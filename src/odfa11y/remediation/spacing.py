@@ -7,11 +7,9 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .document_text import _visible_text_snapshot
-from .namespaces import NS, qn
-from .odt_package import OdtPackage
-from .remediation_models import RemediationResult
-from .styles import StyleCatalog
+from odfa11y.odf import NS, OdtPackage, StyleCatalog, qn, visible_text_snapshot
+
+from .models import RemediationResult
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -44,7 +42,7 @@ def normalize_paragraph_spacing(
     source = Path(source)
     destination = Path(destination)
     package = OdtPackage(source)
-    before_text = _visible_text_snapshot(package)
+    before_text = visible_text_snapshot(package)
     catalog = StyleCatalog(package)
     tree = catalog.content_tree
 
@@ -75,7 +73,7 @@ def normalize_paragraph_spacing(
     by_style = _apply_spacing(catalog, targets, spacing)
 
     catalog.commit_content()
-    if before_text != _visible_text_snapshot(package):
+    if before_text != visible_text_snapshot(package):
         msg = "Visible text changed while normalizing paragraph spacing; aborting."
         raise ValueError(msg)
     package.save(destination)

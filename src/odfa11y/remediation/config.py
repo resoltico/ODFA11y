@@ -6,7 +6,7 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from .remediation_models import AltText, RemediationOptions
+from .models import AltText, RemediationOptions
 
 
 def load_remediation_config(path: str | Path) -> RemediationOptions:
@@ -40,7 +40,7 @@ def load_remediation_config(path: str | Path) -> RemediationOptions:
             raise ValueError(msg)
     graphics = _config_table(data, "alt_text")
     alt_text = {
-        key: _validate_alt_text(_config_table(graphics, key), f"alt_text.{key}") for key in graphics
+        key: validate_alt_text(_config_table(graphics, key), f"alt_text.{key}") for key in graphics
     }
     return RemediationOptions(
         target_version=document.get("target_version", "1.4"),
@@ -76,7 +76,15 @@ def _field_types(data: dict[str, object], expected: type, label: str) -> None:
             raise ValueError(msg)
 
 
-def _validate_alt_text(data: dict[str, object], label: str) -> AltText:
+def validate_alt_text(data: dict[str, object], label: str) -> AltText:
+    """Validate one alt-text table and build its replacement text.
+
+    Returns
+    -------
+    AltText
+        The validated title and description.
+
+    """
     _known_keys(data, {"title", "description"}, label)
     _field_types(data, str, label)
     return AltText(title=data.get("title"), description=data.get("description"))

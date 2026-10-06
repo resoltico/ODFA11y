@@ -5,18 +5,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .models import Severity
-from .namespaces import NS, qn
+from odfa11y.odf import NS, qn
+from odfa11y.report import Severity
 
 if TYPE_CHECKING:
     from lxml import etree
 
-    from .models import AuditReport
+    from odfa11y.report import AuditReport
 
 
-def _audit_metadata(
+def audit_metadata(
     meta_tree: etree._ElementTree, styles_tree: etree._ElementTree, report: AuditReport
 ) -> None:
+    """Report missing or empty document title and language metadata."""
     title = meta_tree.findtext(".//dc:title", namespaces=NS)
     if not title or not title.strip():
         report.add(

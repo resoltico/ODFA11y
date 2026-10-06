@@ -11,16 +11,15 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 
-from .models import AuditReport, Severity
-from .odt_package import secure_xml_parser
-from .pdf_export import export_pdfua, run_verapdf
-from .pdf_structure import audit_structure, pdf_dictionary
+from odfa11y.report import AuditReport, Severity
+from odfa11y.safe_xml import secure_xml_parser
+
+from .structure import audit_structure, pdf_dictionary
 
 if TYPE_CHECKING:
     from pypdf import PageObject
     from pypdf.generic import DictionaryObject
 
-__all__ = ["audit_pdfua", "export_pdfua", "run_verapdf"]
 PDFUA_PART = "{http://www.aiim.org/pdfua/ns/id/}part"
 
 

@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 from lxml import etree
 
 from .namespaces import NS, qn
-from .style_properties import _attr_from_display, _display_attr, find_paragraphs_by_style
+from .style_properties import attr_from_display, display_attr, find_paragraphs_by_style
 
 if TYPE_CHECKING:
-    from .odt_package import OdtPackage
+    from .package import OdtPackage
 
 __all__ = ["ParagraphStyleUsage", "StyleCatalog", "find_paragraphs_by_style"]
 
@@ -168,7 +168,7 @@ class StyleCatalog:
 
         """
         props = self.effective_paragraph_properties(name)
-        return {_display_attr(key): props[key] for key in SPACING_ATTRIBUTES if key in props}
+        return {display_attr(key): props[key] for key in SPACING_ATTRIBUTES if key in props}
 
     def has_break_semantics(self, name: str | None) -> bool:
         """Return whether a style carries page or master-page controls.
@@ -229,7 +229,7 @@ class StyleCatalog:
         for key in SPACING_ATTRIBUTES:
             pprops.attrib.pop(key, None)
         for display_name, value in spacing.items():
-            key = _attr_from_display(display_name)
+            key = attr_from_display(display_name)
             if key in SPACING_ATTRIBUTES:
                 pprops.set(key, value)
 

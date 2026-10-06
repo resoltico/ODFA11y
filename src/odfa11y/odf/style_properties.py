@@ -36,7 +36,15 @@ def find_paragraphs_by_style(
     ]
 
 
-def _display_attr(qname: str) -> str:
+def display_attr(qname: str) -> str:
+    """Render a Clark-notation attribute name with its namespace prefix.
+
+    Returns
+    -------
+    str
+        The prefixed name, or the input when its namespace is unknown.
+
+    """
     for prefix, uri in NS.items():
         marker = f"{{{uri}}}"
         if qname.startswith(marker):
@@ -44,7 +52,15 @@ def _display_attr(qname: str) -> str:
     return qname
 
 
-def _attr_from_display(name: str) -> str:
+def attr_from_display(name: str) -> str:
+    """Parse a prefixed attribute name into Clark notation.
+
+    Returns
+    -------
+    str
+        The Clark-notation name, or the input when its prefix is unknown.
+
+    """
     if ":" not in name:
         return name
     prefix, local = name.split(":", 1)

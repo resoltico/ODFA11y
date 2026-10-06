@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.pdf_export import run_verapdf
+from odfa11y.pdf import run_verapdf
 
 if TYPE_CHECKING:
     from pathlib import Path

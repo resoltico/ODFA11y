@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from . import __version__
+from odfa11y import __version__
 
 
 def build_parser() -> argparse.ArgumentParser:

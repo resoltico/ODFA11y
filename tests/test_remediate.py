@@ -7,9 +7,8 @@ import zipfile
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import audit_odt
-from odfa11y.namespaces import NS, qn
-from odfa11y.odt_package import OdtPackage
-from odfa11y.remediate import AltText, RemediationOptions, remediate_odt
+from odfa11y.odf import NS, OdtPackage, qn
+from odfa11y.remediation import AltText, RemediationOptions, remediate_odt
 
 from .fixtures import make_minimal_odt
 

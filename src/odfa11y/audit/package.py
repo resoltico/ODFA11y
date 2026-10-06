@@ -8,19 +8,19 @@ from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from .models import Severity
-from .namespaces import NS, qn
-from .odt_package import ODT_MIMETYPE, REQUIRED_XML
+from odfa11y.odf import NS, ODT_MIMETYPE, REQUIRED_XML, qn
+from odfa11y.report import Severity
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
-    from .models import AuditReport
-    from .odt_package import OdtPackage
+    from odfa11y.odf import OdtPackage
+    from odfa11y.report import AuditReport
 
 
-def _audit_package(package: OdtPackage, report: AuditReport) -> None:
+def audit_package(package: OdtPackage, report: AuditReport) -> None:
+    """Report package-level defects such as duplicate or missing required members."""
     names = list(package.member_names())
     duplicates = sorted({name for name in names if names.count(name) > 1})
     if duplicates:
@@ -70,9 +70,10 @@ def _audit_package(package: OdtPackage, report: AuditReport) -> None:
             )
 
 
-def _audit_versions(
+def audit_versions(
     trees: dict[str, etree._ElementTree], report: AuditReport, target_version: str
 ) -> None:
+    """Report ODF version declarations that differ from the target version."""
     for name in ("content.xml", "styles.xml", "meta.xml", "settings.xml"):
         if name not in trees:
             continue
@@ -131,7 +132,7 @@ def _audit_versions(
             )
 
 
-def _validate_relaxng(
+def validate_relaxng(
     trees: dict[str, etree._ElementTree],
     *,
     schema: Path,
@@ -139,6 +140,7 @@ def _validate_relaxng(
     report: AuditReport,
     rule_id: str,
 ) -> None:
+    """Report Relax NG schema violations for the supplied validators."""
     if not schema.is_file():
         report.add(
             rule_id, Severity.ERROR, f"Relax NG schema not found: {schema}", location=str(schema)

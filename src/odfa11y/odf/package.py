@@ -13,31 +13,15 @@ from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from .package_archive import _check_archive_limits, _clone_zipinfo, _validate_archive
+from odfa11y.safe_xml import secure_xml_parser
+
+from .archive import check_archive_limits, clone_zipinfo, validate_archive
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 ODT_MIMETYPE = "application/vnd.oasis.opendocument.text"
 REQUIRED_XML = ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml")
-
-
-def secure_xml_parser() -> etree.XMLParser:
-    """Disable XML external entities, network access and permissive parsing.
-
-    Returns
-    -------
-    etree.XMLParser
-        A parser that rejects external entities and network access.
-
-    """
-    return etree.XMLParser(
-        resolve_entities=False,
-        no_network=True,
-        recover=False,
-        remove_blank_text=False,
-        huge_tree=False,
-    )
 
 
 @dataclass(slots=True)
@@ -82,7 +66,7 @@ class OdtPackage:
     def _read_archive(self) -> None:
         with zipfile.ZipFile(self.source, "r") as zf:
             infos = zf.infolist()
-            _check_archive_limits(infos)
+            check_archive_limits(infos)
             for info in infos:
                 self.order.append(info.filename)
                 self.members[info.filename] = Member(info=info, data=zf.read(info))
@@ -210,7 +194,7 @@ class OdtPackage:
         tmp = Path(temp_name)
         try:
             self._write_archive(tmp)
-            _validate_archive(tmp, ODT_MIMETYPE)
+            validate_archive(tmp, ODT_MIMETYPE)
             tmp.replace(destination)
         finally:
             if tmp.exists():
@@ -221,7 +205,7 @@ class OdtPackage:
         with zipfile.ZipFile(tmp, "w") as zf:
             # ODF package requirement: first member, uncompressed.
             mt_member = self.members["mimetype"]
-            mt_info = _clone_zipinfo(mt_member.info)
+            mt_info = clone_zipinfo(mt_member.info)
             mt_info.filename = "mimetype"
             mt_info.compress_type = zipfile.ZIP_STORED
             zf.writestr(mt_info, mt_member.data, compress_type=zipfile.ZIP_STORED)
@@ -230,7 +214,7 @@ class OdtPackage:
                 if name == "mimetype" or name not in self.members:
                     continue
                 member = self.members[name]
-                info = _clone_zipinfo(member.info)
+                info = clone_zipinfo(member.info)
                 # Keep the original compression method where possible.
                 compress_type = info.compress_type
                 if compress_type not in {
@@ -247,7 +231,7 @@ class OdtPackage:
             for name, member in self.members.items():
                 if name == "mimetype" or name in known:
                     continue
-                info = _clone_zipinfo(member.info)
+                info = clone_zipinfo(member.info)
                 zf.writestr(info, member.data, compress_type=info.compress_type)
 
     def clone(self) -> OdtPackage:
@@ -263,7 +247,7 @@ class OdtPackage:
         obj.source = self.source
         obj.order = list(self.order)
         obj.members = {
-            name: Member(info=_clone_zipinfo(member.info), data=bytes(member.data))
+            name: Member(info=clone_zipinfo(member.info), data=bytes(member.data))
             for name, member in self.members.items()
         }
         return obj

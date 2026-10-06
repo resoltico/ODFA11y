@@ -8,13 +8,21 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lxml import etree
 
-    from .odt_package import OdtPackage
+    from .package import OdtPackage
 
 from .namespaces import NS, qn
 
 
-def _is_empty_paragraph(p: etree._Element) -> bool:
-    if _element_text(p).strip():
+def is_empty_paragraph(p: etree._Element) -> bool:
+    """Whether a paragraph has no visible text or meaningful inline content.
+
+    Returns
+    -------
+    bool
+        True when the paragraph is empty.
+
+    """
+    if element_text(p).strip():
         return False
     meaningful = p.xpath(
         (
@@ -29,11 +37,27 @@ def _is_empty_paragraph(p: etree._Element) -> bool:
     return not meaningful
 
 
-def _element_text(element: etree._Element) -> str:
+def element_text(element: etree._Element) -> str:
+    """Concatenate an element's text with non-breaking spaces normalized.
+
+    Returns
+    -------
+    str
+        The stripped text.
+
+    """
     return "".join(element.itertext()).replace("\u00a0", " ").strip()
 
 
-def _visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
+def visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
+    """Collect normalized heading and paragraph text from a package's content.
+
+    Returns
+    -------
+    tuple[str, ...]
+        One entry per visible text block.
+
+    """
     tree = package.parse_xml("content.xml")
     blocks: list[str] = []
     for node in tree.xpath("//text:h | //text:p", namespaces=NS):

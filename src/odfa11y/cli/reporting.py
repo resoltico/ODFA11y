@@ -12,20 +12,26 @@ from typing import TYPE_CHECKING
 import lxml
 import pypdf
 
-from . import __version__
-from .models import Severity
-from .odt_package import OdtPackage
-from .pdfua import run_verapdf
-from .reporting import max_severity_exit_code, render_report
-from .styles import StyleCatalog
+from odfa11y import __version__
+from odfa11y.odf import OdtPackage, StyleCatalog
+from odfa11y.pdf import run_verapdf
+from odfa11y.report import Severity, max_severity_exit_code, render_report
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .models import AuditReport
+    from odfa11y.report import AuditReport
 
 
-def _style_report(source: Path, output_format: str) -> int:
+def style_report(source: Path, output_format: str) -> int:
+    """Print paragraph-style usage for a document.
+
+    Returns
+    -------
+    int
+        Zero after the report is printed.
+
+    """
     package = OdtPackage(source)
     catalog = StyleCatalog(package)
     rows = catalog.paragraph_usage()
@@ -56,7 +62,8 @@ def _style_report(source: Path, output_format: str) -> int:
     return 0
 
 
-def _append_verapdf_result(report: AuditReport, pdf: Path, value: str | None) -> None:
+def append_verapdf_result(report: AuditReport, pdf: Path, value: str | None) -> None:
+    """Add the veraPDF validation outcome to a PDF report when requested."""
     if not value:
         return
     executable = None if value == "auto" else value
@@ -77,7 +84,15 @@ def _append_verapdf_result(report: AuditReport, pdf: Path, value: str | None) ->
         report.metadata["veraPDF_PDF_UA_1"] = "non-compliant"
 
 
-def _print_multi_reports(reports: list[AuditReport], output_format: str, *, strict: bool) -> int:
+def print_multi_reports(reports: list[AuditReport], output_format: str, *, strict: bool) -> int:
+    """Print several reports in one format and combine their exit status.
+
+    Returns
+    -------
+    int
+        The highest exit code across the reports.
+
+    """
     if output_format == "json":
         print(
             json.dumps([r.as_dict() for r in reports], indent=2, ensure_ascii=False, sort_keys=True)
@@ -87,7 +102,15 @@ def _print_multi_reports(reports: list[AuditReport], output_format: str, *, stri
     return max(max_severity_exit_code(r, strict=strict) for r in reports)
 
 
-def _doctor(output_format: str) -> int:
+def doctor(output_format: str) -> int:
+    """Print tool and dependency versions used by this installation.
+
+    Returns
+    -------
+    int
+        Zero after the versions are printed.
+
+    """
     info = {
         "odfa11y": __version__,
         "python": sys.version.split()[0],

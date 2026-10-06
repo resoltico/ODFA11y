@@ -7,14 +7,21 @@ from pathlib import Path
 
 from lxml import etree
 
-from .document_text import _is_empty_paragraph, _visible_text_snapshot, text_is_preserved
-from .namespaces import NS, qn
-from .odt_package import ODT_MIMETYPE, OdtPackage
-from .remediation_links import linkify_plain_addresses
-from .remediation_metadata import _set_default_style_language, _set_metadata_text
-from .remediation_models import AltText, RemediationOptions, RemediationResult
+from odfa11y.odf import (
+    NS,
+    ODT_MIMETYPE,
+    OdtPackage,
+    StyleCatalog,
+    is_empty_paragraph,
+    qn,
+    text_is_preserved,
+    visible_text_snapshot,
+)
+
+from .links import linkify_plain_addresses
+from .metadata import set_default_style_language, set_metadata_text
+from .models import AltText, RemediationOptions, RemediationResult
 from .spacing import normalize_paragraph_spacing
-from .styles import StyleCatalog
 
 __all__ = [
     "AltText",
@@ -51,7 +58,7 @@ def remediate_odt(
     source = Path(source)
     destination = Path(destination)
     package = OdtPackage(source)
-    before_text = _visible_text_snapshot(package)
+    before_text = visible_text_snapshot(package)
     changes: list[str] = []
 
     content = package.parse_xml("content.xml")
@@ -92,7 +99,7 @@ def remediate_odt(
     if settings is not None:
         package.write_xml("settings.xml", settings)
 
-    after_text = _visible_text_snapshot(package)
+    after_text = visible_text_snapshot(package)
     if not text_is_preserved(before_text, after_text, removed_empty_blocks=removed_spacers):
         msg = (
             "Visible document text changed during a structure-only remediation. "
@@ -180,7 +187,7 @@ def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatal
     """
     removed = 0
     for p in list(tree.xpath("//text:p", namespaces=NS)):
-        if not _is_empty_paragraph(p):
+        if not is_empty_paragraph(p):
             continue
         if p.xpath(
             (
@@ -247,21 +254,21 @@ def _apply_document_metadata(
     options: RemediationOptions,
     changes: list[str],
 ) -> None:
-    if options.title is not None and _set_metadata_text(
+    if options.title is not None and set_metadata_text(
         meta, qn("dc", "title"), options.title.strip()
     ):
         changes.append("Set document title metadata.")
 
-    if options.description is not None and _set_metadata_text(
+    if options.description is not None and set_metadata_text(
         meta, qn("dc", "description"), options.description.strip()
     ):
         changes.append("Set document description metadata.")
 
     if options.language is not None:
         language = options.language.strip()
-        if _set_metadata_text(meta, qn("dc", "language"), language):
+        if set_metadata_text(meta, qn("dc", "language"), language):
             changes.append(f"Set document language metadata to {language}.")
-        if _set_default_style_language(styles, language):
+        if set_default_style_language(styles, language):
             changes.append(f"Set default paragraph-style language to {language}.")
 
 

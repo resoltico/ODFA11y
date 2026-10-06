@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y import package_archive
 from odfa11y.audit import audit_odt
-from odfa11y.odt_package import ODT_MIMETYPE, OdtPackage
+from odfa11y.odf import ODT_MIMETYPE, OdtPackage
+from odfa11y.odf import archive as archive_limits
 
 from .fixtures import make_minimal_odt
 
@@ -45,7 +45,7 @@ def test_member_count_limit_is_enforced_before_loading(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
-    monkeypatch.setattr(package_archive, "MAX_ARCHIVE_MEMBERS", 1)
+    monkeypatch.setattr(archive_limits, "MAX_ARCHIVE_MEMBERS", 1)
     with pytest.raises(ValueError, match="member archive limit"):
         OdtPackage(source)
 
@@ -58,7 +58,7 @@ def test_unpacked_size_limit_accepts_boundary_and_rejects_one_extra_byte(
     with zipfile.ZipFile(source, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("mimetype", ODT_MIMETYPE)
         archive.writestr("payload.bin", b"x" * payload_size)
-    monkeypatch.setattr(package_archive, "MAX_UNCOMPRESSED_BYTES", 64)
+    monkeypatch.setattr(archive_limits, "MAX_UNCOMPRESSED_BYTES", 64)
     if accepted:
         assert OdtPackage(source).read("payload.bin") == b"x" * payload_size
     else:

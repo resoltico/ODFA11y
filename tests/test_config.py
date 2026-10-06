@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.config import load_remediation_config
+from odfa11y.remediation import load_remediation_config
 
 
 def test_toml_configuration_loads_explicit_semantics(tmp_path: Path) -> None:

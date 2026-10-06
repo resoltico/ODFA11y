@@ -6,14 +6,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from .document_text import _element_text
-from .models import Severity
-from .namespaces import NS, qn
+from odfa11y.odf import NS, element_text, qn
+from odfa11y.report import Severity
 
 if TYPE_CHECKING:
     from lxml import etree
 
-    from .models import AuditReport
+    from odfa11y.report import AuditReport
 
 MANUAL_NUMBER_RE = re.compile(r"^\s*(?P<num>\d+(?:\.\d+)*)(?P<punct>[.)])?\s+")
 
@@ -23,13 +22,14 @@ MAX_DATA_HEADER_LENGTH = 80
 MAX_SIMPLE_HEADING_NUMBER = 99
 
 
-def _audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
+def audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
+    """Report heading-structure defects such as skipped levels and empty headings."""
     headings = tree.xpath("//text:h", namespaces=NS)
     report.metadata["heading_count"] = len(headings)
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
         raw = heading.get(qn("text", "outline-level"))
-        text = _element_text(heading)
+        text = element_text(heading)
         try:
             level = int(raw) if raw is not None else 0
         except ValueError:
@@ -79,7 +79,8 @@ def _audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
         )
 
 
-def _audit_images(tree: etree._ElementTree, report: AuditReport) -> None:
+def audit_images(tree: etree._ElementTree, report: AuditReport) -> None:
+    """Report graphics and embedded objects that lack alternative text."""
     frames = tree.xpath("//draw:frame[draw:image or draw:object or draw:object-ole]", namespaces=NS)
     report.metadata["graphic_object_count"] = len(frames)
     for index, frame in enumerate(frames, start=1):
@@ -99,7 +100,8 @@ def _audit_images(tree: etree._ElementTree, report: AuditReport) -> None:
             )
 
 
-def _audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
+def audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
+    """Report table structure defects such as missing header rows."""
     tables = tree.xpath("//table:table", namespaces=NS)
     report.metadata["table_count"] = len(tables)
     for index, table in enumerate(tables, start=1):
@@ -145,7 +147,7 @@ def _looks_like_data_table(rows: list[etree._Element]) -> bool:
     second = rows[1].xpath("./table:table-cell", namespaces=NS)
     if len(first) < MIN_DATA_TABLE_DIMENSION or len(second) < MIN_DATA_TABLE_DIMENSION:
         return False
-    first_text = [_element_text(cell) for cell in first]
+    first_text = [element_text(cell) for cell in first]
     if sum(bool(t.strip()) for t in first_text) < MIN_DATA_TABLE_DIMENSION:
         return False
     # Deliberately conservative: long narrative cells are more likely to be layout tables.

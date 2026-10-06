@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.pdfua import audit_pdfua, export_pdfua
+from odfa11y.pdf import audit_pdfua, export_pdfua
 
 from .fixtures import make_minimal_odt
 

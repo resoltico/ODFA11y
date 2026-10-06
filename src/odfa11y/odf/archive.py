@@ -10,7 +10,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
+def clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
+    """Copy ZIP member metadata so rewritten archives preserve it.
+
+    Returns
+    -------
+    zipfile.ZipInfo
+        A new record carrying the original member's metadata.
+
+    """
     clone = zipfile.ZipInfo(filename=info.filename, date_time=info.date_time)
     clone.compress_type = info.compress_type
     clone.comment = info.comment
@@ -25,7 +33,15 @@ def _clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return clone
 
 
-def _validate_archive(tmp: Path, expected_mimetype: str) -> None:
+def validate_archive(tmp: Path, expected_mimetype: str) -> None:
+    """Check a written archive's integrity and first-member mimetype invariant.
+
+    Raises
+    ------
+    ValueError
+        The archive is corrupt or violates the mimetype invariant.
+
+    """
     # Validate what we wrote before replacing the destination.
     with zipfile.ZipFile(tmp, "r") as zf:
         infos = zf.infolist()
@@ -48,7 +64,15 @@ MAX_ARCHIVE_MEMBERS = 10_000
 MAX_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
 
 
-def _check_archive_limits(infos: list[zipfile.ZipInfo]) -> None:
+def check_archive_limits(infos: list[zipfile.ZipInfo]) -> None:
+    """Bound member count and declared unpacked size before decompression.
+
+    Raises
+    ------
+    ValueError
+        The member count or declared unpacked size exceeds its limit.
+
+    """
     if len(infos) > MAX_ARCHIVE_MEMBERS:
         msg = f"ODT exceeds the {MAX_ARCHIVE_MEMBERS}-member archive limit"
         raise ValueError(msg)

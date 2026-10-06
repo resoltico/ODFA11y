@@ -8,10 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.document_text import text_is_preserved
-from odfa11y.namespaces import NS, qn
-from odfa11y.odt_package import OdtPackage
-from odfa11y.remediate import RemediationOptions, remediate_odt
+from odfa11y.odf import NS, OdtPackage, qn, text_is_preserved
+from odfa11y.remediation import RemediationOptions, remediate_odt
 
 from .fixtures import make_minimal_odt
 

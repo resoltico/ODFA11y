@@ -124,22 +124,24 @@ max-file-lines = 300
 # The fixture exposes independent document features as named keyword arguments.
 "tests/fixtures.py" = ["too-many-arguments"]
 # Reports accept three identifiers plus named location/details/fixability fields.
-"src/odfa11y/models.py" = ["too-many-arguments"]
+"src/odfa11y/report/models.py" = ["too-many-arguments"]
 # Preserve the public API's explicit spacing controls, all optional controls keyword-only.
-"src/odfa11y/spacing.py" = ["too-many-arguments"]
+"src/odfa11y/remediation/spacing.py" = ["too-many-arguments"]
 # CLI output is its stdout/stderr interface; subprocess is used for timeout error handling.
-"src/odfa11y/cli.py" = ["print", "suspicious-subprocess-import"]
+"src/odfa11y/cli/commands.py" = ["print", "suspicious-subprocess-import"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
-"src/odfa11y/pdf_export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+"src/odfa11y/pdf/export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+# veraPDF is an explicitly selected local validator, invoked with an argument list.
+"src/odfa11y/pdf/verapdf.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 # Reporting prints the CLI interface and queries explicitly selected local tools.
-"src/odfa11y/cli_reporting.py" = ["print", "subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+"src/odfa11y/cli/reporting.py" = ["print", "subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 
 # lxml's documented public tree type is named _ElementTree; used in isinstance.
-"src/odfa11y/odt_package.py" = ["private-member-access"]
+"src/odfa11y/odf/package.py" = ["private-member-access"]
 # Serialized configuration readers preserve ValueError for malformed input.
-"src/odfa11y/config.py" = ["type-check-without-type-error"]
+"src/odfa11y/remediation/config.py" = ["type-check-without-type-error"]
 # JSON CLI configuration preserves ValueError for malformed serialized input.
-"src/odfa11y/cli_options.py" = ["type-check-without-type-error"]
+"src/odfa11y/cli/options.py" = ["type-check-without-type-error"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 # pypdf has no public registration API for synthetic indirect structure objects.

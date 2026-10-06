@@ -6,19 +6,26 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .audit_metadata import _audit_metadata
-from .audit_package import _audit_package, _audit_versions, _validate_relaxng
-from .audit_semantics import (
-    _audit_headings,
-    _audit_images,
-    _audit_tables,
+from odfa11y.odf import (
+    NS,
+    REQUIRED_XML,
+    URI_RE,
+    OdtPackage,
+    StyleCatalog,
+    element_text,
+    is_empty_paragraph,
+    qn,
+    split_trailing_punctuation,
 )
-from .document_text import _element_text, _is_empty_paragraph
-from .links import URI_RE, split_trailing_punctuation
-from .models import AuditReport, Severity
-from .namespaces import NS, qn
-from .odt_package import REQUIRED_XML, OdtPackage
-from .styles import StyleCatalog
+from odfa11y.report import AuditReport, Severity
+
+from .metadata import audit_metadata
+from .package import audit_package, audit_versions, validate_relaxng
+from .semantics import (
+    audit_headings,
+    audit_images,
+    audit_tables,
+)
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -48,7 +55,7 @@ def audit_odt(
         report.add("PKG000", Severity.ERROR, str(exc), location=str(source))
         return report
 
-    _audit_package(package, report)
+    audit_package(package, report)
     if any(not package.has(name) for name in REQUIRED_XML):
         return report
 
@@ -65,11 +72,11 @@ def audit_odt(
     if any(name not in trees for name in REQUIRED_XML):
         return report
 
-    _audit_versions(trees, report, target_version)
-    _audit_metadata(trees["meta.xml"], trees["styles.xml"], report)
-    _audit_headings(trees["content.xml"], report)
-    _audit_images(trees["content.xml"], report)
-    _audit_tables(trees["content.xml"], report)
+    audit_versions(trees, report, target_version)
+    audit_metadata(trees["meta.xml"], trees["styles.xml"], report)
+    audit_headings(trees["content.xml"], report)
+    audit_images(trees["content.xml"], report)
+    audit_tables(trees["content.xml"], report)
     _audit_links(trees["content.xml"], report)
     _audit_empty_spacers(trees["content.xml"], package, report)
     _audit_notes(trees["content.xml"], report)
@@ -80,7 +87,7 @@ def audit_odt(
         schema_members = ["content.xml", "styles.xml", "meta.xml"]
         if "settings.xml" in trees:
             schema_members.append("settings.xml")
-        _validate_relaxng(
+        validate_relaxng(
             trees,
             schema=Path(schema),
             member_names=tuple(schema_members),
@@ -88,7 +95,7 @@ def audit_odt(
             rule_id="ODF900",
         )
     if manifest_schema:
-        _validate_relaxng(
+        validate_relaxng(
             trees,
             schema=Path(manifest_schema),
             member_names=("META-INF/manifest.xml",),
@@ -102,11 +109,11 @@ def audit_odt(
 def _audit_links(tree: etree._ElementTree, report: AuditReport) -> None:
     blocks = tree.xpath("//text:p | //text:h", namespaces=NS)
     for index, block in enumerate(blocks, start=1):
-        text = _element_text(block)
+        text = element_text(block)
         matches = list(URI_RE.finditer(text))
         if not matches:
             continue
-        linked_texts = [_element_text(a) for a in block.xpath(".//text:a", namespaces=NS)]
+        linked_texts = [element_text(a) for a in block.xpath(".//text:a", namespaces=NS)]
         for match in matches:
             token, _suffix = split_trailing_punctuation(match.group(0))
             if not any(token in linked for linked in linked_texts):
@@ -126,7 +133,7 @@ def _audit_empty_spacers(
     catalog = StyleCatalog(package)
     empty = []
     for p in tree.xpath("//text:p", namespaces=NS):
-        if not _is_empty_paragraph(p):
+        if not is_empty_paragraph(p):
             continue
         if p.xpath(
             "ancestor::table:table-cell | ancestor::draw:text-box | ancestor::office:annotation",

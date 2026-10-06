@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.odt_package import OdtPackage
+from odfa11y.odf import OdtPackage
 
 from .fixtures import make_minimal_odt
 

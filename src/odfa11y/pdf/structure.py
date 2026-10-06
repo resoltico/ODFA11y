@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING
 from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject, NameObject
 
-from .models import Severity
+from odfa11y.report import Severity
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from .models import AuditReport
+    from odfa11y.report import AuditReport
 
 STANDARD_STRUCTURE_TYPES = {
     "Document",

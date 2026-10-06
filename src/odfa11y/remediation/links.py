@@ -5,8 +5,7 @@ from __future__ import annotations
 
 from lxml import etree
 
-from .links import URI_RE, split_trailing_punctuation
-from .namespaces import NS, qn
+from odfa11y.odf import NS, URI_RE, qn, split_trailing_punctuation
 
 
 def linkify_plain_addresses(tree: etree._ElementTree) -> int:

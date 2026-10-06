@@ -7,15 +7,32 @@ import json
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from .config import _validate_alt_text, load_remediation_config
-from .remediate import AltText, RemediationOptions
+from odfa11y.remediation import (
+    AltText,
+    RemediationOptions,
+    load_remediation_config,
+    validate_alt_text,
+)
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-def _options_from_args(args: argparse.Namespace) -> RemediationOptions:
+def options_from_args(args: argparse.Namespace) -> RemediationOptions:
+    """Combine configuration-file choices with explicit command-line overrides.
+
+    Returns
+    -------
+    RemediationOptions
+        Options with every explicit override applied.
+
+    Raises
+    ------
+    ValueError
+        A configuration file or command-line value is invalid.
+
+    """
     options = load_remediation_config(args.config) if args.config else RemediationOptions()
 
     overrides = {
@@ -59,7 +76,7 @@ def _load_alt_map(path: Path) -> dict[str, AltText]:
         if isinstance(value, str):
             result[key] = AltText(description=value)
         elif isinstance(value, dict):
-            result[key] = _validate_alt_text(value, f"alt-map.{key}")
+            result[key] = validate_alt_text(value, f"alt-map.{key}")
         else:
             msg = f"Alt-map value for {key!r} must be a string or object."
             raise ValueError(msg)

@@ -5,10 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.namespaces import NS, qn
-from odfa11y.odt_package import OdtPackage
-from odfa11y.remediate import normalize_paragraph_spacing
-from odfa11y.styles import StyleCatalog
+from odfa11y.odf import NS, OdtPackage, StyleCatalog, qn
+from odfa11y.remediation import normalize_paragraph_spacing
 
 from .fixtures import make_minimal_odt
 

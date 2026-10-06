@@ -17,7 +17,7 @@ from pypdf.generic import (
     TextStringObject,
 )
 
-from odfa11y.pdfua import audit_pdfua
+from odfa11y.pdf import audit_pdfua
 
 if TYPE_CHECKING:
     from pathlib import Path

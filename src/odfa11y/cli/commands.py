@@ -7,20 +7,21 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING
 
-from .audit import audit_odt
-from .cli_options import _options_from_args
-from .cli_parser import build_parser
-from .cli_reporting import _append_verapdf_result, _doctor, _print_multi_reports, _style_report
-from .pdfua import audit_pdfua, export_pdfua
-from .remediate import normalize_paragraph_spacing, remediate_odt
-from .reporting import max_severity_exit_code, render_report
+from odfa11y.audit import audit_odt
+from odfa11y.pdf import audit_pdfua, export_pdfua
+from odfa11y.remediation import normalize_paragraph_spacing, remediate_odt
+from odfa11y.report import max_severity_exit_code, render_report
+
+from .options import options_from_args
+from .parser import build_parser
+from .reporting import append_verapdf_result, doctor, print_multi_reports, style_report
 
 if TYPE_CHECKING:
     import argparse
     from collections.abc import Callable, Sequence
 
-    from .models import AuditReport
-    from .remediation_models import RemediationResult
+    from odfa11y.remediation import RemediationResult
+    from odfa11y.report import AuditReport
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -36,13 +37,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": _audit,
         "remediate": _remediate,
-        "styles": lambda args: _style_report(args.source, args.format),
+        "styles": lambda args: style_report(args.source, args.format),
         "normalize-spacing": _normalize_spacing,
         "export-pdfua": _export,
         "verify-pdf": _verify_pdf,
         "verify": _verify,
         "pipeline": _pipeline,
-        "doctor": lambda args: _doctor(args.format),
+        "doctor": lambda args: doctor(args.format),
     }
     try:
         return handlers[args.command](args)
@@ -75,7 +76,7 @@ def _print_remediation(result: RemediationResult) -> None:
 
 
 def _remediate(args: argparse.Namespace) -> int:
-    result = remediate_odt(args.source, args.destination, options=_options_from_args(args))
+    result = remediate_odt(args.source, args.destination, options=options_from_args(args))
     _print_remediation(result)
     return 0
 
@@ -103,7 +104,7 @@ def _export(args: argparse.Namespace) -> int:
 
 def _verify_pdf(args: argparse.Namespace) -> int:
     report = audit_pdfua(args.pdf)
-    _append_verapdf_result(report, args.pdf, args.verapdf)
+    append_verapdf_result(report, args.pdf, args.verapdf)
     print(render_report(report, output_format=args.format))
     return max_severity_exit_code(report, strict=args.strict)
 
@@ -112,13 +113,13 @@ def _verify(args: argparse.Namespace) -> int:
     reports = [_odt_report(args)]
     if args.pdf:
         pdf_report = audit_pdfua(args.pdf)
-        _append_verapdf_result(pdf_report, args.pdf, args.verapdf)
+        append_verapdf_result(pdf_report, args.pdf, args.verapdf)
         reports.append(pdf_report)
-    return _print_multi_reports(reports, args.format, strict=args.strict)
+    return print_multi_reports(reports, args.format, strict=args.strict)
 
 
 def _pipeline(args: argparse.Namespace) -> int:
-    options = _options_from_args(args)
+    options = options_from_args(args)
     remediation = remediate_odt(args.source, args.destination, options=options)
     odt_report = audit_odt(
         args.destination,
@@ -129,17 +130,17 @@ def _pipeline(args: argparse.Namespace) -> int:
     if max_severity_exit_code(odt_report, strict=args.strict):
         if args.format == "text":
             print("PDF export skipped because the ODT audit failed.")
-        return _print_multi_reports([odt_report], args.format, strict=args.strict)
+        return print_multi_reports([odt_report], args.format, strict=args.strict)
     export_pdfua(args.destination, args.pdf, soffice=args.soffice)
     pdf_report = audit_pdfua(args.pdf)
-    _append_verapdf_result(pdf_report, args.pdf, args.verapdf)
+    append_verapdf_result(pdf_report, args.pdf, args.verapdf)
     if args.format == "text":
         print(f"Remediated ODT: {remediation.destination}")
         for change in remediation.changes:
             print(f"- {change}")
         print(f"PDF/UA export: {args.pdf}")
         print()
-    return _print_multi_reports([odt_report, pdf_report], args.format, strict=args.strict)
+    return print_multi_reports([odt_report, pdf_report], args.format, strict=args.strict)
 
 
 if __name__ == "__main__":

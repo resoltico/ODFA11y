@@ -7,10 +7,18 @@ import re
 
 from lxml import etree
 
-from .namespaces import NS, qn
+from odfa11y.odf import NS, qn
 
 
-def _set_metadata_text(tree: etree._ElementTree, tag: str, value: str) -> bool:
+def set_metadata_text(tree: etree._ElementTree, tag: str, value: str) -> bool:
+    """Set a metadata element's text, reporting whether anything changed.
+
+    Returns
+    -------
+    bool
+        True when the tree was modified.
+
+    """
     meta = tree.find("office:meta", NS)
     if meta is None:
         meta = etree.SubElement(tree.getroot(), qn("office", "meta"))
@@ -23,7 +31,15 @@ def _set_metadata_text(tree: etree._ElementTree, tag: str, value: str) -> bool:
     return True
 
 
-def _set_default_style_language(tree: etree._ElementTree, language_tag: str) -> bool:
+def set_default_style_language(tree: etree._ElementTree, language_tag: str) -> bool:
+    """Set the default style's language and country, reporting whether anything changed.
+
+    Returns
+    -------
+    bool
+        True when the tree was modified.
+
+    """
     language, country = _split_language(language_tag)
     styles = tree.find("office:styles", NS)
     if styles is None:

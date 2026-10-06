@@ -88,7 +88,7 @@ def test_pipeline_blocks_failed_source_audit_before_export(
     def unexpected_export(*_args: object, **_kwargs: object) -> None:
         pytest.fail("Export must not run after the source gate fails")
 
-    monkeypatch.setattr("odfa11y.cli.export_pdfua", unexpected_export)
+    monkeypatch.setattr("odfa11y.cli.commands.export_pdfua", unexpected_export)
     arguments = ["pipeline", str(source), str(destination), "--pdf", str(pdf), "--format", "json"]
     if strict:
         arguments.append("--strict")
