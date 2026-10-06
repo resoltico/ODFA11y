@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+.venv/
+*.pdf
+*.odt
+*.tmp
+.DS_Store
+
+.ruff_cache/
+
+# Local credentials and private inputs must not reach the public repository.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+private/
+.coverage.*

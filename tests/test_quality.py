@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: MPL-2.0
+"""Negative controls for repository size and centralized lint policy."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from tools.check_quality import check_repository
+
+
+def _repository(tmp_path: Path) -> Path:
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.odfa11y.quality]\nmax-file-lines = 300\n", encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_file_limit_accepts_boundary_and_rejects_one_extra_line(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    source = root / "example.py"
+    source.write_text("\n" * 300, encoding="utf-8")
+    assert check_repository(root) == []
+    source.write_text("\n" * 301, encoding="utf-8")
+    assert any("301 lines" in error for error in check_repository(root))
+
+
+@pytest.mark.parametrize(
+    "directive", ["noqa: E501", "RUFF: noqa", "fmt: off", "pylint: disable=all"]
+)
+def test_inline_directives_are_rejected_in_hidden_directories(
+    tmp_path: Path, directive: str
+) -> None:
+    root = _repository(tmp_path)
+    directory = root / ".checks"
+    directory.mkdir()
+    (directory / "hidden.py").write_text(f"value = 1  # {directive}\n", encoding="utf-8")
+    assert any("inline lint/format" in error for error in check_repository(root))
+
+
+def test_directive_text_inside_strings_is_allowed(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / "example.py").write_text('value = "# noqa: E501"\n', encoding="utf-8")
+    assert check_repository(root) == []
+
+
+@pytest.mark.parametrize("filename", ["ruff.toml", ".ruff.toml", "pyproject.toml"])
+def test_separate_lint_configuration_is_rejected(tmp_path: Path, filename: str) -> None:
+    root = _repository(tmp_path)
+    (root / "example.py").write_text("value = 1\n", encoding="utf-8")
+    nested = root / "nested"
+    nested.mkdir()
+    (nested / filename).write_text("[tool.ruff]\nline-length = 100\n", encoding="utf-8")
+    assert any("configuration" in error for error in check_repository(root))
+
+
+def test_empty_scan_is_rejected(tmp_path: Path) -> None:
+    assert check_repository(_repository(tmp_path)) == ["No Python files were checked"]
+
+
+def test_project_satisfies_policy() -> None:
+    assert check_repository(Path(__file__).resolve().parents[1]) == []
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        '[tool.ruff.lint]\nignore = [\n"print",\n]\n',
+        '[tool.ruff.lint]\nignore = ["print"]\n',
+        '[tool.ruff.lint]\nignore=["print"]\n',
+        '[tool.ruff.lint.per-file-ignores]\nexample=["print"]\n',
+        '[tool.ruff.lint]\nextend-ignore = ["print"]\n',
+        '[tool.ruff.lint.per-file-ignores]\n"example.py" = ["print"]\n',
+    ],
+)
+def test_lint_exception_requires_a_reason(tmp_path: Path, settings: str) -> None:
+    root = _repository(tmp_path)
+    with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
+        stream.write(settings)
+    (root / "example.py").write_text("value = 1\n", encoding="utf-8")
+    assert any("reason comment" in error for error in check_repository(root))
