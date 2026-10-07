@@ -1,22 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Render reports as text or JSON and map them to exit statuses."""
+"""Render reports as text, JSON or SARIF and map them to exit statuses."""
 
 from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
 
+from .sarif import sarif_log
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from .models import Report
 
-FORMATS = ("text", "json")
+FORMATS = ("text", "json", "sarif")
 EXIT_STRICT_WARNINGS = 1
 EXIT_ERRORS = 2
 
 
-def render_reports(reports: Iterable[Report], *, output_format: str = "text") -> str:
+def render_reports(
+    reports: Iterable[Report], *, output_format: str = "text", source_root: Path | None = None
+) -> str:
     """Render one or more reports; JSON is a single object for one report, else an array.
 
     Returns
@@ -27,10 +32,15 @@ def render_reports(reports: Iterable[Report], *, output_format: str = "text") ->
     Raises
     ------
     ValueError
-        The requested output format is unsupported.
+        The requested format is unsupported or SARIF source identities are unsafe.
 
     """
     items = list(reports)
+    if output_format == "sarif":
+        if source_root is None:
+            msg = "SARIF requires an explicit source root."
+            raise ValueError(msg)
+        return json.dumps(sarif_log(items, source_root=source_root), indent=2, ensure_ascii=False)
     if output_format == "json":
         payload = items[0].as_dict() if len(items) == 1 else [r.as_dict() for r in items]
         return json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True)

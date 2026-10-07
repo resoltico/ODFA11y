@@ -43,6 +43,7 @@ dev = [
   "ruff==0.16.10",
   "tach==0.35.3",
   "ty==0.0.85",
+  "jsonschema>=4.25.1,<5",
 ]
 audit = [
   "pip-audit==2.10.1",
