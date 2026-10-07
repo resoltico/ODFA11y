@@ -26,10 +26,10 @@ they are not part of the published package metadata.
 ## Required checks
 
 ```bash
-uv run --no-sync python tools/check_quality.py
+uv run --no-sync python -m tools.check_quality
 uv run --no-sync ruff check . --ignore-noqa
 uv run --no-sync ruff format --check .
-uv run --no-sync python tools/check_quality.py --types
+uv run --no-sync python -m tools.check_quality --types
 uv run --no-sync tach check
 uv run --no-sync tach check-external
 uv run --no-sync pytest -m 'not integration' --cov --durations=10
@@ -37,10 +37,17 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-
 uv build
 ```
 
-Ruff enables all rules, including preview rules, at its pinned version. Exceptions
-belong only in the root `pyproject.toml`, with a preceding reason comment for each
-entry. The policy checker rejects inline lint/formatter directives and separate
-Ruff configuration files. The type gate passes the shared authored-file inventory as explicit
+Ruff enables all rules, including preview rules, at its pinned version. Public APIs use
+the explicit NumPy docstring convention; the formatter owns trailing commas. Exceptions
+belong only in the root `pyproject.toml`. Each needs an adjacent reason, an exact current
+Ruff rule, an authored Python scope and a diagnostic it actually suppresses. The policy
+gate runs two bounded Ruff probes against a derived configuration with every suppression
+removed, preserving project import classification. It rejects unused or overlapping masks,
+inherited configuration, reduced rule selection, disabled type rules and inline lint,
+formatter, type or security suppressions. Per-file scopes use literal relative paths or
+rooted `directory/**` roles; literal basename patterns also match nested names as Ruff does.
+Every existing registration is checked against current source; there are no historical
+baselines or grandfathered exceptions. The type gate passes the shared authored-file inventory as explicit
 paths, so analyzer discovery defaults cannot hide a domain directory named `dist` or an
 ignored Python file. Lint and formatting likewise use explicit project exclusions: only
 repository-root build/distribution outputs and generated environments/caches are excluded.

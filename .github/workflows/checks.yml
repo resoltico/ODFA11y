@@ -47,13 +47,13 @@ jobs:
           uv export --locked --group audit --no-emit-project --output-file "$RUNNER_TEMP/audit-requirements.txt" > /dev/null
           uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r "$RUNNER_TEMP/audit-requirements.txt"
       - name: Enforce module size and lint-exception policy
-        run: uv run --no-sync python tools/check_quality.py
+        run: uv run --no-sync python -m tools.check_quality
       - name: Lint all authored Python
         run: uv run --no-sync ruff check . --ignore-noqa
       - name: Check Python formatting
         run: uv run --no-sync ruff format --check .
       - name: Type-check source, tests and tools
-        run: uv run --no-sync python tools/check_quality.py --types
+        run: uv run --no-sync python -m tools.check_quality --types
       - name: Enforce package boundaries
         run: |
           uv run --no-sync tach check

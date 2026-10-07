@@ -12,14 +12,15 @@ import sys
 import tokenize
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
+from tools.lint_policy import INLINE_DIRECTIVE, analyzer_errors, exception_errors
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 GENERATED_DIRECTORIES = {".git", ".venv", "__pycache__", ".ruff_cache"}
 ROOT_BUILD_DIRECTORIES = {"build", "dist"}
-INLINE_DIRECTIVE = re.compile(r"\b(?:noqa\b|ruff\s*:|fmt\s*:|pylint\s*:)", re.IGNORECASE)
 # XML namespace prefixes whose elements belong to a document family, not to the ODF core.
 FAMILY_PREFIXES = frozenset({
     "text",
@@ -56,10 +57,10 @@ def check_repository(root: Path) -> list[str]:
     config_text = (root / "pyproject.toml").read_text(encoding="utf-8")
     config = tomllib.loads(config_text)
     limit = config["tool"]["odfa11y"]["quality"]["max-file-lines"]
-    errors = _exception_reasons(config_text)
-    errors.extend(_stale_ignores(root, config))
+    paths = list(authored_paths(root))
+    errors = exception_errors(root, config_text, config, paths)
     files_checked = 0
-    for path in authored_paths(root):
+    for path in paths:
         relative = path.relative_to(root)
         if path.name in {"ruff.toml", ".ruff.toml"}:
             errors.append(f"{relative}: Ruff configuration belongs in the root pyproject.toml")
@@ -103,6 +104,11 @@ def check_types(root: Path) -> int:
         The analyzer's exit status; one when discovery is empty or execution is unavailable.
 
     """
+    config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    errors = analyzer_errors(config)
+    if errors:
+        sys.stderr.write("\n".join(errors) + "\n")
+        return 1
     files = sorted(
         path.relative_to(root).as_posix() for path in authored_paths(root) if path.suffix == ".py"
     )
@@ -111,7 +117,7 @@ def check_types(root: Path) -> int:
         return 1
     try:
         return subprocess.run(
-            [sys.executable, "-m", "ty", "check", *files], cwd=root, shell=False, check=False
+            [sys.executable, "-m", "ty", "check", "--", *files], cwd=root, shell=False, check=False
         ).returncode
     except OSError:
         sys.stderr.write("Cannot execute the type checker\n")
@@ -196,53 +202,6 @@ def _family_qn_prefix(node: ast.AST, qn_names: set[str]) -> object | None:
     return (
         first.value if isinstance(first, ast.Constant) and first.value in FAMILY_PREFIXES else None
     )
-
-
-def _stale_ignores(root: Path, config: dict[str, Any]) -> list[str]:
-    lint = config.get("tool", {}).get("ruff", {}).get("lint", {})
-    return [
-        f"pyproject.toml: per-file ignore matches no file: {pattern}"
-        for table in ("per-file-ignores", "extend-per-file-ignores")
-        for pattern in lint.get(table, {})
-        if not any(root.glob(pattern))
-    ]
-
-
-def _exception_reasons(source: str) -> list[str]:
-    errors = []
-    section = ""
-    in_ignores = False
-    reason = False
-    for number, raw in enumerate(source.splitlines(), start=1):
-        line = raw.strip()
-        if line.startswith("["):
-            section = line
-            reason = False
-        elif line.startswith("#"):
-            reason = bool(line.removeprefix("#").strip())
-        elif re.match(r"(?:ignore|extend-ignore)\s*=\s*\[", line) and section == "[tool.ruff.lint]":
-            if line.split("[", 1)[1].strip() not in {"", "]"} and not reason:
-                errors.append(
-                    f"pyproject.toml:{number}: lint exception requires a preceding reason comment"
-                )
-            in_ignores = not line.endswith("]")
-            reason = False
-        elif in_ignores and line == "]":
-            in_ignores = False
-        elif ("=" in line or line.startswith(('"', "'"))) and (
-            in_ignores
-            or section
-            in {
-                "[tool.ruff.lint.per-file-ignores]",
-                "[tool.ruff.lint.extend-per-file-ignores]",
-            }
-        ):
-            if not reason:
-                errors.append(
-                    f"pyproject.toml:{number}: lint exception requires a preceding reason comment"
-                )
-            reason = False
-    return errors
 
 
 def _check_source(path: Path, source: str, limit: int) -> list[str]:
