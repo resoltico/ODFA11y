@@ -98,9 +98,13 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
 - **Quality** (Linux, macOS, Windows; the job is `test` in the workflow): unit tests (with coverage on Linux), a build of
   the source archive and wheel, and unit tests against the wheel installed with
   hashed locked dependencies, including metadata, license and `py.typed` checks.
-- **Integration** (Linux): installs LibreOffice and a checksum-pinned veraPDF, then
-  runs the integration tests (real exports, real validation, the full pipeline) with
-  `ODFA11Y_REQUIRE_INTEGRATION=1`.
+- **Integration** (Linux, macOS, Windows): installs LibreOffice (the distribution package on
+  Linux, the current release on macOS and Windows) and a checksum-pinned veraPDF with
+  `tools/install_verapdf.py`, then runs the integration tests (real exports, real
+  validation, the full pipeline) with `ODFA11Y_REQUIRE_INTEGRATION=1`. PDF tagging and
+  pagination are exporter behaviour, so passing on one operating system says little about
+  another. LibreOffice versions are not pinned; the job logs the version it ran with, and
+  the evidence record of any run carries it.
 - **CI gate**: waits for the three jobs above and fails unless all succeeded. It is the
   only check a branch ruleset should require; see [Releasing](RELEASING.md#repository-settings).
 

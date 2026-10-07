@@ -157,6 +157,9 @@ max-file-lines = 300
 # Version probes run an explicitly selected local tool with an argument list; stopping a
 # timed-out process tree on Windows needs the system taskkill, found through PATH.
 "src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import", "start-process-with-partial-path"]
+# CI tooling: downloads one pinned HTTPS release, verifies its SHA-256 and runs the installer
+# with the runner's java through an argument list.
+"tools/install_verapdf.py" = ["suspicious-subprocess-import", "suspicious-url-open-usage", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]
 # veraPDF is an explicitly selected local validator, invoked with an argument list.
 "src/odfa11y/pdf/verapdf.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 
