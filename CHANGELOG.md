@@ -18,6 +18,12 @@ Notable changes to this project are documented in this file. The format is based
   Python API takes `Location` in `Report.add`. The grammar is in
   [Rules](docs/RULES.md#locations).
 
+### Changed
+
+- The package description and README now state the support boundary: every OpenDocument kind
+  is recognised and checked in common, while semantic audit, remediation and PDF/UA export
+  exist only for text documents.
+
 ## [0.3.0] - 2026-10-07
 
 This release makes the ODF core independent of any document family: ODFA11y now recognises
