@@ -48,6 +48,18 @@ def local_resource_path(href: str) -> str | None:
         path = unquote(uri.path, errors="strict")
     except UnicodeError, ValueError:
         return None
+    return _member_path(path)
+
+
+def _member_path(path: str) -> str | None:
+    """Normalize dot segments while preserving empty segments and confining the member.
+
+    Returns
+    -------
+    str | None
+        The normalized package path, or None for an unsafe member.
+
+    """
     if (
         path.startswith("/")
         or "\\" in path
