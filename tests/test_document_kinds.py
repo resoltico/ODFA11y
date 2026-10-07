@@ -43,6 +43,10 @@ SEMANTIC_PREFIXES = {
     "spreadsheet": "SHEET",
     "presentation": "PRES",
     "graphics": "DRAW",
+    "formula": "MATH",
+    "chart": "CHART",
+    "image": "IMAGE",
+    "database": "BASE",
 }
 
 

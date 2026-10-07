@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("destination", type=Path)
     p.add_argument("--config", type=Path, required=True, help="TOML configuration file.")
     p.add_argument("--dry-run", action="store_true", help="Report outcomes without writing.")
-    p.add_argument("--format", choices=FORMATS, default="text")
+    p.add_argument("--format", choices=("text", "json"), default="text")
 
     p = sub.add_parser("export", help="Export an ODF document to PDF/UA with LibreOffice.")
     p.add_argument("source", type=Path)
@@ -76,11 +76,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--verapdf-path", type=Path, help="veraPDF executable for the production profile."
     )
     _add_tool_options(p)
-    p.add_argument("--format", choices=FORMATS, default="text")
+    p.add_argument("--format", choices=("text", "json"), default="text")
+
+    _add_batch(sub)
 
     p = sub.add_parser("styles", help="Report paragraph-style usage and effective spacing.")
     p.add_argument("source", type=Path)
-    p.add_argument("--format", choices=FORMATS, default="text")
+    p.add_argument("--format", choices=("text", "json"), default="text")
 
     p = sub.add_parser("check-evidence", help="Verify an evidence directory against its manifest.")
     p.add_argument("directory", type=Path)
@@ -89,12 +91,15 @@ def build_parser() -> argparse.ArgumentParser:
         "doctor", help="Show tool and dependency versions and what the PDF export supports."
     )
     _add_tool_options(p)
-    p.add_argument("--format", choices=FORMATS, default="text")
+    p.add_argument("--format", choices=("text", "json"), default="text")
     return parser
 
 
 def _add_report_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--format", choices=FORMATS, default="text")
+    parser.add_argument(
+        "--source-root", type=Path, help="Confined source root, required for SARIF."
+    )
     parser.add_argument("--strict", action="store_true", help="Fail on warnings too.")
 
 
@@ -108,3 +113,15 @@ def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:
     parser.add_argument(
         "--verapdf-path", type=Path, help="veraPDF executable (implies --verapdf); default: PATH."
     )
+
+
+def _add_batch(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "batch", help="Run independent manifest items and retain aggregate evidence."
+    )
+    p.add_argument("manifest", type=Path)
+    p.add_argument("--output-dir", type=Path, required=True)
+    p.add_argument("--profile", choices=tuple(PROFILES), default=DEFAULT_PROFILE)
+    p.add_argument("--verapdf-path", type=Path)
+    _add_tool_options(p)
+    p.add_argument("--format", choices=("text", "json"), default="text")

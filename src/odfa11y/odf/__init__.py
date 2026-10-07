@@ -7,6 +7,7 @@ from .detect import Detection, declared_version, detect
 from .document import OdfDocument
 from .flat import FLAT_MEMBER, FlatXmlStorage
 from .kinds import KINDS, DocumentKind, Family, kind_for_media_type
+from .metadata_part import ensure_metadata_part
 from .namespaces import NS, is_office_element, qn
 from .opening import open_storage
 from .package import PackageStorage
@@ -39,6 +40,7 @@ __all__ = [
     "body_text_snapshot",
     "declared_version",
     "detect",
+    "ensure_metadata_part",
     "is_office_element",
     "is_unsafe_member_name",
     "kind_for_media_type",

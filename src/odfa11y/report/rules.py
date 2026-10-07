@@ -203,6 +203,48 @@ DRAW008 = _rule(
 )
 DRAW009 = _rule("DRAW009", ERROR, LNK, "Hyperlink has no readable purpose.")
 
+MATH001 = _rule("MATH001", ERROR, SEM, "Native mathematical expression is missing or unsupported.")
+MATH002 = _rule("MATH002", ERROR, SEM, "Formula has no spoken alternative.", "formula.alternative")
+MATH003 = _rule("MATH003", WARNING, SEM, "Formula references external content requiring review.")
+
+CHART001 = _rule("CHART001", ERROR, SEM, "Chart body or data series is missing or ambiguous.")
+CHART002 = _rule("CHART002", WARNING, SEM, "Chart has no identifying title.", "document.title")
+CHART003 = _rule(
+    "CHART003", ERROR, SEM, "Chart has no supplied document description.", "document.description"
+)
+CHART004 = _rule("CHART004", ERROR, SEM, "Local chart range does not match its declared data grid.")
+CHART005 = _rule(
+    "CHART005", WARNING, SEM, "Chart data provider or range cannot be verified locally."
+)
+CHART006 = _rule("CHART006", WARNING, SEM, "Chart labels or data ordering need review.")
+
+IMAGE005 = _rule(
+    "IMAGE005", WARNING, SEM, "SVG declares active or external content requiring native review."
+)
+IMAGE004 = _rule("IMAGE004", ERROR, SEM, "Image payload is malformed or unsafe to inspect.")
+IMAGE001 = _rule("IMAGE001", ERROR, SEM, "Image body does not contain one supported graphic frame.")
+IMAGE002 = _rule("IMAGE002", ERROR, SEM, "Image has no accessible description.", "image.graphics")
+IMAGE003 = _rule(
+    "IMAGE003", WARNING, SEM, "Image resource is external, unavailable or not embedded."
+)
+
+BASE001 = _rule("BASE001", ERROR, SEM, "Database body, connection or embedded storage is missing.")
+BASE002 = _rule("BASE002", WARNING, SEM, "Database has external connection declarations.")
+BASE003 = _rule(
+    "BASE003", WARNING, SEM, "Database stores authentication information requiring privacy review."
+)
+BASE004 = _rule(
+    "BASE004",
+    WARNING,
+    SEM,
+    "Database object description is missing or ambiguous.",
+    "database.descriptions",
+)
+BASE005 = _rule(
+    "BASE005", WARNING, SEM, "Database has executable scripts requiring offline review."
+)
+BASE006 = _rule("BASE006", INFO, SEM, "Queries, forms or reports require native semantic review.")
+
 PDF000 = _rule("PDF000", ERROR, PDF, "PDF cannot be opened or strictly inspected.")
 PDF001 = _rule("PDF001", ERROR, PDF, "Document title is missing.")
 PDF002 = _rule("PDF002", ERROR, PDF, "Catalog language is missing.")

@@ -24,7 +24,7 @@ These apply to every ODF document, whatever its family.
 
 ## ODF declarations, kind, schema and metadata
 
-Also common to every family. `ODF009` says that a document's family has no semantic audit yet (text and spreadsheet documents have one): the common checks ran and nothing is implied about the rest.
+Also common to every family. `ODF009` says that a document's family has no semantic audit yet (all eight document families have one): the common checks ran and nothing is implied about the rest.
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
@@ -107,6 +107,46 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `DRAW008` | Info | Notes or annotations need relationship and reading-order review. |  |
 | `DRAW009` | Error | Hyperlink has no readable purpose. |  |
 
+## Formula
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `MATH001` | Error | Native mathematical expression is missing or unsupported. |  |
+| `MATH002` | Error | Formula has no spoken alternative. | `formula.alternative` |
+| `MATH003` | Warning | Formula references external content requiring review. |  |
+
+## Charts
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `CHART001` | Error | Chart body or data series is missing or ambiguous. |  |
+| `CHART002` | Warning | Chart has no identifying title. | `document.title` |
+| `CHART003` | Error | Chart has no supplied document description. | `document.description` |
+| `CHART004` | Error | Local chart range does not match its declared data grid. |  |
+| `CHART005` | Warning | Chart data provider or range cannot be verified locally. |  |
+| `CHART006` | Warning | Chart labels or data ordering need review. |  |
+
+## Images
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
+| `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
+| `IMAGE001` | Error | Image body does not contain one supported graphic frame. |  |
+| `IMAGE002` | Error | Image has no accessible description. | `image.graphics` |
+| `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
+
+## Databases
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `BASE001` | Error | Database body, connection or embedded storage is missing. |  |
+| `BASE002` | Warning | Database has external connection declarations. |  |
+| `BASE003` | Warning | Database stores authentication information requiring privacy review. |  |
+| `BASE004` | Warning | Database object description is missing or ambiguous. | `database.descriptions` |
+| `BASE005` | Warning | Database has executable scripts requiring offline review. |  |
+| `BASE006` | Info | Queries, forms or reports require native semantic review. |  |
+
 ## PDF inspection and veraPDF
 
 | ID | Severity | Finding | Remedy |
@@ -156,8 +196,8 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
 which `remediate` enforces: it refuses any result with a violation the source did not
 already have. The `TXT` link, table, numbering and spacer findings use heuristics; inspect the
-source in context. Graphics need supplied descriptions, and header rows need a named
-table with an explicit row count. `TXT040` is observational: [spacer
+source in context. Graphics need supplied descriptions, and table headers need a named
+table with explicit leading row or column counts. `TXT040` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
 The `SHEET` findings are structural: a *default name* is a name of the form `Sheet` and
 digits (other languages' defaults are not recognised); a *data sheet* is one whose first row
@@ -181,14 +221,20 @@ defects such as `ODF004` or `PKG004`). A finding with no location applies to the
 file; an audit reports no location at all for a source it cannot open.
 
 ```text
-path     = part [ "/" segment ]
-part     = "content" | "styles" | "meta" | "manifest" | "package" | "document"
-segment  = "heading[" N "]" | "paragraph[" N "]" | "table[" ref "]" | "frame[" ref "]"
-         | "title" | "language" | "mimetype"
-ref      = "name=" percent_encoded_name | N
+path     = part ( "/" segment )*
+part     = "content" | "styles" | "meta" | "settings" | "manifest" | "package" | "document"
+segment  = domain_name [ "[" ref "]" ]
+ref      = "name=" percent_encoded_name | "id=" percent_encoded_identity | N
 ```
 
-`N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
+
+`domain_name` identifies the audited domain object or field: for example `heading`,
+`paragraph`, `table`, `frame`, `page`, `shape`, `formula`, `chart`, `chart-range`, `query`,
+`query-collection`, `column`, `title`, `description`, `language` or `mimetype`. Nested Base
+objects retain parent segments, such as
+`content/query-collection[name=Fruit]/query[name=Totals]/column[name=Count]`.
+Named and XML-identity values percent-encode reserved delimiters; consumers must not
+split decoded names as path syntax. `N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
 `text:h`, `paragraph[3]` the third `text:p` (headings are not paragraphs here). `ref` is the
 element's percent-encoded declared name (`table[name=Data]`, `frame[name=Logo]`) or, when it has none, its
 index among tables or graphics (`table[2]`). `meta/title` and `meta/language` name the

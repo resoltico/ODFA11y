@@ -40,13 +40,17 @@ def test_the_notice_names_every_bundled_file_and_its_source() -> None:
     recorded = tomllib.loads((SCHEMAS / "PROVENANCE.toml").read_text(encoding="utf-8"))
     assert recorded
     for name, entry in recorded.items():
-        assert name in NOTICE
-        assert entry["url"].rsplit("/", 1)[0] in NOTICE
+        if name.startswith("mathml/"):
+            text = (SCHEMAS / "mathml/NOTICE.txt").read_text()
+            assert "W3C Software Notice and License (2002-12-31)" in text
+        else:
+            assert name in NOTICE
+            assert entry["url"].rsplit("/", 1)[0] in NOTICE
 
 
 def test_the_package_declares_the_third_party_terms_in_its_metadata() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    assert project["license"] == "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice"
+    assert project["license"] == "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
     assert "src/odfa11y/odf/schemas/NOTICE.txt" in project["license-files"]
     assert "LICENSE" in project["license-files"]
 

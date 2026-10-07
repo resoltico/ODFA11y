@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import itertools
+import shutil
 import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -46,16 +47,18 @@ def test_bundled_schemas_match_their_recorded_digests_and_cover_every_version() 
         assert f"OpenDocument-v{version}-schema.rng" in recorded
         assert f"OpenDocument-v{version}-manifest-schema.rng" in recorded
     assert all(
-        entry["url"].startswith("https://docs.oasis-open.org/") for entry in recorded.values()
+        entry["url"].startswith((
+            "https://docs.oasis-open.org/",
+            "https://www.w3.org/Math/RelaxNG/mathml3/",
+        ))
+        for entry in recorded.values()
     )
 
 
 def test_a_tampered_schema_is_detected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     directory = tmp_path / "schemas"
-    directory.mkdir()
     original = Path(module.SCHEMA_DIRECTORY)
-    for item in original.iterdir():
-        (directory / item.name).write_bytes(item.read_bytes())
+    shutil.copytree(original, directory)
     target = directory / "OpenDocument-v1.4-schema.rng"
     target.write_bytes(target.read_bytes() + b"<!-- tampered -->")
     monkeypatch.setattr(module, "SCHEMA_DIRECTORY", directory)
@@ -65,7 +68,10 @@ def test_a_tampered_schema_is_detected(tmp_path: Path, monkeypatch: pytest.Monke
 
 def test_provenance_file_is_valid_toml_with_one_entry_per_schema() -> None:
     text = (Path(__file__).parents[1] / "src/odfa11y/odf/schemas/PROVENANCE.toml").read_text()
-    assert len(tomllib.loads(text)) == 2 * len(SUPPORTED_VERSIONS)
+    directory = Path(module.SCHEMA_DIRECTORY)
+    assert set(tomllib.loads(text)) == {
+        path.relative_to(directory).as_posix() for path in directory.rglob("*.rng")
+    }
 
 
 @pytest.mark.parametrize("version", SUPPORTED_VERSIONS)

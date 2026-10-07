@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING
 
 from odfa11y.odf import Family
 
+from .chart import ADAPTER as CHART_ADAPTER
+from .database import ADAPTER as DATABASE_ADAPTER
 from .drawing import ADAPTER as DRAWING_ADAPTER
+from .formula import ADAPTER as FORMULA_ADAPTER
 from .generic import GENERIC
+from .image import ADAPTER as IMAGE_ADAPTER
 from .presentation import ADAPTER as PRESENTATION_ADAPTER
 from .spreadsheet import ADAPTER as SPREADSHEET_ADAPTER
 from .text import ADAPTER as TEXT_ADAPTER
@@ -21,6 +25,10 @@ if TYPE_CHECKING:
 
 REGISTRY: dict[Family, FamilyAdapter] = {
     Family.TEXT: TEXT_ADAPTER,
+    Family.DATABASE: DATABASE_ADAPTER,
+    Family.IMAGE: IMAGE_ADAPTER,
+    Family.CHART: CHART_ADAPTER,
+    Family.FORMULA: FORMULA_ADAPTER,
     Family.PRESENTATION: PRESENTATION_ADAPTER,
     Family.GRAPHICS: DRAWING_ADAPTER,
     Family.SPREADSHEET: SPREADSHEET_ADAPTER,

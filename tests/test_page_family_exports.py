@@ -50,7 +50,9 @@ def test_native_family_corpus_matches_provenance_and_validates() -> None:
     manifest = tomllib.loads((CORPUS / "manifest.toml").read_text())
     assert manifest["producer"] == "LibreOffice 26.8.0.3"
     expected = {f"fruit-{family}{suffix}" for family, (suffix, _) in FAMILIES.items()}
-    assert {entry["file"] for entry in manifest["documents"]} == expected
+    assert {
+        entry["file"] for entry in manifest["documents"] if entry["family"] in FAMILIES
+    } == expected
     for entry in manifest["documents"]:
         source = CORPUS / entry["file"]
         assert hashlib.sha256(source.read_bytes()).hexdigest() == entry["sha256"]

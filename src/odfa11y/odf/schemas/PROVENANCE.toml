@@ -15,3 +15,27 @@ sha256 = "4034ec6be29205d5fc1ee5f42468ac6ef824287b3aba6d9289032af4fafbda7f"
 ["OpenDocument-v1.4-manifest-schema.rng"]
 url = "https://docs.oasis-open.org/office/OpenDocument/v1.4/os/schemas/OpenDocument-v1.4-manifest-schema.rng"
 sha256 = "f96e1fe95f4e3609717a307c28e2fe0654c890fe70ea03eb8a53caa20b684782"
+
+# MathML 3.0 normative grammar, W3C Software Notice and License (2002-12-31).
+# Archive: https://www.w3.org/Math/RelaxNG/mathml3-relaxng.zip
+# Archive SHA256: 1ea59a8d772702f88a6e7d3adf4f15128bb1ae184d4e93cd6846f3675ddc28a4
+
+["mathml/mathml3-common.rng"]
+url = "https://www.w3.org/Math/RelaxNG/mathml3/mathml3-common.rng"
+sha256 = "f50511995a6035177a6a1d368fffaf621f4124e31b78871d96464bc6c1a6ff5a"
+
+["mathml/mathml3-content.rng"]
+url = "https://www.w3.org/Math/RelaxNG/mathml3/mathml3-content.rng"
+sha256 = "e8e57dd905da190967fafcef83bdcd57da0f3abefe9b55db8bb117c3c7c77b3b"
+
+["mathml/mathml3-presentation.rng"]
+url = "https://www.w3.org/Math/RelaxNG/mathml3/mathml3-presentation.rng"
+sha256 = "fa6f07d60eca2ca82f3b1beba4ccdc13875766d963383ec6b070e113459bf626"
+
+["mathml/mathml3-strict-content.rng"]
+url = "https://www.w3.org/Math/RelaxNG/mathml3/mathml3-strict-content.rng"
+sha256 = "15685143a185d8ad1ca0025b2b1b5ea4df76afd5260becaa6f84a9398e0cef95"
+
+["mathml/mathml3.rng"]
+url = "https://www.w3.org/Math/RelaxNG/mathml3/mathml3.rng"
+sha256 = "333ebedf134a0f4579632b52d0555cbb66e62f0e23b7b5a6874ac42f2daa3ee4"

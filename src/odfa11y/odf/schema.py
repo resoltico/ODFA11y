@@ -17,7 +17,8 @@ from lxml import etree
 from odfa11y.errors import XmlParseError
 
 from .detect import declared_version
-from .namespaces import is_office_element, qn
+from .kinds import Family
+from .namespaces import NS, is_office_element, qn
 from .storage import Part
 
 if TYPE_CHECKING:
@@ -85,9 +86,9 @@ def _validator(version: str, *, manifest: bool) -> etree.RelaxNG:
 def validate(document: OdfDocument) -> SchemaResult:
     """Validate every part against the schema for the declared version.
 
-    Violations carry no line numbers or paths, so they can be compared across edits. A part
-    whose root is not an office document root (a formula's MathML) has no schema here and
-    is skipped.
+    Violations carry no line numbers or paths, so they can be compared across edits. ODF
+    parts use their declared bundled version; native and embedded MathML content uses the
+    normative W3C MathML 3.0 grammar. Unsupported other foreign roots are not validated.
 
     Returns
     -------
@@ -109,13 +110,35 @@ def validate(document: OdfDocument) -> SchemaResult:
             tree = document.tree(part)
         except XmlParseError:
             continue  # not well-formed: reported separately, nothing to validate
-        manifest = part is Part.MANIFEST
-        if not manifest and not is_office_element(tree.getroot()):
-            continue
-        validator = _validator(version, manifest=manifest)
-        if not validator.validate(tree):
-            violations[member] = tuple(_violation(tree, error) for error in validator.error_log)
+        errors = []
+        for validator, content in _models(document, part, tree, version):
+            if not validator.validate(content):
+                errors.extend(_violation(tree, error) for error in validator.error_log)
+        if errors:
+            violations[member] = tuple(errors)
     return SchemaResult(version=version, available=True, violations=violations)
+
+
+@cache
+def _math_validator() -> etree.RelaxNG:
+    return etree.RelaxNG(etree.parse(str(SCHEMA_DIRECTORY / "mathml/mathml3.rng")))
+
+
+def _models(
+    document: OdfDocument, part: Part, tree: etree._ElementTree, version: str
+) -> list[tuple[etree.RelaxNG, etree._Element | etree._ElementTree]]:
+    models = []
+    office = is_office_element(tree.getroot())
+    if part is Part.MANIFEST or office:
+        models.append((_validator(version, manifest=part is Part.MANIFEST), tree))
+    if part is Part.CONTENT:
+        roots = list(tree.iter(f"{{{NS['math']}}}math"))
+        if not office and document.kind is not None and document.kind.family is Family.FORMULA:
+            roots = [tree.getroot()]
+        if roots:
+            validator = _math_validator()
+            models.extend((validator, root) for root in roots)
+    return models
 
 
 def regressions(before: SchemaResult, after: SchemaResult) -> dict[str, tuple[str, ...]]:

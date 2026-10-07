@@ -240,3 +240,45 @@ built-in `PDF010` check rejects it solely because it has no extractable text. Th
 must require readable text **or a reachable described Figure**, keeping errors for missing
 tagging, missing alternatives and blank/unreadable output. Verify an independent compliant
 native positive case and undescribed/empty negative cases; do not suppress the finding.
+
+Native Base QA produced a schema-valid standard ODF 1.4 database with invented embedded
+Firebird data and no metadata/styles parts. Metadata remediation must create the standard
+optional metadata part when explicitly requested, using the declared supported version and
+adding one manifest entry. Preflight conflicting/duplicate manifest declarations before any
+mutation; never overwrite a resource. Apply the same standard operation to package families
+and retain flat metadata creation. This is ordinary part creation, not a compatibility shim.
+Embedded database bytes, settings, connections, SQL and bindings remain protected; source
+assurance never opens the connection. A separate producer-output case containing queries
+has native schema defects and remains a negative/non-regression fixture rather than a false
+clean baseline.
+
+Normative chart-model inspection rejects another proposed shortcut: `chart:chart` has
+visible chart-title elements but no `svg:desc` slot. A standalone chart's explicit
+nonvisual alternative is its document description, through the existing `[document]`
+operation. Reuse that contract instead of inventing an invalid chart-body field or a
+second spelling for metadata. Chart audits still check series, local data ranges and labels;
+all body data, types, values and references remain protected. No standalone native export
+filter is introduced. Native formula content is a packaged MathML root; flat office-body
+formula wrappers are not an ODF content model and are rejected, not normalized.
+
+Separate implementation QA found additional counterexamples and revised the affected
+contracts before building the fixes: unresolved SVG XML content fails inspection, while
+active/external SVG declarations require review; empty MathML tokens/containers do not
+establish expression presence; cached chart category/value cardinalities and value types
+need consistency checks without expanding repeats. Base fingerprints omit precisely all
+editable descendant descriptions so a parent/child plan remains idempotent; flat Base
+protects its settings subtree rather than treating the whole flat document as settings.
+SQL and settings mutation controls still reject publication. SARIF source confinement
+preflights before exports or diff outputs, and execution diagnostics stay private.
+
+The app version now has one declared authority, `[project].version` in `pyproject.toml`.
+Runtime reporting derives installed metadata. Release validation independently reads the
+project declaration, and isolated-wheel QA compares all three values; stale installed
+metadata cannot authorize a tag. Published version records remain historical outcomes.
+
+MathML presence QA preserves legitimate empty collection constructors and quoted empty
+strings, as well as explicitly defined content symbols. It rejects empty presentation
+placeholders and annotation/phantom-only content. Base recognizes standard server
+declarations and reviews nonblank authentication settings without reporting their values;
+boolean requirement flags are not credentials. These checks do not inspect opaque storage
+for secrets and do not replace the native human review.

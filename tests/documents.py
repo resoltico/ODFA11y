@@ -16,6 +16,7 @@ NAMESPACES = (
     'xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" '
     'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
     'xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" '
+    'xmlns:db="urn:oasis:names:tc:opendocument:xmlns:database:1.0" '
     'xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" '
     'xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" '
     'xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" '
@@ -93,14 +94,26 @@ KIND_SPECS = {
             "presentation",
             master=True,
         ),
-        KindSpec("image", OASIS + "image", ".odi", "<office:image/>", "image", schema_valid=False),
+        KindSpec(
+            "image",
+            OASIS + "image",
+            ".odi",
+            '<office:image><draw:frame draw:name="Picture"><draw:image>'
+            "<office:binary-data>"
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC"
+            "</office:binary-data></draw:image>"
+            "<svg:title>Synthetic graphic</svg:title></draw:frame></office:image>",
+            "image",
+        ),
         KindSpec(
             "database",
             OASIS + "base",
             ".odb",
-            "<office:database/>",
+            "<office:database><db:data-source><db:connection-data>"
+            '<db:connection-resource xlink:type="simple" '
+            'xlink:href="sdbc:postgresql:example.invalid"/>'
+            "</db:connection-data></db:data-source></office:database>",
             "database",
-            schema_valid=False,
         ),
     )
 }

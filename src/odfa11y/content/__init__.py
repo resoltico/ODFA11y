@@ -21,6 +21,7 @@ from .resources import local_resource_path
 from .tables import (
     AXES,
     axis_count,
+    cell_at,
     declarations,
     header_count,
     repeated,
@@ -40,6 +41,7 @@ __all__ = [
     "PageDecision",
     "PageEditor",
     "axis_count",
+    "cell_at",
     "declarations",
     "graphic_descriptions",
     "graphic_keys",

@@ -4,6 +4,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-07
+
 ### Breaking
 
 - **Plans and Python operations.** Graphic descriptions use `[text.graphics]` and
@@ -14,6 +16,8 @@ Notable changes to this project are documented in this file. The format is based
 - **Finding locations.** Reports are format 4. Named targets use percent-encoded
   `[name=…]`, heading XML identities use `[id=…]`, and unnamed targets use plain ordinals
   such as `table[2]`. Update consumers to the grammar in [Rules](docs/RULES.md#locations).
+- **Document metadata.** Supplied titles and descriptions must be nonblank. Omit fields
+  to preserve existing metadata; clear metadata in the native application when intended.
 - **Base media types.** Retired `application/vnd.oasis.opendocument.database` and
   `application/vnd.sun.xml.base` aliases are rejected. The standard Base media type is
   `application/vnd.oasis.opendocument.base`.
@@ -30,6 +34,18 @@ Notable changes to this project are documented in this file. The format is based
   splits fail without publication. Writer exports corrected heading roles. Its current
   header-column export omits PDF `TH`; strict PDF gates continue to reject that omission,
   even when veraPDF reports compliance.
+
+- **Formula, Chart, Image and Base source semantics.** Supplied alternatives and object
+  descriptions preserve mathematical expressions, chart data, images, SQL, bindings and
+  opaque storage. Normative MathML 3 schemas are bundled under the W3C license. Optional
+  native metadata parts can be created explicitly. Math tagging failures remain visible;
+  Chart, Image and Base have no PDF export contract, and required production stages fail.
+- **Batch workflows.** Strict manifests run independent items with atomic evidence and
+  aggregate status. Failures continue; graceful interruption retains completed bundles
+  and marks pending work. Forced termination leaves an incomplete running summary.
+- **SARIF 2.1.0.** Audit and comparison reports expose registered rules and logical
+  locations through explicit, confined source identities. Arbitrary source diagnostics
+  and metadata are excluded to protect privacy; see [SARIF](docs/SARIF.md).
 
 ### Fixed
 
@@ -49,6 +65,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Internal
 
+- **Version authority.** `pyproject.toml` declares the app version. Installed reporting and
+  release validation derive from it, with isolated wheel checks.
 - **Gate efficiency.** PR checks no longer duplicate branch-push checks; main, version-tag
   and manual runs remain authoritative. Integration uses two isolated workers with crash
   restarts disabled; unit coverage remains sequential. Coverage append and all generated

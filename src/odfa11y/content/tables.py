@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import RemediationError
@@ -19,6 +20,7 @@ AXES = {
     "rows": ("table-row", "table-header-rows", "number-rows-repeated"),
     "columns": ("table-column", "table-header-columns", "number-columns-repeated"),
 }
+POSITIVE_INTEGER = re.compile(r"\+?[0-9]+")
 
 
 def repeated(node: etree._Element, attribute: str) -> int:
@@ -36,10 +38,14 @@ def repeated(node: etree._Element, attribute: str) -> int:
 
     """
     value = node.get(qn("table", attribute), "1")
-    if not value.isdecimal() or int(value) < 1:
-        msg = f"Invalid table {attribute}: {value!r}"
+    try:
+        count = int(value) if POSITIVE_INTEGER.fullmatch(value) else 0
+    except ValueError:
+        count = 0
+    if count < 1:
+        msg = f"Invalid or uninspectable table {attribute} count."
         raise RemediationError(msg)
-    return int(value)
+    return count
 
 
 def declarations(table: etree._Element, axis: str) -> list[etree._Element]:
@@ -70,6 +76,36 @@ def axis_count(table: etree._Element, axis: str) -> int:
 
     """
     return sum(repeated(node, AXES[axis][2]) for node in declarations(table, axis))
+
+
+def cell_at(table: etree._Element, row: int, column: int) -> etree._Element | None:
+    """Resolve one positive logical cell coordinate without expanding repeated declarations.
+
+    Returns
+    -------
+    etree._Element | None
+        The cell at that coordinate, including a covered cell, or None outside the grid.
+
+    """
+    if row < 1 or column < 1:
+        return None
+    position = 1
+    for declaration in declarations(table, "rows"):
+        count = repeated(declaration, "number-rows-repeated")
+        if position <= row < position + count:
+            return _column_cell(declaration, column)
+        position += count
+    return None
+
+
+def _column_cell(row: etree._Element, column: int) -> etree._Element | None:
+    position = 1
+    for cell in select_elements(row, "./table:table-cell | ./table:covered-table-cell"):
+        count = repeated(cell, "number-columns-repeated")
+        if position <= column < position + count:
+            return cell
+        position += count
+    return None
 
 
 def header_count(table: etree._Element, axis: str) -> int:

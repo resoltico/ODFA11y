@@ -8,7 +8,7 @@ what will change. Run `odfa11y template original.odt` to print a commented start
 the decisions an audit leaves open.
 
 The file has two common tables, `[document]` and `[fidelity]`, and one table per document
-family (`[text]`, `[spreadsheet]`, `[presentation]`, `[drawing]`). The drawing adapter
+family (`[text]`, `[spreadsheet]`, `[presentation]`, `[drawing]`, `[formula]`, `[image]`, `[database]`); Chart uses only the common `[document]` table. The drawing adapter
 serves the standard's graphics family. A family table is read by that
 family's adapter and applies only to documents of that family: configuring `[text]` for a
 spreadsheet, or `[spreadsheet]` for a text document, is an error that stops the run before
@@ -70,7 +70,7 @@ A test extracts this block and loads it through the real reader.
 | --- | --- | --- |
 | `document.odf_version` | `"1.3"` or `"1.4"` (versions with a bundled schema). | The declared version is kept. |
 | `document.title` | Nonblank string; stripped before use. | Existing title kept. |
-| `document.description` | String; stripped before use. An empty string clears it. | Existing description kept. |
+| `document.description` | Nonblank string; stripped before use. | Existing description kept. |
 | `document.language` | Language tag such as `"en-GB"`; sets metadata and, for families that keep a default language in their styles, that default too. | Existing languages kept. |
 | `text.remediation.linkify_plain_addresses` | Boolean. | `false`. |
 | `text.remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
@@ -85,6 +85,9 @@ A test extracts this block and loads it through the real reader.
 | `spreadsheet.graphics.KEY.title`, `.description`, `.fingerprint` | As for `text.graphics`, addressing frames in sheets. | See `text.graphics`. |
 | `presentation.pages."PAGE"`, `drawing.pages."PAGE"` | Structured entry with optional string `title`, `description`, `fingerprint`, and `navigation = ["shape-id", …]`. | Existing metadata/order kept. |
 | `presentation.graphics.KEY`, `drawing.graphics.KEY` | As for `text.graphics`, including vector shapes. | Existing descriptions kept. |
+| `formula.alternative`, `formula.fingerprint` | Nonblank spoken alternative and optional reviewed expression digest. | Native MathML `alttext` kept. |
+| `image.graphics.KEY` | As for `text.graphics`, addressing the standalone image frame. | Existing descriptions kept. |
+| `database.descriptions."TARGET"` | `{ text = "…", fingerprint = "…" }`, addressing the exact report target. Ordinal targets require the fingerprint. | Existing object descriptions kept. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
 | `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
@@ -190,3 +193,25 @@ operation fails, so an author's style is never overwritten or reinterpreted. Use
 Every operation reports `applied`, `unchanged` or `failed`. A second run over the result
 reports everything `unchanged` and writes identical members. `remediate --dry-run` shows
 the outcomes without writing.
+
+## Formula, Chart, Image and Base
+
+Formula decisions edit native MathML `alttext` and language, preserving the expression and
+StarMath annotation. The bundled normative MathML 3 grammar validates native expressions;
+an invented flat `office:formula` wrapper is rejected. Math's native PDF export currently
+lacks required tags, so source success does not establish PDF/UA conformance.
+
+Chart alternatives use `[document].description`, and identifying titles use
+`[document].title`. There is no separate chart plan or visible title rewrite. Data, series,
+ranges, formulas and labels remain protected. External data providers are reported and
+never fetched. Image descriptions use `[image.graphics]`; malformed payloads fail and
+active/external SVG declarations need review. Standard image media types remain deprecated.
+
+Base plans use `[database.descriptions."content/query[name=Example]"]` with nonblank
+`text` and a reviewed `fingerprint`. Declared objects use standard `db:description` or
+form control `form:title`. SQL, bindings, settings and opaque database/form/report bytes
+remain protected. Connections, queries and macros are never executed. Chart, Image and
+Base have no native PDF export contract; `production` fails at that assurance boundary.
+
+When native packages omit optional `meta.xml`, explicit document metadata creates the
+standard part and its manifest entry, using the declared supported ODF version.

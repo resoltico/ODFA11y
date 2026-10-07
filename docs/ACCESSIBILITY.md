@@ -8,10 +8,10 @@ implemented checks found no errors; it is not an accessibility certificate.
 
 | Layer | Evidence provided | What still needs review |
 | --- | --- | --- |
-| ODF audit | Package/XML readability, document kind, version consistency, metadata; for text documents and spreadsheets also selected semantic properties; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, sheet names, links and descriptions convey the intended meaning. |
+| ODF audit | Package/XML readability, document kind, version consistency, metadata; selected semantic properties for all eight families; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, sheet names, links and descriptions convey the intended meaning. |
 | ODF remediation | Explicit, typed changes with per-target outcomes; unchanged content; no new ODF schema violations. | Whether the choices were right, and the visual result. |
 | LibreOffice export | A PDF produced with the requested PDF/UA and tagging options. | Whether this exporter and version produced correct accessible structure. |
-| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page and a description (`/Contents` or the element's `/Alt`), that marked content on each page and the structure tree's references to it correspond and that no text is shown outside tagged content and artifacts, extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
+| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page and a description (`/Contents` or the element's `/Alt`), that marked content on each page and the structure tree's references to it correspond and that no text is shown outside tagged content and artifacts, extractable text or described inspected graphical content. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
 | veraPDF | Machine-verifiable PDF/UA-1 rules, each failure with its clause and test number. | Human checkpoints and the actual reading experience. |
 | Fidelity comparison | Source and candidate renders agree on pages, text, links and rendered ink under the policy. | Whether an intended change looks right. |
 
@@ -55,14 +55,12 @@ runtimes, rather than accepting older exporter behavior.
 ## Document families
 
 Every ODF kind is recognised from its declared media type, as a package or as flat XML,
-and gets the common checks. Semantic audit and remediation exist per family; today text
-documents (`.odt`, templates, master and web documents) and spreadsheets (`.ods`, `.ots`,
-`.fods`) have them. For any other family the audit says so with `ODF009`, only the common
-`[document]` decisions apply, a plan for another family's table is refused, and PDF export,
-PDF checks and fidelity comparison are `not-applicable` in the pipeline (the `production`
-profile fails instead, because it requires PDF validation). A document of a recognised kind
-therefore never receives rules that belong to another family, and silence about a family is
-never a pass.
+and gets the common checks. Semantic audit and explicit remediation exist for all eight families. Text, spreadsheet,
+presentation and drawing have native PDF filters. Formula has native MathML semantics,
+but its current PDF export lacks required tagging and fails assurance. Chart, Image and
+Base support source inspection/remediation only: required production PDF stages fail.
+Base never opens connections, executes SQL or runs macros. Source correctness does not
+certify embedded opaque documents or database storage. See [configuration](CONFIGURATION.md).
 
 ### Spreadsheets
 
@@ -110,7 +108,7 @@ cannot hide an equal one introduced elsewhere, while edits elsewhere do not make
 violation look new. libxml2 reports only the first error of a failing content model, so a
 second error inside an element that already failed is outside what this gate can see;
 violations it cannot locate are compared by count and reported as unlocated. Formula
-documents, whose content is MathML, have no schema here and are not validated.
+documents validate native expressions against the bundled normative W3C MathML 3 grammar.
 `document.odf_version` relabels the package; the result must still validate for the new
 version. A relabelled or untouched document is "no new violations", never "ODF-conformant".
 

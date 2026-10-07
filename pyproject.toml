@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "odfa11y"
-version = "0.4.0"
-description = "Recognise and check every OpenDocument kind; audit, remediate and export text documents and spreadsheets as PDF/UA with evidence"
+version = "0.5.0"
+description = "Audit and explicitly remediate OpenDocument families; verify supported PDF/UA exports with evidence"
 readme = "README.md"
 requires-python = ">=3.14"
-# The project is MPL-2.0; the bundled OASIS ODF schemas carry OASIS's own notice (see NOTICE.txt).
-license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice"
-license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt"]
+# Code uses MPL-2.0; bundled ODF and MathML grammars retain OASIS and W3C notices.
+license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
+license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt"]
 authors = [
   { name = "Ervins Strauhmanis" }
 ]

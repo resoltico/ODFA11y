@@ -11,7 +11,7 @@ from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.families import adapter_for
-from odfa11y.odf import NS, Part, qn
+from odfa11y.odf import NS, Part, ensure_metadata_part, qn
 
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
@@ -35,6 +35,15 @@ class SetMetadata(Operation):
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         outcomes = []
+        for key, value in (
+            ("title", self.title),
+            ("description", self.description),
+            ("language", self.language),
+        ):
+            if value is not None and not isinstance(value, str):
+                return (
+                    Outcome(self.name, Status.FAILED, f"Document {key} must be a string.", key=key),
+                )
         blank = [
             key
             for key, value in (("title", self.title), ("description", self.description))
@@ -43,14 +52,21 @@ class SetMetadata(Operation):
         if blank:
             message = f"Document {' and '.join(blank)} must not be blank."
             return (Outcome(self.name, Status.FAILED, message, key=blank[0]),)
+        language = self.language.strip().replace("_", "-") if self.language is not None else None
+        if language is not None and not LANGUAGE_TAG_RE.fullmatch(language):
+            return (
+                Outcome(
+                    self.name, Status.FAILED, f"Invalid language tag: {language!r}", key="language"
+                ),
+            )
         for key, tag, value in (
             ("title", qn("dc", "title"), self.title),
             ("description", qn("dc", "description"), self.description),
         ):
             if value is not None:
                 outcomes.append(self._text(document, key, tag, value.strip()))
-        if self.language is not None:
-            outcomes.append(self._language(document, self.language.strip()))
+        if language is not None:
+            outcomes.append(self._language(document, language))
         return tuple(outcomes)
 
     def _text(self, document: OdfDocument, key: str, tag: str, value: str) -> Outcome:
@@ -61,11 +77,6 @@ class SetMetadata(Operation):
         return Outcome(self.name, Status.APPLIED, f"Set document {key}.", key=key, count=1)
 
     def _language(self, document: OdfDocument, tag: str) -> Outcome:
-        tag = tag.replace("_", "-")  # accept the POSIX spelling of a BCP 47 tag
-        if not LANGUAGE_TAG_RE.fullmatch(tag):
-            return Outcome(
-                self.name, Status.FAILED, f"Invalid language tag: {tag!r}", key="language"
-            )
         adapter = adapter_for(document.kind)
         node = _meta_node(document, qn("dc", "language"))
         meta_changed = node is None or (node.text or "") != tag
@@ -86,6 +97,7 @@ def _meta_node(document: OdfDocument, tag: str) -> etree._Element | None:
 
 
 def _ensure_meta_node(document: OdfDocument, tag: str) -> etree._Element:
+    ensure_metadata_part(document)
     meta = document.edit(Part.META)
     office_meta = meta.find("office:meta", NS)
     if office_meta is None:

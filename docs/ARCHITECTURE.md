@@ -43,6 +43,7 @@ flowchart LR
 | `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
 | `families.spreadsheet` | Everything specific to spreadsheets: audit rules, operations, snapshot, plan table. |
 | `families` | The registry: which adapter serves which kind; the generic adapter for the rest. |
+| `batch` | Strict manifests and independent pipelines with atomic aggregate evidence. |
 | `audit` | The read-only audit engine: common checks, then the family's. |
 | `remediation` | The executor and the operations common to every family. |
 | `pdf` | LibreOffice export, structural PDF audit, link correlation, veraPDF. |
@@ -94,7 +95,7 @@ if LibreOffice can export it to PDF, the export filter. Kinds without an impleme
 the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
 audit exists, and the body text must not change.
 
-Four families are implemented, and none imports another:
+Eight families are implemented, and none imports another:
 
 - `text` (text, templates, master and web documents) owns the `TXT` rules, explicit semantic operations
   and the `[text]` configuration table.
@@ -114,6 +115,14 @@ Four families are implemented, and none imports another:
   and complete navigation lists. Their native Impress/Draw filters are independently tested
   through production assurance with real standard-ODF 1.4 fixtures.
 
+
+- `formula` owns native MathML alternative/language decisions and `MATH` rules. Formal
+  expressions use the bundled normative W3C grammar. `math_pdf_Export` is measured and
+  currently fails PDF tagging; no success is inferred from a valid source.
+- `chart`, `image` and `database` own `CHART`, `IMAGE` and `BASE` source audits. Their
+  snapshots protect data, geometry, SQL, bindings and settings; opaque resources are
+  protected by the executor. They expose no PDF filter. Chart uses common document
+  metadata; Image binds the shared graphic editor; Base describes declarations offline.
 
 ### Adding a family
 
