@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "odfa11y"
 dynamic = ["version"]
-description = "Audit, remediate and verify ODF Writer documents for accessible PDF/UA, with evidence"
+description = "Audit, remediate and verify OpenDocument files for accessible PDF/UA, with evidence"
 readme = "README.md"
 requires-python = ">=3.14"
 # The project is MPL-2.0; the bundled OASIS ODF schemas carry OASIS's own notice (see NOTICE.txt).
@@ -171,6 +171,8 @@ max-file-lines = 300
 "src/odfa11y/odf/flat.py" = ["no-self-use"]
 # Same reason for the ZIP layout.
 "src/odfa11y/odf/package.py" = ["no-self-use"]
+# The tests exercise the subprocess wrapper and name the exception it raises on timeout.
+"tests/test_external_tools.py" = ["suspicious-subprocess-import"]
 # pypdf has no public registration API for synthetic indirect structure objects.
 "tests/test_pdf_inspection.py" = ["private-member-access"]
 # Same reason: synthetic PDFs register indirect structure objects.

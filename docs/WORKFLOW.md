@@ -4,6 +4,13 @@ Use the locked environment from the [README](../README.md#start-here). Keep the
 original file: remediation refuses to write over its own source, and every command
 writes to a path you choose.
 
+The commands work on any OpenDocument file, a ZIP package (`.odt`, `.ods`, `.odp`, `.odg`,
+templates, …) or a flat XML file (`.fodt`, `.fods`, …); the file's declared media type, not
+its extension, decides what it is. Text documents get the full workflow below. Other kinds
+get the common checks (package, kind, version, metadata, schema), `audit` notes with
+`ODF009` that no semantic audit exists for their family yet, and the common `[document]`
+decisions can still be applied; see [Architecture](ARCHITECTURE.md#document-families).
+
 ## 1. Establish the baseline
 
 ```bash
@@ -15,7 +22,7 @@ An audit is read-only. Findings name a rule, a location and, where a configurati
 address them, a `remedy`: the key that holds the decision. `--schema` also validates
 every member against the bundled official ODF schema for the declared version
 (1.3 or 1.4); see [Accessibility and limits](ACCESSIBILITY.md#odf-schema-validation).
-Audit accepts several files and detects ODT or PDF by content, so
+Audit accepts several files and detects PDF by content, so
 `odfa11y audit a.odt b.pdf` reports both.
 
 Open the original in Writer and identify its intended heading hierarchy, language,
@@ -28,8 +35,11 @@ decisions cannot be inferred from appearance.
 uv run --no-sync odfa11y template original.odt > document.toml
 ```
 
-The template lists the open decisions with every line commented out. Uncomment and
-complete only what you have decided; see [Configuration](CONFIGURATION.md). Then:
+The template lists the open decisions with every line commented out, including the
+fingerprint of each object it suggests. Uncomment and complete only what you have decided;
+see [Configuration](CONFIGURATION.md). The template refuses a document it cannot read well
+enough to plan (blocking findings on stderr, status 2) rather than printing an empty plan.
+Then:
 
 ```bash
 uv run --no-sync odfa11y remediate original.odt reviewed.odt --config document.toml --dry-run
@@ -40,7 +50,8 @@ Each target reports `applied`, `unchanged` or `failed`. Any failure (a table or 
 that does not exist, a header count that conflicts, an invalid language) aborts the run
 and writes nothing. Before publishing, the executor also checks that visible text is
 unchanged (apart from counted spacer removals) and that the ODF schema shows no
-violation the source did not already have. Publication is atomic.
+violation the source did not already have. A plan written for another family (a `[text]`
+table applied to a spreadsheet) is refused outright. Publication is atomic.
 
 ## 3. Export and check the PDF
 
@@ -51,6 +62,8 @@ uv run --no-sync odfa11y export reviewed.odt reviewed.pdf
 uv run --no-sync odfa11y audit reviewed.pdf --strict
 uv run --no-sync odfa11y audit reviewed.pdf --verapdf --strict
 ```
+
+`--verapdf-path PATH` names the validator executable and implies `--verapdf`.
 
 The exporter uses a temporary LibreOffice profile, requests PDF/UA-1 and tagged PDF, and
 publishes the PDF atomically. The built-in PDF audit is a fast smoke test of metadata,
@@ -65,7 +78,7 @@ test number. If veraPDF cannot be found the report contains the warning `VERA000
 uv run --no-sync odfa11y compare original.odt reviewed.odt --diff-dir diffs
 ```
 
-Both documents are exported with the same LibreOffice and profile, then compared by page
+Both documents are exported (only families with a PDF export can be) with the same LibreOffice and profile, then compared by page
 count and size, text, links and rendered ink; see [Fidelity](FIDELITY.md). `compare`
 also takes two PDFs directly.
 
@@ -73,13 +86,24 @@ also takes two PDFs directly.
 
 ```bash
 uv run --no-sync odfa11y pipeline original.odt --config document.toml \
-  --output-dir evidence --verapdf --strict
+  --output-dir evidence --profile production
 uv run --no-sync odfa11y check-evidence evidence
 ```
 
-The pipeline runs the stages in order and stops at the first failed gate; later stages
-are recorded as skipped. The [evidence directory](EVIDENCE.md) is published whether the
-run passed or failed.
+An **assurance profile** names the stages a run requires and how strictly it gates; the
+effective profile is recorded in `run.json`.
+
+| Profile | Stages | Gating |
+| --- | --- | --- |
+| `inspect` | identify, audit, remediate, audit the result | warnings do not fail |
+| `verify` (default) | `inspect` plus export, PDF audit and fidelity comparison | warnings do not fail |
+| `production` | `verify` plus veraPDF, which must be available | warnings fail (strict) |
+
+The pipeline runs the stages in order and stops at the first failed gate; later stages are
+recorded as `skipped`. A stage the document's family does not have (PDF export for a family
+LibreOffice export is not defined for) is `not-applicable`, which is not a failure. The
+[evidence directory](EVIDENCE.md) is published whether the run passed or failed, even when
+the source cannot be read.
 
 ## Exit statuses
 
@@ -87,7 +111,7 @@ run passed or failed.
 | --- | --- |
 | `0` | Success; warnings are allowed without `--strict`. |
 | `1` | A report has warnings and `--strict` was supplied. |
-| `2` | A report has errors (also argparse's status for invalid arguments), or `check-evidence` found problems. |
+| `2` | A report has errors (also argparse's status for invalid arguments), `template` could not read the document, or `check-evidence` found problems. |
 | `3` | An execution failure: invalid configuration, failed remediation, missing or failing external tool, unreadable input. The message is on stderr. |
 
 For several reports the highest status wins. Informational findings never fail a command.

@@ -18,6 +18,7 @@ from odfa11y.families.text import (
     HeaderRows,
     LinkifyAddresses,
     MarkHeaderRows,
+    RemoveEmptySpacers,
     SetAltText,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
@@ -159,6 +160,22 @@ def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path)
     result = remediate(broken, tmp_path / "out.odt", [SetMetadata(title="Still fine")])
     assert "pre-existing" in result.schema_check
     assert "(0 pre-existing)" not in result.schema_check
+
+
+def test_a_content_edit_beside_an_old_violation_does_not_count_as_a_regression(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", add_blank_body_paragraph=True)
+    package = PackageStorage(source)
+    package.write_member(
+        "content.xml",
+        package.read("content.xml").replace(b"</office:text>", b"<text:bogus/></office:text>"),
+    )
+    broken = tmp_path / "broken.odt"
+    package.save(broken)
+    result = remediate(broken, tmp_path / "out.odt", [RemoveEmptySpacers()])
+    assert result.changed
+    assert "1 pre-existing" in result.schema_check
 
 
 def test_an_operation_that_misreports_its_edits_is_an_internal_error(tmp_path: Path) -> None:

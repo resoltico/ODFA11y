@@ -6,7 +6,7 @@ and verification discipline.
 
 For bug reports, describe the command, expected result, actual result and relevant
 tool versions. Provide a small synthetic reproduction. Never upload customer
-ODT/PDF files, private reports, credentials or identifiable production content.
+ODF/PDF files, private reports, credentials or identifiable production content.
 Use [the security reporting route](SECURITY.md) for vulnerabilities.
 
 Keep changes focused on a concrete requirement or reproduced defect. Include a

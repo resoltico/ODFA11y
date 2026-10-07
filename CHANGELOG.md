@@ -4,6 +4,112 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+This release makes the ODF core independent of any document family: ODFA11y now recognises
+every kind of OpenDocument file, packaged or flat, and the text-document logic became the
+first *family* plug-in. It is a deliberate break from 0.2.0 with no compatibility layer; the
+configuration file, the report and evidence formats, the rule identifiers and the Python API
+all changed. Review the **Breaking** list before upgrading.
+
+### Breaking
+
+- **Python API.** `OdtDocument` is `OdfDocument` and `OdtPackage` is `PackageStorage` (a ZIP
+  package; `FlatXmlStorage` is its flat-XML sibling), `audit_odt` is `audit_odf`, and
+  `ODT_MIMETYPE` is gone. A document is read through logical parts
+  (`document.tree(Part.CONTENT)`), never member names. Everything specific to text moved to
+  `odfa11y.families.text`: the operations `LinkifyAddresses`, `RemoveEmptySpacers`,
+  `NormalizeSpacing`, `SetAltText`, `MarkHeaderRows`, their `AltText` and `HeaderRows`
+  parameters, and the text helpers formerly in `odfa11y.odf`. `Operation`, `Outcome` and
+  `Status` are in `odfa11y.adapter`; `odfa11y.remediation` keeps `remediate`, `SetMetadata`,
+  `SetOdfVersion` and `RemediationResult`. `export_pdfua` takes an `ExportSettings` (including
+  the family's PDF filter), `write_bundle` takes a `Redactor`, `PipelineOptions` selects a
+  `profile` instead of `verapdf`/`strict`, and `SchemaResult.violations` holds `Violation`
+  objects.
+- **Configuration.** Family decisions moved under the family's table: `[remediation]`,
+  `[table_headers]`, `[alt_text]` and `[spacing]` are now `[text.remediation]`,
+  `[text.table_headers]`, `[text.alt_text]` and `[text.spacing]`. A header entry may also be
+  `{ rows = N, fingerprint = "…" }`. `[document]` and `[fidelity]` are unchanged. A table for
+  another family, or for a family the document does not belong to, is an error.
+- **Rule identifiers.** Text rules are renamed `TXT…`: `SEM001`–`SEM005` → `TXT001`–`TXT005`,
+  `IMG001` → `TXT010`, `TBL001`/`TBL002` → `TXT020`/`TXT021`, `LNK001` → `TXT030`, `LAY001` →
+  `TXT040`, `STYLE001` → `TXT050`. `PKG001` (no declared media type) and `PKG002` (an optional
+  package member is missing) are now warnings with new meanings; `ODF004` compares the
+  manifest with the document's own media type. Remedies are the new config keys
+  (`text.alt_text`, …).
+- **Reports.** JSON reports are format 2: `kind` is `odf`, locations name the stored member
+  (`content.xml`, or `document` for flat XML), and `metadata` carries `document_kind`,
+  `media_type`, `layout`, `family` and `adapter`.
+- **Command line.** `pipeline` selects `--profile {inspect,verify,production}` (default
+  `verify`) and no longer takes `--verapdf` or `--strict`; `production` is the old
+  `--verapdf --strict`. `template` refuses a document it cannot read instead of printing an
+  empty plan, and `styles` is available only for families that define it.
+- **Evidence.** `run.json` is format 2 (`document` replaces `input`, plus `plan_sha256`,
+  `profile`, `fonts`, `libraries`, `environment`, `human_review`; stage `identify-source` and
+  status `not-applicable` are new). The remediated file keeps the source's extension
+  (`remediated.fodt`, not always `remediated.odt`). `check-evidence` treats the manifest as
+  untrusted and reports symbolic links and nested files it used to ignore.
+- **Generated styles.** `NormalizeSpacing` names its styles `A11ySpacing_<style>_<digest>`.
+  A style named that way is reused only when it is provably ODFA11y's own derivation; one made
+  by version 0.2 has no digest, so re-applying a plan to a 0.2 output is not recognised (apply
+  the plan to the original instead).
+
+### Added
+
+- **ODF family core.** Every OpenDocument kind is recognised from its declared media type,
+  packaged or as flat XML (`.fodt`, …): text, spreadsheet, presentation, graphics, formula,
+  chart, image and database, with templates, master and web documents and the deprecated and
+  legacy media types. New findings report an unrecognised media type (`ODF005`), a body that
+  contradicts it (`ODF006`), a misleading extension (`ODF007`), deprecated or legacy kinds
+  (`ODF008`), a family without semantic audit (`ODF009`) and a flat root that is not
+  `office:document` (`ODF010`). Packages need only a manifest and content: a missing
+  `mimetype`, `styles.xml` or `meta.xml` is a warning, not a rejection.
+- **Document families.** The text family is the first implementation of the adapter contract;
+  other families are served by the generic adapter (common checks, common `[document]`
+  decisions, an honest `ODF009`) until they get their own. A plan for the wrong family is
+  refused.
+- **Assurance profiles** for `pipeline`, recorded with their effective gates, and stages that
+  are `not-applicable` rather than skipped when a family has no PDF export.
+- **Plan fingerprints.** `template` prints a fingerprint for each graphic and table it
+  suggests; an entry carrying one fails when the object it addresses has drifted.
+- **PDF link correspondence.** Each link annotation must be referenced by a Link element on its
+  page (`PDF016`); `PDF017` reports a Link element that refers to no annotation and `PDF018` an
+  annotation mapped twice or from another page.
+- **Resource limits.** Tool output is captured only up to a size limit and a timed-out tool's
+  process tree is killed; PDFs above 256 MiB, 5,000 pages or 500,000 structure elements are
+  refused; flat XML is limited to 256 MiB.
+- Evidence records the document's kind, layout and adapter, the fonts of both PDFs and the
+  libraries and locale of the run.
+
+### Fixed
+
+- `check-evidence` followed absolute manifest names, `..` components and symbolic links out
+  of the bundle, and ignored every file named `manifest.json` wherever it lay.
+- Evidence leaked local paths: a failed LibreOffice run recorded its whole command line, and
+  even a successful run wrote the temporary working directory into the raw veraPDF report. All
+  textual evidence now passes through a redactor and failures record bounded, path-free
+  diagnostics.
+- The schema regression gate compared violation messages only, so a violation fixed in one
+  place hid an identical one introduced elsewhere. Violations are now identified by their
+  failing element.
+- The built-in PDF check passed a document when any one Link element existed, however many
+  link annotations lacked one.
+- `NormalizeSpacing` could reuse or reinterpret an author's style that happened to have its
+  generated name, and removed same-named styles; it now fails without touching them.
+- Two alt-text selectors addressing one graphic silently overwrote each other; selectors are
+  now resolved before any edit and conflicting assignments fail.
+- `template` reported success for an unreadable or nonexistent document; it now refuses.
+- `pipeline` could fail before publishing evidence when the source could not be read; it now
+  publishes a bundle naming the failed stage.
+- Setting the language created `office:styles` after the body in documents without one,
+  which the schema gate rejected.
+
+### Internal
+
+- Package boundaries (`odf` core, `adapter` contract, `families.<family>`, registry) enforced
+  by tach with families as nested modules, plus a quality gate that fails when core code names
+  a family's XML elements. A test registers a stand-in family through the registry alone.
+- Synthetic documents of every kind, as packages and flat XML, are tested for detection,
+  audit, schema validity and cross-family rejection.
+
 ## [0.2.0] - 2026-10-07
 
 This release is a deliberate break from 0.1.0 with no compatibility layer: the Python
