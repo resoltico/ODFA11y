@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, cast, override
 
 import pytest
+from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicDescription, protected_xml
 from odfa11y.errors import RemediationError
 from odfa11y.families.text import SetGraphicDescriptions
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
@@ -88,10 +89,29 @@ def test_protected_cell_value_change_is_rejected_even_without_changed_words(tmp_
     assert not destination.exists()
 
 
-def test_direct_graphic_api_rejects_nonstring_metadata_before_any_edit(tmp_path: Path) -> None:
+@pytest.mark.parametrize("value", [7, [], {}, False, b"bytes"])
+def test_direct_graphic_api_rejects_nonstring_metadata_before_any_edit(
+    tmp_path: Path, value: object
+) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
 
     doc = OdfDocument.open(source)
-    operation = SetGraphicDescriptions({"Logo": GraphicDescription(description=cast("str", 7))})
+    operation = SetGraphicDescriptions({"Logo": GraphicDescription(description=cast("str", value))})
     assert operation.apply(doc)[0].status is Status.FAILED
     assert doc.edit_count == 0
+
+
+def test_protected_xml_retains_qname_value_bindings_and_ignores_unused_metadata_bindings() -> None:
+    one = etree.fromstring(b'<root xmlns:of="urn:formula:one" formula="of:=SUM()"/>')
+    two = etree.fromstring(b'<root xmlns:of="urn:formula:two" formula="of:=SUM()"/>')
+    unused = etree.fromstring(
+        b'<root xmlns:of="urn:formula:one" xmlns:svg="urn:svg" formula="of:=SUM()"/>'
+    )
+    assert protected_xml(one) != protected_xml(two)
+    assert protected_xml(one) == protected_xml(unused)
+
+
+def test_inherited_attribute_value_bindings_are_protected() -> None:
+    one = etree.fromstring(b'<root xmlns:of="urn:formula:one"><sheet formula="of:=SUM()"/></root>')
+    two = etree.fromstring(b'<root xmlns:of="urn:formula:two"><sheet formula="of:=SUM()"/></root>')
+    assert protected_xml(one[0]) != protected_xml(two[0])

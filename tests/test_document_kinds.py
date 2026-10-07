@@ -38,7 +38,12 @@ def test_every_kind_is_detected_in_both_layouts(tmp_path: Path, name: str, layou
     assert document.detection.body_element == document.kind.body_element
 
 
-SEMANTIC_PREFIXES = {"text": "TXT", "spreadsheet": "SHEET"}
+SEMANTIC_PREFIXES = {
+    "text": "TXT",
+    "spreadsheet": "SHEET",
+    "presentation": "PRES",
+    "graphics": "DRAW",
+}
 
 
 @pytest.mark.parametrize(("name", "layout"), CASES)
@@ -51,7 +56,8 @@ def test_every_kind_audits_without_errors_and_only_its_own_family_has_semantic_r
     family = KIND_SPECS[name].family
     assert report.metadata["family"] == family
     has_adapter = family in SEMANTIC_PREFIXES
-    assert report.metadata["adapter"] == (family if has_adapter else "generic")
+    expected_adapter = "drawing" if family == "graphics" else family
+    assert report.metadata["adapter"] == (expected_adapter if has_adapter else "generic")
     assert ("ODF009" in ids(report)) is (not has_adapter)
     foreign = set(SEMANTIC_PREFIXES.values()) - {SEMANTIC_PREFIXES.get(family)}
     assert not {i for i in ids(report) if i.startswith(tuple(foreign))}
@@ -70,8 +76,10 @@ def test_the_registry_serves_each_implemented_family_and_everything_else_generic
     for kind in KINDS.values():
         adapter = adapter_for(kind)
         assert adapter is (adapter_for(kind))
-        if kind.family in {Family.TEXT, Family.SPREADSHEET}:
-            assert adapter.name == kind.family.value
+        if kind.family.value in SEMANTIC_PREFIXES:
+            assert adapter.name == (
+                "drawing" if kind.family is Family.GRAPHICS else kind.family.value
+            )
             assert adapter.family is kind.family
         else:
             assert adapter is GENERIC

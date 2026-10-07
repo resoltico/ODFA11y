@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from odfa11y.content import (
     axis_count,
     declarations,
-    frame_keys,
+    graphic_keys,
     graphics_fingerprint,
     header_count,
     repeated,
@@ -106,7 +106,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         selector = declared_name or href
-        addressed = [f for f in all_frames if selector in frame_keys(f)] if selector else [frame]
+        addressed = [f for f in all_frames if selector in graphic_keys(f)] if selector else [frame]
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.add(
                 rules.TXT010,

@@ -19,6 +19,13 @@ NS = {
     "xlink": "http://www.w3.org/1999/xlink",
     "dc": "http://purl.org/dc/elements/1.1/",
     "meta": "urn:oasis:names:tc:opendocument:xmlns:meta:1.0",
+    "chart": "urn:oasis:names:tc:opendocument:xmlns:chart:1.0",
+    "db": "urn:oasis:names:tc:opendocument:xmlns:database:1.0",
+    "form": "urn:oasis:names:tc:opendocument:xmlns:form:1.0",
+    "presentation": "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0",
+    "script": "urn:oasis:names:tc:opendocument:xmlns:script:1.0",
+    "dr3d": "urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0",
+    "math": "http://www.w3.org/1998/Math/MathML",
     "manifest": "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0",
 }
 

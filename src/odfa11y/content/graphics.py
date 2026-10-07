@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 from .tables import AXES, declarations, repeated
+from .xml import protected_xml
 
 MIN_CONFLICTING_VALUES = 2
 FIELDS = (("title", qn("svg", "title")), ("description", qn("svg", "desc")))
@@ -45,6 +45,7 @@ class GraphicEditor:
 
     entries: Mapping[str, GraphicDescription]
     name: str
+    shape_tags: tuple[str, ...] = (qn("draw", "frame"),)
 
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         """Preflight every graphic target, then edit description metadata.
@@ -55,16 +56,21 @@ class GraphicEditor:
             Per-target results, with no edit when any target fails.
 
         """
-        frames = select_elements(document.tree(Part.CONTENT), "//office:body//draw:frame")
+        tags = set(self.shape_tags)
+        frames = [
+            node
+            for node in select_elements(document.tree(Part.CONTENT), "//office:body//*")
+            if node.tag in tags
+        ]
         matched = {
-            key: [frame for frame in frames if key in frame_keys(frame)] for key in self.entries
+            key: [frame for frame in frames if key in graphic_keys(frame)] for key in self.entries
         }
         failures = self._preflight(document, matched)
         if failures:
             return failures
         outcomes = []
         for key, text in self.entries.items():
-            changed = sum(_set_text(document, frame, text) for frame in matched[key])
+            changed = sum(set_description(document, frame, text) for frame in matched[key])
             if changed:
                 message = f"Set accessible text on {changed} graphic frame(s)."
                 outcomes.append(Outcome(self.name, Status.APPLIED, message, key=key, count=changed))
@@ -116,7 +122,7 @@ class GraphicEditor:
             for frame in frames:
                 for label, _tag in FIELDS:
                     value = getattr(self.entries[key], label)
-                    if value is not None:
+                    if isinstance(value, str):
                         wanted.setdefault((id(frame), label), {}).setdefault(value, []).append(key)
         for (_frame, label), values in wanted.items():
             if len(values) < MIN_CONFLICTING_VALUES:
@@ -129,7 +135,7 @@ class GraphicEditor:
                 )
 
 
-def frame_keys(frame: etree._Element) -> set[str]:
+def graphic_keys(frame: etree._Element) -> set[str]:
     """List the selectors that address a graphic frame.
 
     Returns
@@ -147,7 +153,15 @@ def frame_keys(frame: etree._Element) -> set[str]:
     return keys
 
 
-def _set_text(document: OdfDocument, frame: etree._Element, text: GraphicDescription) -> bool:
+def set_description(document: OdfDocument, frame: etree._Element, text: GraphicDescription) -> bool:
+    """Edit supplied description fields in the standard order for the element.
+
+    Returns
+    -------
+    bool
+        Whether any description field changed.
+
+    """
     changed = False
     for label, tag in FIELDS:
         value = getattr(text, label)
@@ -187,6 +201,8 @@ def _accessibility_position(frame: etree._Element, tag: str) -> int:
         qn("draw", "contour-polygon"),
         qn("draw", "contour-path"),
     }
+    if frame.tag != qn("draw", "frame"):
+        return int(bool(children and children[0].tag == qn("office", "event-listeners")))
     last_content = max(
         (index for index, child in enumerate(children) if child.tag not in fixed), default=-1
     )
@@ -204,17 +220,16 @@ def graphics_fingerprint(document: OdfDocument, frames: list[etree._Element]) ->
     """
     facts = []
     for frame in frames:
-        copy = deepcopy(frame)
-        for node in select_elements(copy, ".//svg:title | .//svg:desc"):
-            parent = node.getparent()
-            if parent is not None:
-                parent.remove(node)
         payloads = []
         for node in select_elements(frame, ".//*[@xlink:href]"):
             href = node.get(qn("xlink", "href"), "").removeprefix("./")
             if document.storage.has(href):
                 payloads.append(hashlib.sha256(document.storage.read(href)).hexdigest())
-        facts.append([_position(frame), etree.tostring(copy, method="c14n").decode(), payloads])
+        facts.append([
+            _position(frame),
+            protected_xml(frame, omitted_elements=(qn("svg", "title"), qn("svg", "desc"))),
+            payloads,
+        ])
     return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
 
 

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import TYPE_CHECKING
 
 from odfa11y.content import protected_xml
@@ -29,16 +28,15 @@ def sheet_snapshot(document: OdfDocument) -> tuple[str, ...]:
     """
     entries: list[str] = []
     for sheet in sheets(document.tree(Part.CONTENT)):
-        entries.append(f"{SHEET_TAG}{sheet_name(sheet)}")
-        copy = deepcopy(sheet)
-        copy.attrib.pop(qn("table", "name"), None)
-        entries.append(
+        entries.extend((
+            f"{SHEET_TAG}{sheet_name(sheet)}",
             "content\t"
             + protected_xml(
-                copy,
+                sheet,
+                omitted_root_attributes=(qn("table", "name"),),
                 omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
-            )
-        )
+            ),
+        ))
     return tuple(entries)
 
 

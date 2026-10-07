@@ -157,6 +157,52 @@ SHEET006 = _rule("SHEET006", WARNING, LNK, "Hyperlink text is a raw address.")
 SHEET007 = _rule("SHEET007", WARNING, SEM, "Empty sheet follows the last sheet with content.")
 SHEET008 = _rule("SHEET008", WARNING, SEM, "Hidden sheets, rows or columns are present.")
 
+PRES001 = _rule("PRES001", ERROR, SEM, "Pages are missing, unnamed or ambiguously named.")
+PRES002 = _rule("PRES002", WARNING, SEM, "Page has no accessible title.", "presentation.pages")
+PRES003 = _rule(
+    "PRES003", ERROR, SEM, "Graphic payload has no accessible description.", "presentation.graphics"
+)
+PRES004 = _rule(
+    "PRES004",
+    WARNING,
+    SEM,
+    "Nontext shape needs a meaning/decorative-content decision.",
+    "presentation.graphics",
+)
+PRES005 = _rule(
+    "PRES005", ERROR, SEM, "Navigation order is incomplete or ambiguous.", "presentation.pages"
+)
+PRES006 = _rule(
+    "PRES006", WARNING, SEM, "Page has no explicit navigation order.", "presentation.pages"
+)
+PRES007 = _rule("PRES007", WARNING, SEM, "Hidden content needs review.")
+PRES008 = _rule(
+    "PRES008", INFO, SEM, "Notes or annotations need relationship and reading-order review."
+)
+PRES009 = _rule("PRES009", ERROR, LNK, "Hyperlink has no readable purpose.")
+
+DRAW001 = _rule("DRAW001", ERROR, SEM, "Pages are missing, unnamed or ambiguously named.")
+DRAW002 = _rule("DRAW002", WARNING, SEM, "Page has no accessible title.", "drawing.pages")
+DRAW003 = _rule(
+    "DRAW003", ERROR, SEM, "Graphic payload has no accessible description.", "drawing.graphics"
+)
+DRAW004 = _rule(
+    "DRAW004",
+    WARNING,
+    SEM,
+    "Nontext shape needs a meaning/decorative-content decision.",
+    "drawing.graphics",
+)
+DRAW005 = _rule(
+    "DRAW005", ERROR, SEM, "Navigation order is incomplete or ambiguous.", "drawing.pages"
+)
+DRAW006 = _rule("DRAW006", WARNING, SEM, "Page has no explicit navigation order.", "drawing.pages")
+DRAW007 = _rule("DRAW007", WARNING, SEM, "Hidden content needs review.")
+DRAW008 = _rule(
+    "DRAW008", INFO, SEM, "Notes or annotations need relationship and reading-order review."
+)
+DRAW009 = _rule("DRAW009", ERROR, LNK, "Hyperlink has no readable purpose.")
+
 PDF000 = _rule("PDF000", ERROR, PDF, "PDF cannot be opened or strictly inspected.")
 PDF001 = _rule("PDF001", ERROR, PDF, "Document title is missing.")
 PDF002 = _rule("PDF002", ERROR, PDF, "Catalog language is missing.")
@@ -167,7 +213,9 @@ PDF006 = _rule("PDF006", ERROR, PDF, "XMP metadata does not declare PDF/UA part 
 PDF007 = _rule("PDF007", ERROR, PDF, "A Figure structure element has no alternative text.")
 PDF008 = _rule("PDF008", INFO, PDF, "No numbered heading structure elements were found.")
 PDF009 = _rule("PDF009", ERROR, PDF, "PDF has no pages.")
-PDF010 = _rule("PDF010", ERROR, PDF, "No extractable text was found.")
+PDF010 = _rule(
+    "PDF010", ERROR, PDF, "No extractable text or inspected described graphical content was found."
+)
 PDF011 = _rule("PDF011", ERROR, PDF, "A custom structure role does not resolve to a standard role.")
 PDF012 = _rule("PDF012", ERROR, PDF, "Heading structure starts too deep or skips a level.")
 PDF013 = _rule("PDF013", ERROR, PDF, "List structure is malformed.")

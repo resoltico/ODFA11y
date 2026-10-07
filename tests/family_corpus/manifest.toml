@@ -1,0 +1,15 @@
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native application services, standard ODF save mode"
+
+[[documents]]
+file = "fruit-presentation.odp"
+family = "presentation"
+sha256 = "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308"
+schema_violations = 0
+
+[[documents]]
+file = "fruit-drawing.odg"
+family = "drawing"
+sha256 = "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4"
+schema_violations = 0

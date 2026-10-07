@@ -3,20 +3,19 @@
 
 from __future__ import annotations
 
-import hashlib
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 from urllib.parse import quote
 
-from lxml import etree
-
 from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.content import protected_xml
 from odfa11y.odf import Family, Part, qn, select_elements
 from odfa11y.report import Location
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from lxml import etree
 
     from odfa11y.odf import OdfDocument
 
@@ -101,13 +100,11 @@ def heading_fingerprint(heading: etree._Element) -> str:
         The stable reviewed-content digest.
 
     """
-    copy = deepcopy(heading)
-    copy.attrib.pop(qn("text", "outline-level"), None)
-    for node in select_elements(copy, ".//svg:title | .//svg:desc"):
-        parent = node.getparent()
-        if parent is not None:
-            parent.remove(node)
-    return hashlib.sha256(etree.tostring(copy, method="c14n")).hexdigest()[:16]
+    return protected_xml(
+        heading,
+        omitted_root_attributes=(qn("text", "outline-level"),),
+        omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
+    )[:16]
 
 
 def _problem(target: str, entry: HeadingLevel, matches: list[etree._Element]) -> str | None:

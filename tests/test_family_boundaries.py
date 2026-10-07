@@ -164,7 +164,13 @@ def test_the_template_refuses_a_source_it_cannot_read(
 
 def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(
+        REGISTRY,
+        Family.PRESENTATION,
+        dataclasses.replace(adapter_for(None), family=Family.PRESENTATION),
+    )
     source = make_package(tmp_path, "presentation")
     record = run_pipeline(
         source, [SetMetadata(title="T")], FidelityPolicy(), tmp_path / "out", PipelineOptions()
@@ -183,7 +189,13 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
 
 def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(
+        REGISTRY,
+        Family.PRESENTATION,
+        dataclasses.replace(adapter_for(None), family=Family.PRESENTATION),
+    )
     record = run_pipeline(
         make_package(tmp_path, "presentation"),
         [],

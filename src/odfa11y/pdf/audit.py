@@ -50,8 +50,8 @@ def _inspect(pdf_path: Path, report: Report) -> None:
         reader = PdfReader(stream, strict=True)
         check_limits(pdf_path, len(reader.pages))
         structure = _audit_metadata(reader, report)
-        audit_structure(structure, report, link_annotations(reader), reader.pages)
-        _audit_content(reader, report)
+        graphics = audit_structure(structure, report, link_annotations(reader), reader.pages)
+        _audit_content(reader, report, graphics)
 
 
 def _audit_metadata(reader: PdfReader, report: Report) -> DictionaryObject:
@@ -105,11 +105,14 @@ def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
         report.add(rules.PDF006, "PDF XMP metadata does not declare PDF/UA-1.")
 
 
-def _audit_content(reader: PdfReader, report: Report) -> None:
+def _audit_content(reader: PdfReader, report: Report, graphics: int) -> None:
     if not reader.pages:
         report.add(rules.PDF009, "PDF contains no pages.")
         return
     text_chars = sum(len(page.extract_text() or "") for page in reader.pages)
     report.metadata["extractable_text_characters"] = text_chars
-    if not text_chars:
-        report.add(rules.PDF010, "No extractable text was found in the PDF.")
+    report.metadata["described_graphics"] = graphics
+    if not text_chars and not graphics:
+        report.add(
+            rules.PDF010, "No extractable text or inspected described graphical content was found."
+        )

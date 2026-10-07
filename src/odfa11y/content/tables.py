@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, qn, select_elements
 
+from .xml import attribute_bindings
+
 if TYPE_CHECKING:
     from lxml import etree
 
@@ -184,11 +186,19 @@ def _fingerprint(table: etree._Element, *, include_styles: bool) -> str:
             )
             cells.append([
                 cell.tag,
+                attribute_bindings(
+                    cell,
+                    omitted_attributes=() if include_styles else (qn("table", "style-name"),),
+                ),
                 _attributes(cell, "unused", include_styles=include_styles),
                 " ".join("".join(str(word) for word in words).split()),
             ])
         attributes = _attributes(row, "number-rows-repeated", include_styles=include_styles)
-        value = [attributes, cells]
+        value = [
+            attributes,
+            attribute_bindings(row, omitted_attributes=(qn("table", "number-rows-repeated"),)),
+            cells,
+        ]
         count = repeated(row, "number-rows-repeated")
         if runs and runs[-1][0] == value:
             runs[-1] = (value, runs[-1][1] + count)

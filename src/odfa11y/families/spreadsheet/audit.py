@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from odfa11y.content import frame_keys, graphics_fingerprint
+from odfa11y.content import graphic_keys, graphics_fingerprint
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import Location, rules
 
@@ -108,7 +108,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         selector = declared_name or href
-        addressed = [f for f in everything if selector in frame_keys(f)] if selector else [frame]
+        addressed = [f for f in everything if selector in graphic_keys(f)] if selector else [frame]
         report.add(
             rules.SHEET005,
             "Picture, chart or object has neither accessible title nor description.",

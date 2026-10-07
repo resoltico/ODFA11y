@@ -20,6 +20,10 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Added
 
+- **Presentation and drawing families.** Native Impress and Draw documents have separate
+  page/shape audits, reviewed descriptions and complete navigation decisions in
+  `[presentation]` and `[drawing]`. Standard ODF 1.4 native fixtures exercise schema,
+  PDF/UA validation, fidelity and evidence with independent missing-alternative controls.
 - **Explicit text semantics.** Reviewed heading levels and leading table header columns
   are configurable. Targets are preflighted before editing; repeated table declarations
   are split only when that preserves data and identities. Crossing spans and unsafe repeat
@@ -29,11 +33,26 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Fixed
 
+- **Installer paths.** The pinned veraPDF installer handles XML-significant characters in
+  its destination path.
+- **PDF graphical content.** Described illustration-only PDFs no longer fail solely for
+  having no extracted text. The content gate reconciles Figure references with executed
+  graphical operations on their actual pages; empty, orphan and artifact-only declarations
+  remain failures. This is structural content evidence, not proof of pixel visibility.
+- **Namespace integrity.** XML fingerprints preserve inherited bindings used by formula
+  and other attribute values while ignoring harmless metadata namespace additions.
 - **Preservation and reviewed targets.** Table fingerprints cover complete logical data;
   graphic fingerprints include position and payload bytes while remaining stable across
   header-wrapper edits. Spreadsheet postconditions protect formulas, values, references,
   repeats and geometry. Opaque package resources and flat binary data cannot change during
   source remediation. Malformed or non-leading table header bands produce `TXT022`.
+
+### Internal
+
+- **Gate efficiency.** PR checks no longer duplicate branch-push checks; main, version-tag
+  and manual runs remain authoritative. Integration uses two isolated workers with crash
+  restarts disabled; unit coverage remains sequential. Coverage append and all generated
+  property cases are retained. Cached Go tools are isolated from release builds.
 
 ## [0.4.0] - 2026-10-07
 

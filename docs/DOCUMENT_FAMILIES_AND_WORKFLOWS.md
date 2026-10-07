@@ -227,3 +227,16 @@ are rejected before mutation. Protected logical table data ignores generated sty
 reviewed target fingerprints retain them. Spreadsheet postconditions protect full sheet
 structure, not just displayed strings. The Base adapter accepts the standard `base` media
 type; retired `database` and `sun.xml.base` producer aliases are rejected.
+
+Further implementation QA found two boundary defects. Copying an XML subtree drops
+inherited namespace declarations used only in attribute values: two identical formula
+strings with different `of` bindings previously produced one digest. Protected XML must
+capture those bindings from the original tree, then canonicalize structure with precisely
+declared editable root attributes omitted. Tests cover inherited and locally declared
+bindings, alongside harmless metadata namespace additions.
+
+A real Draw export containing only one described illustration passes veraPDF but the
+built-in `PDF010` check rejects it solely because it has no extractable text. That check
+must require readable text **or a reachable described Figure**, keeping errors for missing
+tagging, missing alternatives and blank/unreadable output. Verify an independent compliant
+native positive case and undescribed/empty negative cases; do not suppress the finding.

@@ -94,7 +94,7 @@ if LibreOffice can export it to PDF, the export filter. Kinds without an impleme
 the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
 audit exists, and the body text must not change.
 
-Two families are implemented, and neither imports the other:
+Four families are implemented, and none imports another:
 
 - `text` (text, templates, master and web documents) owns the `TXT` rules, explicit semantic operations
   and the `[text]` configuration table.
@@ -106,6 +106,13 @@ Two families are implemented, and neither imports the other:
   paragraphs, and the operations resolve sheets and frames instead of paragraphs and
   tables. Both families bind the shared graphic editor to their own operation contract. The common
   helper understands `draw:` vocabulary without selecting family rules.
+
+- `presentation` (`.odp`, `.otp`, flat `.fodp`) and `drawing` (`.odg`, `.otg`, flat `.fodg`)
+  bind shared page/shape mechanics to separate `PRES`/`DRAW` rules and explicit configuration.
+  The drawing adapter serves the standard's `graphics` family. Both preserve complete body
+  structure, geometry, references and resource bytes while allowing reviewed descriptions
+  and complete navigation lists. Their native Impress/Draw filters are independently tested
+  through production assurance with real standard-ODF 1.4 fixtures.
 
 
 ### Adding a family
@@ -179,7 +186,12 @@ non-compliance is a finding. Nothing here is a sandbox.
 
 Marked-content scanning skips raw inline images using their sample dimensions. Filtered
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
-where binary samples end. Form XObjects are not scanned. The decoded-page-content limit
+where binary samples end. Form XObjects are not scanned. A text-free PDF can satisfy content-presence checks through
+reachable described Figures whose own/descendant MCIDs match constructed-and-painted
+paths, valid raw inline images, or invoked image resources on the actual page. Empty,
+artifact-only, wrong-page and orphan Figure declarations cannot satisfy that check.
+This proves structural graphical-content presence, not pixel visibility under clipping,
+transparency or hidden content. The decoded-page-content limit
 is checked after each stream is decoded; it does not bound the decoder's peak memory.
 
 

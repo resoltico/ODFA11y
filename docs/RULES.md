@@ -79,6 +79,34 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
 | `SHEET008` | Warning | Hidden sheets, rows or columns are present. |  |
 
+## Presentations
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `PRES001` | Error | Pages are missing, unnamed or ambiguously named. |  |
+| `PRES002` | Warning | Page has no accessible title. | `presentation.pages` |
+| `PRES003` | Error | Graphic payload has no accessible description. | `presentation.graphics` |
+| `PRES004` | Warning | Nontext shape needs a meaning/decorative-content decision. | `presentation.graphics` |
+| `PRES005` | Error | Navigation order is incomplete or ambiguous. | `presentation.pages` |
+| `PRES006` | Warning | Page has no explicit navigation order. | `presentation.pages` |
+| `PRES007` | Warning | Hidden content needs review. |  |
+| `PRES008` | Info | Notes or annotations need relationship and reading-order review. |  |
+| `PRES009` | Error | Hyperlink has no readable purpose. |  |
+
+## Drawings
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `DRAW001` | Error | Pages are missing, unnamed or ambiguously named. |  |
+| `DRAW002` | Warning | Page has no accessible title. | `drawing.pages` |
+| `DRAW003` | Error | Graphic payload has no accessible description. | `drawing.graphics` |
+| `DRAW004` | Warning | Nontext shape needs a meaning/decorative-content decision. | `drawing.graphics` |
+| `DRAW005` | Error | Navigation order is incomplete or ambiguous. | `drawing.pages` |
+| `DRAW006` | Warning | Page has no explicit navigation order. | `drawing.pages` |
+| `DRAW007` | Warning | Hidden content needs review. |  |
+| `DRAW008` | Info | Notes or annotations need relationship and reading-order review. |  |
+| `DRAW009` | Error | Hyperlink has no readable purpose. |  |
+
 ## PDF inspection and veraPDF
 
 | ID | Severity | Finding | Remedy |
@@ -93,7 +121,7 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `PDF007` | Error | A Figure structure element has no alternative text. |  |
 | `PDF008` | Info | No numbered heading structure elements were found. |  |
 | `PDF009` | Error | PDF has no pages. |  |
-| `PDF010` | Error | No extractable text was found. |  |
+| `PDF010` | Error | No extractable text or inspected described graphical content was found. |  |
 | `PDF011` | Error | A custom structure role does not resolve to a standard role. |  |
 | `PDF012` | Error | Heading structure starts too deep or skips a level. |  |
 | `PDF013` | Error | List structure is malformed. |  |

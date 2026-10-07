@@ -8,11 +8,12 @@ what will change. Run `odfa11y template original.odt` to print a commented start
 the decisions an audit leaves open.
 
 The file has two common tables, `[document]` and `[fidelity]`, and one table per document
-family, named after the family (`[text]`, `[spreadsheet]`). A family table is read by that
+family (`[text]`, `[spreadsheet]`, `[presentation]`, `[drawing]`). The drawing adapter
+serves the standard's graphics family. A family table is read by that
 family's adapter and applies only to documents of that family: configuring `[text]` for a
 spreadsheet, or `[spreadsheet]` for a text document, is an error that stops the run before
-anything is written, never a silently ignored section. Other families add their own tables
-when they are supported (see [Architecture](ARCHITECTURE.md#document-families)).
+anything is written, never a silently ignored section. Other families expose decisions appropriate to their contracts
+when supported (see [Architecture](ARCHITECTURE.md#document-families)).
 
 ## Example
 
@@ -68,7 +69,8 @@ A test extracts this block and loads it through the real reader.
 | Table/key | Accepted value | When omitted |
 | --- | --- | --- |
 | `document.odf_version` | `"1.3"` or `"1.4"` (versions with a bundled schema). | The declared version is kept. |
-| `document.title`, `document.description` | String; stripped before use. An empty string clears the field. | Existing value kept. |
+| `document.title` | Nonblank string; stripped before use. | Existing title kept. |
+| `document.description` | String; stripped before use. An empty string clears it. | Existing description kept. |
 | `document.language` | Language tag such as `"en-GB"`; sets metadata and, for families that keep a default language in their styles, that default too. | Existing languages kept. |
 | `text.remediation.linkify_plain_addresses` | Boolean. | `false`. |
 | `text.remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
@@ -81,6 +83,8 @@ A test extracts this block and loads it through the real reader.
 | `text.spacing.exact_reference`, `text.spacing.include_headings` | Boolean. | `false`. |
 | `spreadsheet.sheet_names."CURRENT"` | The new name of the sheet currently named `CURRENT`: not blank, without `[ ] * ? : / \`, no apostrophe at either end. | Sheet keeps its name. |
 | `spreadsheet.graphics.KEY.title`, `.description`, `.fingerprint` | As for `text.graphics`, addressing frames in sheets. | See `text.graphics`. |
+| `presentation.pages."PAGE"`, `drawing.pages."PAGE"` | Structured entry with optional string `title`, `description`, `fingerprint`, and `navigation = ["shape-id", …]`. | Existing metadata/order kept. |
+| `presentation.graphics.KEY`, `drawing.graphics.KEY` | As for `text.graphics`, including vector shapes. | Existing descriptions kept. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
 | `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
@@ -149,6 +153,26 @@ Renaming updates the sheet keys in table view and script-configuration settings,
 the active-sheet selection, in
 `settings.xml` or flat XML. A test reloads a renamed document in LibreOffice and exports it. Renaming also changes what Calc's default page header prints, see
 [spreadsheet PDF exports](ACCESSIBILITY.md#spreadsheet-pdf-exports).
+
+## Presentation and drawing pages
+
+`[presentation.pages]` and `[drawing.pages]` address exact unique `draw:name` values.
+Each page decision sets supplied standard title/description metadata and optionally a
+complete navigation list. Navigation uses existing XML/drawing shape identities, includes
+every top-level shape exactly once (a group is one entry), and rejects identities duplicated
+anywhere in the content document. No identity or reading order is guessed. If identities
+are missing, set explicit navigation in the native application first and save the document.
+Templates leave every choice commented out.
+
+`[presentation.graphics]` and `[drawing.graphics]` describe frames and vector shapes.
+Descriptions are inserted in the standard order appropriate to their element. An empty
+native notes placeholder or a generated page thumbnail does not need an invented graphic
+alternative. Notes, annotations, hidden slides/layers, group relationships and visual
+meaning still need the adapter's human review.
+
+Page metadata is a source semantic decision; it does not create visible heading text or
+claim a PDF heading role. Complete native integration independently checks figure
+alternatives, PDF/UA validation, fidelity and evidence.
 
 ## Spacing
 

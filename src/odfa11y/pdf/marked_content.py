@@ -13,6 +13,7 @@ from odfa11y.pdf_limits import MAX_CONTENT_BYTES
 from odfa11y.report import rules
 
 from .content_scan import scan_content
+from .graphic_presence import described_graphics, page_images
 from .link_structure import MAX_LISTED
 from .structure_walk import pdf_dictionary
 
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 
 def check_marked_content(
     pages: Iterable[PageObject], nodes: list[StructureNode], report: Report
-) -> None:
+) -> int:
     """Report page content that is not tagged, and structure references that match no content.
 
     Each page's content stream is scanned for marked-content sequences. Findings: MCIDs no
@@ -38,6 +39,12 @@ def check_marked_content(
     references into it (``/Stm``) are ignored. The check claims only these correspondences;
     veraPDF remains the validator. Decoded content beyond ``MAX_CONTENT_BYTES`` in all pages
     raises ``ToolFailedError``.
+
+    Returns
+    -------
+    int
+        Described Figures containing graphical operations reconciled on actual pages.
+
     """
     references: dict[int | None, Counter[int]] = defaultdict(Counter)
     for node in nodes:
@@ -48,13 +55,16 @@ def check_marked_content(
     unreferenced: list[dict[str, object]] = []
     page_numbers: dict[int | None, int] = {}
     contents: dict[int, set[int]] = {}
+    painted: dict[int, set[int]] = {}
     for number, page in enumerate(pages, start=1):
         data = _decoded_content(page, budget)
         budget -= len(data)
-        scan = scan_content(data, _property_mcids(page))
+        scan = scan_content(data, _property_mcids(page), page_images(page))
         xref = page.indirect_reference.idnum if page.indirect_reference else None
         page_numbers[xref] = number
         contents[number] = scan.mcids
+        if xref is not None:
+            painted[xref] = scan.graphical_mcids
         loose = sorted(scan.mcids - set(references.get(xref, ())))
         if loose:
             unreferenced.append({"page": number, "count": len(loose), "mcids": loose[:MAX_LISTED]})
@@ -72,6 +82,7 @@ def check_marked_content(
         report.add(
             rules.PDF022, details={"count": len(duplicated), "mcids": duplicated[:MAX_LISTED]}
         )
+    return described_graphics(nodes, painted)
 
 
 def _report(
