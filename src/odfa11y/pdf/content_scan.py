@@ -180,7 +180,9 @@ def _inline_image_end(data: bytes, position: int) -> int:
     if start is None:
         msg = "Inline image has no data delimiter"
         raise ToolFailedError(msg)
-    header = data[position : start.start()]
+    header = _NAME_ESCAPE.sub(
+        lambda match: bytes([int(match[1], 16)]), data[position : start.start()]
+    )
     if re.search(rb"/(?:F|Filter)\b", header):
         msg = "Filtered inline images are outside the marked-content scanner's scope"
         raise ToolFailedError(msg)

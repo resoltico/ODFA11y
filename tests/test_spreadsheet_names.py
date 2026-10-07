@@ -139,6 +139,7 @@ def test_two_sheets_with_one_name_cannot_be_addressed(tmp_path: Path) -> None:
     [
         "of:=SUM([$Notes.A1:.A3])",
         "of:=[Notes.A1]",
+        "of:=[notes.A1]",
         "of:=SUM([$Notes.A1:$Other.B2])",
         "of:=INDIRECT(&quot;Notes.A1&quot;)",
     ],

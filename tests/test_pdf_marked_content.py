@@ -283,6 +283,12 @@ def test_the_content_limit_covers_all_pages_together(
     assert "PDF000" not in {f.rule_id for f in audit(tmp_path, writer).findings}
 
 
-def test_a_filtered_inline_image_is_refused_instead_of_guessing_its_end() -> None:
+@pytest.mark.parametrize("filter_name", [b"F", b"Filter", b"Fi#6cter"])
+def test_a_filtered_inline_image_is_refused_instead_of_guessing_its_end(
+    filter_name: bytes,
+) -> None:
     with pytest.raises(ToolFailedError, match="Filtered inline images"):
-        scan_content(b"BI /W 1 /H 1 /F /Fl ID fake EI", lambda _name: None)
+        scan_content(
+            b"BI /W 1 /H 1 /CS /G /BPC 8 /" + filter_name + b" /Fl ID x EI",
+            lambda _name: None,
+        )

@@ -158,8 +158,8 @@ def _is_referenced(document: OdfDocument, name: str) -> bool:
 
     """
     quoted = "'" + name.replace("'", "''") + "'"
-    dotted = (f"{name}.", f"{quoted}.")
-    links = {f"#{name}", f"#{quoted}"}
+    dotted = (f"{name}.".casefold(), f"{quoted}.".casefold())
+    links = {f"#{name}".casefold(), f"#{quoted}".casefold()}
     own_name = qn("table", "name")
     sheet_tag = qn("table", "table")
     for tree in document.distinct_trees(Part.CONTENT, Part.STYLES):
@@ -169,7 +169,8 @@ def _is_referenced(document: OdfDocument, name: str) -> bool:
                     continue
                 if attribute == qn("table", "formula") and DYNAMIC_REFERENCE.search(value):
                     return True
-                if value in links or any(token in value for token in dotted):
+                reference = value.casefold()
+                if reference in links or any(token in reference for token in dotted):
                     return True
     return False
 
