@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import zlib
 from typing import TYPE_CHECKING
 
 import pytest
@@ -10,8 +11,10 @@ from pypdf.generic import (
     ArrayObject,
     DecodedStreamObject,
     DictionaryObject,
+    EncodedStreamObject,
     NameObject,
     NumberObject,
+    StreamObject,
 )
 
 from odfa11y.pdf import audit_pdfua
@@ -116,17 +119,25 @@ def test_child_content_references_can_supply_the_figures_graphic_content(tmp_pat
 
 
 @pytest.mark.parametrize("invoked", [False, True])
+@pytest.mark.parametrize("payload", [b"", b"\x00", b"\xff"])
 def test_image_resources_count_only_when_invoked_in_matching_content(
-    tmp_path: Path, *, invoked: bool
+    tmp_path: Path, payload: bytes, *, invoked: bool
 ) -> None:
-    writer = tagged_writer(["Figure"], figure_alt="A black pixel")
+    image = DecodedStreamObject()
+    image.set_data(payload)
+    report = _image_report(tmp_path, image, invoked=invoked)
+    expected = invoked and bool(payload)
+    assert report.metadata["described_graphics"] == int(expected)
+    assert ("PDF010" in {finding.rule_id for finding in report.findings}) is (not expected)
+
+
+def _image_report(tmp_path: Path, image: StreamObject, *, invoked: bool = True) -> Report:
+    writer = tagged_writer(["Figure"], figure_alt="An image pixel")
     set_page_content(
         writer,
         writer.pages[0],
         "/Figure <</MCID 0>> BDC " + ("/Image Do" if invoked else "") + " EMC",
     )
-    image = DecodedStreamObject()
-    image.set_data(b"\x00")
     image.update({
         NameObject("/Type"): NameObject("/XObject"),
         NameObject("/Subtype"): NameObject("/Image"),
@@ -140,9 +151,34 @@ def test_image_resources_count_only_when_invoked_in_matching_content(
     resources[NameObject("/XObject")] = DictionaryObject({NameObject("/Image"): image})
     path = tmp_path / "image.pdf"
     writer.write(path)
-    report = audit_pdfua(path)
-    assert report.metadata["described_graphics"] == int(invoked)
-    assert ("PDF010" in {finding.rule_id for finding in report.findings}) is (not invoked)
+    return audit_pdfua(path)
+
+
+@pytest.mark.parametrize("payload", [b"", b"\x00", b"\xff"])
+def test_encoded_image_presence_never_invokes_a_decompressor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, payload: bytes
+) -> None:
+    image = EncodedStreamObject()
+    image[NameObject("/Filter")] = NameObject("/FlateDecode")
+    StreamObject.set_data(image, zlib.compress(payload))
+
+    def refuse_decompression(_self: EncodedStreamObject) -> bytes:
+        pytest.fail("Image presence must not decode filtered image streams")
+
+    monkeypatch.setattr(EncodedStreamObject, "get_data", refuse_decompression)
+    report = _image_report(tmp_path, image)
+    assert report.metadata["described_graphics"] == 1
+    assert "PDF010" not in {finding.rule_id for finding in report.findings}
+
+
+def test_empty_encoded_image_stream_cannot_supply_graphical_presence(tmp_path: Path) -> None:
+    image = EncodedStreamObject()
+    image[NameObject("/Filter")] = NameObject("/FlateDecode")
+    StreamObject.set_data(image, b"")
+    image[NameObject("/Length")] = NumberObject(999)
+    report = _image_report(tmp_path, image)
+    assert report.metadata["described_graphics"] == 0
+    assert "PDF010" in {finding.rule_id for finding in report.findings}
 
 
 def test_nested_artifacts_cannot_supply_graphics_to_outer_content() -> None:

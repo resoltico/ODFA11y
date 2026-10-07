@@ -18,12 +18,13 @@ if TYPE_CHECKING:
 
 
 def page_images(page: PageObject) -> Callable[[str], bool]:
-    """Resolve invoked resource names to image streams with positive dimensions.
+    """Resolve invoked images with positive dimensions and nonempty stored stream bytes.
 
     Returns
     -------
     Callable[[str], bool]
-        A structural image-resource predicate; it does not decode images or enter Forms.
+        A structural encoded-payload predicate; it does not decode images or enter Forms.
+        Stored bytes do not establish decoded pixel integrity or visibility.
 
     """
     objects = pdf_dictionary(pdf_dictionary(page.get("/Resources")).get("/XObject"))
@@ -39,6 +40,9 @@ def page_images(page: PageObject) -> Callable[[str], bool]:
             and width > 0
             and isinstance(height, NumberObject)
             and height > 0
+            # The public base method reads stored bytes without invoking a filtered
+            # stream's decompressor. A declared /Length is not payload evidence.
+            and bool(StreamObject.get_data(value))
         )
 
     return is_image
