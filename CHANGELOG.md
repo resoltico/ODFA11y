@@ -4,6 +4,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-07
+
 This release makes the ODF core independent of any document family: ODFA11y now recognises
 every kind of OpenDocument file, packaged or flat, and the text-document logic became the
 first *family* plug-in. It is a deliberate break from 0.2.0 with no compatibility layer; the
