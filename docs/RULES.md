@@ -82,10 +82,10 @@ Owned by the text family (`TXT`). A document of another family never produces th
 | `PDF013` | Error | List structure is malformed. |  |
 | `PDF014` | Error | Table structure is malformed. |  |
 | `PDF015` | Warning | Table has no header cells. |  |
-| `PDF016` | Warning | A link annotation is not represented by a Link structure element. |  |
+| `PDF016` | Warning | A link annotation is not represented by a Link element. |  |
 | `PDF017` | Warning | A Link structure element refers to no link annotation. |  |
-| `PDF018` | Error | A link annotation is mapped by more than one element, or from another page. |  |
-| `PDF019` | Error | A link has no alternate description: neither the annotation's `/Contents` nor an `/Alt` on a Link element that refers to it. |  |
+| `PDF018` | Error | A link annotation is referenced from another page. |  |
+| `PDF019` | Error | A link has no alternate description. |  |
 | `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
 | `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 

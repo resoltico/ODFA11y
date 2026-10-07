@@ -99,11 +99,11 @@ def test_registry_ids_severities_and_remedies_are_consistent() -> None:
     assert all(re.fullmatch(r"[A-Z]+\d{3}", key) for key in RULES)
 
 
-def test_rules_document_lists_exactly_the_registered_rules_with_their_severities() -> None:
+def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_title() -> None:
     document = (Path(__file__).parents[1] / "docs/RULES.md").read_text(encoding="utf-8")
-    documented: dict[str, str] = {}
+    documented: dict[str, tuple[str, str]] = {}
     for line in document.splitlines():
-        match = re.match(r"\| `([A-Z]+\d{3})` \| (Error|Warning|Info) \|", line)
+        match = re.match(r"\| `([A-Z]+\d{3})` \| (Error|Warning|Info) \| (.+?) \|", line)
         if match:
-            documented[match.group(1)] = match.group(2).lower()
-    assert documented == {key: rule.severity.value for key, rule in RULES.items()}
+            documented[match.group(1)] = (match.group(2).lower(), match.group(3))
+    assert documented == {key: (rule.severity.value, rule.title) for key, rule in RULES.items()}
