@@ -10,6 +10,7 @@ from .export import (
     identify_soffice,
 )
 from .fonts import list_fonts
+from .link_capability import link_descriptions_supported
 from .verapdf import (
     FailedRule,
     VeraPdfResult,
@@ -31,6 +32,7 @@ __all__ = [
     "find_soffice",
     "find_verapdf",
     "identify_soffice",
+    "link_descriptions_supported",
     "list_fonts",
     "validate_pdfua",
 ]

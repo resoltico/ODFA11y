@@ -68,6 +68,11 @@ uv run --no-sync odfa11y audit reviewed.pdf --verapdf --strict
 
 `--verapdf-path PATH` names the validator executable and implies `--verapdf`.
 
+Before relying on a LibreOffice installation for documents with hyperlinks, run
+`uv run --no-sync odfa11y doctor`. Its `pdfua_link_descriptions` line says whether that
+LibreOffice exports link descriptions (`supported`) or whether every hyperlink will be
+reported as `PDF019` (`unsupported`); see [Accessibility](ACCESSIBILITY.md).
+
 The exporter uses a temporary LibreOffice profile, requests PDF/UA-1 and tagged PDF, and
 publishes the PDF atomically. The built-in PDF audit is a fast smoke test of metadata,
 tagging and structure (roles, headings, lists, tables, figures, links). `--verapdf` runs
@@ -128,5 +133,6 @@ For several reports the highest status wins. Informational findings never fail a
 | Unknown TOML key or wrong type | Compare the field with [Configuration](CONFIGURATION.md); use unquoted booleans and positive integer header counts. |
 | `remediate` lists failed targets | Fix the named table, graphic key or header count; a selector that matches nothing is an error. |
 | "Remediation introduced ODF schema violations" | The operation produced markup the ODF schema rejects; the message lists the violations. |
+| `pdfua_link_descriptions: unsupported` or `PDF019` on every link | The installed LibreOffice exports links without a description; use a release that supports it (`doctor` reports which). |
 | LibreOffice executable not found | Install LibreOffice and expose its CLI on `PATH`, or pass `--soffice`. |
 | `FID005` after spacing or spacer changes | Content moved. Review the diff images; if the movement is intended set `fidelity.pagination = "may-change"`. |

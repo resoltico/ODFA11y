@@ -70,7 +70,7 @@ uv run --no-sync odfa11y check-evidence evidence
 | `pipeline SRC --config FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
 | `styles FILE` | Paragraph-style usage and effective spacing. |
 | `check-evidence DIR` | Verify an evidence directory against its manifest. |
-| `doctor` | Dependency and external-tool versions. |
+| `doctor` | Dependency and external-tool versions, and whether the installed LibreOffice describes hyperlinks in its PDF/UA export (`pdfua_link_descriptions`). |
 
 Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
 [workflow](docs/WORKFLOW.md) is for human review between steps.

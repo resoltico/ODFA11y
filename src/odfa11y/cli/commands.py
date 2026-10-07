@@ -22,6 +22,8 @@ from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
 from odfa11y.evidence import check_bundle
 from odfa11y.external_tools import identify
 from odfa11y.families import adapter_for
+from odfa11y.families.text import ADAPTER as TEXT_ADAPTER
+from odfa11y.families.text import write_link_probe
 from odfa11y.fidelity import compare_pdfs
 from odfa11y.odf import SUPPORTED_VERSIONS, OdfDocument
 from odfa11y.pdf import (
@@ -32,6 +34,7 @@ from odfa11y.pdf import (
     find_soffice,
     find_verapdf,
     identify_soffice,
+    link_descriptions_supported,
 )
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import remediate
@@ -224,15 +227,34 @@ def _doctor(args: argparse.Namespace) -> int:
         "pypdfium2": pypdfium2.version.PYPDFIUM_INFO.version,
         "pillow": PIL.__version__,
         "odf_schemas": list(SUPPORTED_VERSIONS),
-        "LibreOffice": _tool(lambda: identify_soffice(find_soffice()).version),
+        "LibreOffice": _tool(lambda: identify_soffice(find_soffice(args.soffice)).version),
         "veraPDF": _tool(lambda: identify("veraPDF", find_verapdf(), ("--version",)).version),
     }
+    status = 0
+    try:
+        info["pdfua_link_descriptions"] = _link_descriptions(args)
+    except OdfA11yError as exc:
+        info["pdfua_link_descriptions"] = None
+        print(f"error: {exc}", file=sys.stderr)
+        status = EXECUTION_FAILURE
     if args.format == "json":
         print(json.dumps(info, indent=2, sort_keys=True))
     else:
         for key, value in info.items():
             print(f"{key}: {value or 'not found'}")
-    return 0
+    return status
+
+
+def _link_descriptions(args: argparse.Namespace) -> str:
+    pdf_filter = TEXT_ADAPTER.pdf_filter
+    if pdf_filter is None:
+        msg = "No PDF export is defined for text documents."
+        raise UnsupportedKindError(msg)
+    settings = ExportSettings(pdf_filter, args.soffice, args.timeout)
+    with tempfile.TemporaryDirectory(prefix="odfa11y-doctor-") as scratch:
+        probe = Path(scratch) / "probe.odt"
+        write_link_probe(probe)
+        return "supported" if link_descriptions_supported(probe, settings) else "unsupported"
 
 
 def _tool(probe: Callable[[], str]) -> str | None:

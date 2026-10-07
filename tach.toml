@@ -129,6 +129,7 @@ depends_on = [
   "odfa11y.evidence",
   "odfa11y.external_tools",
   "odfa11y.families",
+  "odfa11y.families.text",
   "odfa11y.fidelity",
   "odfa11y.odf",
   "odfa11y.pdf",
