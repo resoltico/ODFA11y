@@ -7,7 +7,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from pypdf.errors import PdfReadError
-from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject, NameObject
+from pypdf.generic import (
+    ArrayObject,
+    DictionaryObject,
+    IndirectObject,
+    NameObject,
+    NumberObject,
+)
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf_limits import MAX_STRUCTURE_NODES
@@ -95,6 +101,14 @@ class ObjectReference:
     page_xref: int | None
 
 
+@dataclass(frozen=True, slots=True)
+class MarkedContentReference:
+    """A marked-content reference kid: the MCID and the page whose content stream holds it."""
+
+    mcid: int
+    page_xref: int | None
+
+
 @dataclass(slots=True)
 class StructureNode:
     """A structure element with its tag, resolved role, effective page and children."""
@@ -105,6 +119,7 @@ class StructureNode:
     page_xref: int | None = None
     children: list[StructureNode] = field(default_factory=list)
     object_references: list[ObjectReference] = field(default_factory=list)
+    marked_content: list[MarkedContentReference] = field(default_factory=list)
 
     def walk(self) -> Iterator[StructureNode]:
         """Yield this node and its descendants in document order.
@@ -145,10 +160,8 @@ def build_tree(root: DictionaryObject) -> StructureNode:
     StructureNode
         A synthetic root whose children are the top-level structure elements.
 
-    Raises
-    ------
-    ToolFailedError
-        The tree has more elements than the size limit allows.
+    Elements and their kids together count toward ``MAX_STRUCTURE_NODES``; more raise
+    ``ToolFailedError``.
 
     """
     role_map = role_map_of(root)
@@ -159,13 +172,10 @@ def build_tree(root: DictionaryObject) -> StructureNode:
     while pending:
         kids, parent = pending.pop()
         for value in _children(kids, seen):
-            tag = value.get("/S")
-            if isinstance(tag, NameObject):
-                name = str(tag).removeprefix("/")
-                nodes += 1
-                if nodes > MAX_STRUCTURE_NODES:
-                    msg = f"Structure tree has more than {MAX_STRUCTURE_NODES} elements"
-                    raise ToolFailedError(msg)
+            nodes += 1
+            _count(nodes)
+            if isinstance(value, DictionaryObject) and isinstance(value.get("/S"), NameObject):
+                name = str(value["/S"]).removeprefix("/")
                 page = _xref(value.get("/Pg"))
                 node = StructureNode(
                     name,
@@ -175,21 +185,37 @@ def build_tree(root: DictionaryObject) -> StructureNode:
                 )
                 parent.children.append(node)
                 pending.append((value.get("/K"), node))
-            elif value.get("/Type") == "/OBJR":
-                page = _xref(value.get("/Pg"))
-                parent.object_references.append(
-                    ObjectReference(
-                        _xref(value.get("/Obj")), page if page is not None else parent.page_xref
-                    )
-                )
+            else:
+                _add_reference(parent, value)
     return top
+
+
+def _add_reference(parent: StructureNode, kid: DictionaryObject | int) -> None:
+    """Record a marked-content or object reference kid on its structure element."""
+    if isinstance(kid, int):
+        parent.marked_content.append(MarkedContentReference(int(kid), parent.page_xref))
+        return
+    page = _xref(kid.get("/Pg"))
+    page = page if page is not None else parent.page_xref
+    kind = kid.get("/Type")
+    mcid = kid.get("/MCID")
+    if kind == "/MCR" and isinstance(mcid, NumberObject) and kid.get("/Stm") is None:
+        parent.marked_content.append(MarkedContentReference(int(mcid), page))
+    elif kind == "/OBJR":
+        parent.object_references.append(ObjectReference(_xref(kid.get("/Obj")), page))
+
+
+def _count(nodes: int) -> None:
+    if nodes > MAX_STRUCTURE_NODES:
+        msg = f"Structure tree has more than {MAX_STRUCTURE_NODES} elements"
+        raise ToolFailedError(msg)
 
 
 def _xref(value: object) -> int | None:
     return value.idnum if isinstance(value, IndirectObject) else None
 
 
-def _children(kids: object, seen: set[int]) -> Iterator[DictionaryObject]:
+def _children(kids: object, seen: set[int]) -> Iterator[DictionaryObject | int]:
     stack = [kids]
     while stack:
         value = stack.pop()
@@ -201,7 +227,7 @@ def _children(kids: object, seen: set[int]) -> Iterator[DictionaryObject]:
             seen.add(id(value))
         if isinstance(value, ArrayObject):
             stack.extend(reversed(value))
-        elif isinstance(value, DictionaryObject):
+        elif isinstance(value, DictionaryObject | NumberObject):
             yield value
 
 
