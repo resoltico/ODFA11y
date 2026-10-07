@@ -34,6 +34,27 @@ UNREADABLE_ARCHIVE_ERRORS = (
 REQUIRED_XML = ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml")
 
 
+def _read_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytes:
+    """Read one member, treating I/O failures inside the archive as corruption.
+
+    Returns
+    -------
+    bytes
+        The decompressed member contents.
+
+    Raises
+    ------
+    zipfile.BadZipFile
+        The member's recorded location or data cannot be read.
+
+    """
+    try:
+        return archive.read(info)
+    except OSError as exc:
+        msg = f"Cannot read member {info.filename!r}: {exc}"
+        raise zipfile.BadZipFile(msg) from exc
+
+
 @dataclass(slots=True)
 class Member:
     """Preserve ZIP metadata alongside member contents."""
@@ -79,7 +100,7 @@ class OdtPackage:
             check_archive_limits(infos)
             for info in infos:
                 self.order.append(info.filename)
-                self.members[info.filename] = Member(info=info, data=zf.read(info))
+                self.members[info.filename] = Member(info=info, data=_read_member(zf, info))
 
     def has(self, name: str) -> bool:
         """Return whether the package contains a named member.

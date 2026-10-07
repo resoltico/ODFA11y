@@ -109,6 +109,7 @@ def test_arbitrary_bytes_are_loaded_or_rejected_with_value_error(payload: bytes)
 
 @given(st.integers(min_value=0, max_value=4000), st.integers(min_value=0, max_value=255))
 @example(offset=118, value=0)  # invalid deflate block length once escaped as zlib.error
+@example(offset=1656, value=6)  # bogus member location once escaped as OSError on Windows
 def test_corrupted_package_bytes_are_loaded_or_rejected_with_value_error(
     offset: int, value: int
 ) -> None:

@@ -64,3 +64,17 @@ def test_unpacked_size_limit_accepts_boundary_and_rejects_one_extra_byte(
     else:
         with pytest.raises(ValueError, match="unpacked archive limit"):
             OdtPackage(source)
+
+
+def test_io_failure_while_reading_a_member_is_reported_as_an_invalid_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+
+    def failing_read(*_args: object, **_kwargs: object) -> bytes:
+        message = "Invalid argument"
+        raise OSError(message)
+
+    monkeypatch.setattr(zipfile.ZipFile, "read", failing_read)
+    with pytest.raises(ValueError, match="Not a valid ZIP/ODT package"):
+        OdtPackage(source)
