@@ -113,7 +113,7 @@ def test_false_flags_request_nothing(tmp_path: Path) -> None:
         ('[text.alt_text.Logo]\ndescripton = "Typo"', "Unknown text.alt_text.Logo keys"),
         ('document = "invalid"', "must be a table"),
         ("[unknown]", "Unknown configuration keys"),
-        ("[spreadsheet]", "Unknown configuration keys"),
+        ("[presentation]", "Unknown configuration keys"),
         ("[remediation]", "Unknown configuration keys"),
         ("[alt_text]", "Unknown configuration keys"),
         ('[text.spacing]\nreference_text = "x"', "text.spacing.target_styles must be"),

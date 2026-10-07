@@ -151,7 +151,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer
+          sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc
       - name: Install LibreOffice on macOS
         if: runner.os == 'macOS'
         run: |

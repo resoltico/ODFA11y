@@ -1,7 +1,7 @@
 # ODFA11y
 
 Recognise and check every kind of OpenDocument file, and audit, explicitly remediate and
-export text documents as PDF/UA-1 with evidence of what changed and what a person must still
+export text documents and spreadsheets as PDF/UA-1 with evidence of what changed and what a person must still
 check.
 
 ODFA11y works on both the editable ODF source and the exported PDF, because an accessible
@@ -10,12 +10,16 @@ source does not guarantee an accessible export.
 - **Every OpenDocument kind, packaged or flat XML:** recognised from its declared media type
   and given the common checks of package structure, document kind, version, metadata and
   schema validity.
-- **Text documents (`.odt`, templates, master and web documents) only:** semantic audit of
+- **Text documents (`.odt`, templates, master and web documents):** semantic audit of
   headings, graphics, tables and links; remediation of the changes *you* decide in one TOML
   file, refusing anything that alters the text or breaks the ODF schema; LibreOffice export;
   PDF inspection and veraPDF; comparison of source and candidate renders; and a hashed
   evidence directory.
-- **Other families (spreadsheets, presentations, drawings and the rest):** recognised and
+- **Spreadsheets (`.ods`, `.ots`, `.fods`):** semantic audit of sheet names, header rows,
+  merged cells, graphics, links and hidden content; explicit sheet renaming and object alt
+  text; Calc export and evidence. Exporter limitations can prevent PDF/UA conformance;
+  see [spreadsheet exports](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports).
+- **Other families (presentations, drawings and the rest):** recognised and
   checked in common only. The audit reports `ODF009` rather than implying semantic coverage;
   see [Accessibility and limits](docs/ACCESSIBILITY.md#document-families).
 
