@@ -262,3 +262,19 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
     remediate(source, destination, [SetMetadata(title="Added")])
     assert audit_odf(destination).metadata["title"] == "Added"
     assert "ODF900" not in ids(audit_odf(destination, schema=True))
+
+
+def test_a_blank_title_is_refused_rather_than_written_empty(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "text")
+    destination = tmp_path / "out.odt"
+    with pytest.raises(RemediationError, match="must not be blank"):
+        remediate(source, destination, [SetMetadata(title="   ")])
+    assert not destination.exists()
+
+
+def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -> None:
+    source = make_flat(tmp_path, "text")
+    source.write_text(source.read_text().replace(' office:version="1.4"', ""), encoding="utf-8")
+    report = audit_odf(source, schema=True)
+    finding = next(f for f in report.findings if f.rule_id == "ODF905")
+    assert "declares no ODF version" in finding.message

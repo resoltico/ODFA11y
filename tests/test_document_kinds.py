@@ -70,3 +70,9 @@ def test_the_registry_serves_text_with_its_adapter_and_everything_else_generical
         else:
             assert adapter is GENERIC
     assert adapter_for(None) is GENERIC
+
+
+def test_every_kind_has_its_own_short_name() -> None:
+    names = [kind.name for kind in KINDS.values()]
+    assert len(names) == len(set(names))
+    assert "application" not in " ".join(names)

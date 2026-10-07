@@ -40,8 +40,9 @@ class DocumentKind:
 
     @property
     def name(self) -> str:
-        """The media type without the OASIS prefix, for example ``text-template``."""
-        return self.media_type.removeprefix(OASIS_PREFIX)
+        """A short unique name, for example ``text-template`` or ``sun-xml-base``."""
+        short = self.media_type.removeprefix(OASIS_PREFIX).removeprefix("application/vnd.")
+        return short.replace(".", "-")
 
 
 def _kinds() -> tuple[DocumentKind, ...]:

@@ -35,6 +35,14 @@ class SetMetadata(Operation):
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         outcomes = []
+        blank = [
+            key
+            for key, value in (("title", self.title), ("description", self.description))
+            if value is not None and not value.strip()
+        ]
+        if blank:
+            message = f"Document {' and '.join(blank)} must not be blank."
+            return (Outcome(self.name, Status.FAILED, message, key=blank[0]),)
         for key, tag, value in (
             ("title", qn("dc", "title"), self.title),
             ("description", qn("dc", "description"), self.description),

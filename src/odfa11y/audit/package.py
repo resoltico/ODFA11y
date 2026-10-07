@@ -216,10 +216,12 @@ def audit_schema(document: OdfDocument, report: Report) -> None:
     result = validate(document)
     report.metadata["schema_version"] = result.version
     if not result.available:
-        report.add(
-            rules.ODF905,
-            f"No ODF schema is bundled for declared version {result.version!r}.",
+        reason = (
+            f"No ODF schema is bundled for declared version {result.version!r}."
+            if result.version
+            else "The document declares no ODF version, so no schema applies."
         )
+        report.add(rules.ODF905, reason)
         return
     report.metadata["schema_violations"] = result.count
     report.metadata["schema_violations_unlocated"] = result.unlocated
