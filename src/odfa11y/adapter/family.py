@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
+    from pathlib import Path
 
     from odfa11y.odf import Family, OdfDocument
     from odfa11y.report import Finding, Report
@@ -44,3 +45,4 @@ class FamilyAdapter:
     review_items: tuple[ReviewItem, ...]
     pdf_filter: str | None = None
     style_report: Callable[[OdfDocument], list[dict[str, object]]] | None = None
+    link_probe: Callable[[Path], Path] | None = None

@@ -35,7 +35,8 @@ Notable changes to this project are documented in this file. The format is based
   which newer LibreOffice releases cause by exporting links without a PDF/UA description.
   `PDF019` remains an error. `doctor` accepts `--soffice` and `--timeout`, and now exits `3`
   when LibreOffice is missing or its export fails, after printing the versions it found.
-  The capability is not recorded in `run.json`.
+  Text pipeline exports record the same capability under `toolchain.LibreOffice` in
+  `run.json`, using one isolated self-test export per run. Probe files are not bundled.
 
 ### Changed
 

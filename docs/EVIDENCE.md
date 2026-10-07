@@ -23,7 +23,10 @@ evidence (and no remediated document).
 Format 2. Sorted keys, no timestamps and no local paths:
 
 - `odfa11y`, `python`, `platform`, `libraries` and the locale `environment`;
-- `toolchain`: LibreOffice (with its build string) and veraPDF names and versions as the
+- `toolchain`: text exports include the self-tested LibreOffice
+  `pdfua_link_descriptions` capability (`supported` or `unsupported`). The isolated probe
+  runs once at the first export; its files are excluded from the bundle. Inspect-only
+  profiles and adapters without a probe do not measure it. LibreOffice (with its build string) and veraPDF names and versions as the
   tools report them (`unknown` when a tool will not say);
 - `schemas`: SHA-256 of each bundled ODF schema;
 - `export_options`: the exact LibreOffice PDF export options;

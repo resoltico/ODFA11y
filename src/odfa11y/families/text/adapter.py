@@ -11,10 +11,13 @@ from odfa11y.odf import Family, Part
 from .audit import audit_text, style_summary
 from .config import parse_text_table
 from .language import default_language, set_default_language
+from .link_probe import write_link_probe
 from .template import text_template
 from .text import text_is_preserved, visible_text_snapshot
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from odfa11y.odf import OdfDocument
 
 REVIEW_ITEMS = (
@@ -48,6 +51,20 @@ def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed_blocks: 
     return text_is_preserved(before, after, removed_empty_blocks=removed_blocks)
 
 
+def _link_probe(directory: Path) -> Path:
+    """Create the text-family self-test document in an isolated directory.
+
+    Returns
+    -------
+    Path
+        The one-link ODF document to export.
+
+    """
+    probe = directory / "probe.odt"
+    write_link_probe(probe)
+    return probe
+
+
 ADAPTER = FamilyAdapter(
     name="text",
     family=Family.TEXT,
@@ -61,4 +78,5 @@ ADAPTER = FamilyAdapter(
     review_items=REVIEW_ITEMS,
     pdf_filter="writer_pdf_Export",
     style_report=style_summary,
+    link_probe=_link_probe,
 )

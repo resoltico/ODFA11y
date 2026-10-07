@@ -14,7 +14,9 @@ import pytest
 from odfa11y import __version__
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
+from odfa11y.evidence import check_bundle
 from odfa11y.families.text import write_link_probe
+from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, PackageStorage
 from odfa11y.pdf import (
     ExportSettings,
@@ -23,6 +25,7 @@ from odfa11y.pdf import (
     link_descriptions_supported,
     validate_pdfua,
 )
+from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import annotation_references, dictionary, link_elements, map_link, tagged_writer
@@ -174,3 +177,12 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     assert main(["doctor", "--soffice", soffice, "--format", "json"]) == 0
     reported = json.loads(capsys.readouterr().out)["pdfua_link_descriptions"]
     assert reported == ("unsupported" if undescribed else "supported")
+
+    record = run_pipeline(
+        linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)
+    )
+    assert record.toolchain["LibreOffice"]["pdfua_link_descriptions"] == reported
+    evidence = json.loads((tmp_path / "evidence" / "run.json").read_text())
+    assert evidence["toolchain"]["LibreOffice"]["pdfua_link_descriptions"] == reported
+    assert not any("probe" in name for name in evidence["outputs"])
+    assert check_bundle(tmp_path / "evidence") == []

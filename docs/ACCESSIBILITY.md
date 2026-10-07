@@ -44,7 +44,11 @@ audits the PDF with the built-in audit, and prints `pdfua_link_descriptions: sup
 (no `PDF019`) or `unsupported`. `doctor` exits `0` whenever the check ran, even when the
 answer is `unsupported`, and `3` when LibreOffice is missing or its export fails (the
 other versions are still printed). The pipeline's evidence records the LibreOffice version
-so the difference is explainable, but not this capability.
+so the difference is explainable. Text pipeline exports also record the same self-tested
+`pdfua_link_descriptions` capability under `toolchain.LibreOffice` in `run.json`. The
+probe runs once at the first export and adds an export to the run; an unsupported
+capability does not itself fail a document with no hyperlinks. A probe execution failure
+fails the export stage and is recorded with the other execution failures.
 
 ## Document families
 
