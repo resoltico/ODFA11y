@@ -64,7 +64,7 @@ class SetSheetNames(Operation):
                 continue
             document.edit(Part.CONTENT)
             found[old].set(qn("table", "name"), new)
-            _rename_view_settings(document, old, new)
+            _rename_settings(document, old, new)
             message = f"Renamed to {new!r}."
             outcomes.append(Outcome(self.name, Status.APPLIED, message, key=old, count=1))
         return tuple(outcomes)
@@ -183,14 +183,14 @@ def _has_scripts(document: OdfDocument) -> bool:
     )
 
 
-def _rename_view_settings(document: OdfDocument, old: str, new: str) -> None:
+def _rename_settings(document: OdfDocument, old: str, new: str) -> None:
     if not document.has(Part.SETTINGS):
         return
     for entry in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item-map-entry"):
         parent = entry.getparent()
         if (
             parent is not None
-            and parent.get(f"{CONFIG}name") == "Tables"
+            and parent.get(f"{CONFIG}name") in {"Tables", "ScriptConfiguration"}
             and entry.get(f"{CONFIG}name") == old
         ):
             document.edit(Part.SETTINGS)

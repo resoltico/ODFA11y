@@ -57,7 +57,9 @@ def cell_text(cell: etree._Element) -> str:
 
     """
     pieces = cell.xpath(
-        "descendant::text()[not(ancestor::svg:title or ancestor::svg:desc)]", namespaces=NS
+        "descendant::text()[not(ancestor::svg:title or ancestor::svg:desc "
+        "or ancestor::office:binary-data)]",
+        namespaces=NS,
     )
     text = "".join(piece for piece in pieces if isinstance(piece, str))
     return " ".join(text.replace("\u00a0", " ").split())

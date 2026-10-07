@@ -237,3 +237,9 @@ def test_spreadsheet_findings_have_the_same_logical_locations_in_both_layouts(
         "content/sheet[Sheet1]",
         "content/frame[Logo]",
     }
+
+
+def test_embedded_image_bytes_are_not_visible_cell_text(tmp_path: Path) -> None:
+    path = make_spreadsheet(tmp_path, "flat", sheet("Logos", row(picture(data="aW1hZ2U="))))
+    document = OdfDocument.open(path)
+    assert adapter_for(document.kind).snapshot(document) == ("sheet\tLogos",)

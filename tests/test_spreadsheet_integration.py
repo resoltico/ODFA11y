@@ -13,9 +13,9 @@ from odfa11y.audit import audit_odf
 from odfa11y.errors import RemediationError
 from odfa11y.external_tools import run_bounded
 from odfa11y.families.spreadsheet import ObjectAltText, SetObjectAltText, SetSheetNames
-from odfa11y.fidelity import FidelityPolicy
-from odfa11y.odf import OdfDocument
-from odfa11y.pdf import ExportSettings, export_pdfua
+from odfa11y.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.odf import OdfDocument, Part
+from odfa11y.pdf import ExportSettings, export_pdfua, validate_pdfua
 from odfa11y.pipeline import STAGE_NAMES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
 
@@ -156,6 +156,10 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     output = tmp_path / "remediated.ods"
     result = remediate(source, output, plan)
     assert result.changed
+    assert OdfDocument.open(output).tree(Part.SETTINGS).xpath(
+        "//config:config-item-map-named[@config:name='ScriptConfiguration']/config:config-item-map-entry/@config:name",
+        namespaces={"config": "urn:oasis:names:tc:opendocument:xmlns:config:1.0"},
+    ) == ["Fruit prices", "Data", "Spare"]
     after = {f.rule_id for f in audit_odf(output, schema=True).findings}
     assert not {"SHEET002", "SHEET005"} & after
     export = ExportSettings("calc_pdf_Export", soffice, profile_dir=tmp_path / "profile")
@@ -190,7 +194,19 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     plan = [SetMetadata(language="en-GB")]
     options = PipelineOptions(soffice=soffice)
     record = run_pipeline(source, plan, FidelityPolicy(), tmp_path / "out", options)
-    assert stages(record) == dict.fromkeys(STAGE_NAMES, "passed") | {"verapdf": "skipped"}
+    reached = stages(record)
+    assert all(reached[name] == "passed" for name in STAGE_NAMES[:6]), record.as_dict()
+    pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
+    assert pdf_stage.report is not None
+    pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
+    assert pdf_rules <= {"PDF008", "PDF015", "PDF023"}, record.as_dict()
+    failures = validation_failures(tmp_path / "out" / "remediated.pdf", external_tool("verapdf"))
+    assert ("PDF023" in pdf_rules) == (("7.1", "3") in failures)
+    if "PDF023" in pdf_rules:
+        assert record.failed_stage == "audit-pdf"
+        assert reached["fidelity"] == "skipped"
+    else:
+        assert reached["audit-pdf"] == reached["fidelity"] == "passed"
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["document"]["adapter"] == "spreadsheet"
     assert {"source.pdf", "remediated.pdf", "remediated.ods"} <= set(run["outputs"])
@@ -208,13 +224,21 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
         source, plan, FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice=soffice)
     )
     assert stages(record)["remediate"] == "passed"
-    assert stages(record)["fidelity"] == "failed"
-    fidelity = next(stage for stage in record.stages if stage.name == "fidelity")
-    assert fidelity.report is not None
-    assert "FID003" in {f.rule_id for f in fidelity.report.findings}
+    report = compare_pdfs(
+        tmp_path / "out" / "source.pdf", tmp_path / "out" / "remediated.pdf", FidelityPolicy()
+    )
+    assert "FID003" in {f.rule_id for f in report.findings}
+    if record.failed_stage == "audit-pdf":
+        assert stages(record)["fidelity"] == "skipped"
+        failures = validation_failures(
+            tmp_path / "out" / "remediated.pdf", external_tool("verapdf")
+        )
+        assert ("7.1", "3") in failures
+    else:
+        assert record.failed_stage == "fidelity", record.as_dict()
 
 
-def test_the_production_profile_runs_veraphdf_on_a_calc_export(
+def test_the_production_profile_rejects_known_invalid_calc_exports(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
@@ -226,9 +250,19 @@ def test_the_production_profile_runs_veraphdf_on_a_calc_export(
     )
     reached = stages(record)
     assert reached["export-source"] == reached["export-remediated"] == "passed"
-    assert reached["audit-pdf"] == "passed"
-    assert reached["verapdf"] in {"passed", "failed"}
-    assert (tmp_path / "out" / "verapdf.xml").is_file()
+    failures = validation_failures(tmp_path / "out" / "remediated.pdf", verapdf)
+    pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
+    assert pdf_stage.report is not None
+    pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
+    assert pdf_rules <= {"PDF008", "PDF015", "PDF023"}, record.as_dict()
+    assert ("PDF023" in pdf_rules) == (("7.1", "3") in failures)
+    if pdf_rules & {"PDF015", "PDF023"}:
+        assert record.failed_stage == "audit-pdf", record.as_dict()
+        assert reached["verapdf"] == reached["fidelity"] == "skipped"
+    else:
+        assert reached["audit-pdf"] == "passed"
+        assert (reached["verapdf"] == "failed") == bool(failures)
+        assert (tmp_path / "out" / "verapdf.xml").is_file()
 
 
 def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(
@@ -238,3 +272,18 @@ def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(
         tmp_path, external_tool("soffice", "libreoffice"), data_sheet("Prices", header_rows=1)
     )
     assert "SHEET003" not in {f.rule_id for f in audit_odf(source).findings}
+
+
+def validation_failures(pdf: Path, verapdf: str) -> set[tuple[str, str]]:
+    """Require independent validation to find only the known Calc exporter defects.
+
+    Returns
+    -------
+    set[tuple[str, str]]
+        Failed clause/test pairs, empty for an exporter that conforms.
+
+    """
+    result = validate_pdfua(pdf, executable=verapdf)
+    failures = {(f.clause, f.test_number) for f in result.failures}
+    assert failures <= {("7.1", "3"), ("7.2", "43")}, result.failures
+    return failures

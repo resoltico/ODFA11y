@@ -243,14 +243,17 @@ def test_duplicate_targets_are_not_treated_as_a_completed_rename(tmp_path: Path)
     assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
 
 
-def test_view_settings_follow_a_rename_without_changing_other_settings(tmp_path: Path) -> None:
+@pytest.mark.parametrize("map_name", ["Tables", "ScriptConfiguration"])
+def test_sheet_settings_follow_a_rename_without_changing_other_settings(
+    tmp_path: Path, map_name: str
+) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
     namespace = "urn:oasis:names:tc:opendocument:xmlns:config:1.0"
     settings = (
         "<office:document-settings "
         'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
         f'xmlns:config="{namespace}"><office:settings>'
-        '<config:config-item-map-named config:name="Tables">'
+        f'<config:config-item-map-named config:name="{map_name}">'
         '<config:config-item-map-entry config:name="Notes"/>'
         '<config:config-item-map-entry config:name="Sheet1"/>'
         "</config:config-item-map-named>"
