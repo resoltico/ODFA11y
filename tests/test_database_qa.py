@@ -134,3 +134,94 @@ def test_flat_base_metadata_edits_protect_settings_without_freezing_whole_docume
     with pytest.raises(RemediationError, match="content changed"):
         remediate(destination, wrong, [ChangeDatabaseSettings()])
     assert not wrong.exists()
+
+
+def test_standard_server_database_declaration_is_external_instead_of_missing(
+    tmp_path: Path,
+) -> None:
+    document = OdfDocument.open(SOURCE)
+    connection = select_elements(document.edit(Part.CONTENT), "//db:connection-data")[0]
+    resource = select_elements(connection, "./db:connection-resource")[0]
+    connection.remove(resource)
+    description = etree.Element(qn("db", "database-description"))
+    etree.SubElement(
+        description,
+        qn("db", "server-database"),
+        {
+            qn("db", "type"): "db:postgresql",
+            qn("db", "hostname"): "invalid.example",
+            qn("db", "port"): "5432",
+            qn("db", "database-name"): "private-invented-database",
+        },
+    )
+    connection.insert(0, description)
+    source = document.save(tmp_path / "server.odb")
+    assert validate(OdfDocument.open(source)).count == 0
+    report = audit_odf(source)
+    assert "BASE002" in {finding.rule_id for finding in report.findings}
+    assert "BASE001" not in {finding.rule_id for finding in report.findings}
+    assert report.metadata["connection_declarations"] == 1
+    assert "invalid.example" not in str(report.as_dict())
+    assert "private-invented-database" not in str(report.as_dict())
+
+
+@pytest.mark.parametrize("part", ["content", "settings", "flat"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("Password", "string", "invented-sensitive-value", True),
+        ("User_Name", "string", "invented-sensitive-value", True),
+        ("Auth", "string", "invented-sensitive-value", True),
+        ("Access-Token", "string", "invented-sensitive-value", True),
+        ("ClientSecret", "string", "invented-sensitive-value", True),
+        ("API Key", "string", "invented-sensitive-value", True),
+        ("PasswordRequired", "boolean", "true", False),
+        ("UsePassword", "boolean", "true", False),
+        ("Password", "boolean", "false", False),
+        ("AuthMode", "string", "OAuth", False),
+        ("Password", "string", "  ", False),
+    ],
+)
+def test_named_authentication_settings_are_reported_without_exposing_values(
+    tmp_path: Path, part: str, case: tuple[str, str, str, bool]
+) -> None:
+    name, kind, value, credential = case
+    document = OdfDocument.open(SOURCE)
+    if part == "content":
+        application = select_elements(
+            document.edit(Part.CONTENT), "//db:application-connection-settings"
+        )[0]
+        settings = etree.SubElement(application, qn("db", "data-source-settings"))
+        setting = etree.SubElement(
+            settings,
+            qn("db", "data-source-setting"),
+            {
+                qn("db", "data-source-setting-name"): name,
+                qn("db", "data-source-setting-type"): kind,
+            },
+        )
+        etree.SubElement(setting, qn("db", "data-source-setting-value")).text = value
+    else:
+        settings = etree.SubElement(
+            document.edit(Part.SETTINGS).getroot(), qn("office", "settings")
+        )
+        setting_set = etree.SubElement(
+            settings, CONFIG + "config-item-set", {CONFIG + "name": "Database"}
+        )
+        etree.SubElement(
+            setting_set, CONFIG + "config-item", {CONFIG + "name": name, CONFIG + "type": kind}
+        ).text = value
+    if part == "flat":
+        root = deepcopy(document.tree(Part.CONTENT).getroot())
+        root.tag = qn("office", "document")
+        root.set(qn("office", "mimetype"), "application/vnd.oasis.opendocument.base")
+        root.insert(0, deepcopy(settings))
+        source = tmp_path / "settings.fodb"
+        source.write_bytes(etree.tostring(root, xml_declaration=True, encoding="UTF-8"))
+    else:
+        source = document.save(tmp_path / "settings.odb")
+    assert validate(OdfDocument.open(source)).count == 0
+    report = audit_odf(source)
+    assert ("BASE003" in {finding.rule_id for finding in report.findings}) is credential
+    assert sum(finding.rule_id == "BASE003" for finding in report.findings) <= 1
+    assert "invented-sensitive-value" not in str(report.as_dict())
