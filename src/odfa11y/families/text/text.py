@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 from odfa11y.odf import qn, select_elements
 
 INERT_INLINE_TAGS = frozenset({qn("text", "span"), qn("text", "s")})
-HIDDEN_TAGS = frozenset({qn("svg", "title"), qn("svg", "desc")})
+# Accessibility metadata, and the image bytes a flat XML document embeds, are not rendered text.
+HIDDEN_TAGS = frozenset({qn("svg", "title"), qn("svg", "desc"), qn("office", "binary-data")})
 
 
 def is_empty_paragraph(p: etree._Element) -> bool:
@@ -61,7 +62,7 @@ def visible_text_snapshot(tree: etree._ElementTree) -> tuple[str, ...]:
 
 
 def _visible_node_text(node: etree._Element) -> str:
-    """Return rendered textual content while excluding accessibility metadata.
+    """Return rendered textual content while excluding accessibility metadata and image data.
 
     The walk is iterative, so no document depth can exhaust the interpreter's stack.
 

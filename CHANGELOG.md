@@ -18,6 +18,20 @@ Notable changes to this project are documented in this file. The format is based
   Python API takes `Location` in `Report.add`. The grammar is in
   [Rules](docs/RULES.md#locations).
 
+### Fixed
+
+- The text-preservation check no longer counts the image bytes that a flat XML document embeds
+  (`office:binary-data`) as visible text, so a flat and a packaged copy of one document
+  compare equal.
+
+### Internal
+
+- A regression corpus of fourteen small documents authored by LibreOffice Writer 24.2
+  (`tests/corpus`, nineteen files including flat-XML twins) is audited for its exact rule
+  ids, hashed, checked for package/flat equivalence and schema validity, and remediated
+  idempotently; an integration test runs the pipeline on three of them with real LibreOffice.
+  The sdist ships the corpus with the tests.
+
 ### Added
 
 - **Spreadsheet family.** Spreadsheets (`.ods`, `.ots`, flat `.fods`) now have their own

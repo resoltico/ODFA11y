@@ -54,6 +54,36 @@ synthetic ODF/PDF fixtures (`tests/documents.py` builds every document kind as a
 is extracted directly from [Configuration](CONFIGURATION.md#example) and validated
 through the real loader.
 
+## Writer regression corpus
+
+`tests/corpus` holds small documents that a real LibreOffice Writer wrote, with a
+[README](../tests/corpus/README.md) naming each one's purpose and provenance and a
+`manifest.toml` recording, per file, the exact audit rule ids, the rule ids left after the
+standard remediation plan, the schema-violation count and the SHA-256. `tests/test_corpus.py`
+and `tests/test_corpus_remediation.py` check all of it, and an integration test runs the
+pipeline on some of the documents. The files are marked binary in `.gitattributes`; they ship
+in the source archive with the rest of `tests/`.
+
+The Writer corpus hyperlink pipeline test compares the exported PDF with real veraPDF.
+When LibreOffice omits link descriptions, it requires `PDF019`, a failed PDF audit and
+skipped downstream stages; other failures are rejected. Green CI proves that the defect
+is detected, while the other corpus pipeline cases must complete successfully.
+
+
+To add or change a document:
+
+1. Add or edit its source in `tests/corpus/sources/` (HTML for what Writer's HTML import
+   expresses, flat XML for the rest).
+2. With `soffice` on the path, run `sh tests/corpus/build.sh` from the repository root. It
+   rewrites every document, and Writer's timestamps change every file's bytes, so only commit
+   the documents that changed on purpose; restore the others with `git checkout`.
+3. Audit the new documents, decide their expected rule ids by reading the findings, and list
+   the document in `manifest.toml` with its rule ids, schema-violation count and
+   `sha256sum` hash. List it in the corpus README too. Let the tests tell you which
+   expectation is wrong; do not copy their output without reading it.
+4. Update the LibreOffice version in the manifest and README when regenerating with another
+   one.
+
 ## Types, boundaries and properties
 
 [ty](https://github.com/astral-sh/ty) checks `src`, `tests` and `tools` using
