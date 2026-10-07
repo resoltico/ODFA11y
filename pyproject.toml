@@ -20,6 +20,8 @@ classifiers = [
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+  "Typing :: Typed",
   "Topic :: Office/Business",
   "Topic :: Software Development :: Quality Assurance",
 ]
@@ -28,15 +30,16 @@ dependencies = [
   "pypdf>=6.19.0,<7",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+  "hypothesis>=6.152.0,<7",
+  "types-lxml==2026.2.16",
   "pytest>=9.1.1,<10",
   "pytest-cov>=7.1.0,<8",
-  "build>=1.6.1,<2",
   "ruff==0.16.10",
+  "tach==0.35.3",
+  "ty==0.0.85",
 ]
-
-[dependency-groups]
 audit = [
   "pip-audit==2.10.1",
   "zizmor==1.30.1",
@@ -46,6 +49,7 @@ audit = [
 odfa11y = "odfa11y.cli:main"
 
 [project.urls]
+"Changelog" = "https://github.com/resoltico/ODFA11y/blob/main/CHANGELOG.md"
 "Repository" = "https://github.com/resoltico/ODFA11y"
 "Issues" = "https://github.com/resoltico/ODFA11y/issues"
 "ODF 1.4 standard" = "https://www.oasis-open.org/standard/opendocument-v1-4/"
@@ -69,19 +73,38 @@ include = [
   "/.editorconfig",
   "/.gitattributes",
   "/.python-version",
+  "/tach.toml",
   "/AGENTS.md",
   "/CHANGELOG.md",
   "/uv.lock",
 ]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra -p no:tach"
 strict = true
 filterwarnings = ["error"]
 testpaths = ["tests"]
 markers = [
   "integration: tests that invoke an external application such as LibreOffice",
 ]
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["odfa11y"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+include = ["src", "tests", "tools"]
+
+[tool.ty.terminal]
+error-on-warning = true
 
 [tool.ruff]
 required-version = "==0.16.10"
@@ -124,23 +147,27 @@ max-file-lines = 300
 # The fixture exposes independent document features as named keyword arguments.
 "tests/fixtures.py" = ["too-many-arguments"]
 # Reports accept three identifiers plus named location/details/fixability fields.
-"src/odfa11y/models.py" = ["too-many-arguments"]
+"src/odfa11y/report/models.py" = ["too-many-arguments"]
 # Preserve the public API's explicit spacing controls, all optional controls keyword-only.
-"src/odfa11y/spacing.py" = ["too-many-arguments"]
+"src/odfa11y/remediation/spacing.py" = ["too-many-arguments"]
 # CLI output is its stdout/stderr interface; subprocess is used for timeout error handling.
-"src/odfa11y/cli.py" = ["print", "suspicious-subprocess-import"]
+"src/odfa11y/cli/commands.py" = ["print", "suspicious-subprocess-import"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
-"src/odfa11y/pdf_export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+"src/odfa11y/pdf/export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+# veraPDF is an explicitly selected local validator, invoked with an argument list.
+"src/odfa11y/pdf/verapdf.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 # Reporting prints the CLI interface and queries explicitly selected local tools.
-"src/odfa11y/cli_reporting.py" = ["print", "subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+"src/odfa11y/cli/reporting.py" = ["print", "subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 
 # lxml's documented public tree type is named _ElementTree; used in isinstance.
-"src/odfa11y/odt_package.py" = ["private-member-access"]
+"src/odfa11y/odf/package.py" = ["private-member-access"]
 # Serialized configuration readers preserve ValueError for malformed input.
-"src/odfa11y/config.py" = ["type-check-without-type-error"]
+"src/odfa11y/remediation/config.py" = ["type-check-without-type-error"]
 # JSON CLI configuration preserves ValueError for malformed serialized input.
-"src/odfa11y/cli_options.py" = ["type-check-without-type-error"]
+"src/odfa11y/cli/options.py" = ["type-check-without-type-error"]
 
 [tool.ruff.lint.extend-per-file-ignores]
+# lxml's element type is named _Element; the selector filters XPath results with isinstance.
+"src/odfa11y/odf/xpath.py" = ["private-member-access"]
 # pypdf has no public registration API for synthetic indirect structure objects.
 "tests/test_pdf_inspection.py" = ["private-member-access"]

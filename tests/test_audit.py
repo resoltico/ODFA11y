@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Test audit for ODF accessibility workflows."""
+"""Report accessibility findings for synthetic ODT documents."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import audit_odt
-from odfa11y.models import Severity
+from odfa11y.report import Severity
 
 from .fixtures import make_minimal_odt
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.models import AuditReport
+    from odfa11y.report import AuditReport
 
 
 def ids(report: AuditReport) -> set[str]:

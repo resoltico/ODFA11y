@@ -1,3 +1,3 @@
 # SPDX-License-Identifier: MPL-2.0
-"""init   for ODF accessibility workflows."""
+"""Synthetic-document tests for ODFA11y."""
 # Test package marker.

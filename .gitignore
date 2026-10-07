@@ -7,8 +7,8 @@ htmlcov/
 build/
 dist/
 .venv/
-*.pdf
-*.odt
+/*.pdf
+/*.odt
 *.tmp
 .DS_Store
 

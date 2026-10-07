@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Test remediate for ODF accessibility workflows."""
+"""Apply remediation choices and preserve document wording and package invariants."""
 
 from __future__ import annotations
 
@@ -7,9 +7,8 @@ import zipfile
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import audit_odt
-from odfa11y.namespaces import NS, qn
-from odfa11y.odt_package import OdtPackage
-from odfa11y.remediate import AltText, RemediationOptions, remediate_odt
+from odfa11y.odf import OdtPackage, qn, select_elements
+from odfa11y.remediation import AltText, RemediationOptions, remediate_odt
 
 from .fixtures import make_minimal_odt
 
@@ -47,14 +46,13 @@ def test_remediation_fixes_safe_structural_issues(tmp_path: Path) -> None:
 
     package = OdtPackage(dest)
     content = package.parse_xml("content.xml")
-    links = content.xpath("//text:a", namespaces=NS)
+    links = select_elements(content, "//text:a")
     assert len(links) == 1
     assert links[0].get(qn("xlink", "href")) == "mailto:test@example.com"
     assert (
         len(
-            content.xpath(
-                "//table:table[@table:name='Data']/table:table-header-rows/table:table-row",
-                namespaces=NS,
+            select_elements(
+                content, "//table:table[@table:name='Data']/table:table-header-rows/table:table-row"
             )
         )
         == 1
@@ -76,7 +74,7 @@ def test_linkify_preserves_trailing_punctuation_and_balanced_parentheses(tmp_pat
     source = make_minimal_odt(tmp_path / "source.odt")
     package = OdtPackage(source)
     tree = package.parse_xml("content.xml")
-    paragraph = tree.xpath("//text:p[1]", namespaces=NS)[0]
+    paragraph = select_elements(tree, "//text:p[1]")[0]
     paragraph.text = "See https://example.test/a_(b). Then email qa@example.test."
     package.write_xml("content.xml", tree)
     package.save(source)
@@ -88,10 +86,10 @@ def test_linkify_preserves_trailing_punctuation_and_balanced_parentheses(tmp_pat
         options=RemediationOptions(linkify_plain_addresses=True),
     )
     out = OdtPackage(dest).parse_xml("content.xml")
-    links = out.xpath("//text:a", namespaces=NS)
+    links = select_elements(out, "//text:a")
     assert [link.get(qn("xlink", "href")) for link in links] == [
         "https://example.test/a_(b)",
         "mailto:qa@example.test",
     ]
-    visible = "".join(out.xpath("//text:p[1]", namespaces=NS)[0].itertext())
+    visible = "".join(select_elements(out, "//text:p")[0].itertext())
     assert visible == "See https://example.test/a_(b). Then email qa@example.test."

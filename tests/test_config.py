@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Test config for ODF accessibility workflows."""
+"""Validate TOML remediation configuration and reject malformed input."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.config import load_remediation_config
+from odfa11y.remediation import load_remediation_config
 
 
 def test_toml_configuration_loads_explicit_semantics(tmp_path: Path) -> None:
@@ -40,6 +40,7 @@ description = "Organisation logo."
     assert options.language == "en-GB"
     assert options.linkify_plain_addresses is True
     assert options.table_header_rows == {"Data": 1}
+    assert options.alt_text is not None
     assert options.alt_text["Logo"].description == "Organisation logo."
 
 

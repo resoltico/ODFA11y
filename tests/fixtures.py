@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Fixtures for ODF accessibility workflows."""
+"""Build synthetic ODT documents with selected structural features."""
 
 from __future__ import annotations
 

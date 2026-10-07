@@ -17,7 +17,7 @@ from pypdf.generic import (
     TextStringObject,
 )
 
-from odfa11y.pdfua import audit_pdfua
+from odfa11y.pdf import audit_pdfua
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,7 +32,7 @@ def _writer(tag: str = "H1", *, role_map: dict[str, str] | None = None) -> PdfWr
     root[NameObject("/MarkInfo")] = DictionaryObject({
         NameObject("/Marked"): BooleanObject(value=True)
     })
-    writer.create_viewer_preferences().display_doctitle = True
+    writer.create_viewer_preferences()[NameObject("/DisplayDocTitle")] = BooleanObject(value=True)
     metadata = DecodedStreamObject()
     metadata.set_data(
         b'<x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:ua="http://www.aiim.org/pdfua/ns/id/">'
@@ -107,7 +107,9 @@ def test_unmapped_and_cyclic_roles_are_rejected(
 def test_false_marked_flag_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "untagged.pdf"
     writer = _writer()
-    writer.root_object["/MarkInfo"][NameObject("/Marked")] = BooleanObject(value=False)
+    mark_info = writer.root_object["/MarkInfo"]
+    assert isinstance(mark_info, DictionaryObject)
+    mark_info[NameObject("/Marked")] = BooleanObject(value=False)
     writer.write(path)
     assert "PDF003" in {issue.rule_id for issue in audit_pdfua(path).issues}
 
@@ -122,7 +124,9 @@ def test_cyclic_structure_arrays_do_not_repeat_traversal(tmp_path: Path) -> None
     path = tmp_path / "cyclic.pdf"
     writer = _writer()
     structure = writer.root_object["/StructTreeRoot"]
+    assert isinstance(structure, DictionaryObject)
     children = structure["/K"]
+    assert isinstance(children, ArrayObject)
     reference = writer._add_object(children)
     children.append(reference)
     writer.write(path)
