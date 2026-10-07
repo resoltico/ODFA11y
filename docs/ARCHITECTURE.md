@@ -114,7 +114,9 @@ Every finding references a [registered rule](../src/odfa11y/report/rules.py) wit
 severity, category and *remedy*, the configuration key that holds the decision. The id's
 prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `PDF`,
 `VERA`, `FID` (outputs). Reports serialize as
-`{"format": 2, "kind", "subject", "passed", "summary", "metadata", "findings"}`.
+`{"format": 3, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
+`location` is `{"path", "member"}` or null: a storage-neutral logical path, and the package
+member only where it helps ([locations](RULES.md#locations)).
 
 ## Operations and the executor
 

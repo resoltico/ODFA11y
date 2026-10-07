@@ -2,7 +2,7 @@
 """Rules, findings and report rendering shared by every check."""
 
 from . import rules
-from .models import Finding, Report
+from .models import Finding, Location, Report
 from .render import FORMATS, exit_status, render_reports
 from .rules import RULES, Category, Rule, Severity
 
@@ -11,6 +11,7 @@ __all__ = [
     "RULES",
     "Category",
     "Finding",
+    "Location",
     "Report",
     "Rule",
     "Severity",
