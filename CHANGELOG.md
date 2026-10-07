@@ -18,6 +18,16 @@ Notable changes to this project are documented in this file. The format is based
   Python API takes `Location` in `Report.add`. The grammar is in
   [Rules](docs/RULES.md#locations).
 
+### Added
+
+- `odfa11y doctor` now exports a synthetic one-hyperlink document with the installed
+  LibreOffice and reports `pdfua_link_descriptions: supported` or `unsupported` (also in
+  `--format json`). It answers in advance whether hyperlinks will be reported as `PDF019`,
+  which newer LibreOffice releases cause by exporting links without a PDF/UA description.
+  `PDF019` remains an error. `doctor` accepts `--soffice` and `--timeout`, and now exits `3`
+  when LibreOffice is missing or its export fails, after printing the versions it found.
+  The capability is not recorded in `run.json`.
+
 ### Changed
 
 - The package description and README now state the support boundary: every OpenDocument kind

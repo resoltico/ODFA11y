@@ -3,6 +3,7 @@
 
 from .adapter import ADAPTER
 from .graphics import AltText, SetAltText
+from .link_probe import write_link_probe
 from .linkify import LinkifyAddresses, linkify_plain_addresses
 from .links import URI_RE, split_trailing_punctuation
 from .remove_spacers import RemoveEmptySpacers
@@ -24,4 +25,5 @@ __all__ = [
     "linkify_plain_addresses",
     "split_trailing_punctuation",
     "text_is_preserved",
+    "write_link_probe",
 ]
