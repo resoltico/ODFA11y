@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 FINDINGS = 2
 EXECUTION_FAILURE = 3
-CONFIG = '[document]\ntitle = "Updated"\n[remediation]\nlinkify_plain_addresses = true\n'
+CONFIG = '[document]\ntitle = "Updated"\n[text.remediation]\nlinkify_plain_addresses = true\n'
 
 
 def config(tmp_path: Path, text: str = CONFIG) -> Path:
@@ -47,7 +47,7 @@ def test_audit_prints_json_for_one_file_and_an_array_for_several(
     assert main(["audit", str(first), "--format", "json"]) == 0
     one = json.loads(capsys.readouterr().out)
     assert (one["kind"], one["passed"], one["metadata"]["title"]) == (
-        "odt",
+        "odf",
         True,
         "Synthetic accessible document",
     )
@@ -62,7 +62,7 @@ def test_audit_dispatches_on_file_content_and_mixes_kinds(
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
     assert main(["audit", str(odt), str(pdf), "--format", "json"]) == 0
-    assert [report["kind"] for report in json.loads(capsys.readouterr().out)] == ["odt", "pdf"]
+    assert [report["kind"] for report in json.loads(capsys.readouterr().out)] == ["odf", "pdf"]
 
 
 def test_audit_text_exit_status_and_strict_mode(
@@ -72,7 +72,7 @@ def test_audit_text_exit_status_and_strict_mode(
     assert main(["audit", str(failing)]) == FINDINGS
     output = capsys.readouterr().out
     assert "Result: FAIL" in output
-    assert "remedy: alt_text" in output
+    assert "remedy: text.alt_text" in output
     warned = make_minimal_odt(tmp_path / "warn.odt", with_plain_email=True)
     assert main(["audit", str(warned)]) == 0
     assert main(["audit", str(warned), "--strict"]) == 1
@@ -105,7 +105,7 @@ def test_template_prints_a_loadable_commented_configuration(
     source = make_minimal_odt(tmp_path / "a.odt", with_image_without_alt=True)
     assert main(["template", str(source)]) == 0
     output = capsys.readouterr().out
-    assert '# [alt_text."Logo"]' in output
+    assert '# [text.alt_text."Logo"]' in output
 
 
 def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
@@ -148,7 +148,7 @@ def test_remediation_failures_are_reported_on_stderr_with_exit_3(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
-    bad = config(tmp_path, "[table_headers]\nMissing = 1\n")
+    bad = config(tmp_path, "[text.table_headers]\nMissing = 1\n")
     destination = tmp_path / "out.odt"
     assert (
         main(["remediate", str(source), str(destination), "--config", str(bad)])

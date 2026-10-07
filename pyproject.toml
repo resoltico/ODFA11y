@@ -154,8 +154,9 @@ max-file-lines = 300
 "src/odfa11y/cli/commands.py" = ["print"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
 "src/odfa11y/pdf/export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
-# Version probes run an explicitly selected local tool with an argument list.
-"src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+# Version probes run an explicitly selected local tool with an argument list; stopping a
+# timed-out process tree on Windows needs the system taskkill, found through PATH.
+"src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import", "start-process-with-partial-path"]
 # veraPDF is an explicitly selected local validator, invoked with an argument list.
 "src/odfa11y/pdf/verapdf.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 
@@ -163,6 +164,13 @@ max-file-lines = 300
 [tool.ruff.lint.extend-per-file-ignores]
 # lxml's element type is named _Element; the selector filters XPath results with isinstance.
 "src/odfa11y/odf/xpath.py" = ["private-member-access"]
+# Same reason: schema errors are located with XPath and filtered with isinstance.
+"src/odfa11y/odf/schema.py" = ["private-member-access"]
+# These classes implement the abstract storage interface; whether a part or member exists
+# does not depend on instance state for every layout.
+"src/odfa11y/odf/flat.py" = ["no-self-use"]
+# Same reason for the ZIP layout.
+"src/odfa11y/odf/package.py" = ["no-self-use"]
 # pypdf has no public registration API for synthetic indirect structure objects.
 "tests/test_pdf_inspection.py" = ["private-member-access"]
 # Same reason: synthetic PDFs register indirect structure objects.

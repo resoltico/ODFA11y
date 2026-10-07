@@ -11,21 +11,15 @@ from typing import TYPE_CHECKING, Unpack
 import pypdfium2
 import pytest
 
-from odfa11y.audit import audit_odt
+from odfa11y.adapter import Status
+from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, RemediationError, ToolFailedError
+from odfa11y.families.text import HeaderRows, LinkifyAddresses, MarkHeaderRows, RemoveEmptySpacers
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.fidelity import compare as compare_module
-from odfa11y.odf import OdtDocument, OdtPackage, select_elements
+from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import (
-    LinkifyAddresses,
-    MarkHeaderRows,
-    RemoveEmptySpacers,
-    SetMetadata,
-    SetOdfVersion,
-    Status,
-    remediate,
-)
+from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import text_pdf
@@ -49,7 +43,7 @@ def with_body(tmp_path: Path, body: bytes, **features: Unpack[Features]) -> Path
         The rewritten document.
 
     """
-    package = OdtPackage(make_minimal_odt(tmp_path / "base.odt", **features))
+    package = PackageStorage(make_minimal_odt(tmp_path / "base.odt", **features))
     package.write_member(
         "content.xml",
         package.read("content.xml").replace(b"<office:text>", b"<office:text>" + body, 1),
@@ -60,11 +54,11 @@ def with_body(tmp_path: Path, body: bytes, **features: Unpack[Features]) -> Path
 
 
 def test_malformed_optional_members_do_not_abort_the_audit_or_remediation(tmp_path: Path) -> None:
-    package = OdtPackage(make_minimal_odt(tmp_path / "base.odt"))
+    package = PackageStorage(make_minimal_odt(tmp_path / "base.odt"))
     package.write_member("settings.xml", b"<not-closed")
     broken = tmp_path / "broken.odt"
     package.save(broken)
-    report = audit_odt(broken, schema=True)
+    report = audit_odf(broken, schema=True)
     assert "XML001" in {f.rule_id for f in report.findings}
     result = remediate(broken, tmp_path / "out.odt", [SetMetadata(title="Still works")])
     assert result.changed
@@ -79,8 +73,8 @@ def test_zip_encrypted_members_are_an_invalid_package_not_a_crash(tmp_path: Path
     encrypted = tmp_path / "encrypted.odt"
     encrypted.write_bytes(bytes(data))
     with pytest.raises(PackageError):
-        OdtPackage(encrypted)
-    assert {f.rule_id for f in audit_odt(encrypted).findings} == {"PKG000"}
+        PackageStorage(encrypted)
+    assert {f.rule_id for f in audit_odf(encrypted).findings} == {"PKG000"}
 
 
 ANNOTATED = (
@@ -96,16 +90,16 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
     tmp_path: Path,
 ) -> None:
     source = with_body(tmp_path, ANNOTATED)
-    audited = [f for f in audit_odt(source).findings if f.rule_id == "LNK001"]
+    audited = [f for f in audit_odf(source).findings if f.rule_id == "TXT030"]
     assert sorted(f.details["text"] for f in audited) == [
         "https://example.test/note",
         "https://example.test/real",
         "qa@example.test",
     ]
-    document = OdtDocument.open(source)
+    document = OdfDocument.open(source)
     (outcome,) = LinkifyAddresses().apply(document)
     assert (outcome.status, outcome.count) == (Status.APPLIED, 3)
-    content = document.tree("content.xml")
+    content = document.tree(Part.CONTENT)
     assert not select_elements(content, "//svg:desc/text:a | //dc:creator/text:a")
     links = select_elements(content, "//text:a")
     assert sorted(link.text or "" for link in links) == [
@@ -113,7 +107,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
         "https://example.test/real",
         "qa@example.test",
     ]
-    assert audit_odt(source).findings  # the original is untouched
+    assert audit_odf(source).findings  # the original is untouched
     assert LinkifyAddresses().apply(document)[0].status is Status.UNCHANGED
 
 
@@ -133,9 +127,9 @@ def test_paragraphs_with_markers_or_fields_are_never_removed_as_spacers(
     tmp_path: Path, marker: bytes
 ) -> None:
     body = b'<text:p text:style-name="Body" xml:id="marked">' + marker + b"</text:p>"
-    document = OdtDocument.open(with_body(tmp_path, body))
+    document = OdfDocument.open(with_body(tmp_path, body))
     RemoveEmptySpacers().apply(document)
-    assert select_elements(document.tree("content.xml"), "//*[@xml:id='marked']")
+    assert select_elements(document.tree(Part.CONTENT), "//*[@xml:id='marked']")
 
 
 def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None:
@@ -143,8 +137,8 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
         b'<text:list><text:list-item><text:p text:style-name="Body"/></text:list-item></text:list>'
     )
     source = with_body(tmp_path, listed)
-    finding = next(f for f in audit_odt(source).findings if f.rule_id == "LAY001")
-    (outcome,) = RemoveEmptySpacers().apply(OdtDocument.open(source))
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == "TXT040")
+    (outcome,) = RemoveEmptySpacers().apply(OdfDocument.open(source))
     assert finding.details["count"] == outcome.count == 1  # the list item's paragraph is neither
 
 
@@ -154,7 +148,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     valid = make_minimal_odt(tmp_path / "v12.odt", version="1.2", with_data_table=True)
     result = remediate(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
     assert result.schema_check.startswith("valid against ODF 1.4")
-    package = OdtPackage(valid)
+    package = PackageStorage(valid)
     package.write_member(
         "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")
     )
@@ -167,7 +161,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
 
 def test_duplicate_table_names_are_ambiguous_and_fail(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "base.odt", with_data_table=True)
-    package = OdtPackage(source)
+    package = PackageStorage(source)
     content = package.read("content.xml")
     start, end = (
         content.index(b"<table:table "),
@@ -176,7 +170,7 @@ def test_duplicate_table_names_are_ambiguous_and_fail(tmp_path: Path) -> None:
     package.write_member("content.xml", content[:end] + content[start:end] + content[end:])
     twin = tmp_path / "twin.odt"
     package.save(twin)
-    (outcome,) = MarkHeaderRows({"Data": 1}).apply(OdtDocument.open(twin))
+    (outcome,) = MarkHeaderRows({"Data": HeaderRows(1)}).apply(OdfDocument.open(twin))
     assert outcome.status is Status.FAILED
     assert "must be unique" in outcome.message
 

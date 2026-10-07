@@ -9,10 +9,12 @@ import pytest
 from pypdf import PdfWriter
 
 from odfa11y.errors import OutputError, ToolNotFoundError
-from odfa11y.odf import OdtPackage
-from odfa11y.pdf import audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.odf import PackageStorage
+from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
 
 from .fixtures import make_minimal_odt
+
+WRITER = "writer_pdf_Export"
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -30,13 +32,15 @@ RICH_BODY = (
 def test_export_to_the_source_path_is_refused(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     with pytest.raises(OutputError):
-        export_pdfua(source, source)
+        export_pdfua(source, source, ExportSettings(WRITER))
 
 
 def test_export_without_libreoffice_is_a_not_found_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     with pytest.raises(ToolNotFoundError):
-        export_pdfua(source, tmp_path / "out.pdf", soffice=tmp_path / "absent")
+        export_pdfua(
+            source, tmp_path / "out.pdf", ExportSettings(WRITER, soffice=tmp_path / "absent")
+        )
 
 
 @pytest.mark.integration
@@ -45,7 +49,9 @@ def test_libreoffice_pdfua_export_has_core_markers(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     pdf = export_pdfua(
-        make_minimal_odt(tmp_path / "doc.odt"), tmp_path / "doc.pdf", soffice=soffice
+        make_minimal_odt(tmp_path / "doc.odt"),
+        tmp_path / "doc.pdf",
+        ExportSettings(WRITER, soffice=soffice),
     )
     report = audit_pdfua(pdf)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
@@ -61,7 +67,9 @@ def test_libreoffice_export_passes_real_verapdf_pdfua_validation(
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
     pdf = export_pdfua(
-        make_minimal_odt(tmp_path / "doc.odt"), tmp_path / "doc.pdf", soffice=soffice
+        make_minimal_odt(tmp_path / "doc.odt"),
+        tmp_path / "doc.pdf",
+        ExportSettings(WRITER, soffice=soffice),
     )
     result = validate_pdfua(pdf, executable=verapdf)
     assert result.compliant, result.raw_xml
@@ -75,16 +83,23 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
     source = make_minimal_odt(tmp_path / "rich.odt", with_data_table=True, with_table_header=True)
-    package = OdtPackage(source)
+    package = PackageStorage(source)
     package.write_member(
         "content.xml",
         package.read("content.xml").replace(b"<office:text>", b"<office:text>" + RICH_BODY, 1),
     )
     rich = tmp_path / "rich-doc.odt"
     package.save(rich)
-    pdf = export_pdfua(rich, tmp_path / "rich.pdf", soffice=soffice)
+    pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
-    assert not {f.rule_id for f in report.findings} & {"PDF012", "PDF013", "PDF014", "PDF016"}
+    assert not {f.rule_id for f in report.findings} & {
+        "PDF012",
+        "PDF013",
+        "PDF014",
+        "PDF016",
+        "PDF017",
+        "PDF018",
+    }
     assert report.metadata["link_structure_elements"] >= 1
     assert validate_pdfua(pdf, executable=verapdf).compliant
 

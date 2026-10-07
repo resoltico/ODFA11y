@@ -1,6 +1,6 @@
 # Rule reference
 
-Every finding comes from one registered rule with a stable ID, a severity, a category and,
+Every finding comes from one registered rule (the identifier prefix names its owner: `PKG`, `XML`, `ODF` and `META` belong to the ODF core, `TXT` to the text family, `PDF`, `VERA` and `FID` to the output checks) with a stable ID, a severity, a category and,
 where a configuration can address it, a **remedy**: the configuration key that holds the
 decision. Severity decides exit statuses (see [the workflow](WORKFLOW.md#exit-statuses));
 the code registry in [rules.py](../src/odfa11y/report/rules.py) is authoritative and a test
@@ -8,47 +8,59 @@ checks that this document lists exactly its rules and severities.
 
 ## Package and XML
 
+These apply to every ODF document, whatever its family.
+
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
-| `PKG000` | Error | The source cannot be read as an ODT package (corrupt, oversized or not a ZIP). |  |
-| `PKG001` | Error | Required mimetype member is missing. |  |
-| `PKG002` | Error | MIME type is not application/vnd.oasis.opendocument.text. |  |
+| `PKG000` | Error | Source is not a readable ODF package or flat XML document. |  |
+| `PKG001` | Warning | The document does not declare its media type. |  |
+| `PKG002` | Warning | An optional package member is missing. |  |
 | `PKG003` | Error | mimetype is not the first ZIP member. |  |
 | `PKG004` | Error | mimetype is compressed. |  |
-| `PKG005` | Error | A required XML member is missing. |  |
+| `PKG005` | Error | A member the document needs is missing. |  |
 | `PKG006` | Error | ZIP member names are duplicated. |  |
-| `PKG007` | Error | Names such as `/etc/x` or `../x` are unsafe if the package is ever extracted; the writer refuses them. |  |
+| `PKG007` | Error | A ZIP member name is absolute or escapes its directory. |  |
 | `XML001` | Error | A required XML member cannot be parsed. |  |
 
-## ODF declarations, schema and metadata
+## ODF declarations, kind, schema and metadata
+
+Also common to every family. `ODF009` says that a document's family has no semantic audit yet: the common checks ran and nothing is implied about the rest.
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
 | `ODF001` | Error | Package members declare different ODF versions. | `document.odf_version` |
 | `ODF002` | Error | Manifest root file-entry '/' is missing. |  |
 | `ODF003` | Error | Manifest root file-entry version differs from the document version. | `document.odf_version` |
-| `ODF004` | Error | Manifest root media type is not the ODT media type. |  |
+| `ODF004` | Error | Manifest root media type differs from the document's. |  |
+| `ODF005` | Error | The media type is not an OpenDocument document type. |  |
+| `ODF006` | Error | The document body does not match its media type. |  |
+| `ODF007` | Warning | The file extension does not match the media type. |  |
+| `ODF008` | Warning | The document kind is deprecated or legacy. |  |
+| `ODF009` | Info | No semantic audit exists for this document family. |  |
+| `ODF010` | Error | A flat XML document's root is not office:document. |  |
 | `ODF900` | Warning | A member does not validate against the ODF schema. |  |
 | `ODF905` | Info | No ODF schema is bundled for the declared version. |  |
 | `META001` | Error | Document title metadata is missing. | `document.title` |
 | `META002` | Error | Document language is not declared. | `document.language` |
-| `META003` | Warning | Metadata and default paragraph-style languages disagree. | `document.language` |
+| `META003` | Warning | Metadata and default style languages disagree. | `document.language` |
 
-## Semantics, links and layout
+## Text documents
+
+Owned by the text family (`TXT`). A document of another family never produces them. Remedies are keys of the `[text]` configuration table.
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
-| `SEM001` | Error | Heading has no valid outline level. |  |
-| `SEM002` | Error | Heading hierarchy starts too deep or skips a level. |  |
-| `SEM003` | Warning | Heading text resembles manually typed numbering. |  |
-| `SEM004` | Info | No structural headings were found. |  |
-| `SEM005` | Warning | Footnotes or endnotes need reading-order review. |  |
-| `IMG001` | Error | Graphic has neither accessible title nor description. | `alt_text` |
-| `TBL001` | Error | Table has merged or split cells. |  |
-| `TBL002` | Warning | Data-like table has no header rows. | `table_headers` |
-| `LNK001` | Warning | Visible URL or email address is not a hyperlink. | `remediation.linkify_plain_addresses` |
-| `LAY001` | Info | Empty paragraphs may be visual spacers. | `remediation.remove_empty_spacers` |
-| `STYLE001` | Error | Blinking text styling is declared. |  |
+| `TXT001` | Error | Heading has no valid outline level. |  |
+| `TXT002` | Error | Heading hierarchy starts too deep or skips a level. |  |
+| `TXT003` | Warning | Heading text resembles manually typed numbering. |  |
+| `TXT004` | Info | No structural headings were found. |  |
+| `TXT005` | Warning | Footnotes or endnotes need reading-order review. |  |
+| `TXT010` | Error | Graphic has neither accessible title nor description. | `text.alt_text` |
+| `TXT020` | Error | Table has merged or split cells. |  |
+| `TXT021` | Warning | Data-like table has no header rows. | `text.table_headers` |
+| `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.remediation.linkify_plain_addresses` |
+| `TXT040` | Info | Empty paragraphs may be visual spacers. | `text.remediation.remove_empty_spacers` |
+| `TXT050` | Error | Blinking text styling is declared. |  |
 
 ## PDF inspection and veraPDF
 
@@ -70,7 +82,9 @@ checks that this document lists exactly its rules and severities.
 | `PDF013` | Error | List structure is malformed. |  |
 | `PDF014` | Error | Table structure is malformed. |  |
 | `PDF015` | Warning | Table has no header cells. |  |
-| `PDF016` | Warning | Link annotations have no Link structure elements. |  |
+| `PDF016` | Warning | A link annotation is not represented by a Link structure element. |  |
+| `PDF017` | Warning | A Link structure element refers to no link annotation. |  |
+| `PDF018` | Error | A link annotation is mapped by more than one element, or from another page. |  |
 | `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
 | `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 
@@ -91,9 +105,9 @@ checks that this document lists exactly its rules and severities.
 `ODF900` is a warning because pristine LibreOffice output often fails the strict ODF
 schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
 which `remediate` enforces: it refuses any result with a violation the source did not
-already have. The `LNK`, `TBL`, `SEM003` and `LAY` findings use heuristics; inspect the
+already have. The `TXT` link, table, numbering and spacer findings use heuristics; inspect the
 source in context. Graphics need supplied descriptions, and header rows need a named
-table with an explicit row count. `LAY001` is observational: [spacer
+table with an explicit row count. `TXT040` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
 `VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
 number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.

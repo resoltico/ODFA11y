@@ -10,20 +10,18 @@ from typing import TYPE_CHECKING, ClassVar, override
 import pytest
 from lxml import etree
 
+from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.errors import OutputError, RemediationError
-from odfa11y.odf import OdtDocument, OdtPackage, qn, select_elements
-from odfa11y.remediation import (
+from odfa11y.families.text import (
+    ADAPTER,
     AltText,
+    HeaderRows,
     LinkifyAddresses,
     MarkHeaderRows,
-    Operation,
-    Outcome,
     SetAltText,
-    SetMetadata,
-    SetOdfVersion,
-    Status,
-    remediate,
 )
+from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
+from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
 
 from .fixtures import make_minimal_odt
 
@@ -39,8 +37,8 @@ class Misbehaving(Operation):
     name: ClassVar[str] = "misbehaving"
 
     @override
-    def apply(self, document: OdtDocument) -> tuple[Outcome, ...]:
-        content = document.edit("content.xml")
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+        content = document.edit(Part.CONTENT)
         paragraph = select_elements(content, "//text:p")[0]
         if self.action == "change-text":
             paragraph.text = "Different words"
@@ -56,7 +54,7 @@ class Lying(Operation):
     name: ClassVar[str] = "lying"
 
     @override
-    def apply(self, document: OdtDocument) -> tuple[Outcome, ...]:
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         return (Outcome(self.name, Status.APPLIED, "claims a change"),)
 
 
@@ -72,7 +70,7 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     operations = [
         SetMetadata(title="New title", language="en-GB"),
         SetAltText({"Logo": AltText("Example logo", "Sample")}),
-        MarkHeaderRows({"Data": 1}),
+        MarkHeaderRows({"Data": HeaderRows(1)}),
         LinkifyAddresses(),
     ]
     destination = tmp_path / "out.odt"
@@ -84,9 +82,9 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     again = remediate(destination, tmp_path / "again.odt", operations)
     assert not again.changed
     for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
-        assert OdtPackage(destination).read(member) == OdtPackage(tmp_path / "again.odt").read(
-            member
-        )
+        assert PackageStorage(destination).read(member) == PackageStorage(
+            tmp_path / "again.odt"
+        ).read(member)
 
 
 def test_failed_outcomes_abort_the_run_listing_every_failure_and_write_nothing(
@@ -95,7 +93,10 @@ def test_failed_outcomes_abort_the_run_listing_every_failure_and_write_nothing(
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing")
-    operations = [SetAltText({"A": AltText("x"), "B": AltText("y")}), MarkHeaderRows({"C": 1})]
+    operations = [
+        SetAltText({"A": AltText("x"), "B": AltText("y")}),
+        MarkHeaderRows({"C": HeaderRows(1)}),
+    ]
     with pytest.raises(RemediationError) as raised:
         remediate(source, destination, operations)
     for key in ("[A]", "[B]", "[C]"):
@@ -134,7 +135,7 @@ def test_a_symlink_to_the_source_is_not_a_different_destination(tmp_path: Path) 
 def test_text_changes_are_rejected_before_publication(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="text changed"):
+    with pytest.raises(RemediationError, match="content changed"):
         remediate(source, destination, [Misbehaving("change-text")])
     assert not destination.exists()
 
@@ -149,7 +150,7 @@ def test_new_schema_violations_are_rejected_before_publication(tmp_path: Path) -
 
 def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", with_data_table=True)
-    package = OdtPackage(source)
+    package = PackageStorage(source)
     package.write_member(
         "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")
     )
@@ -168,7 +169,7 @@ def test_an_operation_that_misreports_its_edits_is_an_internal_error(tmp_path: P
 
 def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
-    package = OdtPackage(source)
+    package = PackageStorage(source)
     content = package.read("content.xml").replace(
         b"<office:text>",
         b'<office:text><!-- keep me --><?keep this?><x:ext xmlns:x="urn:example" x:a="1"/>',
@@ -180,7 +181,7 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
 
     destination = tmp_path / "out.odt"
     remediate(marked, destination, [SetMetadata(title="Only metadata changes")])
-    before, after = OdtPackage(marked), OdtPackage(destination)
+    before, after = PackageStorage(marked), PackageStorage(destination)
     for member in (
         "content.xml",
         "styles.xml",
@@ -194,11 +195,11 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
     remediate(
         marked, tmp_path / "out2.odt", [LinkifyAddresses(), SetAltText({"Logo": AltText("T")})]
     )
-    content_after = OdtPackage(tmp_path / "out2.odt").read("content.xml")
+    content_after = PackageStorage(tmp_path / "out2.odt").read("content.xml")
     assert b"keep me" in content_after
     assert b"<?keep this?>" in content_after
     assert b'x:a="1"' in content_after
-    assert OdtPackage(tmp_path / "out2.odt").read("styles.xml") == before.read("styles.xml")
+    assert PackageStorage(tmp_path / "out2.odt").read("styles.xml") == before.read("styles.xml")
 
 
 def test_saved_archive_keeps_the_mimetype_invariant(tmp_path: Path) -> None:
@@ -208,4 +209,4 @@ def test_saved_archive_keeps_the_mimetype_invariant(tmp_path: Path) -> None:
     with zipfile.ZipFile(destination) as archive:
         first = archive.infolist()[0]
         assert (first.filename, first.compress_type) == ("mimetype", zipfile.ZIP_STORED)
-    assert OdtDocument.open(destination).text_snapshot()
+    assert ADAPTER.snapshot(OdfDocument.open(destination))

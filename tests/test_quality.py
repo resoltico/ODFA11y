@@ -93,3 +93,43 @@ def test_per_file_ignores_for_missing_files_are_rejected(tmp_path: Path) -> None
     errors = check_repository(root)
     assert any("gone.py" in error for error in errors)
     assert not any("present.py" in error for error in errors)
+
+
+def _core_file(root: Path, *parts: str, source: str) -> None:
+    path = root.joinpath("src", "odfa11y", *parts)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(source, encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'from x import qn\nvalue = qn("text", "p")\n',
+        'value = "//text:p"\n',
+        'value = ".//table:table-row"\n',
+        'value = "//*[@style:text-blinking]"\n',
+    ],
+)
+def test_family_specific_names_are_rejected_in_the_core(tmp_path: Path, source: str) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, "audit", "engine.py", source=source)
+    assert any("family" in error for error in check_repository(root))
+
+
+def test_family_specific_names_are_allowed_in_a_family_package(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, "families", "text", "audit.py", source='value = "//text:p"\n')
+    assert check_repository(root) == []
+
+
+def test_core_prose_and_common_prefixes_are_allowed(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    source = (
+        '"""Mentions text:p only in prose."""\n'
+        "from x import qn\n"
+        'value = qn("office", "version")\n'
+        'media = "application/vnd.oasis.opendocument.text"\n'
+        'body = "office:text"\n'
+    )
+    _core_file(root, "odf", "kinds.py", source=source)
+    assert check_repository(root) == []

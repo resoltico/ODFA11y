@@ -3,7 +3,21 @@
 
 from __future__ import annotations
 
-from .namespaces import NS, qn
+from odfa11y.odf import NS, qn
+
+SPACING_ATTRIBUTES = (
+    qn("fo", "margin-top"),
+    qn("fo", "margin-bottom"),
+    qn("fo", "line-height"),
+    qn("fo", "line-height-at-least"),
+    qn("style", "contextual-spacing"),
+)
+
+BREAK_ATTRIBUTES = (
+    qn("fo", "break-before"),
+    qn("fo", "break-after"),
+    qn("style", "master-page-name"),
+)
 
 
 def display_attr(qname: str) -> str:

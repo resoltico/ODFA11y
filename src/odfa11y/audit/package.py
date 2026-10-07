@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Audit ZIP package structure, ODF version declarations and schema validity."""
+"""Audit storage structure, the document kind and ODF version declarations."""
 
 from __future__ import annotations
 
 import zipfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from odfa11y.errors import XmlParseError
 from odfa11y.odf import (
-    ODT_MIMETYPE,
-    REQUIRED_XML,
+    Part,
     declared_version,
+    is_office_element,
     is_unsafe_member_name,
     qn,
     select_elements,
@@ -19,68 +19,161 @@ from odfa11y.odf import (
 from odfa11y.report import rules
 
 if TYPE_CHECKING:
-    from odfa11y.odf import OdtDocument, OdtPackage
+    from odfa11y.odf import OdfDocument, PackageStorage
     from odfa11y.report import Report
 
 MAX_REPORTED_VIOLATIONS = 20
+MIMETYPE = "mimetype"
+OFFICE_ROOT_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.SETTINGS)
 
 
-def audit_package(package: OdtPackage, report: Report) -> None:
-    """Report package-level defects such as duplicate or missing required members."""
+def audit_structure(document: OdfDocument, report: Report) -> bool:
+    """Report storage-level defects of a package or a flat document.
+
+    Returns
+    -------
+    bool
+        False when the document lacks what any further audit needs.
+
+    """
+    if document.layout == "flat":
+        return _audit_flat(document, report)
+    return _audit_package(document, report)
+
+
+def _audit_flat(document: OdfDocument, report: Report) -> bool:
+    try:
+        root = document.tree(Part.CONTENT).getroot()
+    except XmlParseError as exc:
+        report.add(rules.XML001, str(exc), location=document.storage.source.name)
+        return False
+    if root.tag != qn("office", "document"):
+        report.add(
+            rules.ODF010,
+            f"The root element is {root.tag!r}; a flat document's root is office:document.",
+        )
+        return False
+    if document.detection.media_type is None:
+        report.add(rules.PKG001, "The document has no office:mimetype attribute.")
+    return True
+
+
+def _audit_package(document: OdfDocument, report: Report) -> bool:
+    package = cast("PackageStorage", document.storage)
     names = list(package.member_names())
     duplicates = sorted({name for name in names if names.count(name) > 1})
     if duplicates:
         report.add(
             rules.PKG006,
-            "ODT package contains duplicate ZIP member names.",
+            "Package contains duplicate ZIP member names.",
             details={"duplicates": duplicates},
         )
-    if "mimetype" not in package.members:
-        report.add(rules.PKG001, "ODT package has no mimetype member.")
-    else:
-        value = package.read("mimetype")
-        try:
-            decoded = value.decode("ascii")
-        except UnicodeDecodeError:
-            decoded = "<non-ASCII>"
-        if decoded != ODT_MIMETYPE:
-            report.add(
-                rules.PKG002,
-                f"mimetype is {decoded!r}; expected {ODT_MIMETYPE!r}.",
-                location="mimetype",
-            )
-        info = package.members["mimetype"].info
-        if not names or names[0] != "mimetype":
-            report.add(rules.PKG003, location="mimetype")
-        if info.compress_type != zipfile.ZIP_STORED:
-            report.add(
-                rules.PKG004,
-                "mimetype is compressed; ODF requires it to be stored uncompressed.",
-                location="mimetype",
-            )
-
-    for name in REQUIRED_XML:
-        if not package.has(name):
-            report.add(rules.PKG005, f"Required ODT member is missing: {name}", location=name)
+    _audit_mimetype(package, names, report)
     unsafe = sorted(name for name in names if is_unsafe_member_name(name))
     if unsafe:
         report.add(rules.PKG007, details={"names": unsafe})
+    usable = True
+    for part in (Part.MANIFEST, Part.CONTENT):
+        if not document.has(part):
+            name = package.member_for(part)
+            report.add(rules.PKG005, f"Required package member is missing: {name}", location=name)
+            usable = False
+    for part in (Part.STYLES, Part.META):
+        if not document.has(part):
+            name = package.member_for(part)
+            report.add(rules.PKG002, f"Optional package member is missing: {name}", location=name)
+    return usable
 
 
-def audit_versions(document: OdtDocument, report: Report) -> None:
+def _audit_mimetype(package: PackageStorage, names: list[str], report: Report) -> None:
+    if MIMETYPE not in package.members:
+        report.add(
+            rules.PKG001,
+            "Package has no mimetype member; tools cannot recognise its type without it.",
+        )
+        return
+    info = package.members[MIMETYPE].info
+    if not names or names[0] != MIMETYPE:
+        report.add(rules.PKG003, location=MIMETYPE)
+    if info.compress_type != zipfile.ZIP_STORED:
+        report.add(
+            rules.PKG004,
+            "mimetype is compressed; ODF requires it to be stored uncompressed.",
+            location=MIMETYPE,
+        )
+
+
+def audit_kind(document: OdfDocument, report: Report) -> bool:
+    """Report what the media type, body element and extension say about the document kind.
+
+    Returns
+    -------
+    bool
+        False when the media type is not an OpenDocument one, which ends the audit.
+
+    """
+    detection = document.detection
+    kind = detection.kind
+    report.metadata["layout"] = document.layout
+    report.metadata["media_type"] = detection.media_type
+    if kind is None:
+        report.add(
+            rules.ODF005,
+            f"The media type {detection.media_type!r} is not an OpenDocument document type.",
+            details={"media_type": detection.media_type, "declared_by": detection.declared_by},
+        )
+        return False
+    report.metadata["document_kind"] = kind.name
+    report.metadata["family"] = kind.family.value
+    if (
+        detection.manifest_media_type is not None
+        and detection.media_type is not None
+        and detection.manifest_media_type != detection.media_type
+    ):
+        report.add(
+            rules.ODF004,
+            f"The manifest declares {detection.manifest_media_type!r}; the document declares "
+            f"{detection.media_type!r}.",
+            location="META-INF/manifest.xml",
+        )
+    if kind.body_element is not None and detection.body_element != kind.body_element:
+        report.add(
+            rules.ODF006,
+            f"The body holds {detection.body_element!r}; a {kind.name} document holds "
+            f"{kind.body_element!r}.",
+            details={"body": detection.body_element, "expected": kind.body_element},
+        )
+    expected = _extensions(kind.extension, flat=document.layout == "flat")
+    if detection.extension not in expected:
+        report.add(
+            rules.ODF007,
+            f"The file extension {detection.extension!r} does not match a {kind.name} document "
+            f"({', '.join(sorted(expected))}).",
+        )
+    if kind.deprecated or kind.legacy:
+        state = "deprecated" if kind.deprecated else "legacy"
+        report.add(rules.ODF008, f"The {kind.media_type} media type is {state}.")
+    return True
+
+
+def _extensions(extension: str, *, flat: bool) -> set[str]:
+    return {f".f{extension[1:]}", ".xml"} if flat else {extension}
+
+
+def audit_versions(document: OdfDocument, report: Report) -> None:
     """Report ODF version declarations that disagree across members or the manifest."""
     version = declared_version(document)
-    members = [
-        name
-        for name in ("content.xml", "styles.xml", "meta.xml", "settings.xml")
-        if document.has(name)
-    ]
     declared = {}
-    for name in members:
+    for part in OFFICE_ROOT_PARTS:
+        name = document.member_name(part)
+        if name is None or name in declared:
+            continue
         try:
-            declared[name] = document.tree(name).getroot().get(qn("office", "version"))
+            root = document.tree(part).getroot()
         except XmlParseError:
             continue  # reported as XML001 by the caller
+        if is_office_element(root):
+            declared[name] = root.get(qn("office", "version"))
     if version is None or len(set(declared.values())) > 1:
         report.add(
             rules.ODF001,
@@ -89,7 +182,12 @@ def audit_versions(document: OdtDocument, report: Report) -> None:
         )
     if version is not None:
         report.metadata["odf_version"] = version
-    manifest_root = document.tree("META-INF/manifest.xml").getroot()
+    if document.has(Part.MANIFEST):
+        _audit_manifest(document, version, report)
+
+
+def _audit_manifest(document: OdfDocument, version: str | None, report: Report) -> None:
+    manifest_root = document.tree(Part.MANIFEST).getroot()
     manifest_version = manifest_root.get(qn("manifest", "version"))
     if manifest_version is not None and manifest_version != version:
         report.add(
@@ -101,8 +199,7 @@ def audit_versions(document: OdtDocument, report: Report) -> None:
     if not root_entries:
         report.add(rules.ODF002, location="META-INF/manifest.xml")
         return
-    entry = root_entries[0]
-    entry_version = entry.get(qn("manifest", "version"))
+    entry_version = root_entries[0].get(qn("manifest", "version"))
     if entry_version is not None and entry_version != version:
         report.add(
             rules.ODF003,
@@ -112,15 +209,9 @@ def audit_versions(document: OdtDocument, report: Report) -> None:
             ),
             location="META-INF/manifest.xml",
         )
-    if entry.get(qn("manifest", "media-type")) != ODT_MIMETYPE:
-        report.add(
-            rules.ODF004,
-            f"Manifest root media type is not {ODT_MIMETYPE!r}.",
-            location="META-INF/manifest.xml",
-        )
 
 
-def audit_schema(document: OdtDocument, report: Report) -> None:
+def audit_schema(document: OdfDocument, report: Report) -> None:
     """Report members that violate the bundled ODF schema for the declared version."""
     result = validate(document)
     report.metadata["schema_version"] = result.version
@@ -131,7 +222,8 @@ def audit_schema(document: OdtDocument, report: Report) -> None:
         )
         return
     report.metadata["schema_violations"] = result.count
-    for member, messages in result.violations.items():
+    report.metadata["schema_violations_unlocated"] = result.unlocated
+    for member, messages in result.messages().items():
         report.add(
             rules.ODF900,
             f"{member} does not validate against the ODF {result.version} schema.",

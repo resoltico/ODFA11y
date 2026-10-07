@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Export Writer documents to PDF/UA through LibreOffice."""
+"""Export ODF documents to PDF/UA through LibreOffice."""
 
 from __future__ import annotations
 
@@ -7,11 +7,12 @@ import json
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import OutputError, ToolFailedError
-from odfa11y.external_tools import find_executable, identify
+from odfa11y.external_tools import find_executable, identify, run_bounded
 from odfa11y.staging import staging_sibling
 
 if TYPE_CHECKING:
@@ -50,18 +51,22 @@ def identify_soffice(executable: str) -> ToolIdentity:
     return identify("LibreOffice", executable, ("--version",))
 
 
-def export_pdfua(
-    source_odt: str | Path,
-    destination_pdf: str | Path,
-    *,
-    soffice: str | Path | None = None,
-    timeout: int = 120,
-    profile_dir: str | Path | None = None,
-) -> Path:
-    """Export a Writer document with the fixed PDF/UA options, publishing the PDF atomically.
+@dataclass(frozen=True, slots=True)
+class ExportSettings:
+    """How LibreOffice exports: the family's PDF filter, the tool, the time limit, the profile.
 
     A temporary LibreOffice profile is used unless ``profile_dir`` is given; the caller
     then owns that directory, so several exports can share one profile sequentially.
+    """
+
+    pdf_filter: str
+    soffice: str | Path | None = None
+    timeout: int = 120
+    profile_dir: str | Path | None = None
+
+
+def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: ExportSettings) -> Path:
+    """Export a document with the fixed PDF/UA options, publishing the PDF atomically.
 
     Returns
     -------
@@ -76,19 +81,23 @@ def export_pdfua(
         LibreOffice fails, times out, or returns without producing a PDF.
 
     """
-    source = Path(source_odt).resolve()
+    source = Path(source).resolve()
     destination = Path(destination_pdf).resolve()
     if source == destination:
-        msg = f"Destination must differ from the source: {destination}"
+        msg = f"Destination must differ from the source: {destination.name}"
         raise OutputError(msg)
-    executable = find_soffice(soffice)
+    executable = find_soffice(settings.soffice)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    options = "pdf:writer_pdf_Export:" + json.dumps(EXPORT_OPTIONS, separators=(",", ":"))
+    options = f"pdf:{settings.pdf_filter}:" + json.dumps(EXPORT_OPTIONS, separators=(",", ":"))
     with (
         tempfile.TemporaryDirectory(prefix="odfa11y-lo-profile-") as temporary_profile,
         tempfile.TemporaryDirectory(prefix="odfa11y-pdf-export-") as out_dir,
     ):
-        profile = Path(profile_dir) if profile_dir is not None else Path(temporary_profile)
+        profile = (
+            Path(settings.profile_dir)
+            if settings.profile_dir is not None
+            else Path(temporary_profile)
+        )
         command = [
             executable,
             f"-env:UserInstallation={profile.resolve().as_uri()}",
@@ -104,20 +113,16 @@ def export_pdfua(
             str(source),
         ]
         try:
-            completed = subprocess.run(
-                command, capture_output=True, text=True, timeout=timeout, check=False
-            )
+            completed = run_bounded(command, timeout=settings.timeout)
         except subprocess.TimeoutExpired as exc:
-            msg = f"LibreOffice PDF/UA export timed out after {timeout} s"
+            msg = f"LibreOffice PDF/UA export timed out after {settings.timeout} s"
             raise ToolFailedError(msg) from exc
         produced = Path(out_dir) / f"{source.stem}.pdf"
         if completed.returncode != 0 or not produced.is_file():
-            msg = (
-                "LibreOffice PDF/UA export failed.\n"
-                f"command: {' '.join(command)}\n"
-                f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
+            msg = f"LibreOffice PDF/UA export failed (exit status {completed.returncode})."
+            raise ToolFailedError(
+                msg, details=f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
             )
-            raise ToolFailedError(msg)
         _publish(produced, destination)
     return destination
 

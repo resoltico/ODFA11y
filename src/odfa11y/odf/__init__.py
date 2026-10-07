@@ -1,47 +1,51 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Read and edit ODF packages, XML content, styles, text and schema validity."""
+"""Read and edit ODF documents: storage, parts, kinds, detection, XML and schema validity."""
 
 from .archive import is_unsafe_member_name
-from .document import OdtDocument
-from .links import URI_RE, split_trailing_punctuation
-from .namespaces import NS, qn
-from .package import ODT_MIMETYPE, REQUIRED_XML, OdtPackage
-from .prose import prose_slots
+from .body import body_text_snapshot
+from .detect import Detection, declared_version, detect
+from .document import OdfDocument
+from .flat import FLAT_MEMBER, FlatXmlStorage
+from .kinds import KINDS, DocumentKind, Family, kind_for_media_type
+from .namespaces import NS, is_office_element, qn
+from .opening import open_storage
+from .package import PackageStorage
 from .schema import (
     SUPPORTED_VERSIONS,
     SchemaResult,
-    declared_version,
+    Violation,
     provenance,
     regressions,
     validate,
 )
-from .spacers import spacer_candidates
-from .styles import StyleCatalog
-from .text import element_text, is_empty_paragraph, text_is_preserved, visible_text_snapshot
+from .storage import OdfStorage, Part
 from .xpath import select_elements
 
 __all__ = [
+    "FLAT_MEMBER",
+    "KINDS",
     "NS",
-    "ODT_MIMETYPE",
-    "REQUIRED_XML",
     "SUPPORTED_VERSIONS",
-    "URI_RE",
-    "OdtDocument",
-    "OdtPackage",
+    "Detection",
+    "DocumentKind",
+    "Family",
+    "FlatXmlStorage",
+    "OdfDocument",
+    "OdfStorage",
+    "PackageStorage",
+    "Part",
     "SchemaResult",
-    "StyleCatalog",
+    "Violation",
+    "body_text_snapshot",
     "declared_version",
-    "element_text",
-    "is_empty_paragraph",
+    "detect",
+    "is_office_element",
     "is_unsafe_member_name",
-    "prose_slots",
+    "kind_for_media_type",
+    "open_storage",
     "provenance",
     "qn",
     "regressions",
     "select_elements",
-    "spacer_candidates",
-    "split_trailing_punctuation",
-    "text_is_preserved",
     "validate",
-    "visible_text_snapshot",
 ]

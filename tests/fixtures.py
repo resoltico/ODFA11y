@@ -10,6 +10,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+TEXT_MEDIA_TYPE = "application/vnd.oasis.opendocument.text"
+
+
 class Features(TypedDict, total=False):
     """Independent structural features of the synthetic document."""
 

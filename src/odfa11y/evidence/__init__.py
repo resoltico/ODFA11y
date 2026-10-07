@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Evidence bundles: hashed, atomically published records of a remediation run."""
+"""Evidence bundles: hashed, atomically published, path-free records of a run."""
 
 from .bundle import require_free_directory, write_bundle
 from .manifest import check_bundle, sha256_file
-from .review import HUMAN_REVIEW_ITEMS, render_review
+from .redact import Redactor
+from .review import render_review
 
 __all__ = [
-    "HUMAN_REVIEW_ITEMS",
+    "Redactor",
     "check_bundle",
     "render_review",
     "require_free_directory",

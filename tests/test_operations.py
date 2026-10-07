@@ -8,33 +8,32 @@ from typing import TYPE_CHECKING, Unpack
 import pytest
 from lxml import etree
 
-from odfa11y.odf import OdtDocument, qn, select_elements, validate
-from odfa11y.remediation import (
+from odfa11y.adapter import Status
+from odfa11y.families.text import (
     AltText,
+    HeaderRows,
     LinkifyAddresses,
     MarkHeaderRows,
     NormalizeSpacing,
     RemoveEmptySpacers,
     SetAltText,
-    SetMetadata,
-    SetOdfVersion,
-    Status,
-    clone_style_name,
+    derived_style_name,
 )
+from odfa11y.families.text.styles import catalog_of
+from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.remediation import SetMetadata, SetOdfVersion
 
 from .fixtures import make_minimal_odt
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.remediation import (
-        Operation,
-    )
+    from odfa11y.adapter import Operation
 
     from .fixtures import Features
 
 
-def run(operation: Operation, document: OdtDocument) -> tuple[Status, ...]:
+def run(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
     """Apply an operation and return its statuses.
 
     Returns
@@ -46,19 +45,19 @@ def run(operation: Operation, document: OdtDocument) -> tuple[Status, ...]:
     return tuple(outcome.status for outcome in operation.apply(document))
 
 
-def document(tmp_path: Path, *, version: str = "1.4", **features: Unpack[Features]) -> OdtDocument:
+def document(tmp_path: Path, *, version: str = "1.4", **features: Unpack[Features]) -> OdfDocument:
     """Open a synthetic document with the given features.
 
     Returns
     -------
-    OdtDocument
+    OdfDocument
         A fresh document.
 
     """
-    return OdtDocument.open(make_minimal_odt(tmp_path / "doc.odt", version=version, **features))
+    return OdfDocument.open(make_minimal_odt(tmp_path / "doc.odt", version=version, **features))
 
 
-def assert_valid(doc: OdtDocument) -> None:
+def assert_valid(doc: OdfDocument) -> None:
     """Fail if the document no longer validates against its bundled schema."""
     assert validate(doc).violations == {}
 
@@ -82,14 +81,12 @@ def test_metadata_is_applied_once_and_language_reaches_both_places(tmp_path: Pat
     assert run(operation, doc) == (Status.APPLIED,) * 3
     assert run(operation, doc) == (Status.UNCHANGED,) * 3
     assert (
-        doc.tree("meta.xml").findtext(
+        doc.tree(Part.META).findtext(
             ".//dc:title", namespaces={"dc": "http://purl.org/dc/elements/1.1/"}
         )
         == "New title"
     )
-    props = select_elements(doc.tree("styles.xml"), "//style:default-style/style:text-properties")[
-        0
-    ]
+    props = select_elements(doc.tree(Part.STYLES), "//style:default-style/style:text-properties")[0]
     assert (props.get(qn("fo", "language")), props.get(qn("fo", "country"))) == ("fr", "CA")
     assert_valid(doc)
 
@@ -104,7 +101,10 @@ def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail
 ) -> None:
     doc = document(tmp_path, with_image_without_alt=True)
     entries = {"Logo": AltText("Title", "Description"), "Missing": AltText("x")}
-    assert run(SetAltText(entries), doc) == (Status.APPLIED, Status.FAILED)
+    assert run(SetAltText(entries), doc) == (Status.FAILED,)
+    assert doc.edit_count == 0  # selectors are resolved before anything is edited
+    entries = {"Logo": AltText("Title", "Description")}
+    assert run(SetAltText(entries), doc) == (Status.APPLIED,)
     assert_valid(doc)
     assert run(SetAltText({"Logo": AltText("Title", "Description")}), doc) == (Status.UNCHANGED,)
     assert run(SetAltText({"logo.svg": AltText(description="By file name")}), doc) == (
@@ -115,16 +115,16 @@ def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail
 
 def test_header_rows_apply_once_and_conflicts_fail(tmp_path: Path) -> None:
     doc = document(tmp_path, with_data_table=True)
-    assert run(MarkHeaderRows({"Data": 1}), doc) == (Status.APPLIED,)
-    assert run(MarkHeaderRows({"Data": 1}), doc) == (Status.UNCHANGED,)
-    assert run(MarkHeaderRows({"Data": 2}), doc) == (Status.FAILED,)
+    assert run(MarkHeaderRows({"Data": HeaderRows(1)}), doc) == (Status.APPLIED,)
+    assert run(MarkHeaderRows({"Data": HeaderRows(1)}), doc) == (Status.UNCHANGED,)
+    assert run(MarkHeaderRows({"Data": HeaderRows(2)}), doc) == (Status.FAILED,)
     assert_valid(doc)
 
 
 def test_header_rows_fail_for_unknown_tables_and_too_many_rows(tmp_path: Path) -> None:
     doc = document(tmp_path, with_data_table=True)
-    assert run(MarkHeaderRows({"Nope": 1}), doc) == (Status.FAILED,)
-    assert run(MarkHeaderRows({"Data": 9}), doc) == (Status.FAILED,)
+    assert run(MarkHeaderRows({"Nope": HeaderRows(1)}), doc) == (Status.FAILED,)
+    assert run(MarkHeaderRows({"Data": HeaderRows(9)}), doc) == (Status.FAILED,)
 
 
 def test_linkify_applies_once_and_keeps_the_document_valid(tmp_path: Path) -> None:
@@ -138,7 +138,7 @@ def test_spacer_removal_applies_once(tmp_path: Path) -> None:
     doc = document(tmp_path, add_blank_body_paragraph=True)
     assert run(RemoveEmptySpacers(), doc) == (Status.APPLIED,)
     assert run(RemoveEmptySpacers(), doc) == (Status.UNCHANGED,)
-    assert [p.text for p in select_elements(doc.tree("content.xml"), "//text:p")] == [
+    assert [p.text for p in select_elements(doc.tree(Part.CONTENT), "//text:p")] == [
         "Body paragraph."
     ]
 
@@ -148,15 +148,15 @@ def test_spacer_removal_retains_semantically_protected_paragraphs(
     tmp_path: Path, marker: str
 ) -> None:
     doc = document(tmp_path, add_blank_body_paragraph=True)
-    paragraph = select_elements(doc.tree("content.xml"), "//text:p[not(text())]")[0]
+    paragraph = select_elements(doc.tree(Part.CONTENT), "//text:p[not(text())]")[0]
     paragraph.set("{http://www.w3.org/XML/1998/namespace}id", "protected")
     _protect(doc, paragraph, marker)
     RemoveEmptySpacers().apply(doc)
-    kept = select_elements(doc.tree("content.xml"), "//*[@xml:id='protected']")
+    kept = select_elements(doc.tree(Part.CONTENT), "//*[@xml:id='protected']")
     assert len(kept) == 1
 
 
-def _protect(doc: OdtDocument, paragraph: etree._Element, marker: str) -> None:
+def _protect(doc: OdfDocument, paragraph: etree._Element, marker: str) -> None:
     if marker in {"table", "list"}:
         namespace, tag = ("table", "table-cell") if marker == "table" else ("text", "list-item")
         parent = paragraph.getparent()
@@ -165,7 +165,7 @@ def _protect(doc: OdtDocument, paragraph: etree._Element, marker: str) -> None:
         parent.replace(paragraph, wrapper)
         wrapper.append(paragraph)
     elif marker in {"break", "master"}:
-        style = select_elements(doc.edit("styles.xml"), "//style:style[@style:name='Body']")[0]
+        style = select_elements(doc.edit(Part.STYLES), "//style:style[@style:name='Body']")[0]
         properties = style.find("style:paragraph-properties", {"style": style.nsmap["style"]})
         assert properties is not None
         if marker == "break":
@@ -181,9 +181,9 @@ def _protect(doc: OdtDocument, paragraph: etree._Element, marker: str) -> None:
         etree.SubElement(paragraph, child[marker])
 
 
-def _spacing_document(tmp_path: Path) -> OdtDocument:
+def _spacing_document(tmp_path: Path) -> OdfDocument:
     doc = document(tmp_path)
-    paragraphs = select_elements(doc.edit("content.xml"), "//text:p")
+    paragraphs = select_elements(doc.edit(Part.CONTENT), "//text:p")
     paragraphs[0].set(qn("text", "style-name"), "Body")
     paragraphs[-1].set(qn("text", "style-name"), "BodyTight")
     return doc
@@ -193,25 +193,25 @@ def test_spacing_copies_reference_spacing_onto_a_derived_style_once(tmp_path: Pa
     doc = _spacing_document(tmp_path)
     operation = NormalizeSpacing("Body paragraph.", ("BodyTight",))
     assert run(operation, doc) == (Status.APPLIED,)
-    last = select_elements(doc.tree("content.xml"), "//text:p[last()]")[0]
-    assert last.get(qn("text", "style-name")) == clone_style_name("BodyTight")
-    assert doc.catalog.spacing_signature(
-        clone_style_name("BodyTight")
-    ) == doc.catalog.spacing_signature("Body")
-    assert doc.catalog.style("paragraph", "BodyTight") is not None
+    last = select_elements(doc.tree(Part.CONTENT), "//text:p[last()]")[0]
+    assert last.get(qn("text", "style-name")) == derived_style_name("BodyTight")
+    assert catalog_of(doc).spacing_signature(derived_style_name("BodyTight")) == catalog_of(
+        doc
+    ).spacing_signature("Body")
+    assert catalog_of(doc).style("paragraph", "BodyTight") is not None
     assert run(operation, doc) == (Status.UNCHANGED,)
 
 
 def test_spacing_follows_a_changed_reference_without_new_style_names(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
     NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(doc)
-    paragraphs = select_elements(doc.edit("content.xml"), "//text:p")
+    paragraphs = select_elements(doc.edit(Part.CONTENT), "//text:p")
     paragraphs[0].set(qn("text", "style-name"), "Heading1")
     outcome = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(doc)[0]
     assert outcome.status is Status.APPLIED
     clones = [
         s
-        for s in select_elements(doc.tree("content.xml"), "//style:style")
+        for s in select_elements(doc.tree(Part.CONTENT), "//style:style")
         if "A11ySpacing" in (s.get(qn("style", "name")) or "")
     ]
     assert len(clones) == 1
@@ -233,16 +233,16 @@ def test_operations_describe_themselves_in_json_compatible_values() -> None:
     described = SetAltText({"Logo": AltText("T", "D")}).as_dict()
     assert described == {
         "operation": "set_alt_text",
-        "entries": {"Logo": {"title": "T", "description": "D"}},
+        "entries": {"Logo": {"title": "T", "description": "D", "fingerprint": None}},
     }
-    assert MarkHeaderRows({"Data": 1}).as_dict() == {
+    assert MarkHeaderRows({"Data": HeaderRows(1)}).as_dict() == {
         "operation": "mark_header_rows",
-        "rows": {"Data": 1},
+        "entries": {"Data": {"rows": 1, "fingerprint": None}},
     }
     assert NormalizeSpacing("x", ("A",)).as_dict()["target_styles"] == ("A",)
 
 
 def test_a_reference_style_without_spacing_cannot_be_copied(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
-    select_elements(doc.edit("content.xml"), "//text:p")[0].set(qn("text", "style-name"), "Unknown")
+    select_elements(doc.edit(Part.CONTENT), "//text:p")[0].set(qn("text", "style-name"), "Unknown")
     assert run(NormalizeSpacing("Body paragraph.", ("BodyTight",)), doc) == (Status.FAILED,)

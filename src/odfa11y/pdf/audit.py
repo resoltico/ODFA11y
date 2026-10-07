@@ -11,14 +11,16 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 
+from odfa11y.errors import ToolFailedError
+from odfa11y.pdf_limits import check_limits
 from odfa11y.report import Report, rules
 from odfa11y.safe_xml import secure_xml_parser
 
+from .link_structure import link_annotations
 from .structure_checks import audit_structure
 from .structure_walk import pdf_dictionary
 
 if TYPE_CHECKING:
-    from pypdf import PageObject
     from pypdf.generic import DictionaryObject
 
 PDFUA_PART = "{http://www.aiim.org/pdfua/ns/id/}part"
@@ -36,14 +38,19 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
     pdf_path = Path(pdf_path)
     report = Report(kind="pdf", subject=str(pdf_path))
     try:
-        with pdf_path.open("rb") as stream:
-            reader = PdfReader(stream, strict=True)
-            structure = _audit_metadata(reader, report)
-            audit_structure(structure, report)
-            _audit_content(reader, report)
-    except (OSError, PyPdfError, ValueError, KeyError) as exc:
-        report.add(rules.PDF000, f"Cannot inspect PDF: {exc}", location=str(pdf_path))
+        _inspect(pdf_path, report)
+    except (OSError, PyPdfError, ValueError, KeyError, ToolFailedError) as exc:
+        report.add(rules.PDF000, f"Cannot inspect PDF: {exc}", location=pdf_path.name)
     return report
+
+
+def _inspect(pdf_path: Path, report: Report) -> None:
+    with pdf_path.open("rb") as stream:
+        reader = PdfReader(stream, strict=True)
+        check_limits(pdf_path, len(reader.pages))
+        structure = _audit_metadata(reader, report)
+        audit_structure(structure, report, link_annotations(reader))
+        _audit_content(reader, report)
 
 
 def _audit_metadata(reader: PdfReader, report: Report) -> DictionaryObject:
@@ -98,10 +105,6 @@ def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
 
 
 def _audit_content(reader: PdfReader, report: Report) -> None:
-    annotations = sum(_link_count(page) for page in reader.pages)
-    report.metadata["link_annotations"] = annotations
-    if annotations and not report.metadata.get("link_structure_elements"):
-        report.add(rules.PDF016, details={"link_annotations": annotations})
     if not reader.pages:
         report.add(rules.PDF009, "PDF contains no pages.")
         return
@@ -109,10 +112,3 @@ def _audit_content(reader: PdfReader, report: Report) -> None:
     report.metadata["extractable_text_characters"] = text_chars
     if not text_chars:
         report.add(rules.PDF010, "No extractable text was found in the PDF.")
-
-
-def _link_count(page: PageObject) -> int:
-    annotations = page.get("/Annots")
-    if annotations is None:
-        return 0
-    return sum(pdf_dictionary(item).get("/Subtype") == "/Link" for item in annotations.get_object())

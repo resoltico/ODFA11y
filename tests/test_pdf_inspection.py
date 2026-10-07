@@ -10,7 +10,7 @@ from pypdf.generic import ArrayObject, BooleanObject, DictionaryObject, NameObje
 
 from odfa11y.pdf import audit_pdfua
 
-from .pdf_fixtures import tagged_writer
+from .pdf_fixtures import annotation_references, link_elements, map_link, tagged_writer
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -145,9 +145,55 @@ def test_tables_without_header_cells_are_warned_about(tmp_path: Path) -> None:
     assert "PDF015" not in ids(audit(tmp_path, tagged_writer(["H1", ("Table", [("TR", ["TD"])])])))
 
 
-def test_link_annotations_need_link_structure_elements(tmp_path: Path) -> None:
-    assert "PDF016" in ids(audit(tmp_path, tagged_writer(["H1"], link_annotations=1)))
-    tagged = audit(tmp_path, tagged_writer(["H1", ("P", ["Link"])], link_annotations=1))
-    assert "PDF016" not in ids(tagged)
-    assert tagged.metadata["link_structure_elements"] == 1
+def test_an_annotation_without_a_link_element_is_reported(tmp_path: Path) -> None:
+    report = audit(tmp_path, tagged_writer(["H1"], link_annotations=1))
+    finding = next(f for f in report.findings if f.rule_id == "PDF016")
+    assert finding.details["count"] == 1
     assert "PDF016" not in ids(audit(tmp_path, tagged_writer(["H1"])))
+
+
+def test_a_link_element_that_refers_to_its_annotation_passes(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1", ("P", ["Link"])], link_annotations=1)
+    map_link(writer, link_elements(writer)[0], annotation_references(writer)[0])
+    report = audit(tmp_path, writer)
+    assert not ids(report) & {"PDF016", "PDF017", "PDF018"}
+    assert report.metadata["link_annotations"] == 1
+    assert report.metadata["link_structure_elements"] == 1
+
+
+def test_one_mapped_link_among_many_annotations_is_not_a_pass(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1", ("P", ["Link"])], link_annotations=20)
+    map_link(writer, link_elements(writer)[0], annotation_references(writer)[0])
+    report = audit(tmp_path, writer)
+    finding = next(f for f in report.findings if f.rule_id == "PDF016")
+    assert finding.details["count"] == 19
+    assert len(finding.details["annotations"]) == 19
+
+
+def test_a_link_element_without_any_annotation_reference_is_reported(tmp_path: Path) -> None:
+    report = audit(tmp_path, tagged_writer(["H1", ("P", ["Link"])], link_annotations=1))
+    assert {"PDF016", "PDF017"} <= ids(report)
+    assert next(f for f in report.findings if f.rule_id == "PDF017").details["count"] == 1
+
+
+def test_an_annotation_mapped_twice_is_an_error(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1", ("P", ["Link", "Link"])], link_annotations=1)
+    first, second = link_elements(writer)
+    annotation = annotation_references(writer)[0]
+    map_link(writer, first, annotation)
+    map_link(writer, second, annotation)
+    finding = next(f for f in audit(tmp_path, writer).findings if f.rule_id == "PDF018")
+    assert finding.severity.value == "error"
+    assert finding.details["count"] == 1
+
+
+def test_a_mapping_declared_on_another_page_is_an_error(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1", ("P", ["Link"])], link_annotations=1)
+    other = writer.add_blank_page(width=100, height=100)
+    map_link(
+        writer,
+        link_elements(writer)[0],
+        annotation_references(writer)[0],
+        page=other.indirect_reference,
+    )
+    assert "PDF018" in ids(audit(tmp_path, writer))

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Load, edit and atomically save ODT ZIP packages."""
+"""Load, edit and atomically save ODF ZIP packages."""
 
 from __future__ import annotations
 
@@ -10,10 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from lxml import etree
-
-from odfa11y.errors import MissingMemberError, PackageError, XmlParseError
-from odfa11y.safe_xml import secure_xml_parser
+from odfa11y.errors import MissingMemberError, PackageError
 from odfa11y.staging import staging_sibling
 
 from .archive import (
@@ -22,12 +19,12 @@ from .archive import (
     is_unsafe_member_name,
     validate_archive,
 )
+from .storage import OdfStorage, Part
 
 if TYPE_CHECKING:
     import os
     from collections.abc import Iterable
 
-ODT_MIMETYPE = "application/vnd.oasis.opendocument.text"
 # Errors raised while reading malformed or unsupported ZIP structure or damaged member data.
 UNREADABLE_ARCHIVE_ERRORS = (
     zipfile.BadZipFile,
@@ -38,7 +35,14 @@ UNREADABLE_ARCHIVE_ERRORS = (
     RuntimeError,  # ZIP-encrypted members
     zipfile.LargeZipFile,
 )
-REQUIRED_XML = ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml")
+PART_MEMBERS = {
+    Part.CONTENT: "content.xml",
+    Part.STYLES: "styles.xml",
+    Part.META: "meta.xml",
+    Part.SETTINGS: "settings.xml",
+    Part.MANIFEST: "META-INF/manifest.xml",
+}
+MIMETYPE_MEMBER = "mimetype"
 
 
 def _read_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytes:
@@ -70,13 +74,15 @@ class Member:
     data: bytes
 
 
-class OdtPackage:
-    """In-memory ODT package that preserves member metadata when rewritten.
+class PackageStorage(OdfStorage):
+    """In-memory ODF package that preserves member metadata when rewritten.
 
     ODF packages are ZIP files with one important packaging invariant: ``mimetype``
     must be the first member and must be stored without compression. This class
     makes that invariant explicit instead of relying on generic ZIP behaviour.
     """
+
+    layout = "package"
 
     def __init__(self, source: str | os.PathLike[str]) -> None:
         """Load and index the document resources.
@@ -98,7 +104,7 @@ class OdtPackage:
         try:
             self._read_archive()
         except UNREADABLE_ARCHIVE_ERRORS as exc:
-            msg = f"Not a valid ZIP/ODT package: {self.source}: {exc}"
+            msg = f"Not a valid ODF package: {self.source.name}: {exc}"
             raise PackageError(msg) from exc
 
     def _read_archive(self) -> None:
@@ -108,6 +114,17 @@ class OdtPackage:
             for info in infos:
                 self.order.append(info.filename)
                 self.members[info.filename] = Member(info=info, data=_read_member(zf, info))
+
+    def member_for(self, part: Part) -> str | None:
+        """Name the package member holding a part.
+
+        Returns
+        -------
+        str | None
+            The conventional member name for the part.
+
+        """
+        return PART_MEMBERS[part]
 
     def has(self, name: str) -> bool:
         """Return whether the package contains a named member.
@@ -137,7 +154,7 @@ class OdtPackage:
         try:
             return self.members[name].data
         except KeyError as exc:
-            msg = f"ODT member not found: {name}"
+            msg = f"Package member not found: {name}"
             raise MissingMemberError(msg) from exc
 
     def write_member(self, name: str, data: bytes) -> None:
@@ -149,28 +166,6 @@ class OdtPackage:
         info.compress_type = zipfile.ZIP_DEFLATED
         self.members[name] = Member(info=info, data=data)
         self.order.append(name)
-
-    def parse_xml(self, name: str) -> etree._ElementTree:
-        """Parse a member with external entities and network access disabled.
-
-        Returns
-        -------
-        etree._ElementTree
-            The securely parsed member tree.
-
-        Raises
-        ------
-        XmlParseError
-            The member contains malformed XML.
-
-        """
-        data = self.read(name)
-        try:
-            root = etree.fromstring(data, parser=secure_xml_parser())
-        except etree.XMLSyntaxError as exc:
-            msg = f"Malformed XML in {name}: {exc}"
-            raise XmlParseError(msg) from exc
-        return etree.ElementTree(root)
 
     def member_names(self) -> Iterable[str]:
         """Return member names in archive order.
@@ -200,39 +195,46 @@ class OdtPackage:
         """
         destination = Path(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        if "mimetype" not in self.members:
-            msg = "Cannot write ODT without the required mimetype member"
-            raise PackageError(msg)
-
         if len(self.order) != len(set(self.order)):
-            msg = "Cannot rewrite an ODT package with duplicate ZIP member names"
+            msg = "Cannot rewrite an ODF package with duplicate ZIP member names"
             raise PackageError(msg)
         unsafe = sorted(name for name in self.order if is_unsafe_member_name(name))
         if unsafe:
-            msg = f"Cannot rewrite an ODT package with unsafe member names: {unsafe}"
+            msg = f"Cannot rewrite an ODF package with unsafe member names: {unsafe}"
             raise PackageError(msg)
 
         tmp = staging_sibling(destination)
         try:
             self._write_archive(tmp)
-            validate_archive(tmp, ODT_MIMETYPE)
+            validate_archive(tmp, self._declared_mimetype())
             tmp.replace(destination)
         finally:
             if tmp.exists():
                 tmp.unlink(missing_ok=True)
         return destination
 
+    def _declared_mimetype(self) -> str | None:
+        member = self.members.get(MIMETYPE_MEMBER)
+        if member is None:
+            return None
+        try:
+            return member.data.decode("ascii")
+        except UnicodeDecodeError as exc:
+            msg = "Cannot rewrite an ODF package whose mimetype is not ASCII"
+            raise PackageError(msg) from exc
+
     def _write_archive(self, tmp: Path) -> None:
         with zipfile.ZipFile(tmp, "w") as zf:
-            # ODF package requirement: first member, uncompressed.
-            mt_member = self.members["mimetype"]
-            mt_info = clone_zipinfo(mt_member.info)
-            mt_info.filename = "mimetype"
-            mt_info.compress_type = zipfile.ZIP_STORED
-            zf.writestr(mt_info, mt_member.data, compress_type=zipfile.ZIP_STORED)
+            if MIMETYPE_MEMBER in self.members:
+                # ODF package requirement: first member, uncompressed.
+                mt_member = self.members[MIMETYPE_MEMBER]
+                mt_info = clone_zipinfo(mt_member.info)
+                mt_info.filename = MIMETYPE_MEMBER
+                mt_info.compress_type = zipfile.ZIP_STORED
+                zf.writestr(mt_info, mt_member.data, compress_type=zipfile.ZIP_STORED)
 
             for name in self.order:
-                if name == "mimetype" or name not in self.members:
+                if name == MIMETYPE_MEMBER or name not in self.members:
                     continue
                 member = self.members[name]
                 info = clone_zipinfo(member.info)
@@ -250,7 +252,7 @@ class OdtPackage:
             # Include any newly created members that were not in the original order.
             known = set(self.order)
             for name, member in self.members.items():
-                if name == "mimetype" or name in known:
+                if name == MIMETYPE_MEMBER or name in known:
                     continue
                 info = clone_zipinfo(member.info)
                 zf.writestr(info, member.data, compress_type=info.compress_type)

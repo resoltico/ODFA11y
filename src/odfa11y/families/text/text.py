@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Extract and compare visible document text."""
+"""Extract and compare the visible text of a text document."""
 
 from __future__ import annotations
 
@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lxml import etree
 
-from .namespaces import qn
-from .xpath import select_elements
+from odfa11y.odf import qn, select_elements
 
 INERT_INLINE_TAGS = frozenset({qn("text", "span"), qn("text", "s")})
 

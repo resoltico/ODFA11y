@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pypdf import PdfWriter
 from pypdf.generic import (
@@ -117,6 +117,66 @@ def tagged_writer(
             for _ in range(link_annotations)
         ])
     return writer
+
+
+def link_elements(writer: PdfWriter) -> list[IndirectObject]:
+    """List the Link structure elements of a synthetic PDF in tree order.
+
+    Returns
+    -------
+    list[IndirectObject]
+        References to every structure element tagged ``Link``.
+
+    """
+    found: list[IndirectObject] = []
+    pending: list[Any] = [writer.root_object["/StructTreeRoot"]]
+    while pending:
+        reference = pending.pop()
+        element = reference.get_object()
+        if element.get("/S") == "/Link":
+            found.append(reference)
+        kids = element.get("/K")
+        if isinstance(kids, ArrayObject):
+            pending.extend(reversed([kid for kid in kids if hasattr(kid, "get_object")]))
+    return found
+
+
+def map_link(
+    writer: PdfWriter,
+    element: IndirectObject,
+    annotation: IndirectObject,
+    *,
+    page: IndirectObject | None = None,
+) -> None:
+    """Add an ``/OBJR`` kid to a structure element that refers to an annotation.
+
+    ``page`` defaults to the first page; pass another page to declare a wrong one.
+    """
+    owner = page if page is not None else writer.pages[0].indirect_reference
+    assert owner is not None
+    reference = DictionaryObject({
+        NameObject("/Type"): NameObject("/OBJR"),
+        NameObject("/Obj"): annotation,
+        NameObject("/Pg"): owner,
+    })
+    target = cast("DictionaryObject", element.get_object())
+    kids = target.get("/K")
+    items = list(kids) if isinstance(kids, ArrayObject) else []
+    target[NameObject("/K")] = ArrayObject([*items, reference])
+
+
+def annotation_references(writer: PdfWriter) -> list[IndirectObject]:
+    """List the first page's annotations.
+
+    Returns
+    -------
+    list[IndirectObject]
+        References to the page's annotation dictionaries.
+
+    """
+    annotations = writer.pages[0]["/Annots"]
+    assert isinstance(annotations, ArrayObject)
+    return list(annotations)
 
 
 def _link_annotation(uri: str, x: float, y: float) -> DictionaryObject:

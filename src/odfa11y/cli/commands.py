@@ -16,14 +16,16 @@ import pypdfium2
 from lxml import etree
 
 from odfa11y import __version__
-from odfa11y.audit import audit_odt, render_template
+from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf, render_template
 from odfa11y.config import Config, load_config
-from odfa11y.errors import OdfA11yError, ToolNotFoundError
+from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
 from odfa11y.evidence import check_bundle
 from odfa11y.external_tools import identify
+from odfa11y.families import adapter_for
 from odfa11y.fidelity import compare_pdfs
-from odfa11y.odf import SUPPORTED_VERSIONS, OdtDocument
+from odfa11y.odf import SUPPORTED_VERSIONS, OdfDocument
 from odfa11y.pdf import (
+    ExportSettings,
     audit_pdfua,
     check_pdfua,
     export_pdfua,
@@ -33,15 +35,13 @@ from odfa11y.pdf import (
 )
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import remediate
-from odfa11y.report import exit_status, render_reports
+from odfa11y.report import Report, exit_status, render_reports
 
 from .parser import build_parser
 
 if TYPE_CHECKING:
     import argparse
     from collections.abc import Callable
-
-    from odfa11y.report import Report
 
 EXECUTION_FAILURE = 3
 PDF_MAGIC = b"%PDF"
@@ -72,6 +72,9 @@ def main(argv: list[str] | None = None) -> int:
         return handlers[args.command](args)
     except (OdfA11yError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
+        details = getattr(exc, "details", "")
+        if details:
+            print(details, file=sys.stderr)
         return EXECUTION_FAILURE
 
 
@@ -91,13 +94,21 @@ def _audit(args: argparse.Namespace) -> int:
                 )
                 reports.append(report)
         else:
-            reports.append(audit_odt(source, schema=args.schema))
+            reports.append(audit_odf(source, schema=args.schema))
     print(render_reports(reports, output_format=args.format))
     return exit_status(reports, strict=args.strict)
 
 
 def _template(args: argparse.Namespace) -> int:
-    print(render_template(audit_odt(args.source)), end="")
+    report = audit_odf(args.source)
+    blocking = Report(kind=report.kind, subject=report.subject)
+    blocking.findings = [f for f in report.findings if f.rule_id in BLOCKING_RULE_IDS]
+    if blocking.findings:
+        print("No template: the document cannot be read well enough to plan.", file=sys.stderr)
+        print(render_reports([blocking]), file=sys.stderr)
+        return exit_status([blocking])
+    adapter = adapter_for(OdfDocument.open(args.source).kind)
+    print(render_template(report, adapter), end="")
     return 0
 
 
@@ -118,8 +129,19 @@ def _remediate(args: argparse.Namespace) -> int:
 
 
 def _export(args: argparse.Namespace) -> int:
-    print(export_pdfua(args.source, args.destination, soffice=args.soffice, timeout=args.timeout))
+    settings = ExportSettings(_pdf_filter(args.source), args.soffice, args.timeout)
+    print(export_pdfua(args.source, args.destination, settings))
     return 0
+
+
+def _pdf_filter(path: Path) -> str:
+    document = OdfDocument.open(path)
+    pdf_filter = adapter_for(document.kind).pdf_filter
+    if pdf_filter is None:
+        kind = document.kind.name if document.kind is not None else "unrecognised"
+        msg = f"No PDF export is defined for {kind} documents."
+        raise UnsupportedKindError(msg)
+    return pdf_filter
 
 
 def _compare(args: argparse.Namespace) -> int:
@@ -137,19 +159,17 @@ def _compare(args: argparse.Namespace) -> int:
 def _as_pdf(path: Path, rendered: Path, args: argparse.Namespace, profile: Path) -> Path:
     if _is_pdf(path):
         return path
-    return export_pdfua(
-        path, rendered, soffice=args.soffice, timeout=args.timeout, profile_dir=profile
-    )
+    settings = ExportSettings(_pdf_filter(path), args.soffice, args.timeout, profile)
+    return export_pdfua(path, rendered, settings)
 
 
 def _pipeline(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     options = PipelineOptions(
+        profile=args.profile,
         soffice=str(args.soffice) if args.soffice else None,
-        verapdf=args.verapdf,
         verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
         timeout=args.timeout,
-        strict=args.strict,
     )
     record = run_pipeline(args.source, config.operations, config.fidelity, args.output_dir, options)
     if args.format == "json":
@@ -167,18 +187,21 @@ def _pipeline(args: argparse.Namespace) -> int:
 
 
 def _styles(args: argparse.Namespace) -> int:
-    rows = OdtDocument.open(args.source).catalog.paragraph_usage()
+    document = OdfDocument.open(args.source)
+    style_report = adapter_for(document.kind).style_report
+    if style_report is None:
+        kind = document.kind.name if document.kind is not None else "unrecognised"
+        msg = f"A style report is not defined for {kind} documents."
+        raise UnsupportedKindError(msg)
+    rows = style_report(document)
     if args.format == "json":
-        data = [
-            {"style": r.style_name, "count": r.count, "parent": r.parent, "spacing": r.spacing}
-            for r in rows
-        ]
-        print(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True))
+        print(json.dumps(rows, indent=2, ensure_ascii=False, sort_keys=True))
         return 0
     print(f"Paragraph styles in {args.source}:")
     for row in rows:
         print(
-            f"- {row.style_name}: {row.count} use(s); parent={row.parent!r}; spacing={row.spacing}"
+            f"- {row['style']}: {row['count']} use(s); parent={row['parent']!r}; "
+            f"spacing={row['spacing']}"
         )
     return 0
 

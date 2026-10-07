@@ -12,6 +12,7 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.pdf_limits import check_file_size, check_limits
 
 if TYPE_CHECKING:
     from pypdf import PageObject
@@ -56,8 +57,11 @@ def read_snapshot(path: str | Path) -> PdfSnapshot:
 
     """
     try:
+        check_file_size(path)
         with Path(path).open("rb") as stream:
-            return _snapshot(PdfReader(stream, strict=True))
+            reader = PdfReader(stream, strict=True)
+            check_limits(path, len(reader.pages))
+            return _snapshot(reader)
     except (OSError, PyPdfError, ValueError, KeyError) as exc:
         msg = f"Cannot read PDF {path}: {exc}"
         raise ToolFailedError(msg) from exc

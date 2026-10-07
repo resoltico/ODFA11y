@@ -2,7 +2,14 @@
 """PDF/UA export, structural inspection and veraPDF validation."""
 
 from .audit import audit_pdfua
-from .export import EXPORT_OPTIONS, export_pdfua, find_soffice, identify_soffice
+from .export import (
+    EXPORT_OPTIONS,
+    ExportSettings,
+    export_pdfua,
+    find_soffice,
+    identify_soffice,
+)
+from .fonts import list_fonts
 from .verapdf import (
     FailedRule,
     VeraPdfResult,
@@ -14,6 +21,7 @@ from .verapdf import (
 
 __all__ = [
     "EXPORT_OPTIONS",
+    "ExportSettings",
     "FailedRule",
     "VeraPdfResult",
     "add_verapdf_findings",
@@ -23,5 +31,6 @@ __all__ = [
     "find_soffice",
     "find_verapdf",
     "identify_soffice",
+    "list_fonts",
     "validate_pdfua",
 ]
