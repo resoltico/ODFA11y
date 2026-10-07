@@ -4,6 +4,20 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Fixed
+
+- The text-preservation check no longer counts the image bytes that a flat XML document embeds
+  (`office:binary-data`) as visible text, so a flat and a packaged copy of one document
+  compare equal.
+
+### Internal
+
+- A regression corpus of fourteen small documents authored by LibreOffice Writer 24.2
+  (`tests/corpus`, nineteen files including flat-XML twins) is audited for its exact rule
+  ids, hashed, checked for package/flat equivalence and schema validity, and remediated
+  idempotently; an integration test runs the pipeline on three of them with real LibreOffice.
+  The sdist ships the corpus with the tests.
+
 ## [0.3.0] - 2026-10-07
 
 This release makes the ODF core independent of any document family: ODFA11y now recognises

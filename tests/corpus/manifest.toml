@@ -1,0 +1,138 @@
+# The Writer regression corpus: what each document must audit to, and its identity.
+# See README.md for purposes and provenance. Hashes are SHA-256 of the stored bytes.
+
+[provenance]
+libreoffice = "24.2.7.2"
+
+[[document]]
+file = "bookmarks.odt"
+rules = []
+rules_after_plan = []
+schema_violations = 8
+sha256 = "5c55098581b91b68b0f73ddf29aceed274d5e95fbab7e9eedc2d1cc2ae078caf"
+
+[[document]]
+file = "footnotes.fodt"
+rules = ["TXT005"]
+rules_after_plan = ["TXT005"]
+schema_violations = 6
+sha256 = "3d2d1798207722aea4cc5a2069219c570566f2e7babac21c1a1d0efbe7582b5f"
+
+[[document]]
+file = "footnotes.odt"
+rules = ["TXT005"]
+rules_after_plan = ["TXT005"]
+schema_violations = 6
+sha256 = "1334647db20f6c1fbbcc33c766b684b7f29c49aa96d4d6a88851461c0e4b3276"
+
+[[document]]
+file = "frames-textbox.odt"
+rules = []
+rules_after_plan = []
+schema_violations = 11
+sha256 = "839ecd92f4879c44bbca7ba224c83e0363e64fa78231d651841c307fcbe4c9ef"
+
+[[document]]
+file = "header-footer.fodt"
+rules = []
+rules_after_plan = []
+schema_violations = 6
+sha256 = "fe38ceaee95128a10a00fe3af445ce8253c1eb201e581d3f2effba911a01c972"
+
+[[document]]
+file = "header-footer.odt"
+rules = []
+rules_after_plan = []
+schema_violations = 6
+sha256 = "012a29a0a085b78408519793d9c62b220c9c3e9bc59d0dd380f2beeb9f8f2530"
+
+[[document]]
+file = "headings-skipped.odt"
+rules = ["TXT002"]
+rules_after_plan = ["TXT002"]
+schema_violations = 6
+sha256 = "1d133a4fdca4cbc364887065f9dc54cff17c7cd2cbd466e3fee886bf303e1c0f"
+
+[[document]]
+file = "images-described.odt"
+rules = []
+rules_after_plan = []
+schema_violations = 6
+sha256 = "cf4a137cd41ce4a19fa542d6215ab07624eeb2580b121e428ba2f07829eb0c91"
+
+[[document]]
+file = "images-undescribed.fodt"
+rules = ["TXT010"]
+rules_after_plan = []
+schema_violations = 6
+sha256 = "ad116aed39a6521fcb3d557a5e2eb0c4c70ae7cd4de91da6c74eb738044d647f"
+
+[[document]]
+file = "images-undescribed.odt"
+rules = ["TXT010"]
+rules_after_plan = []
+schema_violations = 6
+sha256 = "401585b7c44ff08401dc5cbf12bffaea68557f87948b68ba0fa57fcea4c3dbc8"
+
+[[document]]
+file = "links.fodt"
+rules = ["TXT030"]
+rules_after_plan = []
+schema_violations = 8
+sha256 = "2f33cc498331842bb5b8781d765506e68b75c6fff00d6f3d9894df3ab4a2e9e9"
+
+[[document]]
+file = "links.odt"
+rules = ["TXT030"]
+rules_after_plan = []
+schema_violations = 8
+sha256 = "4fe2c9a339cf0acd8ef61f1f2fd769e7e1e2d35ea6d1174284e85a96ffa631b9"
+
+[[document]]
+file = "lists-nested.odt"
+rules = []
+rules_after_plan = []
+schema_violations = 11
+sha256 = "d45ec484624e161078b0a6daa8dd413c558f00306b9c71a454afd0b3f374da90"
+
+[[document]]
+file = "mixed-languages.odt"
+rules = []
+rules_after_plan = []
+schema_violations = 6
+sha256 = "44e402e4bdf55d9f59a15cb11f213bd6710169f801a44922dd0c3e0cdd0d6aee"
+
+[[document]]
+file = "page-breaks-spacers.odt"
+rules = ["TXT040"]
+rules_after_plan = []
+schema_violations = 6
+sha256 = "8151c8e6ed9cbfff44307140816ac9260a580b72b82aecd2cf666484dba82830"
+
+[[document]]
+file = "table-header-row.odt"
+rules = ["TXT040"]
+rules_after_plan = []
+schema_violations = 11
+sha256 = "7099bda2b8ac43e178cd0bd18fed405615a5cdccca3f69f2af827ed32b2d01dc"
+
+[[document]]
+file = "table-merged-cells.fodt"
+rules = ["TXT020", "TXT040"]
+rules_after_plan = ["TXT020"]
+schema_violations = 6
+sha256 = "f6c116fcb84405c780eaf46ee07492ab88d7af2eace1361aef0ac23de4ed70de"
+
+[[document]]
+file = "table-merged-cells.odt"
+rules = ["TXT020", "TXT040"]
+rules_after_plan = ["TXT020"]
+schema_violations = 11
+sha256 = "76ea0681c0ab19dd091a2e2d0402eeee3736f2be5d72f0d6ee2eba2867e120aa"
+
+[[document]]
+file = "table-no-header-row.odt"
+rules = ["TXT021", "TXT040"]
+rules_after_plan = []
+schema_violations = 11
+sha256 = "083a68fb12b52d2a4835bc9325605944a0ce70fe208368b59fd4c73156047c3f"
