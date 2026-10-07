@@ -80,6 +80,12 @@ the authoritative PDF/UA-1 validator and reports each failed rule with its claus
 test number. If veraPDF cannot be found the report contains the warning `VERA000`;
 `--strict` makes that fail.
 
+For links, the doctor capability describes fallback for an unnamed hyperlink, not all
+link-description support. On current Writer, an explicit hyperlink **Name** (`office:name`)
+can produce a valid PDF/UA-1 description even when fallback is unsupported; see
+[link compatibility](ACCESSIBILITY.md#link-descriptions-depend-on-the-libreoffice-release).
+
+
 ## 4. Compare the renders
 
 ```bash

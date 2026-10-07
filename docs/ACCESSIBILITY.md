@@ -34,21 +34,27 @@ is checked after each stream is decoded; it does not bound the decoder's peak me
 
 ## Link descriptions depend on the LibreOffice release
 
-PDF/UA requires every link to carry an alternate description. LibreOffice 24.2 derives one
-from the link text; newer releases (observed with the macOS package current in 2026) export links without one. ODFA11y reports this as `PDF019` and veraPDF as rules 7.18.1-2
-and 7.18.5-2, so a document with hyperlinks can fail `verify` or `production` under one
-LibreOffice and pass under another. ODFA11y cannot add a description to the exported PDF, and `PDF019` stays an error: a PDF
-whose links lack one is not accessible. Run `odfa11y doctor` to learn in advance which
-case applies. It exports a synthetic one-hyperlink document with the installed LibreOffice,
-audits the PDF with the built-in audit, and prints `pdfua_link_descriptions: supported`
-(no `PDF019`) or `unsupported`. `doctor` exits `0` whenever the check ran, even when the
-answer is `unsupported`, and `3` when LibreOffice is missing or its export fails (the
-other versions are still printed). The pipeline's evidence records the LibreOffice version
-so the difference is explainable. Text pipeline exports also record the same self-tested
-`pdfua_link_descriptions` capability under `toolchain.LibreOffice` in `run.json`. The
-probe runs once at the first export and adds an export to the run; an unsupported
-capability does not itself fail a document with no hyperlinks. A probe execution failure
-fails the export stage and is recorded with the other execution failures.
+The installed exporter's unnamed-link behavior is tested by `odfa11y doctor` and, once at
+its first export, by a text pipeline run. The `pdfua_link_descriptions` result means whether
+a link **without an explicit name** receives a PDF/UA-1 description from its visible text.
+It does not mean that an exporter with an `unsupported` result cannot describe named links.
+Text pipeline evidence records the same result under `toolchain.LibreOffice` in `run.json`;
+probe files are excluded. The probe adds one export, and an execution failure fails the
+export stage. An unsupported fallback does not itself fail a document with no hyperlinks.
+
+LibreOffice 24.2 derives a description from link text. LibreOffice 26.8.0.3 does not: an
+unnamed link produces `PDF019`, and veraPDF 1.30.2 independently fails clauses 7.18.1-2 and
+7.18.5-2. Upstream [bug 161583](https://bugs.documentfoundation.org/show_bug.cgi?id=161583)
+explains the change to exporting the hyperlink dialog's **Name** instead of using visible
+text as a fallback. PDF/UA-1 still requires a link description; ODFA11y keeps `PDF019` an error.
+
+For a previously unnamed Writer link, choose a meaningful **Name** in the hyperlink dialog
+before export. In ODF this is `text:a/@office:name`; `office:title` alone did not resolve the
+26.8 failure. Do not change an existing link name without checking references to it.
+ODFA11y does not invent names or descriptions. The
+[one-link reproduction](../tests/reproductions/unnamed-link.odt) and a named control are
+validated against the real exporter and veraPDF in integration tests. Green CI proves
+agreement about invalid unnamed exports as well as successful named exports.
 
 ## Document families
 
