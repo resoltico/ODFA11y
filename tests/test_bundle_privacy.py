@@ -153,4 +153,6 @@ def test_raw_tool_reports_of_a_real_run_are_not_leaked(
     )
     bundle = run(directory, options)
     assert_path_free(bundle, tmp_path)
-    assert "<work>/remediated.pdf" in (bundle / "verapdf.xml").read_text(encoding="utf-8")
+    report = (bundle / "verapdf.xml").read_text(encoding="utf-8")
+    # A spelling the redactor does not know (a Windows 8.3 short name) collapses to <path>.
+    assert "<work>/remediated.pdf" in report or "<path>/remediated.pdf" in report
