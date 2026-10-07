@@ -100,8 +100,20 @@ def _check_edit_accounting(operation: Operation, outcomes: Sequence[Outcome], ed
 
 
 def _schema_check(before: SchemaResult, after: SchemaResult) -> str:
-    if not (before.available and after.available):
-        return "skipped: no bundled schema for the source or result version"
+    if not after.available:
+        return "skipped: no bundled schema for the result's ODF version"
+    if not before.available:
+        # No baseline to compare with (for example a relabel from ODF 1.2): the result must
+        # be fully valid, otherwise the change cannot be shown to be safe.
+        if after.count:
+            lines = [f"{m}: {x}" for m, messages in after.violations.items() for x in messages]
+            msg = (
+                f"The source's ODF version has no bundled schema, so the result must validate "
+                f"against ODF {after.version} outright; it has {after.count} violation(s), "
+                "nothing was written:\n" + "\n".join(lines)
+            )
+            raise RemediationError(msg)
+        return f"valid against ODF {after.version} (the source's version has no bundled schema)"
     new = regressions(before, after)
     if new:
         lines = [f"{member}: {message}" for member, messages in new.items() for message in messages]

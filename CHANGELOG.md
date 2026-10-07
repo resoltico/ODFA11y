@@ -35,6 +35,8 @@ API, command line, configuration file and report format all changed. Review the
   holds the decision), and `audit` of several files returns an array. `ODF900`/`ODF901`
   merged into one warning `ODF900`; `ODF001`–`ODF003` now flag *inconsistent* version
   declarations instead of "not 1.4".
+- **veraPDF selection.** `--verapdf` is now a plain switch (it no longer consumes the next
+  argument); `--verapdf-path PATH` names the executable and implies `--verapdf`.
 - **Installation.** The `dev` extra was replaced by a `dev` dependency group, and
   `pillow` and `pypdfium2` are new runtime dependencies.
 
@@ -59,10 +61,26 @@ API, command line, configuration file and report format all changed. Review the
   LibreOffice exports and veraPDF.
 - `PKG007` for unsafe ZIP member names, which the writer now also refuses.
 - A rule registry with severity, category and remedy, checked against `docs/RULES.md`.
+- Packaging and licensing: the license expression is `MPL-2.0 AND LicenseRef-OASIS-ODF-Notice`;
+  the verbatim OASIS notices ship as `odf/schemas/NOTICE.txt` in the wheel (inside the package
+  and under `dist-info/licenses`) and the source archive. Release verification now rejects a
+  wheel or source archive whose notice or `LICENSE` differs from the repository, or a wheel
+  whose package files differ from `src/odfa11y`.
+- Release assets include `SHA256SUMS` and a build-provenance attestation; CI rebuilds the
+  distributions and requires identical bytes. A weekly dependency-advisory workflow, issue
+  and pull-request templates (warning against uploading real documents).
 - `py.typed`; the CI `CI gate` job and a ruleset file requiring only it.
 
 ### Fixed
 
+- Hostile or unusual inputs: malformed `settings.xml`, encrypted ZIP members and non-executable
+  tool paths now produce domain errors (and a published evidence bundle) instead of crashes;
+  pdfium rendering errors are reported as tool failures.
+- Linkification only touches plain prose (never existing links, annotations or alternative
+  text), and spacer removal never removes paragraphs that carry markers or frames;
+  the audit and the remediation share one definition of each.
+- Outputs respect the umask instead of being created owner-only, and `REVIEW.md` escapes
+  table cells.
 - Alternative text was inserted before the image, which the ODF schema rejects; it is now
   placed where the schema allows.
 - Corrupt ZIP members could escape as `zlib.error`, `EOFError` or an operating-system

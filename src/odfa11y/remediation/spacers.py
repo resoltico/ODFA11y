@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
-from odfa11y.odf import is_empty_paragraph, qn, select_elements
+from odfa11y.odf import qn, spacer_candidates
 
 from .outcome import Operation, Outcome, Status
 
@@ -14,11 +14,6 @@ if TYPE_CHECKING:
     from lxml import etree
 
     from odfa11y.odf import OdtDocument, StyleCatalog
-
-PROTECTED_ANCESTORS = (
-    "ancestor::table:table-cell | ancestor::draw:text-box | "
-    "ancestor::office:annotation | ancestor::text:list-item"
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,11 +42,7 @@ def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatal
 
     """
     removed = 0
-    for paragraph in select_elements(tree, "//text:p"):
-        if not is_empty_paragraph(paragraph):
-            continue
-        if select_elements(paragraph, PROTECTED_ANCESTORS):
-            continue
+    for paragraph in spacer_candidates(tree):
         if catalog.has_break_semantics(paragraph.get(qn("text", "style-name"))):
             continue
         parent = paragraph.getparent()

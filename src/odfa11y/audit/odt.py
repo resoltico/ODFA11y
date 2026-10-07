@@ -11,10 +11,10 @@ from odfa11y.odf import (
     REQUIRED_XML,
     URI_RE,
     OdtDocument,
-    element_text,
-    is_empty_paragraph,
+    prose_slots,
     qn,
     select_elements,
+    spacer_candidates,
     split_trailing_punctuation,
 )
 from odfa11y.report import Report, rules
@@ -76,16 +76,11 @@ def audit_odt(source: str | Path, *, schema: bool = False) -> Report:
 
 
 def _audit_links(tree: etree._ElementTree, report: Report) -> None:
-    blocks = select_elements(tree, "//text:p | //text:h")
-    for index, block in enumerate(blocks, start=1):
-        text = element_text(block)
-        matches = list(URI_RE.finditer(text))
-        if not matches:
-            continue
-        linked_texts = [element_text(a) for a in select_elements(block, ".//text:a")]
-        for match in matches:
-            token, _suffix = split_trailing_punctuation(match.group(0))
-            if not any(token in linked for linked in linked_texts):
+    """Report URLs and addresses in prose, exactly where linkification would act."""
+    for index, block in enumerate(select_elements(tree, "//text:p | //text:h"), start=1):
+        for owner, attr in prose_slots(block):
+            for match in URI_RE.finditer(getattr(owner, attr)):
+                token, _suffix = split_trailing_punctuation(match.group(0))
                 report.add(
                     rules.LNK001,
                     "Visible URL/email address is not represented by a hyperlink element.",
@@ -96,17 +91,11 @@ def _audit_links(tree: etree._ElementTree, report: Report) -> None:
 
 def _audit_empty_spacers(document: OdtDocument, report: Report) -> None:
     catalog = document.catalog
-    empty = []
-    for p in select_elements(document.tree("content.xml"), "//text:p"):
-        if not is_empty_paragraph(p):
-            continue
-        if select_elements(
-            p, "ancestor::table:table-cell | ancestor::draw:text-box | ancestor::office:annotation"
-        ):
-            continue
-        style_name = p.get(qn("text", "style-name"))
-        empty.append((style_name, catalog.has_break_semantics(style_name)))
-    if empty:
+    styles = [
+        paragraph.get(qn("text", "style-name"))
+        for paragraph in spacer_candidates(document.tree("content.xml"))
+    ]
+    if styles:
         report.add(
             rules.LAY001,
             (
@@ -115,9 +104,9 @@ def _audit_empty_spacers(document: OdtDocument, report: Report) -> None:
             ),
             location="content.xml",
             details={
-                "count": len(empty),
-                "with_break_semantics": sum(item[1] for item in empty),
-                "styles": sorted({item[0] or "(none)" for item in empty}),
+                "count": len(styles),
+                "with_break_semantics": sum(catalog.has_break_semantics(s) for s in styles),
+                "styles": sorted({style or "(none)" for style in styles}),
             },
         )
 

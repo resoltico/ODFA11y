@@ -7,6 +7,7 @@ from .verapdf import (
     FailedRule,
     VeraPdfResult,
     add_verapdf_findings,
+    check_pdfua,
     find_verapdf,
     validate_pdfua,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "VeraPdfResult",
     "add_verapdf_findings",
     "audit_pdfua",
+    "check_pdfua",
     "export_pdfua",
     "find_soffice",
     "find_verapdf",

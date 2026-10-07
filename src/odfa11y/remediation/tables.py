@@ -28,9 +28,13 @@ class MarkHeaderRows(Operation):
     @override
     def apply(self, document: OdtDocument) -> tuple[Outcome, ...]:
         tables = select_elements(document.tree("content.xml"), "//table:table")
-        by_name = {table.get(qn("table", "name")): table for table in tables}
         return tuple(
-            self._mark(document, name, by_name.get(name), count)
+            self._mark(
+                document,
+                name,
+                [table for table in tables if table.get(qn("table", "name")) == name],
+                count,
+            )
             for name, count in self.rows.items()
         )
 
@@ -39,10 +43,14 @@ class MarkHeaderRows(Operation):
         return {"operation": self.name, "rows": dict(self.rows)}
 
     def _mark(
-        self, document: OdtDocument, name: str, table: etree._Element | None, count: int
+        self, document: OdtDocument, name: str, matches: list[etree._Element], count: int
     ) -> Outcome:
-        if table is None:
+        if not matches:
             return Outcome(self.name, Status.FAILED, f"No table is named {name!r}.", key=name)
+        if len(matches) > 1:
+            message = f"{len(matches)} tables are named {name!r}; the name must be unique."
+            return Outcome(self.name, Status.FAILED, message, key=name)
+        table = matches[0]
         existing = select_elements(table, "./table:table-header-rows/table:table-row")
         if existing:
             if len(existing) == count:

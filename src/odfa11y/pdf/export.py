@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.errors import OutputError, ToolFailedError
 from odfa11y.external_tools import find_executable, identify
+from odfa11y.staging import staging_sibling
 
 if TYPE_CHECKING:
     from odfa11y.external_tools import ToolIdentity
@@ -122,13 +123,9 @@ def export_pdfua(
 
 
 def _publish(produced: Path, destination: Path) -> None:
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
-    )
-    temporary = Path(temporary_name)
+    temporary = staging_sibling(destination)
     try:
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(produced.read_bytes())
+        shutil.copyfile(produced, temporary)
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)

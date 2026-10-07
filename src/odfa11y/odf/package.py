@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import lzma
-import os
-import tempfile
 import zipfile
 import zlib
 from dataclasses import dataclass
@@ -16,6 +14,7 @@ from lxml import etree
 
 from odfa11y.errors import MissingMemberError, PackageError, XmlParseError
 from odfa11y.safe_xml import secure_xml_parser
+from odfa11y.staging import staging_sibling
 
 from .archive import (
     check_archive_limits,
@@ -25,16 +24,19 @@ from .archive import (
 )
 
 if TYPE_CHECKING:
+    import os
     from collections.abc import Iterable
 
 ODT_MIMETYPE = "application/vnd.oasis.opendocument.text"
-# Errors raised while reading malformed ZIP structure or decompressing damaged member data.
+# Errors raised while reading malformed or unsupported ZIP structure or damaged member data.
 UNREADABLE_ARCHIVE_ERRORS = (
     zipfile.BadZipFile,
     zlib.error,
     EOFError,
     lzma.LZMAError,
     NotImplementedError,
+    RuntimeError,  # ZIP-encrypted members
+    zipfile.LargeZipFile,
 )
 REQUIRED_XML = ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml")
 
@@ -210,11 +212,7 @@ class OdtPackage:
             msg = f"Cannot rewrite an ODT package with unsafe member names: {unsafe}"
             raise PackageError(msg)
 
-        fd, temp_name = tempfile.mkstemp(
-            prefix=f".{destination.name}.", suffix=".tmp", dir=str(destination.parent)
-        )
-        os.close(fd)
-        tmp = Path(temp_name)
+        tmp = staging_sibling(destination)
         try:
             self._write_archive(tmp)
             validate_archive(tmp, ODT_MIMETYPE)

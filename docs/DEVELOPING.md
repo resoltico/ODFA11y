@@ -18,7 +18,7 @@ runtime and development dependencies.
 To refresh dependencies deliberately, review their changes, run `uv lock --upgrade`,
 restore the environment again, and repeat the required checks. Update the pinned
 build backend and `dev` group constraints in `pyproject.toml` when changing those tools.
-Dependabot proposes updates to the locked environment and workflow actions weekly.
+Dependabot proposes updates to the locked environment and workflow actions weekly; the `Dependency audit` workflow also checks the locked dependencies against advisories every week.
 Development tools live in the `dev` dependency group, which uv installs by default;
 they are not part of the published package metadata.
 

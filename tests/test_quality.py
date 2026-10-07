@@ -80,3 +80,16 @@ def test_lint_exception_requires_a_reason(tmp_path: Path, settings: str) -> None
         stream.write(settings)
     (root / "example.py").write_text("value = 1\n", encoding="utf-8")
     assert any("reason comment" in error for error in check_repository(root))
+
+
+def test_per_file_ignores_for_missing_files_are_rejected(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / "present.py").write_text("", encoding="utf-8")
+    with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
+        stream.write(
+            "[tool.ruff.lint.per-file-ignores]\n# reason\n"
+            '"present.py" = ["print"]\n# reason\n"gone.py" = ["print"]\n'
+        )
+    errors = check_repository(root)
+    assert any("gone.py" in error for error in errors)
+    assert not any("present.py" in error for error in errors)

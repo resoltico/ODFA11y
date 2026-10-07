@@ -83,3 +83,10 @@ Each package exposes its API through its `__init__`: for example
 
 Created and maintained by Ervins Strauhmanis. The project is licensed under the [Mozilla Public License 2.0](LICENSE)
 (`MPL-2.0`). Dependencies and external applications retain their own licenses.
+
+The package also bundles unmodified copies of the OASIS OpenDocument Relax NG schemas, which
+are **not** MPL-2.0: they remain © OASIS Open and are distributed under OASIS's own notice,
+reproduced verbatim in [src/odfa11y/odf/schemas/NOTICE.txt](src/odfa11y/odf/schemas/NOTICE.txt)
+and shipped in every wheel and source archive. ODFA11y is not affiliated with or endorsed by OASIS.
+LibreOffice, veraPDF and OpenDocument are names of their respective owners; the project
+only invokes the first two as external applications and does not redistribute them.

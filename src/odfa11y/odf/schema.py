@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 
 from lxml import etree
 
+from odfa11y.errors import XmlParseError
+
 from .namespaces import qn
 
 if TYPE_CHECKING:
@@ -77,7 +79,11 @@ def validate(document: OdtDocument) -> SchemaResult:
         if not document.has(name):
             continue
         validator = _validator(version, manifest=name == MANIFEST_MEMBER)
-        if not validator.validate(document.tree(name)):
+        try:
+            tree = document.tree(name)
+        except XmlParseError:
+            continue  # not well-formed: reported separately, nothing to validate
+        if not validator.validate(tree):
             violations[name] = tuple(error.message for error in validator.error_log)
     return SchemaResult(version=version, available=True, violations=violations)
 

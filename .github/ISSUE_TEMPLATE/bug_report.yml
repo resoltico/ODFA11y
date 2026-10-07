@@ -1,0 +1,26 @@
+name: Bug report
+description: Something audits, remediates or verifies incorrectly.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never attach real or confidential documents.** Evidence bundles contain copies of the
+        input document. Reproduce with a minimal synthetic file instead.
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Command and minimal reproduction
+      description: The exact command, plus a synthetic document or its description.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Output of `odfa11y doctor`
+      render: text

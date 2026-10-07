@@ -122,9 +122,19 @@ class RunRecord:
 
 @dataclass(frozen=True, slots=True)
 class PipelineOptions:
-    """Tool selection and gating: ``verapdf`` is None, ``"auto"`` (search PATH) or a path."""
+    """Tool selection and gating.
+
+    veraPDF runs when ``verapdf`` is true or ``verapdf_path`` is given; without a path it is
+    searched for on PATH.
+    """
 
     soffice: str | None = None
-    verapdf: str | None = None
+    verapdf: bool = False
+    verapdf_path: str | None = None
     timeout: int = 120
     strict: bool = False
+
+    @property
+    def wants_verapdf(self) -> bool:
+        """Whether PDF/UA validation with veraPDF was requested."""
+        return self.verapdf or self.verapdf_path is not None

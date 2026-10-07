@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import json
 import shutil
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from odfa11y.errors import OutputError
+from odfa11y.staging import staging_sibling
 
 from .manifest import write_manifest
 from .review import render_review
@@ -42,7 +42,8 @@ def write_bundle(
     target = Path(directory)
     require_free_directory(target)
     target.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.", dir=target.parent))
+    staging = staging_sibling(target)
+    staging.mkdir()
     try:
         for name, source in artifacts.items():
             destination = staging / name

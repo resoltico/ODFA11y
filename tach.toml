@@ -17,6 +17,10 @@ path = "odfa11y.safe_xml"
 depends_on = []
 
 [[modules]]
+path = "odfa11y.staging"
+depends_on = []
+
+[[modules]]
 path = "odfa11y.report"
 depends_on = []
 
@@ -26,7 +30,7 @@ depends_on = ["odfa11y.errors"]
 
 [[modules]]
 path = "odfa11y.odf"
-depends_on = ["odfa11y.errors", "odfa11y.safe_xml"]
+depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
 
 [[modules]]
 path = "odfa11y.audit"
@@ -43,6 +47,7 @@ depends_on = [
   "odfa11y.external_tools",
   "odfa11y.report",
   "odfa11y.safe_xml",
+  "odfa11y.staging",
 ]
 
 [[modules]]
@@ -51,7 +56,7 @@ depends_on = ["odfa11y.errors", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.evidence"
-depends_on = ["odfa11y.errors"]
+depends_on = ["odfa11y.errors", "odfa11y.staging"]
 
 [[modules]]
 path = "odfa11y.config"

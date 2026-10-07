@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 from collections import Counter
 from dataclasses import dataclass
 
@@ -227,7 +228,7 @@ class StyleCatalog:
 
         base = self.style("paragraph", base_style_name)
         if base is not None:
-            clone = etree.fromstring(etree.tostring(base))
+            clone = copy.deepcopy(base)
             clone.set(qn("style", "name"), new_style_name)
             clone.set(qn("style", "family"), "paragraph")
         else:

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -51,6 +52,9 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
     if requested is not None:
         path = Path(requested)
         if path.is_file():
+            if not os.access(path, os.X_OK):
+                msg = f"Not executable: {requested}"
+                raise ToolNotFoundError(msg)
             return str(path)
         resolved = shutil.which(str(requested))
         if resolved:

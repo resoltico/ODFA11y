@@ -45,6 +45,12 @@ fidelity measurements) from the *human review still required* checklist, and sta
 plainly when veraPDF did not run that the built-in PDF checks are not PDF/UA validation.
 Nothing semantic is turned into a pass.
 
+## Privacy
+
+A bundle contains copies of the input document, its remediated ODT, both PDFs and diff
+images, and reports quote document text. Treat a bundle with the same confidentiality as the
+document, and do not attach one to a public issue.
+
 ## Verifying
 
 ```bash

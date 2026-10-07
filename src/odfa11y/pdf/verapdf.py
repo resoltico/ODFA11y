@@ -6,17 +6,13 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.external_tools import ToolIdentity, find_executable
-from odfa11y.report import rules
+from odfa11y.report import Report, rules
 from odfa11y.safe_xml import secure_xml_parser
-
-if TYPE_CHECKING:
-    from odfa11y.report import Report
 
 MAX_REPORTED_CHECKS = 3
 
@@ -102,6 +98,29 @@ def validate_pdfua(
         msg = f"veraPDF failed: {completed.stderr.strip()}"
         raise ToolFailedError(msg)
     return _parse(completed.stdout, completed.stderr)
+
+
+def check_pdfua(
+    pdf: str | Path, *, subject: str, executable: str | Path | None = None
+) -> tuple[Report, VeraPdfResult | None]:
+    """Validate a PDF and report the outcome, treating an unavailable validator as a warning.
+
+    Returns
+    -------
+    tuple[Report, VeraPdfResult | None]
+        A ``verapdf`` report (with ``VERA000`` when the validator cannot be found) and the
+        parsed result, which is None when the validator was unavailable.
+
+    """
+    report = Report(kind="verapdf", subject=subject)
+    try:
+        located = find_verapdf(executable)
+    except ToolNotFoundError as exc:
+        report.add(rules.VERA000, str(exc))
+        return report, None
+    result = validate_pdfua(pdf, executable=located)
+    add_verapdf_findings(report, result)
+    return report, result
 
 
 def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:

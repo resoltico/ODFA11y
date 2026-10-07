@@ -91,7 +91,7 @@ def test_missing_verapdf_is_a_warning_not_a_crash(
 ) -> None:
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
-    arguments = ["audit", str(pdf), "--verapdf", str(tmp_path / "absent"), "--format", "json"]
+    arguments = ["audit", str(pdf), "--verapdf-path", str(tmp_path / "absent"), "--format", "json"]
     assert main(arguments) == 0
     reports = json.loads(capsys.readouterr().out)
     assert reports[1]["kind"] == "verapdf"
@@ -280,3 +280,14 @@ def test_export_compare_and_pipeline_with_real_libreoffice(
     arguments = ["pipeline", str(source), "--config", str(config(tmp_path)), "--soffice", soffice]
     assert main([*arguments, "--output-dir", str(tmp_path / "ev")]) == 0
     assert main(["check-evidence", str(tmp_path / "ev")]) == 0
+
+
+def test_verapdf_flag_does_not_swallow_the_next_argument(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PATH", "")
+    pdf = tmp_path / "t.pdf"
+    tagged_writer().write(pdf)
+    assert main(["audit", "--verapdf", str(pdf), "--format", "json"]) == 0
+    reports = json.loads(capsys.readouterr().out)
+    assert [report["kind"] for report in reports] == ["pdf", "verapdf"]

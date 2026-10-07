@@ -24,23 +24,24 @@ from odfa11y.external_tools import identify
 from odfa11y.fidelity import compare_pdfs
 from odfa11y.odf import SUPPORTED_VERSIONS, OdtDocument
 from odfa11y.pdf import (
-    add_verapdf_findings,
     audit_pdfua,
+    check_pdfua,
     export_pdfua,
     find_soffice,
     find_verapdf,
     identify_soffice,
-    validate_pdfua,
 )
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import remediate
-from odfa11y.report import Report, exit_status, render_reports, rules
+from odfa11y.report import exit_status, render_reports
 
 from .parser import build_parser
 
 if TYPE_CHECKING:
     import argparse
     from collections.abc import Callable
+
+    from odfa11y.report import Report
 
 EXECUTION_FAILURE = 3
 PDF_MAGIC = b"%PDF"
@@ -84,23 +85,15 @@ def _audit(args: argparse.Namespace) -> int:
     for source in args.sources:
         if _is_pdf(source):
             reports.append(audit_pdfua(source))
-            if args.verapdf:
-                reports.append(_verapdf_report(source, args.verapdf))
+            if args.verapdf or args.verapdf_path:
+                report, _result = check_pdfua(
+                    source, subject=str(source), executable=args.verapdf_path
+                )
+                reports.append(report)
         else:
             reports.append(audit_odt(source, schema=args.schema))
     print(render_reports(reports, output_format=args.format))
     return exit_status(reports, strict=args.strict)
-
-
-def _verapdf_report(pdf: Path, requested: str) -> Report:
-    report = Report(kind="verapdf", subject=str(pdf))
-    try:
-        executable = find_verapdf(None if requested == "auto" else requested)
-    except ToolNotFoundError as exc:
-        report.add(rules.VERA000, str(exc), location=str(pdf))
-        return report
-    add_verapdf_findings(report, validate_pdfua(pdf, executable=executable))
-    return report
 
 
 def _template(args: argparse.Namespace) -> int:
@@ -154,6 +147,7 @@ def _pipeline(args: argparse.Namespace) -> int:
     options = PipelineOptions(
         soffice=str(args.soffice) if args.soffice else None,
         verapdf=args.verapdf,
+        verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
         timeout=args.timeout,
         strict=args.strict,
     )

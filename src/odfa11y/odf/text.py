@@ -11,9 +11,15 @@ if TYPE_CHECKING:
 from .namespaces import qn
 from .xpath import select_elements
 
+INERT_INLINE_TAGS = frozenset({qn("text", "span"), qn("text", "s")})
+
 
 def is_empty_paragraph(p: etree._Element) -> bool:
-    """Whether a paragraph has no visible text or meaningful inline content.
+    """Whether a paragraph has no text and nothing but inert inline elements.
+
+    Anything else (a frame, bookmark, tab, field, change marker, index entry, ...) means the
+    paragraph may carry meaning, so it is not a spacer; only an allow-list of inert elements
+    counts as empty.
 
     Returns
     -------
@@ -23,17 +29,7 @@ def is_empty_paragraph(p: etree._Element) -> bool:
     """
     if element_text(p).strip():
         return False
-    meaningful = select_elements(
-        p,
-        (
-            ".//draw:* | .//text:line-break | .//text:tab | "
-            ".//text:bookmark | .//text:bookmark-start | "
-            ".//text:bookmark-end | .//text:reference-mark | "
-            ".//text:reference-mark-start | .//text:reference-mark-end | "
-            ".//text:soft-page-break"
-        ),
-    )
-    return not meaningful
+    return all(child.tag in INERT_INLINE_TAGS for child in p.iter("*") if child is not p)
 
 
 def element_text(element: etree._Element) -> str:

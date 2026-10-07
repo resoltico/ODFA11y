@@ -8,8 +8,9 @@ dynamic = ["version"]
 description = "Audit, remediate and verify ODF Writer documents for accessible PDF/UA, with evidence"
 readme = "README.md"
 requires-python = ">=3.14"
-license = "MPL-2.0"
-license-files = ["LICENSE"]
+# The project is MPL-2.0; the bundled OASIS ODF schemas carry OASIS's own notice (see NOTICE.txt).
+license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice"
+license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt"]
 authors = [
   { name = "Ervins Strauhmanis" }
 ]
@@ -149,27 +150,15 @@ max-file-lines = 300
 "tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
 # The fixture exposes independent document features as named keyword arguments.
 "tests/fixtures.py" = ["too-many-arguments"]
-# Reports accept three identifiers plus named location/details/fixability fields.
-"src/odfa11y/report/models.py" = ["too-many-arguments"]
-# Preserve the public API's explicit spacing controls, all optional controls keyword-only.
-"src/odfa11y/remediation/spacing.py" = ["too-many-arguments"]
-# CLI output is its stdout/stderr interface; subprocess is used for timeout error handling.
-"src/odfa11y/cli/commands.py" = ["print", "suspicious-subprocess-import"]
+# CLI output is its stdout/stderr interface.
+"src/odfa11y/cli/commands.py" = ["print"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
 "src/odfa11y/pdf/export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 # Version probes run an explicitly selected local tool with an argument list.
 "src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 # veraPDF is an explicitly selected local validator, invoked with an argument list.
 "src/odfa11y/pdf/verapdf.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
-# Reporting prints the CLI interface and queries explicitly selected local tools.
-"src/odfa11y/cli/reporting.py" = ["print", "subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 
-# lxml's documented public tree type is named _ElementTree; used in isinstance.
-"src/odfa11y/odf/package.py" = ["private-member-access"]
-# Serialized configuration readers preserve ValueError for malformed input.
-"src/odfa11y/remediation/config.py" = ["type-check-without-type-error"]
-# JSON CLI configuration preserves ValueError for malformed serialized input.
-"src/odfa11y/cli/options.py" = ["type-check-without-type-error"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 # lxml's element type is named _Element; the selector filters XPath results with isinstance.

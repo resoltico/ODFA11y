@@ -90,4 +90,7 @@ def _add_tool_options(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:
-    parser.add_argument("--verapdf", nargs="?", const="auto", help=help_text)
+    parser.add_argument("--verapdf", action="store_true", help=help_text)
+    parser.add_argument(
+        "--verapdf-path", type=Path, help="veraPDF executable (implies --verapdf); default: PATH."
+    )

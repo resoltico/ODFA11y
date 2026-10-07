@@ -9,6 +9,7 @@ import sys
 import tokenize
 import tomllib
 from pathlib import Path
+from typing import Any
 
 GENERATED_DIRECTORIES = {".git", ".venv", "build", "dist", "__pycache__", ".ruff_cache"}
 INLINE_DIRECTIVE = re.compile(r"\b(?:noqa\b|ruff\s*:|fmt\s*:|pylint\s*:)", re.IGNORECASE)
@@ -27,6 +28,7 @@ def check_repository(root: Path) -> list[str]:
     config = tomllib.loads(config_text)
     limit = config["tool"]["odfa11y"]["quality"]["max-file-lines"]
     errors = _exception_reasons(config_text)
+    errors.extend(_stale_ignores(root, config))
     files_checked = 0
     for directory, dirs, files in root.walk():
         dirs[:] = [name for name in dirs if name not in GENERATED_DIRECTORIES]
@@ -46,6 +48,16 @@ def check_repository(root: Path) -> list[str]:
     if not files_checked:
         errors.append("No Python files were checked")
     return errors
+
+
+def _stale_ignores(root: Path, config: dict[str, Any]) -> list[str]:
+    lint = config.get("tool", {}).get("ruff", {}).get("lint", {})
+    return [
+        f"pyproject.toml: per-file ignore matches no file: {pattern}"
+        for table in ("per-file-ignores", "extend-per-file-ignores")
+        for pattern in lint.get(table, {})
+        if not any(root.glob(pattern))
+    ]
 
 
 def _exception_reasons(source: str) -> list[str]:

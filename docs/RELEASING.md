@@ -55,11 +55,23 @@ tags, so release logic reuses the same gates:
 6. Extract the matching version section from the tagged checkout's `CHANGELOG.md`.
    Include its heading/date and retain all internal wording and Markdown; only outer
    whitespace is trimmed. Missing or duplicate version sections fail the release.
-7. Create a **draft** GitHub release containing the wheel, source archive and those
+7. Attest the build provenance of both distributions (`actions/attest-build-provenance`) and
+   write `SHA256SUMS`.
+8. Create a **draft** GitHub release containing the wheel, source archive, `SHA256SUMS` and those
    exact changelog notes. Unreleased and adjacent release sections are excluded.
 
+CI also rebuilds the distributions and requires byte-identical results, so the assets can be
+reproduced from the tagged source with `uv build`. Consumers can verify a downloaded asset with
+`gh attestation verify FILE --repo resoltico/odfa11y` and `sha256sum --check SHA256SUMS`.
+Provenance attestations require a repository that supports them; if the draft job fails at that
+step, fix the repository setting rather than removing the step.
+
+A weekly `Dependency audit` workflow re-checks the locked dependencies against advisories
+between pushes. Enable GitHub's CodeQL default setup in the repository settings for code scanning;
+no workflow file is needed.
+
 A failed `CI gate` prevents the draft job. The release job alone gets the repository
-write permission needed for its assets; it uses GitHub's scoped workflow token,
+write and attestation permissions it needs; it uses GitHub's scoped workflow token,
 not a long-lived personal token. Version tags trigger this process; branch pushes,
 PRs and manual check runs do not publish or create a draft release.
 

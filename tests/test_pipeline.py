@@ -116,7 +116,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
         SetMetadata(title="Evidence run", language="en-GB"),
         SetAltText({"Logo": AltText("Logo", "A sample logo")}),
     ]
-    options = PipelineOptions(soffice=soffice, verapdf=verapdf)
+    options = PipelineOptions(soffice=soffice, verapdf_path=verapdf)
     record = run_pipeline(source, operations, FidelityPolicy(), tmp_path / "out", options)
     assert statuses(record) == dict.fromkeys(STAGE_NAMES, "passed") | {"audit-source": "passed"}
     assert record.exit_status == 0

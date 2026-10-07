@@ -9,20 +9,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import audit_odt
-from odfa11y.errors import OdfA11yError, ToolNotFoundError
+from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import require_free_directory, sha256_file, write_bundle
 from odfa11y.fidelity import compare_pdfs
 from odfa11y.pdf import (
-    add_verapdf_findings,
     audit_pdfua,
+    check_pdfua,
     export_pdfua,
     find_soffice,
-    find_verapdf,
     identify_soffice,
-    validate_pdfua,
 )
 from odfa11y.remediation import remediate
-from odfa11y.report import Report, exit_status, rules
+from odfa11y.report import exit_status, rules
 
 from .record import STAGE_NAMES, PipelineOptions, RunRecord, StageResult
 
@@ -31,6 +29,7 @@ if TYPE_CHECKING:
 
     from odfa11y.fidelity import FidelityPolicy
     from odfa11y.remediation import Operation
+    from odfa11y.report import Report
 
 
 @dataclass(slots=True)
@@ -43,9 +42,8 @@ class _Run:
     options: PipelineOptions
     executable: str | None = None
 
-    @property
-    def profile(self) -> Path:
-        return self.work / "profile"
+    # Stage methods raise OdfA11yError or OSError on execution failure; run_pipeline turns
+    # either into a failed stage, so no failure can prevent the evidence from being written.
 
     def audit_source(self) -> StageResult:
         report = audit_odt(self.source, schema=True)
@@ -60,10 +58,7 @@ class _Run:
         )
 
     def remediate(self) -> StageResult:
-        try:
-            result = remediate(self.source, self.work / "remediated.odt", self.operations)
-        except OdfA11yError as exc:
-            return StageResult("remediate", "failed", str(exc), error=True)
+        result = remediate(self.source, self.work / "remediated.odt", self.operations)
         return StageResult("remediate", "passed", remediation=result, gate=False)
 
     def audit_remediated(self) -> StageResult:
@@ -83,38 +78,27 @@ class _Run:
         return self._gate("audit-pdf", report)
 
     def validate_pdfua(self) -> StageResult:
-        if self.options.verapdf is None:
+        if not self.options.wants_verapdf:
             return StageResult("verapdf", "skipped", "not requested", gate=False)
-        report = Report(kind="verapdf", subject="remediated.pdf")
-        try:
-            executable = find_verapdf(
-                None if self.options.verapdf == "auto" else self.options.verapdf
-            )
-        except ToolNotFoundError as exc:
-            report.add(rules.VERA000, str(exc))
-            failed = self.record.strict
-            return StageResult(
-                "verapdf", "failed" if failed else "skipped", "veraPDF unavailable", report=report
-            )
-        try:
-            result = validate_pdfua(self.work / "remediated.pdf", executable=executable)
-        except OdfA11yError as exc:
-            return StageResult("verapdf", "failed", str(exc), error=True)
-        add_verapdf_findings(report, result)
+        report, result = check_pdfua(
+            self.work / "remediated.pdf",
+            subject="remediated.pdf",
+            executable=self.options.verapdf_path,
+        )
+        if result is None:
+            status = "failed" if self.record.strict else "skipped"
+            return StageResult("verapdf", status, "veraPDF unavailable", report=report)
         (self.work / "verapdf.xml").write_text(result.raw_xml, encoding="utf-8")
         self.record.toolchain["veraPDF"] = result.identity.as_dict()
         return self._gate("verapdf", report)
 
     def fidelity(self) -> StageResult:
-        try:
-            report = compare_pdfs(
-                self.work / "source.pdf",
-                self.work / "remediated.pdf",
-                self.policy,
-                diff_dir=self.work / "fidelity",
-            )
-        except OdfA11yError as exc:
-            return StageResult("fidelity", "failed", str(exc), error=True)
+        report = compare_pdfs(
+            self.work / "source.pdf",
+            self.work / "remediated.pdf",
+            self.policy,
+            diff_dir=self.work / "fidelity",
+        )
         report.subject = "remediated.pdf vs source.pdf"
         return self._gate("fidelity", report)
 
@@ -123,19 +107,16 @@ class _Run:
         return StageResult(name, "failed" if failed else "passed", report=report)
 
     def _export(self, name: str, odt: Path, pdf_name: str) -> StageResult:
-        try:
-            if self.executable is None:
-                self.executable = find_soffice(self.options.soffice)
-                self.record.toolchain["LibreOffice"] = identify_soffice(self.executable).as_dict()
-            export_pdfua(
-                odt,
-                self.work / pdf_name,
-                soffice=self.executable,
-                timeout=self.options.timeout,
-                profile_dir=self.profile,
-            )
-        except OdfA11yError as exc:
-            return StageResult(name, "failed", str(exc), error=True)
+        if self.executable is None:
+            self.executable = find_soffice(self.options.soffice)
+            self.record.toolchain["LibreOffice"] = identify_soffice(self.executable).as_dict()
+        export_pdfua(
+            odt,
+            self.work / pdf_name,
+            soffice=self.executable,
+            timeout=self.options.timeout,
+            profile_dir=self.work / "profile",
+        )
         return StageResult(name, "passed", gate=False)
 
 
@@ -187,7 +168,10 @@ def run_pipeline(
                     StageResult(name, "skipped", f"not run: {failed} failed", gate=False)
                 )
             else:
-                record.stages.append(step())
+                try:
+                    record.stages.append(step())
+                except (OdfA11yError, OSError) as exc:
+                    record.stages.append(StageResult(name, "failed", str(exc), error=True))
         artifacts = {
             path.relative_to(work).as_posix(): path
             for path in sorted(work.rglob("*"))

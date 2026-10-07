@@ -43,10 +43,9 @@ def render_review(record: dict[str, Any]) -> str:
         "| Stage | Status | Detail |",
         "| --- | --- | --- |",
     ]
-    lines += [
-        f"| `{stage['name']}` | {stage['status']} | {stage.get('reason') or _summary(stage)} |"
-        for stage in stages
-    ]
+    for stage in stages:
+        detail = _cell(stage.get("reason") or _summary(stage))
+        lines.append(f"| `{stage['name']}` | {stage['status']} | {detail} |")
     lines += ["", "## Machine-established facts", ""]
     lines += _facts(stages) or ["- No stage produced facts."]
     attention = _attention(stages)
@@ -58,6 +57,18 @@ def render_review(record: dict[str, Any]) -> str:
     lines += ["", "## Human review still required", ""]
     lines += [f"- [ ] {text}" for _key, text in HUMAN_REVIEW_ITEMS]
     return "\n".join(lines) + "\n"
+
+
+def _cell(text: str) -> str:
+    """Make text safe inside one Markdown table cell.
+
+    Returns
+    -------
+    str
+        The text on one line with backslashes and pipes escaped.
+
+    """
+    return " ".join(text.split()).replace("\\", "\\\\").replace("|", "\\|")
 
 
 def _summary(stage: dict[str, Any]) -> str:

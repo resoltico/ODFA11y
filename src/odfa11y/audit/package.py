@@ -6,6 +6,7 @@ from __future__ import annotations
 import zipfile
 from typing import TYPE_CHECKING
 
+from odfa11y.errors import XmlParseError
 from odfa11y.odf import (
     ODT_MIMETYPE,
     REQUIRED_XML,
@@ -74,9 +75,12 @@ def audit_versions(document: OdtDocument, report: Report) -> None:
         for name in ("content.xml", "styles.xml", "meta.xml", "settings.xml")
         if document.has(name)
     ]
-    declared = {
-        name: document.tree(name).getroot().get(qn("office", "version")) for name in members
-    }
+    declared = {}
+    for name in members:
+        try:
+            declared[name] = document.tree(name).getroot().get(qn("office", "version"))
+        except XmlParseError:
+            continue  # reported as XML001 by the caller
     if version is None or len(set(declared.values())) > 1:
         report.add(
             rules.ODF001,

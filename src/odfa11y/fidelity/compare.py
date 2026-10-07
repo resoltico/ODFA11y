@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pypdfium2
 from PIL import Image, ImageChops
 
+from odfa11y.errors import ToolFailedError
 from odfa11y.report import Report, rules
 
 from .snapshot import read_snapshot
@@ -118,25 +120,11 @@ def _compare_raster(
     if oversized:
         report.add(rules.FID007, details={"pages": oversized, "pixel_limit": MAX_RENDER_PIXELS})
         return
-    ratios: list[float] = []
-    reference, changed = pypdfium2.PdfDocument(paths[0]), pypdfium2.PdfDocument(paths[1])
     try:
-        for index in range(len(snapshot.pages)):
-            left = reference[index].render(scale=scale).to_pil().convert("RGB")
-            right = changed[index].render(scale=scale).to_pil().convert("RGB")
-            ratio, mask = _difference(left, right, policy.ink_threshold)
-            ratios.append(round(ratio, RATIO_PRECISION))
-            if ratio > policy.raster_tolerance:
-                details: dict[str, object] = {"page": index + 1, "changed_ratio": ratios[-1]}
-                if diff_dir is not None:
-                    diff_dir.mkdir(parents=True, exist_ok=True)
-                    path = diff_dir / f"page-{index + 1:03d}-diff.png"
-                    mask.save(path)
-                    details["diff_image"] = path.name
-                report.add(rules.FID005, details=details)
-    finally:
-        reference.close()
-        changed.close()
+        ratios = _render_ratios(paths, snapshot, policy, report, diff_dir)
+    except pypdfium2.PdfiumError as exc:
+        msg = f"Cannot render PDF for comparison: {exc}"
+        raise ToolFailedError(msg) from exc
     report.metadata["raster_changed_ratios"] = ratios
     report.metadata["raster_max_changed_ratio"] = max(ratios, default=0.0)
 
@@ -152,3 +140,32 @@ def _difference(
     moved = ImageChops.logical_xor(ink_left, ink_right)
     ink = max(ink_left.histogram()[255], ink_right.histogram()[255], 1)
     return moved.histogram()[255] / ink, moved.convert("L")
+
+
+def _render_ratios(
+    paths: tuple[Path, Path],
+    snapshot: PdfSnapshot,
+    policy: FidelityPolicy,
+    report: Report,
+    diff_dir: Path | None,
+) -> list[float]:
+    scale = policy.dpi / POINTS_PER_INCH
+    ratios: list[float] = []
+    with (
+        closing(pypdfium2.PdfDocument(paths[0])) as reference,
+        closing(pypdfium2.PdfDocument(paths[1])) as changed,
+    ):
+        for index in range(len(snapshot.pages)):
+            left = reference[index].render(scale=scale).to_pil().convert("RGB")
+            right = changed[index].render(scale=scale).to_pil().convert("RGB")
+            ratio, mask = _difference(left, right, policy.ink_threshold)
+            ratios.append(round(ratio, RATIO_PRECISION))
+            if ratio > policy.raster_tolerance:
+                details: dict[str, object] = {"page": index + 1, "changed_ratio": ratios[-1]}
+                if diff_dir is not None:
+                    diff_dir.mkdir(parents=True, exist_ok=True)
+                    path = diff_dir / f"page-{index + 1:03d}-diff.png"
+                    mask.save(path)
+                    details["diff_image"] = path.name
+                report.add(rules.FID005, details=details)
+    return ratios

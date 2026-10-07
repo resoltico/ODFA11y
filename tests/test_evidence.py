@@ -130,3 +130,14 @@ def test_review_items_appear_in_the_accessibility_guide() -> None:
     )
     for key, _item in HUMAN_REVIEW_ITEMS:
         assert key in guide
+
+
+def test_review_table_cells_stay_on_one_line_and_escape_pipes() -> None:
+    failed = record(status="failed", failed_stage="remediate")
+    failed["stages"][0]["reason"] = "Remediation failed:\n- set_alt_text [Logo]: a | b"
+    table = [
+        line for line in render_review(failed).splitlines() if line.startswith("| `audit-pdf`")
+    ]
+    assert len(table) == 1
+    assert "a \\| b" in table[0]
+    assert "\n" not in table[0]
