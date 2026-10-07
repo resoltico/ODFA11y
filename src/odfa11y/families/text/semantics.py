@@ -7,10 +7,9 @@ import re
 from typing import TYPE_CHECKING
 
 from odfa11y.content import (
+    GraphicIdentity,
     axis_count,
     declarations,
-    graphic_keys,
-    graphics_fingerprint,
     header_count,
     repeated,
     table_fingerprint,
@@ -97,7 +96,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
     frames = select_elements(
         tree, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
     )
-    all_frames = select_elements(tree, "//office:body//draw:frame")
+    identity = GraphicIdentity(document, select_elements(tree, "//office:body//draw:frame"))
     report.metadata["graphic_object_count"] = len(frames)
     for index, frame in enumerate(frames, start=1):
         title = frame.findtext("svg:title", namespaces=NS)
@@ -106,7 +105,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         selector = declared_name or href
-        addressed = [f for f in all_frames if selector in graphic_keys(f)] if selector else [frame]
+        addressed = identity.matching(selector) if selector else [frame]
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.add(
                 rules.TXT010,
@@ -119,7 +118,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
                 details={
                     "frame": declared_name,
                     "href": href,
-                    "fingerprint": graphics_fingerprint(document, addressed),
+                    "fingerprint": identity.fingerprint(addressed),
                 },
             )
 

@@ -2,13 +2,8 @@
 """Shared ODF content vocabulary, without document-family decisions."""
 
 from .configuration import graphic_descriptions, page_decisions
-from .graphics import (
-    GraphicDescription,
-    GraphicEditor,
-    graphic_keys,
-    graphics_fingerprint,
-    set_description,
-)
+from .graphic_identity import GraphicIdentity, graphic_keys, graphics_fingerprint
+from .graphics import GraphicDescription, GraphicEditor, set_description
 from .language import set_style_language, style_language
 from .pages import (
     SHAPE_TAGS,
@@ -22,6 +17,7 @@ from .pages import (
     shape_identity,
 )
 from .protection import opaque_payloads
+from .resources import local_resource_path
 from .tables import (
     AXES,
     axis_count,
@@ -40,6 +36,7 @@ __all__ = [
     "SHAPE_TAGS",
     "GraphicDescription",
     "GraphicEditor",
+    "GraphicIdentity",
     "PageDecision",
     "PageEditor",
     "axis_count",
@@ -48,6 +45,7 @@ __all__ = [
     "graphic_keys",
     "graphics_fingerprint",
     "header_count",
+    "local_resource_path",
     "navigation_problem",
     "opaque_payloads",
     "page_decisions",

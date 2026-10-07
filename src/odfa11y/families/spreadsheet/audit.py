@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from odfa11y.content import graphic_keys, graphics_fingerprint
+from odfa11y.content import GraphicIdentity
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import Location, rules
 
@@ -98,7 +98,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         content, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
     )
     report.metadata["graphic_object_count"] = len(frames)
-    everything = select_elements(content, "//office:body//draw:frame")
+    identity = GraphicIdentity(document, select_elements(content, "//office:body//draw:frame"))
     for index, frame in enumerate(frames, start=1):
         title = frame.findtext("svg:title", namespaces=NS)
         desc = frame.findtext("svg:desc", namespaces=NS)
@@ -108,7 +108,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         selector = declared_name or href
-        addressed = [f for f in everything if selector in graphic_keys(f)] if selector else [frame]
+        addressed = identity.matching(selector) if selector else [frame]
         report.add(
             rules.SHEET005,
             "Picture, chart or object has neither accessible title nor description.",
@@ -120,7 +120,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
             details={
                 "frame": declared_name,
                 "href": href,
-                "fingerprint": graphics_fingerprint(document, addressed),
+                "fingerprint": identity.fingerprint(addressed),
             },
         )
 

@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.content import (
     SHAPE_TAGS,
-    graphic_keys,
-    graphics_fingerprint,
+    GraphicIdentity,
     navigation_problem,
     page_fingerprint,
     page_shapes,
@@ -72,6 +71,7 @@ def _graphics(document: OdfDocument, report: Report) -> None:
         for node in select_elements(document.tree(Part.CONTENT), "//office:body//*")
         if node.tag in SHAPE_TAGS
     ]
+    identity = GraphicIdentity(document, shapes)
     report.metadata["shape_count"] = len(shapes)
     for index, shape in enumerate(shapes, 1):
         name = shape.get(qn("draw", "name"))
@@ -89,9 +89,7 @@ def _graphics(document: OdfDocument, report: Report) -> None:
             continue
         image = shape.find("draw:image", NS)
         selector = name or (image.get(qn("xlink", "href")) if image is not None else None)
-        addressed = (
-            [node for node in shapes if selector in graphic_keys(node)] if selector else [shape]
-        )
+        addressed = identity.matching(selector) if selector else [shape]
         rule = rules.PRES003 if payload else rules.PRES004
         report.add(
             rule,
@@ -101,7 +99,7 @@ def _graphics(document: OdfDocument, report: Report) -> None:
             details={
                 "shape": name,
                 "selector": selector,
-                "fingerprint": graphics_fingerprint(document, addressed),
+                "fingerprint": identity.fingerprint(addressed),
             },
         )
 

@@ -3,10 +3,7 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lxml import etree
@@ -19,8 +16,7 @@ if TYPE_CHECKING:
 
     from odfa11y.odf import OdfDocument
 
-from .tables import AXES, declarations, repeated
-from .xml import protected_xml
+from .graphic_identity import GraphicIdentity
 
 MIN_CONFLICTING_VALUES = 2
 FIELDS = (("title", qn("svg", "title")), ("description", qn("svg", "desc")))
@@ -62,10 +58,9 @@ class GraphicEditor:
             for node in select_elements(document.tree(Part.CONTENT), "//office:body//*")
             if node.tag in tags
         ]
-        matched = {
-            key: [frame for frame in frames if key in graphic_keys(frame)] for key in self.entries
-        }
-        failures = self._preflight(document, matched)
+        identity = GraphicIdentity(document, frames)
+        matched = {key: identity.matching(key) for key in self.entries}
+        failures = self._preflight(identity, matched)
         if failures:
             return failures
         outcomes = []
@@ -81,7 +76,7 @@ class GraphicEditor:
         return tuple(outcomes)
 
     def _preflight(
-        self, document: OdfDocument, matched: dict[str, list[etree._Element]]
+        self, identity: GraphicIdentity, matched: dict[str, tuple[etree._Element, ...]]
     ) -> tuple[Outcome, ...]:
         """Resolve every selector before any edit; report all problems together.
 
@@ -105,7 +100,7 @@ class GraphicEditor:
                 failures[key] = f"No graphic matches {key!r}."
                 continue
             expected = entry.fingerprint
-            if expected is not None and expected != graphics_fingerprint(document, frames):
+            if expected is not None and expected != identity.fingerprint(frames):
                 failures[key] = (
                     "The addressed graphic is no longer the object this plan was reviewed against."
                 )
@@ -115,7 +110,7 @@ class GraphicEditor:
         )
 
     def _find_conflicts(
-        self, matched: dict[str, list[etree._Element]], failures: dict[str, str]
+        self, matched: dict[str, tuple[etree._Element, ...]], failures: dict[str, str]
     ) -> None:
         wanted: dict[tuple[int, str], dict[str, list[str]]] = {}
         for key, frames in matched.items():
@@ -133,24 +128,6 @@ class GraphicEditor:
                 failures.setdefault(
                     key, f"Sets a different {label} than {others} on the same graphic."
                 )
-
-
-def graphic_keys(frame: etree._Element) -> set[str]:
-    """List the selectors that address a graphic frame.
-
-    Returns
-    -------
-    set[str]
-        The frame name, the image reference and the image file name.
-
-    """
-    keys = {frame.get(qn("draw", "name")) or ""}
-    image = frame.find("draw:image", NS)
-    href = image.get(qn("xlink", "href")) if image is not None else None
-    if href:
-        keys |= {href, Path(href).name}
-    keys.discard("")
-    return keys
 
 
 def set_description(document: OdfDocument, frame: etree._Element, text: GraphicDescription) -> bool:
@@ -207,60 +184,3 @@ def _accessibility_position(frame: etree._Element, tag: str) -> int:
         (index for index, child in enumerate(children) if child.tag not in fixed), default=-1
     )
     return last_content + 1
-
-
-def graphics_fingerprint(document: OdfDocument, frames: list[etree._Element]) -> str:
-    """Bind a reviewed selection to its structure and actual local graphic payloads.
-
-    Returns
-    -------
-    str
-        A digest independent of mutable description metadata.
-
-    """
-    facts = []
-    for frame in frames:
-        payloads = []
-        for node in select_elements(frame, ".//*[@xlink:href]"):
-            href = node.get(qn("xlink", "href"), "").removeprefix("./")
-            if document.storage.has(href):
-                payloads.append(hashlib.sha256(document.storage.read(href)).hexdigest())
-        facts.append([
-            _position(frame),
-            protected_xml(frame, omitted_elements=(qn("svg", "title"), qn("svg", "desc"))),
-            payloads,
-        ])
-    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
-
-
-def _position(node: etree._Element) -> list[tuple[str, int]]:
-    """Record ancestry by element identity and sibling ordinal, independent of metadata.
-
-    Returns
-    -------
-    list[tuple[str, int]]
-        Position relative to the body, not the storage root or mutable names.
-
-    """
-    path = []
-    while node.getparent() is not None and node.tag != qn("office", "body"):
-        parent = node.getparent()
-        if parent is None:
-            break
-        if node.tag not in {qn("table", "table-header-rows"), qn("table", "table-header-columns")}:
-            ordinal = _ordinal(node, parent)
-            path.append((str(node.tag), ordinal))
-        node = parent
-    return path
-
-
-def _ordinal(node: etree._Element, parent: etree._Element) -> int:
-    axis = next((key for key, value in AXES.items() if node.tag == qn("table", value[0])), None)
-    table = next(node.iterancestors(qn("table", "table")), None)
-    if axis is not None and table is not None:
-        total = 0
-        for declaration in declarations(table, axis):
-            if declaration is node:
-                return total
-            total += repeated(declaration, AXES[axis][2])
-    return [child for child in parent if child.tag == node.tag].index(node)
