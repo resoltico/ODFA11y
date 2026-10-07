@@ -66,7 +66,7 @@ def test_an_unknown_sheet_fails_the_whole_operation_before_any_edit(
     document = open_sheets(tmp_path, layout, *PLAIN)
     outcomes = SetSheetNames({"Sheet1": "Budget", "Missing": "Other"}).apply(document)
     assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Missing")]
-    assert "No sheet is named 'Missing'" in outcomes[0].message
+    assert "No unique sheet is named 'Missing'" in outcomes[0].message
     assert document.edit_count == 0
     assert sheet_names(document) == ["Sheet1", "Notes"]
 
@@ -218,3 +218,56 @@ def test_the_operation_describes_itself_with_its_entries() -> None:
         "operation": "set_sheet_names",
         "entries": {"Sheet1": "Budget"},
     }
+
+
+@by_layout
+@pytest.mark.parametrize("function", ["INDIRECT", "ADDRESS", "HYPERLINK"])
+def test_dynamic_reference_functions_block_a_rename(
+    tmp_path: Path, layout: str, function: str
+) -> None:
+    formula = referencing(f"of:={function}(&quot;Notes&quot;&amp;&quot;.A1&quot;)")
+    document = open_sheets(tmp_path, layout, *PLAIN, formula)
+    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
+    assert document.edit_count == 0
+
+
+def test_embedded_scripts_block_a_rename(tmp_path: Path) -> None:
+    document = open_sheets(tmp_path, "package", *PLAIN)
+    document.storage.write_member("Basic/Standard/Module1.xml", b"script")
+    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
+    assert document.edit_count == 0
+
+
+def test_duplicate_targets_are_not_treated_as_a_completed_rename(tmp_path: Path) -> None:
+    document = open_sheets(tmp_path, "package", sheet("Memo"), sheet("Memo"))
+    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
+
+
+def test_view_settings_follow_a_rename_without_changing_other_settings(tmp_path: Path) -> None:
+    document = open_sheets(tmp_path, "package", *PLAIN)
+    namespace = "urn:oasis:names:tc:opendocument:xmlns:config:1.0"
+    settings = (
+        "<office:document-settings "
+        'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+        f'xmlns:config="{namespace}"><office:settings>'
+        '<config:config-item-map-named config:name="Tables">'
+        '<config:config-item-map-entry config:name="Notes"/>'
+        '<config:config-item-map-entry config:name="Sheet1"/>'
+        "</config:config-item-map-named>"
+        '<config:config-item config:name="ActiveTable" config:type="string">'
+        "Notes</config:config-item>"
+        '<config:config-item config:name="Other" config:type="string">Notes</config:config-item>'
+        "</office:settings></office:document-settings>"
+    )
+    document.storage.write_member("settings.xml", settings.encode())
+    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.APPLIED,)
+    tree = document.tree(Part.SETTINGS)
+    assert tree.xpath(
+        "//config:config-item-map-entry/@config:name", namespaces={"config": namespace}
+    ) == ["Memo", "Sheet1"]
+    assert tree.xpath(
+        "//config:config-item[@config:name='ActiveTable']/text()", namespaces={"config": namespace}
+    ) == ["Memo"]
+    assert tree.xpath(
+        "//config:config-item[@config:name='Other']/text()", namespaces={"config": namespace}
+    ) == ["Notes"]

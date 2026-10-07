@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "odfa11y"
 dynamic = ["version"]
-description = "Recognise and check every OpenDocument kind; audit, remediate and export text documents as PDF/UA with evidence"
+description = "Recognise and check every OpenDocument kind; audit, remediate and export text documents and spreadsheets as PDF/UA with evidence"
 readme = "README.md"
 requires-python = ">=3.14"
 # The project is MPL-2.0; the bundled OASIS ODF schemas carry OASIS's own notice (see NOTICE.txt).

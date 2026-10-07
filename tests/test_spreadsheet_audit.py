@@ -57,7 +57,7 @@ def test_a_sheet_without_a_name_is_an_error(tmp_path: Path, layout: str) -> None
     [finding] = found(report, "SHEET001")
     assert finding.severity.value == "error"
     assert finding.location is not None
-    assert finding.location.endswith("sheet 2")
+    assert finding.location.path == "content/sheet[#2]"
     assert not found(audit(tmp_path, layout, CONTENT), "SHEET001")
 
 
@@ -223,3 +223,17 @@ def test_the_template_lists_each_decision_with_its_fingerprint(tmp_path: Path) -
     assert '# [spreadsheet.alt_text."Logo"]' in template
     assert "# fingerprint = " in template
     assert all(line.startswith("#") or not line for line in template.splitlines())
+
+
+def test_spreadsheet_findings_have_the_same_logical_locations_in_both_layouts(
+    tmp_path: Path,
+) -> None:
+    body = data_sheet("Sheet1", merged=True) + sheet("Logos", row(picture("Logo")))
+    findings = [audit(tmp_path, layout, body).findings for layout in LAYOUTS]
+    assert [(f.rule_id, f.location) for f in findings[0]] == [
+        (f.rule_id, f.location) for f in findings[1]
+    ]
+    assert {f.location.path for f in findings[0] if f.location} >= {
+        "content/sheet[Sheet1]",
+        "content/frame[Logo]",
+    }

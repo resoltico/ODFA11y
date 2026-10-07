@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.odf import Family, PackageStorage, Part, qn, select_elements
 
 from .sheets import sheet_name, sheets
 
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 FORBIDDEN_CHARACTERS = frozenset("[]*?:/\\")
+DYNAMIC_REFERENCE = re.compile(r"\b(?:INDIRECT|ADDRESS|HYPERLINK)\s*\(", re.IGNORECASE)
+CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
 EMBEDDED_OBJECTS = "//office:body//draw:object | //office:body//draw:object-ole"
 
 
@@ -61,6 +64,7 @@ class SetSheetNames(Operation):
                 continue
             document.edit(Part.CONTENT)
             found[old].set(qn("table", "name"), new)
+            _rename_view_settings(document, old, new)
             message = f"Renamed to {new!r}."
             outcomes.append(Outcome(self.name, Status.APPLIED, message, key=old, count=1))
         return tuple(outcomes)
@@ -114,7 +118,7 @@ def _document_problem(document: OdfDocument, old: str, new: str, names: Counter[
 
     """
     if names[old] == 0:
-        return None if names[new] else f"No sheet is named {old!r}."
+        return None if names[new] == 1 else f"No unique sheet is named {old!r} or {new!r}."
     if names[old] > 1:
         return f"{names[old]} sheets are named {old!r}; the name must be unique."
     if old == new:
@@ -125,6 +129,8 @@ def _document_problem(document: OdfDocument, old: str, new: str, names: Counter[
 
 
 def _reference_problem(document: OdfDocument, old: str) -> str | None:
+    if _has_scripts(document):
+        return f"Cannot rename {old!r}: embedded scripts may refer to sheet names."
     if select_elements(document.tree(Part.CONTENT), EMBEDDED_OBJECTS):
         return (
             f"Cannot rename {old!r}: the document embeds charts or objects whose references "
@@ -161,6 +167,35 @@ def _is_referenced(document: OdfDocument, name: str) -> bool:
             for attribute, value in element.attrib.items():
                 if attribute == own_name and element.tag == sheet_tag:
                     continue
+                if attribute == qn("table", "formula") and DYNAMIC_REFERENCE.search(value):
+                    return True
                 if value in links or any(token in value for token in dotted):
                     return True
     return False
+
+
+def _has_scripts(document: OdfDocument) -> bool:
+    for tree in document.distinct_trees(Part.CONTENT, Part.STYLES):
+        if select_elements(tree, "//office:scripts/* | //office:event-listeners/*"):
+            return True
+    return isinstance(document.storage, PackageStorage) and any(
+        name.lower().startswith(("basic/", "scripts/")) for name in document.storage.member_names()
+    )
+
+
+def _rename_view_settings(document: OdfDocument, old: str, new: str) -> None:
+    if not document.has(Part.SETTINGS):
+        return
+    for entry in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item-map-entry"):
+        parent = entry.getparent()
+        if (
+            parent is not None
+            and parent.get(f"{CONFIG}name") == "Tables"
+            and entry.get(f"{CONFIG}name") == old
+        ):
+            document.edit(Part.SETTINGS)
+            entry.set(f"{CONFIG}name", new)
+    for item in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item"):
+        if item.get(f"{CONFIG}name") == "ActiveTable" and item.text == old:
+            document.edit(Part.SETTINGS)
+            item.text = new

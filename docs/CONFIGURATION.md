@@ -131,11 +131,13 @@ changes. Every entry is checked before the first edit and any problem fails the 
   a link such as `#Sheet1.A1`) contains the sheet's name followed by a dot, plain or quoted
   as a formula writes it, or is a link to the bare name; and it refuses every rename when the
   document embeds charts or other objects, whose own references to sheets are not inspected.
+  Dynamic `INDIRECT`, `ADDRESS` and `HYPERLINK` formulas and embedded scripts also block
+  every rename because their sheet references cannot be resolved safely.
   The test errs towards refusing (a sheet named `Data` is also blocked by a reference to
   `MyData.A1`). Update the references in Calc first, or rename in Calc.
 
-The view settings (`settings.xml`) keep the old name; a test reloads a renamed document in
-LibreOffice and exports it. Renaming also changes what Calc's default page header prints, see
+Renaming updates named table view settings and the active-sheet selection in
+`settings.xml` or flat XML. A test reloads a renamed document in LibreOffice and exports it. Renaming also changes what Calc's default page header prints, see
 [spreadsheet PDF exports](ACCESSIBILITY.md#spreadsheet-pdf-exports).
 
 ## Spacing

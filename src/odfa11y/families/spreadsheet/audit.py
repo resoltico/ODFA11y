@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import rules
+from odfa11y.report import Location, rules
 
 from .objects import frame_keys, frames_fingerprint
 from .sheets import cell_text, is_data_sheet, is_empty, sheet_name, sheets
@@ -34,40 +34,39 @@ HIDDEN_COLUMNS = ".//table:table-column[@table:visibility='collapse' or @table:v
 def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     """Report the accessibility findings that belong to spreadsheets."""
     content = document.tree(Part.CONTENT)
-    member = document.member_name(Part.CONTENT) or Part.CONTENT.value
     all_sheets = sheets(content)
     report.metadata["sheet_count"] = len(all_sheets)
-    _audit_names(all_sheets, report, member)
-    _audit_data_sheets(all_sheets, report, member)
-    _audit_graphics(content, report, member)
-    _audit_links(all_sheets, report, member)
-    _audit_trailing_empty_sheets(all_sheets, report, member)
-    _audit_hidden(content, all_sheets, report, member)
+    _audit_names(all_sheets, report)
+    _audit_data_sheets(all_sheets, report)
+    _audit_graphics(content, report)
+    _audit_links(all_sheets, report)
+    _audit_trailing_empty_sheets(all_sheets, report)
+    _audit_hidden(content, all_sheets, report)
 
 
-def _location(member: str, index: int, sheet: etree._Element) -> str:
-    return f"{member} sheet {index}: {sheet_name(sheet)}"
+def _location(index: int, sheet: etree._Element) -> Location:
+    return Location(f"{Part.CONTENT}/sheet[{sheet_name(sheet) or f'#{index}'}]")
 
 
-def _audit_names(all_sheets: list[etree._Element], report: Report, member: str) -> None:
+def _audit_names(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         name = sheet_name(sheet)
         if not name.strip():
             report.add(
                 rules.SHEET001,
                 "Sheet has no name, so a reader cannot tell it from the others.",
-                location=f"{member} sheet {index}",
+                location=_location(index, sheet),
             )
         elif DEFAULT_SHEET_NAME.fullmatch(name.strip()):
             report.add(
                 rules.SHEET002,
                 "Sheet keeps its default name, which says nothing about its content.",
-                location=_location(member, index, sheet),
+                location=_location(index, sheet),
                 details={"sheet": name},
             )
 
 
-def _audit_data_sheets(all_sheets: list[etree._Element], report: Report, member: str) -> None:
+def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         if not is_data_sheet(sheet):
             continue
@@ -75,7 +74,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report, member:
             report.add(
                 rules.SHEET003,
                 "Sheet looks like a table of data but marks no header rows to repeat.",
-                location=_location(member, index, sheet),
+                location=_location(index, sheet),
                 details={"sheet": sheet_name(sheet)},
             )
         merged = select_elements(sheet, MERGED_CELLS)
@@ -83,12 +82,12 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report, member:
             report.add(
                 rules.SHEET004,
                 "Data sheet merges cells, which breaks row and column navigation.",
-                location=_location(member, index, sheet),
+                location=_location(index, sheet),
                 details={"sheet": sheet_name(sheet), "merged_cells": len(merged)},
             )
 
 
-def _audit_graphics(content: etree._ElementTree, report: Report, member: str) -> None:
+def _audit_graphics(content: etree._ElementTree, report: Report) -> None:
     frames = select_elements(
         content, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
     )
@@ -107,7 +106,7 @@ def _audit_graphics(content: etree._ElementTree, report: Report, member: str) ->
         report.add(
             rules.SHEET005,
             "Picture, chart or object has neither accessible title nor description.",
-            location=f"{member} draw:frame {declared_name or f'frame-{index}'}",
+            location=Location(f"{Part.CONTENT}/frame[{declared_name or f'#{index}'}]"),
             details={
                 "frame": declared_name,
                 "href": href,
@@ -116,7 +115,7 @@ def _audit_graphics(content: etree._ElementTree, report: Report, member: str) ->
         )
 
 
-def _audit_links(all_sheets: list[etree._Element], report: Report, member: str) -> None:
+def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         for link in select_elements(sheet, ".//text:a"):
             text = cell_text(link)
@@ -124,14 +123,12 @@ def _audit_links(all_sheets: list[etree._Element], report: Report, member: str) 
                 report.add(
                     rules.SHEET006,
                     "Hyperlink text is a raw address instead of a description of its target.",
-                    location=_location(member, index, sheet),
+                    location=_location(index, sheet),
                     details={"text": text},
                 )
 
 
-def _audit_trailing_empty_sheets(
-    all_sheets: list[etree._Element], report: Report, member: str
-) -> None:
+def _audit_trailing_empty_sheets(all_sheets: list[etree._Element], report: Report) -> None:
     empty = [is_empty(sheet) for sheet in all_sheets]
     kept = max((index for index, blank in enumerate(empty) if not blank), default=0)
     for index, sheet in enumerate(all_sheets):
@@ -139,13 +136,13 @@ def _audit_trailing_empty_sheets(
             report.add(
                 rules.SHEET007,
                 "Sheet is empty and follows the last sheet with content.",
-                location=_location(member, index + 1, sheet),
+                location=_location(index + 1, sheet),
                 details={"sheet": sheet_name(sheet)},
             )
 
 
 def _audit_hidden(
-    content: etree._ElementTree, all_sheets: list[etree._Element], report: Report, member: str
+    content: etree._ElementTree, all_sheets: list[etree._Element], report: Report
 ) -> None:
     hidden_styles = {
         style.get(qn("style", "name")) for style in select_elements(content, HIDDEN_SHEET_STYLES)
@@ -161,6 +158,6 @@ def _audit_hidden(
         report.add(
             rules.SHEET008,
             "Hidden sheets, rows or columns hold content that not every reader is told about.",
-            location=member,
+            location=Location(Part.CONTENT.value),
             details={"sheets": sheet_names, "rows": rows, "columns": columns},
         )

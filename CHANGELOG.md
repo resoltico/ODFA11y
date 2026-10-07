@@ -31,10 +31,12 @@ Notable changes to this project are documented in this file. The format is based
   fingerprints as in `[text.alt_text]`. `odfa11y template` lists both, and the review
   checklist has spreadsheet items. See [Rules](docs/RULES.md) and
   [Configuration](docs/CONFIGURATION.md#renaming-sheets).
-- **Sheet renames never break a reference.** A rename fails, and nothing is written, for an
+- **Conservative sheet renaming.** A rename fails, and nothing is written, for an
   unknown sheet, an invalid or colliding new name, a chained or swapped rename, any sheet that
   a formula, range or link refers to by name, and every sheet of a document that embeds
-  charts. References are not rewritten.
+  charts or scripts, or uses dynamic reference functions (`INDIRECT`, `ADDRESS`, `HYPERLINK`).
+  References are not rewritten; table view settings and the active-sheet selection follow
+  the renamed sheet.
 - **Spreadsheet PDF export.** The pipeline exports spreadsheets with LibreOffice's
   `calc_pdf_Export` filter and runs the PDF audit, veraPDF and the fidelity comparison on
   them. With LibreOffice 24.2 a Calc export tags only its page header, footer and pictures

@@ -72,8 +72,11 @@ def author(directory: Path, soffice: str, *sheets: str, styles: str = "") -> Pat
         str(out),
         str(flat),
     ]
-    assert run_bounded(command, timeout=120).returncode == 0
-    return out / f"{flat.stem}.ods"
+    result = run_bounded(command, timeout=120)
+    output = out / f"{flat.stem}.ods"
+    assert result.returncode == 0, result
+    assert output.is_file(), result
+    return output
 
 
 def problem_sheets() -> tuple[str, ...]:
