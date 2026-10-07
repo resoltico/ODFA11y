@@ -87,7 +87,7 @@ kind; a mismatch is a finding. An unrecognised media type ends the audit with `O
 ## Document families
 
 A family implements a [FamilyAdapter](../src/odfa11y/adapter/family.py): its audit, its
-default language (a family's styles decide where one lives), the content snapshot the
+default language (a family's styles decide where one lives), an optional hyperlink-probe document for exporter capability evidence, the content snapshot the
 executor compares, the plan table it reads, its template lines, its review checklist and,
 if LibreOffice can export it to PDF, the export filter. Kinds without an implementation get
 the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic

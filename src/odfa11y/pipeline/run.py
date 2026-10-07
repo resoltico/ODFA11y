@@ -21,6 +21,7 @@ from odfa11y.pdf import (
     export_pdfua,
     find_soffice,
     identify_soffice,
+    link_descriptions_supported,
     list_fonts,
 )
 from odfa11y.remediation import remediate
@@ -166,6 +167,21 @@ class _Run:
         if self.executable is None:
             self.executable = find_soffice(self.options.soffice)
             self.record.toolchain["LibreOffice"] = identify_soffice(self.executable).as_dict()
+            if self.adapter.link_probe is not None:
+                with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
+                    probe = self.adapter.link_probe(Path(scratch))
+                    supported = link_descriptions_supported(
+                        probe,
+                        ExportSettings(
+                            self.adapter.pdf_filter,
+                            self.executable,
+                            self.options.timeout,
+                            self.work / "profile",
+                        ),
+                    )
+                self.record.toolchain["LibreOffice"]["pdfua_link_descriptions"] = (
+                    "supported" if supported else "unsupported"
+                )
         export_pdfua(
             document,
             self.work / pdf_name,
