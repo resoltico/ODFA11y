@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Namespaces for ODF accessibility workflows."""
+"""ODF XML namespace prefixes and qualified-name construction."""
 
 from __future__ import annotations
 

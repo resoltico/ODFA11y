@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Styles for ODF accessibility workflows."""
+"""Resolve paragraph style inheritance and clone styles with changed spacing."""
 
 from __future__ import annotations
 

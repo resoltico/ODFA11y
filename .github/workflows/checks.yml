@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
 env:
   ODFA11Y_UV_VERSION: "0.12.23"
+  ODFA11Y_VERAPDF_VERSION: "1.30.2"
+  ODFA11Y_VERAPDF_SHA256: "6cc6341cb1af644044054b81f00a6590a7918abb18f762243de115258bcad838"
 permissions:
   contents: read
 concurrency:
@@ -14,8 +16,44 @@ defaults:
   run:
     shell: bash
 jobs:
-  quality:
-    name: Quality (${{ matrix.os }})
+  static:
+    name: Static analysis
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.ODFA11Y_UV_VERSION }}
+      - name: Validate workflow syntax and shell commands
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Scan Git history for secrets
+        run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --ignore-gitleaks-allow --log-opts=--all
+      - name: Restore locked Python environment
+        run: uv sync --locked --group audit
+      - name: Audit workflow security
+        run: uv run --no-sync zizmor --offline --persona pedantic --no-ignores --strict-collection .github/workflows
+      - name: Audit locked dependencies
+        run: |
+          uv export --locked --group audit --no-emit-project --output-file "$RUNNER_TEMP/audit-requirements.txt" > /dev/null
+          uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r "$RUNNER_TEMP/audit-requirements.txt"
+      - name: Enforce module size and lint-exception policy
+        run: uv run --no-sync python tools/check_quality.py
+      - name: Lint all authored Python
+        run: uv run --no-sync ruff check . --ignore-noqa
+      - name: Check Python formatting
+        run: uv run --no-sync ruff format --check .
+      - name: Type-check source, tests and tools
+        run: uv run --no-sync ty check
+      - name: Enforce package boundaries
+        run: |
+          uv run --no-sync tach check
+          uv run --no-sync tach check-external
+  test:
+    name: Test (${{ matrix.os }})
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -26,52 +64,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
-      - name: Validate workflow syntax and shell commands
-        if: runner.os == 'Linux'
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-      - name: Scan Git history for secrets
-        if: runner.os == 'Linux'
-        run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --ignore-gitleaks-allow --log-opts=--all
       - name: Restore locked Python environment
-        run: uv sync --locked --extra dev --group audit
-      - name: Audit workflow security
+        run: uv sync --locked
+      - name: Unit tests with coverage on Linux
         if: runner.os == 'Linux'
-        run: uv run --no-sync zizmor --offline --persona pedantic --no-ignores --strict-collection .github/workflows
-      - name: Audit locked dependencies
-        if: runner.os == 'Linux'
-        run: |
-          uv export --locked --extra dev --group audit --no-emit-project --output-file "$RUNNER_TEMP/audit-requirements.txt" > /dev/null
-          uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r "$RUNNER_TEMP/audit-requirements.txt"
-      - name: Enforce module size and lint-exception policy
-        run: uv run --no-sync python tools/check_quality.py
-      - name: Lint all authored Python
-        run: uv run --no-sync ruff check . --ignore-noqa
-      - name: Check Python formatting
-        run: uv run --no-sync ruff format --check .
-      - name: Install LibreOffice for the real export test
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer
-          soffice --version
-          command -v soffice
-      - name: Unit and integration tests on Linux
-        if: runner.os == 'Linux'
-        run: uv run --no-sync pytest
+        run: uv run --no-sync pytest -m 'not integration' --cov
       - name: Unit tests on macOS and Windows
         if: runner.os != 'Linux'
         run: uv run --no-sync pytest -m 'not integration'
-      - name: Build wheel from source distribution
-        run: uv run --no-sync python -m build
+      - name: Build source distribution and wheel
+        run: uv build
       - name: Verify installed wheel with locked dependencies
         run: |
           uv venv --python "$(cat .python-version)" "$RUNNER_TEMP/wheel-env"
           wheel_python="$RUNNER_TEMP/wheel-env/$(uv run --no-sync python -c 'import os; print("Scripts/python.exe" if os.name == "nt" else "bin/python")')"
-          uv export --locked --extra dev --no-emit-project --output-file "$RUNNER_TEMP/wheel-requirements.txt" > /dev/null
+          uv export --locked --no-emit-project --output-file "$RUNNER_TEMP/wheel-requirements.txt" > /dev/null
           uv pip sync --python "$wheel_python" --require-hashes "$RUNNER_TEMP/wheel-requirements.txt"
           uv pip install --python "$wheel_python" --no-deps dist/*.whl
           "$wheel_python" - <<'PYTHON'
@@ -87,11 +97,11 @@ jobs:
           assert package.version == odfa11y.__version__
           assert package.metadata["Requires-Python"] == project["requires-python"]
           assert package.metadata["License-Expression"] == project["license"]
+          assert any(str(p).endswith("odfa11y/py.typed") for p in package.files)
           license_file, = (p for p in package.files if str(p).endswith("/licenses/LICENSE"))
           assert package.locate_file(license_file).read_bytes() == Path("LICENSE").read_bytes()
           PYTHON
           "$wheel_python" -m pytest -m 'not integration'
-
       - name: Preserve tested release distributions
         if: runner.os == 'Linux' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -102,10 +112,57 @@ jobs:
             dist/*.tar.gz
           if-no-files-found: error
           retention-days: 7
+  integration:
+    name: Integration (LibreOffice and veraPDF)
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.ODFA11Y_UV_VERSION }}
+      - name: Restore locked Python environment
+        run: uv sync --locked
+      - name: Install LibreOffice
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer
+          soffice --version
+      - name: Install pinned veraPDF
+        run: |
+          java -version
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/verapdf.zip" \
+            "https://software.verapdf.org/releases/${ODFA11Y_VERAPDF_VERSION%.*}/verapdf-greenfield-${ODFA11Y_VERAPDF_VERSION}-installer.zip"
+          echo "${ODFA11Y_VERAPDF_SHA256}  $RUNNER_TEMP/verapdf.zip" | sha256sum --check -
+          unzip -q "$RUNNER_TEMP/verapdf.zip" -d "$RUNNER_TEMP/verapdf-installer"
+          cat > "$RUNNER_TEMP/verapdf-install.xml" <<XML
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <AutomatedInstallation langpack="eng">
+            <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>
+            <com.izforge.izpack.panels.target.TargetPanel id="install_dir">
+              <installpath>$RUNNER_TEMP/verapdf</installpath>
+            </com.izforge.izpack.panels.target.TargetPanel>
+            <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">
+              <pack index="0" name="veraPDF Runtime" selected="true"/>
+            </com.izforge.izpack.panels.packs.PacksPanel>
+            <com.izforge.izpack.panels.install.InstallPanel id="install"/>
+            <com.izforge.izpack.panels.finish.FinishPanel id="finish"/>
+          </AutomatedInstallation>
+          XML
+          java -jar "$RUNNER_TEMP/verapdf-installer/verapdf-greenfield-${ODFA11Y_VERAPDF_VERSION}/verapdf-izpack-installer-${ODFA11Y_VERAPDF_VERSION}.jar" "$RUNNER_TEMP/verapdf-install.xml"
+          echo "$RUNNER_TEMP/verapdf" >> "$GITHUB_PATH"
+      - name: Integration tests against the real applications
+        env:
+          ODFA11Y_REQUIRE_INTEGRATION: "1"
+        run: |
+          verapdf --version
+          uv run --no-sync pytest -m integration
   draft:
     name: Create draft release from tested distributions
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: quality
+    needs: [static, test, integration]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

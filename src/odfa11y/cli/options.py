@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Cli options for ODF accessibility workflows."""
+"""Turn command-line arguments and configuration into remediation options."""
 
 from __future__ import annotations
 

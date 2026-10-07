@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import json
+import runpy
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from pypdf import PdfWriter
 
+from odfa11y import __version__
 from odfa11y.cli import main
 
 from .fixtures import make_minimal_odt
@@ -16,6 +20,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+FINDINGS = 2
 EXECUTION_FAILURE = 3
 
 
@@ -92,7 +97,7 @@ def test_pipeline_blocks_failed_source_audit_before_export(
     arguments = ["pipeline", str(source), str(destination), "--pdf", str(pdf), "--format", "json"]
     if strict:
         arguments.append("--strict")
-    expected = 1 if strict else 2
+    expected = 1 if strict else FINDINGS
     assert main(arguments) == expected
     assert destination.is_file()
     assert not pdf.exists()
@@ -112,3 +117,104 @@ def test_export_executable_error_is_reported_without_traceback(
         == EXECUTION_FAILURE
     )
     assert "error:" in capsys.readouterr().err
+
+
+def test_text_audit_prints_a_readable_report(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
+    assert main(["audit", str(source)]) == FINDINGS
+    output = capsys.readouterr().out
+    assert "Result: FAIL" in output
+    assert "IMG001" in output
+
+
+def test_doctor_reports_installed_versions(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["doctor", "--format", "json"]) == 0
+    info = json.loads(capsys.readouterr().out)
+    assert info["odfa11y"] == __version__
+    assert {"python", "lxml", "pypdf"} <= info.keys()
+
+
+def test_module_entry_point_runs_the_cli(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["odfa11y", "doctor", "--format", "json"])
+    with pytest.raises(SystemExit) as exit_info:
+        runpy.run_module("odfa11y", run_name="__main__")
+    assert exit_info.value.code == 0
+    assert json.loads(capsys.readouterr().out)["odfa11y"] == __version__
+
+
+def test_normalize_spacing_writes_a_copy_with_reference_spacing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    destination = tmp_path / "out.odt"
+    arguments = ["normalize-spacing", str(source), str(destination)]
+    arguments += ["--reference-text", "Body paragraph.", "--target-style", "Body"]
+    assert main(arguments) == 0
+    assert destination.is_file()
+    assert f"Wrote: {destination}" in capsys.readouterr().out
+
+
+def test_verify_pdf_reports_inspection_errors_for_an_untagged_pdf(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    pdf = tmp_path / "untagged.pdf"
+    writer.write(pdf)
+    assert main(["verify-pdf", str(pdf), "--format", "json"]) == FINDINGS
+    report = json.loads(capsys.readouterr().out)
+    assert {"PDF001", "PDF003", "PDF004"} <= {issue["rule_id"] for issue in report["issues"]}
+
+
+def test_missing_verapdf_is_a_warning_not_a_crash(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    pdf = tmp_path / "untagged.pdf"
+    writer.write(pdf)
+    missing = str(tmp_path / "no-such-verapdf")
+    assert main(["verify-pdf", str(pdf), "--verapdf", missing, "--format", "json"]) == FINDINGS
+    report = json.loads(capsys.readouterr().out)
+    assert "VERA000" in {issue["rule_id"] for issue in report["issues"]}
+
+
+def test_table_header_and_alt_map_options_override_configuration(tmp_path: Path) -> None:
+    source = make_minimal_odt(
+        tmp_path / "source.odt", with_data_table=True, with_image_without_alt=True
+    )
+    alt_map = tmp_path / "alt.json"
+    alt_map.write_text(json.dumps({"Logo": {"title": "Logo", "description": "Sample logo"}}))
+    destination = tmp_path / "out.odt"
+    arguments = ["remediate", str(source), str(destination), "--table-header", "Data=1"]
+    arguments += ["--alt-map", str(alt_map)]
+    assert main(arguments) == 0
+    assert main(["audit", str(destination), "--format", "json"]) == 0
+
+
+@pytest.mark.parametrize(
+    ("option", "message"),
+    [
+        (["--table-header", "Data"], "expected TABLE=ROWS"),
+        (["--table-header", "Data=x"], "expected TABLE=ROWS"),
+    ],
+)
+def test_invalid_table_header_option_is_reported_on_stderr(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], option: list[str], message: str
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    assert main(["remediate", str(source), str(tmp_path / "out.odt"), *option]) == EXECUTION_FAILURE
+    assert message in capsys.readouterr().err
+
+
+def test_alt_map_must_be_a_json_object(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    alt_map = tmp_path / "alt.json"
+    alt_map.write_text("[]")
+    arguments = ["remediate", str(source), str(tmp_path / "out.odt"), "--alt-map", str(alt_map)]
+    assert main(arguments) == EXECUTION_FAILURE
+    assert "must be an object" in capsys.readouterr().err

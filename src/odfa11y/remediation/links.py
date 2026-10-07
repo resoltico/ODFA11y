@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Remediation links for ODF accessibility workflows."""
+"""Wrap visible addresses in hyperlinks without changing their text."""
 
 from __future__ import annotations
 

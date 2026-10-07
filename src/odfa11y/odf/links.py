@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Links for ODF accessibility workflows."""
+"""Detect visible URLs and email addresses in prose."""
 
 from __future__ import annotations
 

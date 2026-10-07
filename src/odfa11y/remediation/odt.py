@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Remediate for ODF accessibility workflows."""
+"""Apply explicit, text-preserving remediation choices to an ODT document."""
 
 from __future__ import annotations
 

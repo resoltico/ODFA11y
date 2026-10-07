@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Audit for ODF accessibility workflows."""
+"""Run the read-only audit of an ODT document and collect its findings."""
 
 from __future__ import annotations
 

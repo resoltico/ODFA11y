@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Audit package for ODF accessibility workflows."""
+"""Audit ZIP package structure, ODF version declarations and schema validity."""
 
 from __future__ import annotations
 

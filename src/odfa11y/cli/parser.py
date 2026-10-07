@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Cli parser for ODF accessibility workflows."""
+"""Define the command-line arguments for every command."""
 
 from __future__ import annotations
 

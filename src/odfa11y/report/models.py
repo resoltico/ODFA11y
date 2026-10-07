@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Models for ODF accessibility workflows."""
+"""Findings, severities and the report container shared by every audit."""
 
 from __future__ import annotations
 

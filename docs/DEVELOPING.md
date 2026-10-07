@@ -6,20 +6,21 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run 
 the source directory:
 
 ```bash
-uv sync --locked --extra dev
+uv sync --locked
 ```
 
 Python 3.14 is the baseline. [.python-version](../.python-version) selects the
 development interpreter, which uv installs when needed.
 [pyproject.toml](../pyproject.toml) defines the supported Python range, dependency
-ranges and pinned build/lint tools. [uv.lock](../uv.lock) records the resolved
+ranges and pinned build, lint, type-check and boundary tools. [uv.lock](../uv.lock) records the resolved
 runtime and development dependencies.
 
 To refresh dependencies deliberately, review their changes, run `uv lock --upgrade`,
 restore the environment again, and repeat the required checks. Update the pinned
-build backend or Ruff constraints in `pyproject.toml` when changing those tools.
-A plain `python -m pip install -e '.[dev]'` is also supported on Python 3.14, but
-resolves dependency ranges rather than reproducing the lockfile.
+build backend and `dev` group constraints in `pyproject.toml` when changing those tools.
+Dependabot proposes updates to the locked environment and workflow actions weekly.
+Development tools live in the `dev` dependency group, which uv installs by default;
+they are not part of the published package metadata.
 
 ## Required checks
 
@@ -27,8 +28,11 @@ resolves dependency ranges rather than reproducing the lockfile.
 uv run --no-sync python tools/check_quality.py
 uv run --no-sync ruff check . --ignore-noqa
 uv run --no-sync ruff format --check .
-uv run --no-sync pytest
-uv run --no-sync python -m build
+uv run --no-sync ty check
+uv run --no-sync tach check
+uv run --no-sync tach check-external
+uv run --no-sync pytest --cov
+uv build
 ```
 
 Ruff enables all rules, including preview rules, at its pinned version. Exceptions
@@ -50,21 +54,46 @@ synthetic ODT/PDF fixtures rather than storing customer documents. The TOML exam
 is extracted directly from [Configuration](CONFIGURATION.md#example) and validated
 through the real loader.
 
+## Types, boundaries and properties
+
+[ty](https://github.com/astral-sh/ty) checks `src`, `tests` and `tools` using
+`types-lxml` for lxml's API. Select ODF elements through
+`odfa11y.odf.select_elements`: it returns only element nodes, so callers never handle
+lxml's XPath union result. Fix a type error in the code rather than suppressing it.
+
+[Tach](https://github.com/tach-org/tach) enforces the package layering and public
+interfaces in [tach.toml](../tach.toml); see [Architecture](ARCHITECTURE.md#packages-and-dependency-rules).
+When a package needs a new dependency, change the design first and `tach.toml` only
+if the new direction is intended.
+
+[Hypothesis](https://hypothesis.readthedocs.io/) properties in
+`tests/test_properties.py` state invariants over generated input: lossless address
+splitting, text-preserving linkification, package round trips, and rejection of
+arbitrary or corrupted archives and configuration with `ValueError` only. The profile
+in `tests/conftest.py` is deterministic and bounded; a failure is reproducible by
+rerunning pytest, and a found counterexample belongs in an `@example` beside a fix.
+Coverage uses branch measurement with the floor in `pyproject.toml`; raise the floor
+when coverage rises, never lower it to pass.
+
 ## External integration and CI
 
-The LibreOffice export test is marked `integration`. It skips when the executable
-is absent, so a unit-only run does not prove export integration:
+Tests marked `integration` run the real LibreOffice export and real veraPDF
+validation. They skip when an executable is absent, so a unit-only run does not prove
+integration; set `ODFA11Y_REQUIRE_INTEGRATION=1` to make a missing application fail:
 
 ```bash
-uv run --no-sync pytest -m integration
+ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
 ```
 
-[Checks](../.github/workflows/checks.yml) restores locked environments on Linux and
-macOS and Windows. Linux installs LibreOffice and runs the full suite; macOS and
-Windows run unit tests.
-All three platforms build a wheel from the source archive, install it into an isolated
-environment with hashed locked dependencies, verify metadata/license contents and
-run unit tests against that installed wheel.
+[Checks](../.github/workflows/checks.yml) runs three kinds of job:
+
+- **Static analysis** (Linux): workflow syntax and security, secret scan, dependency
+  advisories, policy, Ruff, ty and tach.
+- **Test** (Linux, macOS, Windows): unit tests (with coverage on Linux), a build of
+  the source archive and wheel, and unit tests against the wheel installed with
+  hashed locked dependencies, including metadata, license and `py.typed` checks.
+- **Integration** (Linux): installs LibreOffice and a checksum-pinned veraPDF, then
+  runs the integration tests with `ODFA11Y_REQUIRE_INTEGRATION=1`.
 
 Workflow syntax and shell commands are checked by the actionlint version pinned
 in the workflow. It uses the Linux runner's Go toolchain and ShellCheck. With that
@@ -79,23 +108,24 @@ runtimes and PR cancellation; checkout credentials are not persisted. It support
 manual runs. Runner images and LibreOffice packages follow their upstream stable
 distributions, so the lockfile does not freeze the complete operating system.
 
-CI currently does not run a real veraPDF integration test. veraPDF is a separately
-installed Java CLI used when an operator explicitly requests `--verapdf`. Its
-machine-validation scope is described in [Accessibility and limits](ACCESSIBILITY.md).
+veraPDF is a separately installed Java CLI used when an operator explicitly requests
+`--verapdf`. CI validates a LibreOffice export with a pinned veraPDF release; update
+`ODFA11Y_VERAPDF_VERSION` and its checksum together. Its machine-validation scope is
+described in [Accessibility and limits](ACCESSIBILITY.md).
 
 ## Packaging
 
-`python -m build` is the build frontend. It reads `[build-system]` in
+`uv build` is the build frontend. It reads `[build-system]` in
 `pyproject.toml` and installs the pinned [Hatchling backend](https://hatch.pypa.io/latest/config/build/) into an isolated build
 environment. Contributors do not need the Hatch application or a `setup.py`.
 
 Build selection is centralized under `[tool.hatch.build.targets]`:
 
 - The source archive (`sdist`, `.tar.gz`) includes the package sources, docs, tests,
-  policy tools, workflow, lockfile and interpreter selection. Hatchling also
+  policy tools, workflow, lockfile, boundary rules and interpreter selection. Hatchling also
   includes the declared README/license and project configuration.
-- The wheel (`.whl`) contains the importable `odfa11y` package, CLI entry point,
-  metadata and license. Repository docs and tests are not runtime package files.
+- The wheel (`.whl`) contains the importable `odfa11y` packages, `py.typed`, CLI entry
+  point, metadata and license. Repository docs and tests are not runtime package files.
 
 The backend reads the version from `src/odfa11y/__init__.py`; keep it as the single
 version source. Build after moving files or changing inclusion rules, inspect both
@@ -123,9 +153,9 @@ initial public `v0.1.0` release.
 Install the locked optional audit tools when performing a security/release review:
 
 ```bash
-uv sync --locked --extra dev --group audit
+uv sync --locked --group audit
 uv run --no-sync zizmor --offline --persona pedantic --no-ignores --strict-collection .github/workflows
-uv export --locked --extra dev --group audit --no-emit-project --output-file /tmp/odfa11y-audit.txt > /dev/null
+uv export --locked --group audit --no-emit-project --output-file /tmp/odfa11y-audit.txt > /dev/null
 uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r /tmp/odfa11y-audit.txt
 ```
 

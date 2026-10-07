@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Test config for ODF accessibility workflows."""
+"""Validate TOML remediation configuration and reject malformed input."""
 
 from __future__ import annotations
 

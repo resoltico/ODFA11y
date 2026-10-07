@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Audit semantics for ODF accessibility workflows."""
+"""Audit headings, graphics and tables for accessible structure."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Audit metadata for ODF accessibility workflows."""
+"""Audit document title and language metadata."""
 
 from __future__ import annotations
 

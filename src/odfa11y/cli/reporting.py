@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Cli reporting for ODF accessibility workflows."""
+"""Print style, validator, multi-report and installation-diagnostic output."""
 
 from __future__ import annotations
 

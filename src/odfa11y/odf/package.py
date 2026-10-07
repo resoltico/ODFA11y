@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Odt package for ODF accessibility workflows."""
+"""Load, edit and atomically save ODT ZIP packages."""
 
 from __future__ import annotations
 

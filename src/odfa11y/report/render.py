@@ -1,15 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Reporting for ODF accessibility workflows."""
+"""Render audit reports and map them to exit codes."""
 
 from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
 
-from .models import AuditReport
-
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from .models import AuditReport
 
 
 def render_report(report: AuditReport, *, output_format: str = "text") -> str:
@@ -76,19 +74,3 @@ def max_severity_exit_code(report: AuditReport, *, strict: bool = False) -> int:
     if strict and report.warning_count:
         return 1
     return 0
-
-
-def merge_reports(subject: str, reports: Iterable[AuditReport]) -> AuditReport:
-    """Combine findings while retaining each subject's metadata.
-
-    Returns
-    -------
-    AuditReport
-        Combined findings and per-subject metadata.
-
-    """
-    merged = AuditReport(subject=subject)
-    for report in reports:
-        merged.issues.extend(report.issues)
-        merged.metadata[report.subject] = report.metadata
-    return merged

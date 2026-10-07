@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Document text for ODF accessibility workflows."""
+"""Extract and compare visible document text."""
 
 from __future__ import annotations
 

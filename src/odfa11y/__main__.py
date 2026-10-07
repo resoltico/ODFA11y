@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""main   for ODF accessibility workflows."""
+"""Run the command-line interface with ``python -m odfa11y``."""
 
 from odfa11y.cli import main
 

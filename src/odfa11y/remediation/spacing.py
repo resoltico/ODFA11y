@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Spacing for ODF accessibility workflows."""
+"""Copy a reference paragraph style's spacing onto selected paragraph styles."""
 
 from __future__ import annotations
 

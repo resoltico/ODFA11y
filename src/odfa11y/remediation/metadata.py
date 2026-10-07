@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Remediation metadata for ODF accessibility workflows."""
+"""Set document metadata text and the default paragraph language."""
 
 from __future__ import annotations
 
