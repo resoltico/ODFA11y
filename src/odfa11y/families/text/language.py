@@ -37,8 +37,8 @@ def default_language(document: OdfDocument) -> str | None:
     return language
 
 
-def set_default_language(document: OdfDocument, language: str, country: str | None) -> bool:
-    """Declare a language on the default paragraph style when it differs.
+def set_default_language(document: OdfDocument, tag: str) -> bool:
+    """Declare a language tag on the default paragraph style when it differs.
 
     Returns
     -------
@@ -49,6 +49,7 @@ def set_default_language(document: OdfDocument, language: str, country: str | No
     """
     if not document.has(Part.STYLES):
         return False
+    language, country = split_language(tag)
     props = _text_properties(document.tree(Part.STYLES))
     current = (
         (props.get(qn("fo", "language")), props.get(qn("fo", "country")))

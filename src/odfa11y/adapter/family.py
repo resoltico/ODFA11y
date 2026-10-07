@@ -36,7 +36,7 @@ class FamilyAdapter:
     family: Family | None
     audit: Callable[[OdfDocument, Report], None]
     default_language: Callable[[OdfDocument], str | None]
-    set_default_language: Callable[[OdfDocument, str, str | None], bool]
+    set_default_language: Callable[[OdfDocument, str], bool]
     snapshot: Callable[[OdfDocument], tuple[str, ...]]
     preserved: Callable[[tuple[str, ...], tuple[str, ...], int], bool]
     config_tables: Mapping[str, Callable[[dict[str, object]], list[Operation]]]

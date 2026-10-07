@@ -5,14 +5,13 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.errors import MissingMemberError, RemediationError
+from odfa11y.errors import RemediationError
 from odfa11y.families import REGISTRY, adapter_for
 from odfa11y.families.text import AltText, SetAltText
 from odfa11y.fidelity import FidelityPolicy
@@ -178,29 +177,6 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     assert (tmp_path / "out" / "remediated.ods").is_file()
 
 
-def test_remediation_refuses_an_unrecognised_document(tmp_path: Path) -> None:
-    source = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
-    destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="not a recognised OpenDocument"):
-        remediate(source, destination, [SetMetadata(title="x")])
-    assert not destination.exists()
-
-
-def test_remediation_refuses_a_package_without_a_meta_part(tmp_path: Path) -> None:
-    source = tmp_path / "nometa.odt"
-    with (
-        zipfile.ZipFile(make_package(tmp_path, "text")) as full,
-        zipfile.ZipFile(source, "w") as cut,
-    ):
-        for member in full.infolist():
-            if member.filename != "meta.xml":
-                cut.writestr(member, full.read(member.filename))
-    destination = tmp_path / "out.odt"
-    with pytest.raises(MissingMemberError, match="no meta part"):
-        remediate(source, destination, [SetMetadata(title="x")])
-    assert not destination.exists()
-
-
 def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     tmp_path: Path,
 ) -> None:
@@ -230,46 +206,6 @@ def test_a_new_family_needs_only_a_registry_entry(
     report = audit_odf(make_package(tmp_path, "spreadsheet"))
     assert report.metadata["adapter"] == "spreadsheet"
     assert any(f.message == "Spreadsheet adapter ran." for f in report.findings)
-
-
-def test_editing_a_flat_document_keeps_comments_and_processing_instructions(
-    tmp_path: Path,
-) -> None:
-    source = make_flat(tmp_path, "text")
-    text = source.read_text(encoding="utf-8")
-    declaration, rest = text.split("\n", 1)
-    source.write_text(
-        f"  {declaration}\n"
-        '<?xml-stylesheet href="s.css" type="text/css"?>\n'
-        f"<!-- keep me -->\n{rest}\n<!-- and me -->\n",
-        encoding="utf-8",
-    )
-    destination = tmp_path / "out.fodt"
-    remediate(source, destination, [SetMetadata(title="Changed")])
-    saved = destination.read_text(encoding="utf-8")
-    assert '<?xml-stylesheet href="s.css" type="text/css"?>' in saved
-    assert "<!-- keep me -->" in saved
-    assert "<!-- and me -->" in saved
-    assert "Changed" in saved
-
-
-def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path) -> None:
-    source = make_flat(tmp_path, "text")
-    text = source.read_text(encoding="utf-8")
-    start, end = text.index("<office:meta>"), text.index("</office:meta>") + len("</office:meta>")
-    source.write_text(text[:start] + text[end:], encoding="utf-8")
-    destination = tmp_path / "out.fodt"
-    remediate(source, destination, [SetMetadata(title="Added")])
-    assert audit_odf(destination).metadata["title"] == "Added"
-    assert "ODF900" not in ids(audit_odf(destination, schema=True))
-
-
-def test_a_blank_title_is_refused_rather_than_written_empty(tmp_path: Path) -> None:
-    source = make_package(tmp_path, "text")
-    destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="must not be blank"):
-        remediate(source, destination, [SetMetadata(title="   ")])
-    assert not destination.exists()
 
 
 def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -> None:

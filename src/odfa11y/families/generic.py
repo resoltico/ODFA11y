@@ -38,8 +38,8 @@ def _no_default_language(document: OdfDocument) -> str | None:
     return None
 
 
-def _no_language_target(document: OdfDocument, language: str, country: str | None) -> bool:
-    del document, language, country
+def _no_language_target(document: OdfDocument, tag: str) -> bool:
+    del document, tag
     return False
 
 

@@ -29,6 +29,7 @@ class Outcome:
     message: str
     key: str | None = None
     count: int = 0
+    removed_blocks: int = 0  # empty body blocks this outcome deleted; the snapshot may shrink by it
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize this outcome into JSON-compatible values.

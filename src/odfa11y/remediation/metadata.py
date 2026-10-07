@@ -16,7 +16,7 @@ from odfa11y.odf import NS, Part, qn
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
-LANGUAGE_TAG_RE = re.compile(r"[A-Za-z]{2,8}(?:[-_][A-Za-z0-9]{1,8})*")
+LANGUAGE_TAG_RE = re.compile(r"(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|x(?:-[A-Za-z0-9]{1,8})+)")
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,17 +61,17 @@ class SetMetadata(Operation):
         return Outcome(self.name, Status.APPLIED, f"Set document {key}.", key=key, count=1)
 
     def _language(self, document: OdfDocument, tag: str) -> Outcome:
+        tag = tag.replace("_", "-")  # accept the POSIX spelling of a BCP 47 tag
         if not LANGUAGE_TAG_RE.fullmatch(tag):
             return Outcome(
                 self.name, Status.FAILED, f"Invalid language tag: {tag!r}", key="language"
             )
         adapter = adapter_for(document.kind)
-        language, country = _split_language(tag)
         node = _meta_node(document, qn("dc", "language"))
         meta_changed = node is None or (node.text or "") != tag
         if meta_changed:
             _ensure_meta_node(document, qn("dc", "language")).text = tag
-        style_changed = adapter.set_default_language(document, language, country)
+        style_changed = adapter.set_default_language(document, tag)
         if not (meta_changed or style_changed):
             return Outcome(self.name, Status.UNCHANGED, "Language already set.", key="language")
         return Outcome(
@@ -101,9 +101,3 @@ def _prefixed(clark: str) -> str:
     namespace, local = clark[1:].split("}")
     prefix = next(prefix for prefix, uri in NS.items() if uri == namespace)
     return f"{prefix}:{local}"
-
-
-def _split_language(tag: str) -> tuple[str, str | None]:
-    parts = tag.replace("_", "-").split("-")
-    country = next((part.upper() for part in parts[1:] if re.fullmatch(r"[A-Za-z]{2}", part)), None)
-    return parts[0].lower(), country

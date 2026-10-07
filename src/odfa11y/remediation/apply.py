@@ -19,8 +19,6 @@ if TYPE_CHECKING:
     from odfa11y.adapter import FamilyAdapter, Operation, Outcome
     from odfa11y.odf import SchemaResult
 
-SPACER_OPERATION = "remove_empty_spacers"
-
 
 def remediate(
     source: str | Path,
@@ -54,6 +52,7 @@ def remediate(
     if document.kind is None:
         msg = f"{source.name} is not a recognised OpenDocument document; nothing was written."
         raise RemediationError(msg)
+    _require_consistent_kind(document, source)
     adapter = adapter_for(document.kind)
     _require_matching_family(document, adapter, operations)
     snapshot_before = adapter.snapshot(document)
@@ -71,7 +70,7 @@ def remediate(
         msg = "Remediation failed; nothing was written:\n" + "\n".join(lines)
         raise RemediationError(msg)
 
-    removed = sum(o.count for o in outcomes if o.operation == SPACER_OPERATION)
+    removed = sum(o.removed_blocks for o in outcomes)
     if not adapter.preserved(snapshot_before, adapter.snapshot(document), removed):
         msg = "Visible document content changed during remediation; nothing was written."
         raise RemediationError(msg)
@@ -98,6 +97,22 @@ def _require_matching_family(
         msg = (
             f"The plan configures {', '.join(wrong)}, which do not apply to a {kind} document "
             f"(handled by the {adapter.name} adapter); nothing was written."
+        )
+        raise RemediationError(msg)
+
+
+def _require_consistent_kind(document: OdfDocument, source: Path) -> None:
+    detection = document.detection
+    kind = detection.kind
+    if kind is None:
+        return  # refused earlier, with its own message
+    if detection.manifest_media_type not in {None, detection.media_type}:
+        msg = f"{source.name}: manifest and mimetype disagree about the kind; nothing was written."
+        raise RemediationError(msg)
+    if kind.body_element is not None and detection.body_element != kind.body_element:
+        msg = (
+            f"{source.name}: the body is {detection.body_element!r}, not the "
+            f"{kind.body_element!r} its media type promises; nothing was written."
         )
         raise RemediationError(msg)
 
