@@ -63,7 +63,7 @@ lxml's XPath union result. Fix a type error in the code rather than suppressing 
 
 [Tach](https://github.com/tach-org/tach) enforces the package layering and public
 interfaces in [tach.toml](../tach.toml); see [Architecture](ARCHITECTURE.md#packages-and-dependency-rules).
-Document families are nested modules (`odfa11y.families.text`): tach rejects a family
+Document families are nested modules (`odfa11y.families.text`, `odfa11y.families.spreadsheet`): tach rejects a family
 importing another, or any package below the registry importing one. When a package needs a
 new dependency, change the design first and `tach.toml` only if the new direction is
 intended. `tools/check_quality.py` adds the check tach cannot make, that no core package

@@ -114,9 +114,14 @@ def _meta(version: str) -> str:
     )
 
 
-def _content(spec: KindSpec, version: str) -> str:
+def _automatic_styles(styles: str) -> str:
+    return f"<office:automatic-styles>{styles}</office:automatic-styles>" if styles else ""
+
+
+def _content(spec: KindSpec, version: str, automatic_styles: str) -> str:
     return (
         f'<office:document-content {NAMESPACES} office:version="{version}">'
+        f"{_automatic_styles(automatic_styles)}"
         f"<office:body>{spec.body}</office:body></office:document-content>"
     )
 
@@ -154,6 +159,7 @@ class Variant:
     body: str | None = None
     extension: str | None = None
     mimetype: bool = True
+    automatic_styles: str = ""
 
 
 WELL_FORMED = Variant()
@@ -175,7 +181,7 @@ def make_package(directory: Path, kind: str, variant: Variant = WELL_FORMED) -> 
     with zipfile.ZipFile(path, "w") as archive:
         if variant.mimetype:
             archive.writestr("mimetype", media, compress_type=zipfile.ZIP_STORED)
-        archive.writestr("content.xml", _content(shaped, variant.version))
+        archive.writestr("content.xml", _content(shaped, variant.version, variant.automatic_styles))
         archive.writestr("styles.xml", _styles(spec, variant.version))
         archive.writestr("meta.xml", _meta(variant.version))
         archive.writestr(
@@ -204,7 +210,7 @@ def make_flat(directory: Path, kind: str, variant: Variant = WELL_FORMED) -> Pat
         f'office:mimetype="{media}">'
         "<office:meta><dc:title>Synthetic document</dc:title>"
         "<dc:language>en-GB</dc:language></office:meta>"
-        f"{MASTER_STYLES if spec.master else ''}"
+        f"{MASTER_STYLES if spec.master else _automatic_styles(variant.automatic_styles)}"
         f"<office:body>{variant.body or spec.body}</office:body></office:document>",
         encoding="utf-8",
     )
