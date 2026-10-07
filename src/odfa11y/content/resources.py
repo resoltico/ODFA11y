@@ -36,8 +36,15 @@ def local_resource_path(href: str) -> str | None:
     try:
         href.encode("utf-8", errors="strict")
         uri = urlsplit(href)
-        if uri.scheme or uri.netloc or uri.query or not uri.path or BAD_ESCAPE.search(uri.path):
+        if (
+            uri.scheme
+            or uri.netloc
+            or "?" in href.partition("#")[0]
+            or not uri.path
+            or BAD_ESCAPE.search(href)
+        ):
             return None
+        unquote(uri.fragment, errors="strict")
         path = unquote(uri.path, errors="strict")
     except UnicodeError, ValueError:
         return None
