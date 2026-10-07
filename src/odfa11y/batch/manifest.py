@@ -86,7 +86,7 @@ def _input(base: Path, value: object) -> Path:
         msg = "Batch source and plan must be nonempty relative paths"
         raise ConfigError(msg)
     path = Path(value)
-    if path.is_absolute() or re.match(r"^[A-Za-z]:", value) or value.startswith("\\"):
+    if path.is_absolute() or re.match(r"^[A-Za-z]:", value) or value.startswith(("/", "\\")):
         msg = "Batch source and plan paths must be relative to the manifest"
         raise ConfigError(msg)
     return base / path

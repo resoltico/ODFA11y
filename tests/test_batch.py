@@ -98,6 +98,9 @@ def test_case_collision_is_global_preflight(tmp_path: Path) -> None:
         "documents = 4",
         '[[documents]]\nid="a"\nsource="a"\nplan="p"\nextra=true',
         '[[documents]]\nid="a"\nsource="/absolute"\nplan="p"',
+        '[[documents]]\nid="a"\nsource="//host/share"\nplan="p"',
+        '[[documents]]\nid="a"\nsource="C:relative"\nplan="p"',
+        '[[documents]]\nid="a"\nsource="C:/absolute"\nplan="p"',
         '[[documents]]\nid="a"\nsource=1\nplan="p"',
     ],
 )
