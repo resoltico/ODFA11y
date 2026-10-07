@@ -85,7 +85,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("check-evidence", help="Verify an evidence directory against its manifest.")
     p.add_argument("directory", type=Path)
 
-    p = sub.add_parser("doctor", help="Show tool and dependency versions.")
+    p = sub.add_parser(
+        "doctor", help="Show tool and dependency versions and what the PDF export supports."
+    )
+    _add_tool_options(p)
     p.add_argument("--format", choices=FORMATS, default="text")
     return parser
 
