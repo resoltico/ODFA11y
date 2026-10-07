@@ -41,6 +41,9 @@ def _graphic(tmp_path: Path) -> tuple[OdfDocument, etree._Element]:
         ("Pictures/file%20name.svg", "Pictures/file name.svg"),
         ("./Pictures/../Pictures/caf%C3%A9.svg#fragment", "Pictures/café.svg"),
         ("Pictures/a%3Fb%23c.svg", "Pictures/a?b#c.svg"),
+        ("Pictures//file.svg", "Pictures//file.svg"),
+        ("a//../b.svg", "a/b.svg"),
+        ("a///../b.svg", "a//b.svg"),
         ("Object%201/", "Object 1"),
         (".", "."),
         ("#fragment", None),
@@ -76,6 +79,7 @@ def test_local_references_are_strict_and_confined(href: str, expected: str | Non
     ("href", "member", "kind"),
     [
         ("Pictures/file%20name.svg", "Pictures/file name.svg", "image"),
+        ("Pictures//file.svg", "Pictures//file.svg", "image"),
         ("Object%201", "Object 1/content.xml", "object"),
         ("Object%201/", "Object 1/Pictures/chart.svg", "object"),
         ("Object%201/", "Object 1/styles.xml", "object-ole"),

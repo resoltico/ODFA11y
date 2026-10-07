@@ -60,8 +60,10 @@ def local_resource_path(href: str) -> str | None:
             if not parts:
                 return None
             parts.pop()
-        elif part not in {"", "."}:
+        elif part != ".":
             parts.append(part)
+    if parts and not parts[-1]:
+        parts.pop()
     normalized = "/".join(parts) or "."
     return None if is_unsafe_member_name(normalized) else normalized
 
