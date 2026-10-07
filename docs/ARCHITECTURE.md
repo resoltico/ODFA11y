@@ -213,10 +213,11 @@ Marked-content scanning skips raw inline images using their sample dimensions. F
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
 where binary samples end. Form XObjects are not scanned. A text-free PDF can satisfy content-presence checks through
 reachable described Figures whose own/descendant MCIDs match constructed-and-painted
-paths, valid raw inline images, or invoked image resources on the actual page. Empty,
+paths, valid raw inline images, or invoked image resources on the actual page with positive
+integer dimensions and nonempty stored stream bytes. Image-resource payloads are not decoded. Empty,
 artifact-only, wrong-page and orphan Figure declarations cannot satisfy that check.
-This proves structural graphical-content presence, not pixel visibility under clipping,
-transparency or hidden content. The decoded-page-content limit
+This establishes structural graphical-content presence; it does not establish decoded pixel
+integrity or visibility under clipping, transparency or hidden content. The decoded-page-content limit
 is checked after each stream is decoded; it does not bound the decoder's peak memory.
 
 
