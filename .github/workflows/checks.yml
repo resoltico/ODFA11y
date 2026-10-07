@@ -119,6 +119,7 @@ jobs:
           import sys
           import tomllib
           from pathlib import Path
+          from lxml import etree
           import odfa11y
           import odfa11y.odf
 
@@ -129,14 +130,19 @@ jobs:
           assert package.metadata["Requires-Python"] == project["requires-python"]
           assert package.metadata["License-Expression"] == project["license"]
           assert any(str(p).endswith("odfa11y/py.typed") for p in package.files)
-          notice = "src/odfa11y/odf/schemas/NOTICE.txt"
-          notice_file, = (p for p in package.files if str(p).endswith(f"/licenses/{notice}"))
-          assert package.locate_file(notice_file).read_bytes() == Path(notice).read_bytes()
-          bundled = {Path(str(p)).name for p in package.files if "odf/schemas/" in str(p)}
-          assert {"OpenDocument-v1.4-schema.rng", "PROVENANCE.toml"} <= bundled
-          assert odfa11y.odf.provenance()
-          license_file, = (p for p in package.files if str(p).endswith("/licenses/LICENSE"))
-          assert package.locate_file(license_file).read_bytes() == Path("LICENSE").read_bytes()
+          for relative in project["license-files"]:
+              license_file, = (
+                  p for p in package.files if str(p).endswith(f"/licenses/{relative}")
+              )
+              assert package.locate_file(license_file).read_bytes() == Path(relative).read_bytes()
+          schemas = Path(odfa11y.odf.__file__).parent / "schemas"
+          repository_provenance = Path("src/odfa11y/odf/schemas/PROVENANCE.toml").read_bytes()
+          assert (schemas / "PROVENANCE.toml").read_bytes() == repository_provenance
+          recorded = tomllib.loads(repository_provenance.decode())
+          assert odfa11y.odf.provenance() == recorded
+          assert {p.relative_to(schemas).as_posix() for p in schemas.rglob("*.rng")} == set(recorded)
+          parser = etree.XMLParser(resolve_entities=False, no_network=True)
+          etree.RelaxNG(etree.parse(str(schemas / "mathml/mathml3.rng"), parser))
           PYTHON
           "$wheel_python" -m pytest -m 'not integration' --durations=10
       - name: Preserve tested release distributions

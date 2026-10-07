@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import email
+import hashlib
 import sys
 import tarfile
 import tomllib
@@ -13,8 +14,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y import __version__
-
-NOTICE_PATH = "src/odfa11y/odf/schemas/NOTICE.txt"
 
 if TYPE_CHECKING:
     from email.message import Message
@@ -44,7 +43,7 @@ def check_release(tag: str, directory: Path) -> list[str]:
             return ["Wheel must contain exactly one package metadata record"]
         metadata = email.message_from_bytes(wheel.read(names[0]))
         errors.extend(_metadata_errors(metadata, project))
-        errors.extend(_wheel_license_errors(wheel, root))
+        errors.extend(_wheel_license_errors(wheel, root, project["license-files"]))
         errors.extend(_wheel_inventory_errors(wheel, root))
     with tarfile.open(archives[0]) as archive:
         names = [member for member in archive.getmembers() if member.name.endswith("/PKG-INFO")]
@@ -54,46 +53,85 @@ def check_release(tag: str, directory: Path) -> list[str]:
         if stream is None:
             return [*errors, "Source archive metadata is not a regular file"]
         errors.extend(_metadata_errors(email.message_from_bytes(stream.read()), project))
-        errors.extend(_sdist_notice_errors(archive, root))
+        prefix = names[0].name.removesuffix("/PKG-INFO")
+        errors.extend(_sdist_license_errors(archive, root, project["license-files"]))
+        errors.extend(_sdist_inventory_errors(archive, root, prefix))
     return errors
 
 
-def _wheel_license_errors(wheel: zipfile.ZipFile, root: Path) -> list[str]:
+def _wheel_license_errors(
+    wheel: zipfile.ZipFile, root: Path, license_files: list[str]
+) -> list[str]:
     errors = []
-    for relative in ("LICENSE", NOTICE_PATH):
+    for relative in license_files:
         found = [name for name in wheel.namelist() if name.endswith(f"/licenses/{relative}")]
         if len(found) != 1 or wheel.read(found[0]) != (root / relative).read_bytes():
             errors.append(f"Wheel {relative} does not match the repository file")
     return errors
 
 
-def _sdist_notice_errors(archive: tarfile.TarFile, root: Path) -> list[str]:
-    found = [m for m in archive.getmembers() if m.name.endswith(f"/{NOTICE_PATH}")]
-    stream = archive.extractfile(found[0]) if len(found) == 1 else None
-    if stream is None or stream.read() != (root / NOTICE_PATH).read_bytes():
-        return ["Source archive is missing the bundled-schema notice or it does not match"]
-    return []
+def _sdist_license_errors(
+    archive: tarfile.TarFile, root: Path, license_files: list[str]
+) -> list[str]:
+    errors = []
+    for relative in license_files:
+        found = [m for m in archive.getmembers() if m.name.endswith(f"/{relative}")]
+        stream = archive.extractfile(found[0]) if len(found) == 1 and found[0].isfile() else None
+        if stream is None or stream.read() != (root / relative).read_bytes():
+            errors.append(f"Source archive {relative} does not match the repository file")
+    return errors
 
 
 def _wheel_inventory_errors(wheel: zipfile.ZipFile, root: Path) -> list[str]:
-    """Require the wheel's package files to be exactly the tracked package tree.
+    shipped = {
+        name: wheel.read(name)
+        for name in wheel.namelist()
+        if name.startswith("odfa11y/") and not name.endswith("/")
+    }
+    return _package_errors(shipped, root, "Wheel")
+
+
+def _sdist_inventory_errors(archive: tarfile.TarFile, root: Path, prefix: str) -> list[str]:
+    package_prefix = f"{prefix}/src/"
+    shipped: dict[str, bytes] = {}
+    for member in archive.getmembers():
+        if member.isfile() and member.name.startswith(f"{package_prefix}odfa11y/"):
+            stream = archive.extractfile(member)
+            if stream is not None:
+                shipped[member.name.removeprefix(package_prefix)] = stream.read()
+    return _package_errors(shipped, root, "Source archive")
+
+
+def _package_errors(shipped: dict[str, bytes], root: Path, kind: str) -> list[str]:
+    """Compare package bytes with source and normative schema digests.
 
     Returns
     -------
     list[str]
-        One entry per file that is missing from or unexpected in the wheel.
+        Missing, unexpected, altered or unverified package files.
 
     """
     package = root / "src"
     expected = {
-        path.relative_to(package).as_posix()
+        path.relative_to(package).as_posix(): path.read_bytes()
         for path in (package / "odfa11y").rglob("*")
         if path.is_file() and "__pycache__" not in path.parts
     }
-    shipped = {name for name in wheel.namelist() if name.startswith("odfa11y/")}
-    return [
-        f"Wheel file set differs from src/odfa11y: {name}" for name in sorted(expected ^ shipped)
+    errors = [
+        f"{kind} file set differs from src/odfa11y: {name}"
+        for name in sorted(expected.keys() ^ shipped.keys())
     ]
+    errors.extend(
+        f"{kind} package file differs from source: {name}"
+        for name in sorted(expected.keys() & shipped.keys())
+        if expected[name] != shipped[name]
+    )
+    recorded = tomllib.loads((package / "odfa11y/odf/schemas/PROVENANCE.toml").read_text())
+    for name, entry in recorded.items():
+        relative = f"odfa11y/odf/schemas/{name}"
+        if relative in shipped and hashlib.sha256(shipped[relative]).hexdigest() != entry["sha256"]:
+            errors.append(f"{kind} schema does not match its normative digest: {name}")
+    return errors
 
 
 def extract_release_notes(changelog: str, version: str) -> str:
