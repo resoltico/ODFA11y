@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, ClassVar
 from lxml import etree
 
 from odfa11y.errors import XmlParseError
-from odfa11y.safe_xml import secure_xml_parser
+from odfa11y.safe_xml import parse_secure
 
 if TYPE_CHECKING:
     import os
@@ -96,7 +96,7 @@ class OdfStorage(ABC):
 
         """
         try:
-            root = etree.fromstring(self.read(name), parser=secure_xml_parser())
+            root = parse_secure(self.read(name))
         except etree.XMLSyntaxError as exc:
             msg = f"Malformed XML in {name}: {exc}"
             raise XmlParseError(msg) from exc

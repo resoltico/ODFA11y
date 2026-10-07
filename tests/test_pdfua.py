@@ -105,6 +105,28 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
 
 
 @pytest.mark.integration
+def test_a_hyperlink_wrapped_over_several_lines_is_one_correct_link(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    words = " ".join(f"word{index}" for index in range(120))
+    body = (
+        b'<text:p text:style-name="Body">Read <text:a xlink:type="simple" '
+        b'xlink:href="https://example.test/long">' + words.encode() + b"</text:a> now.</text:p>"
+    )
+    package = PackageStorage(make_minimal_odt(tmp_path / "wrap.odt"))
+    package.write_member(
+        "content.xml",
+        package.read("content.xml").replace(b"<office:text>", b"<office:text>" + body, 1),
+    )
+    wrapped = package.save(tmp_path / "wrapped.odt")
+    pdf = export_pdfua(wrapped, tmp_path / "wrapped.pdf", ExportSettings(WRITER, soffice=soffice))
+    report = audit_pdfua(pdf)
+    assert report.metadata["link_annotations"] >= 2  # one annotation per wrapped line
+    assert not {f.rule_id for f in report.findings} & {"PDF016", "PDF017", "PDF018"}
+
+
+@pytest.mark.integration
 def test_real_verapdf_reports_the_failed_rules_of_an_untagged_pdf(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

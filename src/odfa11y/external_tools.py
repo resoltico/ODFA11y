@@ -9,6 +9,7 @@ import shutil
 import signal
 import subprocess
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
@@ -18,7 +19,7 @@ from odfa11y.errors import ToolNotFoundError
 IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
 READ_CHUNK_BYTES = 64 * 1024
-READER_JOIN_SECONDS = 5
+READER_JOIN_SECONDS = 3
 VERSION_RE = re.compile(r"\d+(?:\.\d+)+")
 
 
@@ -29,7 +30,13 @@ class ToolRun:
     returncode: int
     stdout: str
     stderr: str
-    truncated: bool
+    stdout_truncated: bool
+    stderr_truncated: bool
+
+    @property
+    def truncated(self) -> bool:
+        """Whether either stream was cut at the limit."""
+        return self.stdout_truncated or self.stderr_truncated
 
 
 def run_bounded(
@@ -38,47 +45,55 @@ def run_bounded(
     """Run a program with a time limit and bounded output capture.
 
     Each output stream keeps only its first ``max_output`` bytes and the rest is drained and
-    discarded, so a chatty or hostile program cannot exhaust memory. On timeout the whole
-    process tree is killed where the platform allows it.
+    discarded, so a chatty or hostile program cannot exhaust memory. On timeout, and on any
+    interruption such as Ctrl-C, the whole process tree is killed where the platform allows
+    it. A descendant that outlives the program while holding its output open cannot delay the
+    return: after a short grace period it is killed (or, if it escaped the process group,
+    abandoned to finish by itself). A program that outlives ``timeout`` is killed and
+    ``subprocess.TimeoutExpired`` propagates.
 
     Returns
     -------
     ToolRun
         The exit status and the captured heads of stdout and stderr.
 
-    Raises
-    ------
-    subprocess.TimeoutExpired
-        The program did not finish in time and was killed.
-
     """
-    with subprocess.Popen(
+    process = subprocess.Popen(
         command,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=os.name != "nt",
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
-    ) as process:
-        captured = [_Capture(process.stdout, max_output), _Capture(process.stderr, max_output)]
-        threads = [threading.Thread(target=capture.drain, daemon=True) for capture in captured]
-        for thread in threads:
-            thread.start()
-        try:
-            process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            _kill_tree(process)
-            process.wait()
-            raise
-        finally:
-            for thread in threads:
-                thread.join(READER_JOIN_SECONDS)
+    )
+    captured = [_Capture(process.stdout, max_output), _Capture(process.stderr, max_output)]
+    threads = [threading.Thread(target=capture.drain, daemon=True) for capture in captured]
+    for thread in threads:
+        thread.start()
+    try:
+        process.wait(timeout=timeout)
+    except BaseException:
+        _kill_tree(process)
+        process.wait()
+        _join(threads)
+        raise
+    if not _join(threads):
+        _kill_tree(process)  # a descendant still holds the pipes open
+        _join(threads)
     return ToolRun(
         process.returncode,
         captured[0].text(),
         captured[1].text(),
-        any(capture.truncated for capture in captured),
+        captured[0].truncated,
+        captured[1].truncated,
     )
+
+
+def _join(threads: list[threading.Thread]) -> bool:
+    deadline = time.monotonic() + READER_JOIN_SECONDS
+    for thread in threads:
+        thread.join(max(deadline - time.monotonic(), 0))
+    return not any(thread.is_alive() for thread in threads)
 
 
 class _Capture:
@@ -89,15 +104,18 @@ class _Capture:
         self.truncated = False
 
     def drain(self) -> None:
-        if self._stream is None:
+        stream = self._stream
+        if stream is None:
             return
         try:
-            while chunk := self._stream.read(READ_CHUNK_BYTES):
+            while chunk := stream.read(READ_CHUNK_BYTES):
                 room = self._limit - len(self._head)
                 self._head += chunk[: max(room, 0)]
                 self.truncated = self.truncated or len(chunk) > room
         except OSError, ValueError:
-            return  # the pipe was closed under us after the process ended
+            return  # the pipe broke under us
+        finally:
+            stream.close()
 
     def text(self) -> str:
         return self._head.decode("utf-8", errors="replace")

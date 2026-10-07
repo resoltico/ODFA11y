@@ -12,7 +12,7 @@ from lxml import etree
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.external_tools import ToolIdentity, find_executable, run_bounded
 from odfa11y.report import Report, rules
-from odfa11y.safe_xml import secure_xml_parser
+from odfa11y.safe_xml import parse_secure
 
 MAX_REPORTED_CHECKS = 3
 MAX_REPORT_BYTES = 32 * 1024 * 1024
@@ -94,7 +94,7 @@ def validate_pdfua(
     except subprocess.TimeoutExpired as exc:
         msg = f"veraPDF timed out after {timeout} s"
         raise ToolFailedError(msg) from exc
-    if completed.truncated:
+    if completed.stdout_truncated:
         msg = f"veraPDF output exceeded {MAX_REPORT_BYTES} bytes"
         raise ToolFailedError(msg)
     if completed.returncode != 0 and not completed.stdout.strip():
@@ -152,7 +152,7 @@ def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:
 
 def _parse(stdout: str, stderr: str) -> VeraPdfResult:
     try:
-        root = etree.fromstring(stdout.encode("utf-8"), parser=secure_xml_parser())
+        root = parse_secure(stdout.encode("utf-8"))
     except etree.XMLSyntaxError as exc:
         msg = "Could not parse the veraPDF report as XML."
         raise ToolFailedError(

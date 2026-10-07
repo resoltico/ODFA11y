@@ -14,7 +14,7 @@ from pypdf.generic import BooleanObject, StreamObject
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf_limits import check_limits
 from odfa11y.report import Report, rules
-from odfa11y.safe_xml import secure_xml_parser
+from odfa11y.safe_xml import parse_secure
 
 from .link_structure import link_annotations
 from .structure_checks import audit_structure
@@ -87,7 +87,7 @@ def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
     part = None
     if isinstance(metadata, StreamObject):
         try:
-            root = etree.fromstring(metadata.get_data(), parser=secure_xml_parser())
+            root = parse_secure(metadata.get_data())
             part = next(
                 (
                     node.text or node.get(PDFUA_PART)

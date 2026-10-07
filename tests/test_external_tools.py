@@ -74,3 +74,43 @@ def test_identify_reports_unknown_for_a_missing_tool_and_for_silence() -> None:
     assert silent.version == "unknown"
     versioned = identify("X", PYTHON, ("-c", "print('X 1.2.3 build')"))
     assert versioned.version == "1.2.3"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses POSIX shell and sessions")
+def test_a_descendant_holding_the_pipes_cannot_delay_a_finished_program() -> None:
+    started = time.monotonic()
+    run = run_bounded(["sh", "-c", "sleep 20 & echo hi"], timeout=30)
+    assert run.stdout.strip() == "hi"
+    assert time.monotonic() - started < 15
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses POSIX shell and sessions")
+def test_the_time_limit_holds_even_when_a_descendant_escapes_the_process_group() -> None:
+    started = time.monotonic()
+    with pytest.raises(subprocess.TimeoutExpired):
+        run_bounded(["sh", "-c", "setsid sleep 20 & sleep 30"], timeout=1)
+    assert time.monotonic() - started < 15
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses POSIX signals")
+def test_an_interruption_kills_the_tool_instead_of_orphaning_it(tmp_path: Path) -> None:
+    marker = tmp_path / "pid"
+    program = (
+        "import os, signal, sys\n"
+        "from odfa11y.external_tools import run_bounded\n"
+        "signal.signal(signal.SIGALRM, lambda *_: os.kill(os.getpid(), signal.SIGINT))\n"
+        "signal.alarm(1)\n"
+        f"run_bounded(['sh', '-c', 'echo $$ > {marker}; exec sleep 25'], timeout=60)\n"
+    )
+    child = subprocess.run(
+        [PYTHON, "-c", program], capture_output=True, text=True, timeout=30, check=False
+    )
+    assert child.returncode != 0
+    pid = int(marker.read_text())
+    for _ in range(50):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.1)
+    pytest.fail("the tool survived the interruption")

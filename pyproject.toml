@@ -175,7 +175,7 @@ max-file-lines = 300
 # Same reason for the ZIP layout.
 "src/odfa11y/odf/package.py" = ["no-self-use"]
 # The tests exercise the subprocess wrapper and name the exception it raises on timeout.
-"tests/test_external_tools.py" = ["suspicious-subprocess-import"]
+"tests/test_external_tools.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
 # pypdf has no public registration API for synthetic indirect structure objects.
 "tests/test_pdf_inspection.py" = ["private-member-access"]
 # Same reason: synthetic PDFs register indirect structure objects.

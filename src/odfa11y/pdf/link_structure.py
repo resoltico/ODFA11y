@@ -7,7 +7,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pypdf.generic import IndirectObject
+from pypdf.errors import PdfReadError
+from pypdf.generic import ArrayObject, IndirectObject
 
 from odfa11y.report import rules
 
@@ -55,8 +56,9 @@ def link_annotations(reader: PdfReader) -> list[LinkAnnotation]:
     found = []
     for number, page in enumerate(reader.pages, start=1):
         page_ref = page.indirect_reference
-        annotations = page.get("/Annots")
-        if annotations is None:
+        raw = page.get("/Annots")
+        items = raw.get_object() if raw is not None else None
+        if not isinstance(items, ArrayObject):
             continue
         found.extend(
             LinkAnnotation(
@@ -64,10 +66,17 @@ def link_annotations(reader: PdfReader) -> list[LinkAnnotation]:
                 page_ref.idnum if page_ref is not None else None,
                 number,
             )
-            for item in annotations.get_object()
-            if pdf_dictionary(item).get("/Subtype") == "/Link"
+            for item in items
+            if _is_link(item)
         )
     return found
+
+
+def _is_link(item: object) -> bool:
+    try:
+        return pdf_dictionary(item).get("/Subtype") == "/Link"
+    except PdfReadError:
+        return False  # a malformed annotation entry is not a link we can correlate
 
 
 def check_link_structure(
@@ -76,8 +85,9 @@ def check_link_structure(
     """Report links whose annotations and structure elements do not correspond.
 
     Findings: annotations without a Link element, Link elements without an annotation, and
-    annotations mapped twice or from another page. The check claims only this correspondence;
-    veraPDF remains the validator.
+    annotations referenced from another page. Several Link elements on the annotation's own
+    page may share it: LibreOffice emits one per line of a wrapped link. The check claims only
+    this correspondence; veraPDF remains the validator.
     """
     link_nodes = [node for node in nodes if node.role == "Link"]
     known = {a.xref for a in annotations if a.xref is not None}
@@ -111,8 +121,7 @@ def check_link_structure(
     conflicts = [
         a
         for a in annotations
-        if a.xref in mapped
-        and (len(mapped[a.xref]) > 1 or any(p not in {None, a.page_xref} for p in mapped[a.xref]))
+        if a.xref in mapped and any(p not in {None, a.page_xref} for p in mapped[a.xref])
     ]
     if conflicts:
         report.add(

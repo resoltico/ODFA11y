@@ -10,18 +10,22 @@ from typing import TYPE_CHECKING, Any, cast
 if TYPE_CHECKING:
     from pathlib import Path
 
-# An absolute POSIX path of two or more segments, a Windows drive path, a UNC path, or a
-# file:// URI. A single segment ("/Link") and URLs ("https://host/a") are left alone.
+# A path-looking run: a segment may contain single spaces ("My Documents"), so a directory
+# named after a person cannot survive. Anchors: an absolute POSIX path of two or more
+# segments, a Windows drive or UNC path, a file:// address, a home (~/) or parent (../) path.
+SEGMENT = r"[^/\\\s'\"<>|:]+(?: [^/\\\s'\"<>|:]+)*"
 ABSOLUTE_PATH = re.compile(
-    r"file:///[^\s'\"<>]+"
-    r"|(?<![\w.:/~-])/(?:[\w.@+~-]+/)+[\w.@+~-]+"
-    r"|\b[A-Za-z]:[\\/][^\s'\"<>]*"
-    r"|\\\\[\w.$-]+\\[^\s'\"<>]+"
+    r"file://[^\s'\"<>]+"
+    rf"|(?<![\w.:/~>-])(?:~|\.\.)?/(?:{SEGMENT}/)+{SEGMENT}"
+    rf"|(?<![\w.:/~>-])(?:~|\.\.)/{SEGMENT}"
+    rf"|\b[A-Za-z]:[\\/](?:{SEGMENT}[\\/])*{SEGMENT}"
+    rf"|\\\\[\w.$-]+\\(?:{SEGMENT}\\)*{SEGMENT}"
 )
+NAME_BOUNDARY = r"(?<![\w.-]){}(?![\w.-])"
 
 
 def _collapse(match: re.Match[str]) -> str:
-    """Reduce an absolute path to its last segment.
+    """Reduce a path to its last segment.
 
     Returns
     -------
@@ -33,26 +37,35 @@ def _collapse(match: re.Match[str]) -> str:
     return f"<path>/{segment}"
 
 
-def _variants(path: Path) -> set[str]:
+def _spellings(path: Path) -> set[str]:
+    """List every absolute way a path may be written, resolved and not.
+
+    Returns
+    -------
+    set[str]
+        Native, POSIX and ``file://`` spellings; relative spellings are never included.
+
+    """
     found: set[str] = set()
-    for candidate in (path, path.resolve()):
-        found |= {str(candidate), candidate.as_posix()}
-        found.add(candidate.as_uri() if candidate.is_absolute() else str(candidate))
-    return {value for value in found if value and value not in {"/", "."}}
+    for candidate in (path.absolute(), path.resolve()):
+        found |= {str(candidate), candidate.as_posix(), candidate.as_uri()}
+    return {value for value in found if len(value) > 1}
 
 
 @dataclass(frozen=True, slots=True)
 class Redactor:
     """Replace known local locations by placeholders, longest location first."""
 
-    replacements: tuple[tuple[str, str], ...]
+    replacements: tuple[tuple[re.Pattern[str], str], ...]
 
     @classmethod
     def for_locations(cls, locations: dict[str, Path]) -> Redactor:
         """Build a redactor for named locations.
 
-        Any other absolute path (a home or temporary directory, a tool's location) is reduced
-        to ``<path>/<file name>`` by :meth:`record`, so no directory name survives.
+        Locations are replaced only where they stand as whole path prefixes, never inside a
+        longer word or sibling directory. Any other absolute path (a home or temporary
+        directory, a tool's location) is reduced to ``<path>/<file name>`` by :meth:`record`,
+        so no directory name survives.
 
         Returns
         -------
@@ -60,12 +73,21 @@ class Redactor:
             A redactor mapping every spelling of each location to ``<name>``.
 
         """
-        pairs = [
-            (spelling, f"<{name}>")
-            for name, path in locations.items()
-            for spelling in _variants(path)
-        ]
-        return cls(tuple(sorted(pairs, key=lambda pair: len(pair[0]), reverse=True)))
+        pairs = sorted(
+            (
+                (spelling, f"<{name}>")
+                for name, path in locations.items()
+                for spelling in _spellings(path)
+            ),
+            key=lambda pair: len(pair[0]),
+            reverse=True,
+        )
+        return cls(
+            tuple(
+                (re.compile(NAME_BOUNDARY.format(re.escape(spelling))), placeholder)
+                for spelling, placeholder in pairs
+            )
+        )
 
     def text(self, value: str) -> str:
         """Replace known locations in raw text.
@@ -76,12 +98,12 @@ class Redactor:
             The text with every known location replaced.
 
         """
-        for spelling, placeholder in self.replacements:
-            value = value.replace(spelling, placeholder)
+        for pattern, placeholder in self.replacements:
+            value = pattern.sub(placeholder, value)
         return value
 
     def record(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Redact every string of a JSON-shaped record, then any remaining absolute path.
+        """Redact every string of a JSON-shaped record, keys included, then any other path.
 
         Returns
         -------
@@ -89,14 +111,16 @@ class Redactor:
             A copy of the record in which no absolute path survives.
 
         """
-        redacted = self._walk(data)
-        return cast("dict[str, Any]", redacted)
+        return cast("dict[str, Any]", self._walk(data))
+
+    def _clean(self, value: str) -> str:
+        return ABSOLUTE_PATH.sub(_collapse, self.text(value))
 
     def _walk(self, value: object) -> object:
         if isinstance(value, str):
-            return ABSOLUTE_PATH.sub(_collapse, self.text(value))
+            return self._clean(value)
         if isinstance(value, dict):
-            return {key: self._walk(item) for key, item in value.items()}
+            return {self._clean(str(key)): self._walk(item) for key, item in value.items()}
         if isinstance(value, (list, tuple)):
             return [self._walk(item) for item in value]
         return value
