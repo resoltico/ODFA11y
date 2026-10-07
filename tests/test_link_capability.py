@@ -16,7 +16,13 @@ from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.families.text import write_link_probe
 from odfa11y.odf import Family, OdfDocument, PackageStorage
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, link_descriptions_supported
+from odfa11y.pdf import (
+    ExportSettings,
+    audit_pdfua,
+    export_pdfua,
+    link_descriptions_supported,
+    validate_pdfua,
+)
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import annotation_references, dictionary, link_elements, map_link, tagged_writer
@@ -76,6 +82,15 @@ def test_an_uninspectable_pdf_is_a_failure_not_a_verdict(probe: Path) -> None:
         return destination
 
     with pytest.raises(ToolFailedError):
+        link_descriptions_supported(probe, SETTINGS, export)
+
+
+def test_a_pdf_without_a_hyperlink_is_not_a_supported_verdict(probe: Path) -> None:
+    def export(_source: Path, destination: Path, _settings: ExportSettings) -> Path:
+        tagged_writer(["H1", "P"]).write(destination)
+        return destination
+
+    with pytest.raises(ToolFailedError, match="contains no hyperlink"):
         link_descriptions_supported(probe, SETTINGS, export)
 
 
@@ -152,6 +167,9 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     package.save(linked)
     pdf = export_pdfua(linked, tmp_path / "linked.pdf", ExportSettings(WRITER, soffice=soffice))
     undescribed = "PDF019" in {f.rule_id for f in audit_pdfua(pdf).findings}
+    result = validate_pdfua(pdf, executable=external_tool("verapdf"))
+    link_failures = {("7.18.1", "2"), ("7.18.5", "2")}
+    assert bool({(f.clause, f.test_number) for f in result.failures} & link_failures) == undescribed
 
     assert main(["doctor", "--soffice", soffice, "--format", "json"]) == 0
     reported = json.loads(capsys.readouterr().out)["pdfua_link_descriptions"]

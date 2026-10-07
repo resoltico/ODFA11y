@@ -44,7 +44,7 @@ def link_descriptions_supported(
     with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
         report = audit_pdfua(export(Path(document), Path(scratch) / "probe.pdf", settings))
     rule_ids = {finding.rule_id for finding in report.findings}
-    if "PDF000" in rule_ids:
-        msg = "The link probe's PDF cannot be inspected."
+    if "PDF000" in rule_ids or not report.metadata.get("link_annotations"):
+        msg = "The link probe's PDF cannot be inspected or contains no hyperlink."
         raise ToolFailedError(msg, details="\n".join(f.message for f in report.findings))
     return "PDF019" not in rule_ids
