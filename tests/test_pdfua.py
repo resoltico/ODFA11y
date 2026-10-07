@@ -15,6 +15,7 @@ from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfu
 from .fixtures import make_minimal_odt
 
 WRITER = "writer_pdf_Export"
+LINK_DESCRIPTION_RULES = {("7.18.1", "2"), ("7.18.5", "2")}
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -102,8 +103,13 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
     }
     assert report.metadata["link_structure_elements"] >= 1
     result = validate_pdfua(pdf, executable=verapdf)
-    failed = [f"{f.clause}-{f.test_number}: {f.description}" for f in result.failures]
-    assert result.compliant, failed
+    failed = {(f.clause, f.test_number) for f in result.failures}
+    # Whether the exporter describes its links depends on the LibreOffice release; the audit
+    # and veraPDF must agree about it, and nothing else may fail.
+    assert bool(failed & LINK_DESCRIPTION_RULES) == (
+        "PDF019" in {f.rule_id for f in report.findings}
+    )
+    assert failed <= LINK_DESCRIPTION_RULES, failed
 
 
 @pytest.mark.integration

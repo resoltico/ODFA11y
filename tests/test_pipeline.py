@@ -13,7 +13,6 @@ from odfa11y.evidence import check_bundle
 from odfa11y.families.text import (
     AltText,
     HeaderRows,
-    LinkifyAddresses,
     MarkHeaderRows,
     RemoveEmptySpacers,
     SetAltText,
@@ -114,13 +113,11 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     verapdf = external_tool("verapdf")
     source = make_minimal_odt(
         tmp_path / "doc.odt",
-        with_plain_email=True,
         with_data_table=True,
         with_image_without_alt=True,
     )
     operations = [
         SetMetadata(title="Evidence run", language="en-GB"),
-        LinkifyAddresses(),
         MarkHeaderRows({"Data": HeaderRows(1)}),
         SetAltText({"Logo": AltText("Logo", "A sample logo")}),
     ]

@@ -21,6 +21,14 @@ be referenced by a Link element's `/OBJR` on the annotation's page. It does not 
 visible content missing from the structure tree; that needs marked-content parsing and is
 veraPDF's job.
 
+## Link descriptions depend on the LibreOffice release
+
+PDF/UA requires every link to carry an alternate description. LibreOffice 24.2 derives one
+from the link text; newer releases (observed with the macOS package current in 2026) export links without one. ODFA11y reports this as `PDF019` and veraPDF as rules 7.18.1-2
+and 7.18.5-2, so a document with hyperlinks can fail `verify` or `production` under one
+LibreOffice and pass under another. ODFA11y cannot add a description to the exported PDF;
+the evidence records the LibreOffice version so the difference is explainable.
+
 ## Document families
 
 Every ODF kind is recognised from its declared media type, as a package or as flat XML,
