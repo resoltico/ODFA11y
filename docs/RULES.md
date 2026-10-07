@@ -102,6 +102,10 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `PDF017` | Warning | A Link structure element refers to no link annotation. |  |
 | `PDF018` | Error | A link annotation is referenced from another page. |  |
 | `PDF019` | Error | A link has no alternate description. |  |
+| `PDF020` | Error | Marked content on a page is not part of the structure tree. |  |
+| `PDF021` | Warning | A structure element refers to marked content its page does not have. |  |
+| `PDF022` | Warning | Marked content is referenced by more than one element. |  |
+| `PDF023` | Error | Text is shown outside tagged content and artifacts. |  |
 | `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
 | `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 

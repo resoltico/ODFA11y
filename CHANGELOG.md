@@ -41,8 +41,18 @@ Notable changes to this project are documented in this file. The format is based
   `calc_pdf_Export` filter and runs the PDF audit, veraPDF and the fidelity comparison on
   them. With LibreOffice 24.2 a Calc export tags only its page header, footer and pictures
   (not the cells) and fails veraPDF's PDF/UA-1 rule 7.1-3, so the `production` profile cannot
-  pass for a spreadsheet; [Accessibility](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports)
+  pass for these fixtures. LibreOffice 26.8 table exports can instead fail `PDF015` and
+  veraPDF 7.2-43. Earlier failed gates skip downstream validation; [Accessibility](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports)
   lists which PDF checks are meaningful for a Calc export.
+- **Marked-content reconciliation in the built-in PDF audit.** Each page's content stream is
+  scanned and compared with the structure tree. New rules: `PDF020` (error, an MCID that no
+  structure element refers to), `PDF021` (warning, a reference to an MCID its page does not
+  contain), `PDF022` (warning, an MCID referred to more than once) and `PDF023` (error, text
+  shown outside tagged content and `/Artifact`). Content of form XObjects is not scanned. Filtered inline images and unsupported
+  inline color spaces produce `PDF000`; raw image samples are skipped by their dimensions. Decoded page
+  content above 64 MiB per document is refused as `PDF000`, like the other input limits.
+  Reports of tagged PDFs may now contain these findings; the audit is still not PDF/UA
+  validation.
 - `odfa11y doctor` now exports a synthetic one-hyperlink document with the installed
   LibreOffice and reports `pdfua_link_descriptions: supported` or `unsupported` (also in
   `--format json`). It answers in advance whether hyperlinks will be reported as `PDF019`,

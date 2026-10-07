@@ -36,33 +36,58 @@ def _font() -> DictionaryObject:
 
 
 def _write_text(writer: PdfWriter, page: PageObject, lines: Sequence[str], y: float) -> None:
-    page[NameObject("/Resources")] = DictionaryObject({
-        NameObject("/Font"): DictionaryObject({NameObject("/F1"): _font()})
-    })
     operations = [
         f"BT /F1 12 Tf 10 {y - 16 * index} Td ({line}) Tj ET" for index, line in enumerate(lines)
     ]
+    set_page_content(writer, page, "\n".join(operations))
+
+
+def set_page_content(writer: PdfWriter, page: PageObject, operators: str) -> None:
+    """Replace a page's content stream; the page gets the font ``/F1`` and a property list ``/MC0``.
+
+    ``/MC0`` is a ``/Properties`` entry with MCID 0, for ``/P /MC0 BDC``.
+    """
+    page[NameObject("/Resources")] = DictionaryObject({
+        NameObject("/Font"): DictionaryObject({NameObject("/F1"): _font()}),
+        NameObject("/Properties"): DictionaryObject({
+            NameObject("/MC0"): DictionaryObject({NameObject("/MCID"): NumberObject(0)})
+        }),
+    })
     content = DecodedStreamObject()
-    content.set_data("\n".join(operations).encode())
+    content.set_data(operators.encode())
     page[NameObject("/Contents")] = writer._add_object(content)
 
 
+def marked_text(mcid: int, text: str = "Synthetic text") -> str:
+    """Show ``text`` inside a marked-content sequence.
+
+    Returns
+    -------
+    str
+        Content-stream operators for a sequence carrying ``mcid``.
+
+    """
+    return f"/P <</MCID {mcid}>> BDC BT /F1 12 Tf 10 50 Td ({text}) Tj ET EMC"
+
+
 def _add_element(
-    writer: PdfWriter, spec: Spec, parent: IndirectObject, role_alt: str | None
+    writer: PdfWriter, spec: Spec, parent: IndirectObject, role_alt: str | None, mcids: list[int]
 ) -> IndirectObject:
     tag, children = (spec, ()) if isinstance(spec, str) else spec
     element = DictionaryObject({
         NameObject("/Type"): NameObject("/StructElem"),
         NameObject("/S"): NameObject(f"/{tag}"),
         NameObject("/P"): parent,
+        NameObject("/Pg"): writer.pages[0].indirect_reference,
     })
     reference = writer._add_object(element)
     if children:
         element[NameObject("/K")] = ArrayObject([
-            _add_element(writer, child, reference, role_alt) for child in children
+            _add_element(writer, child, reference, role_alt, mcids) for child in children
         ])
     else:
-        element[NameObject("/K")] = NumberObject(0)
+        element[NameObject("/K")] = NumberObject(len(mcids))
+        mcids.append(len(mcids))
     if role_alt is not None and tag in {"Figure", "Illustration"}:
         element[NameObject("/Alt")] = TextStringObject(role_alt)
     return reference
@@ -76,6 +101,9 @@ def tagged_writer(
     link_annotations: int = 0,
 ) -> PdfWriter:
     """Create a one-page PDF with every marker the audit looks for and a given structure tree.
+
+    Each leaf element refers to its own MCID (0, 1, ... in tree order) and the page shows text
+    in a marked-content sequence for each; without leaves the text is an artifact.
 
     Returns
     -------
@@ -102,15 +130,21 @@ def tagged_writer(
     root[NameObject("/Metadata")] = writer._add_object(metadata)
     tree = DictionaryObject({NameObject("/Type"): NameObject("/StructTreeRoot")})
     reference = writer._add_object(tree)
+    mcids: list[int] = []
     tree[NameObject("/K")] = ArrayObject([
-        _add_element(writer, spec, reference, figure_alt) for spec in structure
+        _add_element(writer, spec, reference, figure_alt, mcids) for spec in structure
     ])
     if role_map:
         tree[NameObject("/RoleMap")] = DictionaryObject({
             NameObject(f"/{key}"): NameObject(f"/{value}") for key, value in role_map.items()
         })
     root[NameObject("/StructTreeRoot")] = reference
-    _write_text(writer, page, ["Synthetic text"], 50)
+    set_page_content(
+        writer,
+        page,
+        "\n".join(marked_text(mcid) for mcid in mcids)
+        or "/Artifact BMC BT /F1 12 Tf 10 50 Td (Synthetic text) Tj ET EMC",
+    )
     if link_annotations:
         page[NameObject("/Annots")] = ArrayObject([
             writer._add_object(_link_annotation("https://example.test/a", 10, 40))

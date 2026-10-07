@@ -11,15 +11,26 @@ implemented checks found no errors; it is not an accessibility certificate.
 | ODF audit | Package/XML readability, document kind, version consistency, metadata; for text documents and spreadsheets also selected semantic properties; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, sheet names, links and descriptions convey the intended meaning. |
 | ODF remediation | Explicit, typed changes with per-target outcomes; unchanged content; no new ODF schema violations. | Whether the choices were right, and the visual result. |
 | LibreOffice export | A PDF produced with the requested PDF/UA and tagging options. | Whether this exporter and version produced correct accessible structure. |
-| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page and a description (`/Contents` or the element's `/Alt`), extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
+| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page and a description (`/Contents` or the element's `/Alt`), that marked content on each page and the structure tree's references to it correspond and that no text is shown outside tagged content and artifacts, extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
 | veraPDF | Machine-verifiable PDF/UA-1 rules, each failure with its clause and test number. | Human checkpoints and the actual reading experience. |
 | Fidelity comparison | Source and candidate renders agree on pages, text, links and rendered ink under the policy. | Whether an intended change looks right. |
 
 The PDF audit resolves custom roles through `/RoleMap`, visits each structure object once
 and parses strictly. Links are checked by correspondence, not by count: each annotation must
-be referenced by a Link element's `/OBJR` on the annotation's page. It does not detect
-visible content missing from the structure tree; that needs marked-content parsing and is
-veraPDF's job.
+be referenced by a Link element's `/OBJR` on the annotation's page. Content is reconciled
+the same way: each page's content stream is scanned for marked-content sequences, and the
+audit reports MCIDs that no structure element refers to (`PDF020`), references to MCIDs the
+page lacks (`PDF021`), MCIDs referred to more than once (`PDF022`) and text shown outside
+tagged content and `/Artifact` (`PDF023`). Only content streams of pages are scanned; form
+XObjects are not entered, and references into them (`/Stm`) are not judged. Whether tagged
+content is in a sensible reading order, or is correctly an artifact, stays with veraPDF and
+a person.
+
+Marked-content scanning skips raw inline images using their sample dimensions. Filtered
+inline images or unsupported inline color spaces produce `PDF000` rather than guessing
+where binary samples end. Form XObjects are not scanned. The decoded-page-content limit
+is checked after each stream is decoded; it does not bound the decoder's peak memory.
+
 
 ## Link descriptions depend on the LibreOffice release
 
@@ -61,38 +72,31 @@ header rows, link text and hidden content are reported but not changed.
 
 ### Spreadsheet PDF exports
 
-Spreadsheets are exported with LibreOffice's `calc_pdf_Export` filter and go through the
-same PDF audit, veraPDF and fidelity stages. What those checks establish for a Calc export
-was observed with LibreOffice 24.2.7 and veraPDF 1.30.2 on exports of small spreadsheets
-(authored by LibreOffice, with and without header rows, pictures, links and hidden content);
-a different release may differ, as it does for [link descriptions](#link-descriptions-depend-on-the-libreoffice-release).
+Spreadsheets use LibreOffice's `calc_pdf_Export` filter and the same PDF audit, veraPDF
+and fidelity gates as text documents. Checks describe the actual exporter output; source
+header rows or alt text alone do not establish PDF/UA conformance.
 
-- **LibreOffice tags the page header and footer regions and pictures, not the cells.** The
-  structure tree held only `P` elements, which wrap the (usually empty) header and footer
-  areas, and a `Figure` per picture. Cell text is extractable but sits outside the tree: no
-  `Table`, `TH`, `TD`, heading or list element is produced, and hyperlinks have no `Link`
-  element.
-- **Meaningful for a Calc export:** `PDF000`, `PDF001` (the title comes from the document
-  metadata), `PDF003`, `PDF006`, `PDF009`, `PDF010` (cell text is extractable), `PDF007` (a
-  picture without a title or description in the source was reported, one with was not) and
-  `PDF016` (every hyperlink was reported, because no `Link` element exists, so a spreadsheet
-  with links cannot pass `production`, which fails on warnings).
-- **Passes without meaning:** the heading, list and table checks (`PDF008`, `PDF012`,
-  `PDF013`, `PDF014`, `PDF015`) have no structure to inspect, so passing them says nothing
-  about headings, reading order or table headers. `PDF004` passes because header and footer
-  elements exist, not because the cells are tagged. `PDF002` only tests that a language is
-  present: the catalog language was `en-US` whatever language the document declared (checked
-  with `de-DE`), so a person must check it.
-- **veraPDF** reported PDF/UA-1 clause 7.1, test 3 (content neither tagged nor an artifact)
-  on every Calc export tried, and clause 7.18.5, test 1 where a link existed. Under this
-  LibreOffice release a Calc export is therefore not PDF/UA-1 conformant, the `production`
-  profile cannot pass for a spreadsheet, and the source audit is the accessibility evidence
-  ODFA11y can provide for it; the PDF stages still record what the export contains.
-- **Fidelity comparison** is meaningful (pages, text, links and ink). Calc's default page
-  style prints the sheet name in the page header and `Page N` in the footer, so renaming a
-  sheet is a text difference (`FID003`) and the `verify` and `production` profiles fail it.
-  Change or remove the header in Calc first, or apply the plan with `remediate` and review
-  the printed result yourself.
+- **LibreOffice 24.2.7:** the sampled exports tag page headers, footers and pictures but
+  leave cell text untagged. `PDF023` rejects that text, independently confirmed by
+  veraPDF PDF/UA-1 clause 7.1, test 3. Links also lacked `Link` elements (`PDF016`, and
+  veraPDF clause 7.18.5, test 1). Heading, list and table rules (`PDF008`, `PDF012`–`PDF015`)
+  had no cell structure to inspect; `PDF004` passing did not mean cells were tagged.
+- **LibreOffice 26.8.0.3:** the sampled table export has tagged cells but no `TH` cells
+  (`PDF015`), and veraPDF reports inconsistent table-column counts (clause 7.2, test 43).
+  The `production` profile rejects the table-header warning before reaching veraPDF.
+- Metadata, pictures and extractable text remain meaningful diagnostics (`PDF000`–`PDF003`,
+  `PDF006`, `PDF007`, `PDF009`, `PDF010`). A person must check the language: the 24.2 sample
+  exported `en-US` even when the source declared `de-DE`.
+- Fidelity comparisons check pages, text, links and ink. Calc's default header prints the
+  sheet name, so a rename changes rendered text (`FID003`). The pipeline may stop earlier
+  on an invalid PDF; the standalone `compare` command can still assess the exported pair.
+  Change or remove the header in Calc first, or use `remediate` and review the printed result.
+
+These observations use small invented Calc-authored fixtures and veraPDF 1.30.2. They do
+not establish that every spreadsheet or LibreOffice release behaves identically. Integration
+tests require the observed gate failures and reject unrelated validator failures. No warning
+or error is whitelisted in the application. An earlier failed gate leaves downstream stages
+`skipped`; a green integration test can prove correct rejection of an invalid export.
 
 ## ODF schema validation
 

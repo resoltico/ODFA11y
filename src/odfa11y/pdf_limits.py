@@ -10,6 +10,7 @@ from odfa11y.errors import ToolFailedError
 MAX_PDF_BYTES = 256 * 1024 * 1024
 MAX_PDF_PAGES = 5_000
 MAX_STRUCTURE_NODES = 500_000
+MAX_CONTENT_BYTES = 64 * 1024 * 1024  # decoded page content of one document
 
 
 def check_file_size(path: str | Path) -> None:
