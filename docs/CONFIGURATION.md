@@ -8,11 +8,11 @@ what will change. Run `odfa11y template original.odt` to print a commented start
 the decisions an audit leaves open.
 
 The file has two common tables, `[document]` and `[fidelity]`, and one table per document
-family, named after the family (`[text]`). A family table is read by that family's adapter
-and applies only to documents of that family: configuring `[text]` for a spreadsheet is an
-error that stops the run before anything is written, never a silently ignored section.
-Other families add their own tables when they are supported (see
-[Architecture](ARCHITECTURE.md#document-families)).
+family, named after the family (`[text]`, `[spreadsheet]`). A family table is read by that
+family's adapter and applies only to documents of that family: configuring `[text]` for a
+spreadsheet, or `[spreadsheet]` for a text document, is an error that stops the run before
+anything is written, never a silently ignored section. Other families add their own tables
+when they are supported (see [Architecture](ARCHITECTURE.md#document-families)).
 
 ## Example
 
@@ -47,6 +47,16 @@ remove_empty_spacers = false
 # reference_text = "Text of the paragraph whose spacing is the reference"
 # target_styles = ["BodyTight"]
 
+# For spreadsheets (.ods, .fods) use the [spreadsheet] table instead of [text]. Sheet
+# renames are refused for any sheet a formula, range or link refers to by name.
+# [spreadsheet.sheet_names]
+# "Sheet1" = "Budget 2026"
+#
+# [spreadsheet.alt_text."Company logo"]
+# title = "Organisation name"
+# description = "Description of the information conveyed by the picture"
+# fingerprint = "0123456789ab"
+
 [fidelity]
 pagination = "same"
 ```
@@ -68,6 +78,8 @@ A test extracts this block and loads it through the real reader.
 | `text.spacing.reference_text` | Text contained in the reference paragraph (required with `[text.spacing]`). | — |
 | `text.spacing.target_styles` | Non-empty list of paragraph style names (required with `[text.spacing]`). | — |
 | `text.spacing.exact_reference`, `text.spacing.include_headings` | Boolean. | `false`. |
+| `spreadsheet.sheet_names."CURRENT"` | The new name of the sheet currently named `CURRENT`: not blank, without `[ ] * ? : / \`, no apostrophe at either end. | Sheet keeps its name. |
+| `spreadsheet.alt_text.KEY.title`, `.description`, `.fingerprint` | As for `text.alt_text`, addressing frames in sheets. | See `text.alt_text`. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
 | `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
@@ -76,8 +88,8 @@ A test extracts this block and loads it through the real reader.
 Unknown keys, wrong types, non-table sections and non-positive counts are rejected with
 the offending key named. TOML booleans are `true`/`false`, not strings. An empty file is
 valid and requests no change. Operations run in a fixed order (version, metadata, then the
-family's operations: linkify, spacer removal, graphics, header rows, spacing), so a
-configuration always means the same thing.
+family's operations: for text, linkify, spacer removal, graphics, header rows, spacing; for
+spreadsheets, sheet names, then alt text), so a configuration always means the same thing.
 
 ## Every selector must match, and mean what you reviewed
 
@@ -102,6 +114,29 @@ prints the fingerprint of every object it suggests; leaving it out turns the che
 Describing a graphic is a judgement about this document's meaning. The presence of a
 title or description is only a structural check; do not give every image an arbitrary
 description just to make a finding disappear.
+
+## Renaming sheets
+
+`[spreadsheet.sheet_names]` maps a sheet's current name to its new one and nothing else
+changes. Every entry is checked before the first edit and any problem fails the run:
+
+- an unknown sheet, or a name shared by two sheets;
+- a new name that is blank, contains `[ ] * ? : / \`, starts or ends with an apostrophe, or
+  matches another sheet (letter case ignored; a change of case alone is fine);
+- a new name that is another entry's current name, or two entries with one new name. Chains
+  and swaps are refused, which is also what makes re-applying a plan to its output change
+  nothing: an entry whose old name is gone but whose new name exists is *unchanged*;
+- **a sheet that anything refers to by name.** ODFA11y does not rewrite references. It
+  refuses the rename when any attribute of the document (a formula, a range, a print range,
+  a link such as `#Sheet1.A1`) contains the sheet's name followed by a dot, plain or quoted
+  as a formula writes it, or is a link to the bare name; and it refuses every rename when the
+  document embeds charts or other objects, whose own references to sheets are not inspected.
+  The test errs towards refusing (a sheet named `Data` is also blocked by a reference to
+  `MyData.A1`). Update the references in Calc first, or rename in Calc.
+
+The view settings (`settings.xml`) keep the old name; a test reloads a renamed document in
+LibreOffice and exports it. Renaming also changes what Calc's default page header prints, see
+[spreadsheet PDF exports](ACCESSIBILITY.md#spreadsheet-pdf-exports).
 
 ## Spacing
 

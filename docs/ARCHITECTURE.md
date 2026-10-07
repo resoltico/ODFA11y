@@ -40,6 +40,7 @@ flowchart LR
 | `odf` | Storage layouts, logical parts, document kinds, detection, schema validation. |
 | `adapter` | The contract between the core and families: `FamilyAdapter`, `Operation`, `Outcome`. |
 | `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
+| `families.spreadsheet` | Everything specific to spreadsheets: audit rules, operations, snapshot, plan table. |
 | `families` | The registry: which adapter serves which kind; the generic adapter for the rest. |
 | `audit` | The read-only audit engine: common checks, then the family's. |
 | `remediation` | The executor and the operations common to every family. |
@@ -92,13 +93,25 @@ if LibreOffice can export it to PDF, the export filter. Kinds without an impleme
 the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
 audit exists, and the body text must not change.
 
-Today `text` is the only implementation (text, templates, master and web documents). It
-owns the `TXT` rules, five operations and the `[text]` configuration table.
+Two families are implemented, and neither imports the other:
+
+- `text` (text, templates, master and web documents) owns the `TXT` rules, five operations
+  and the `[text]` configuration table.
+- `spreadsheet` (`.ods`, `.ots`, flat `.fods`) owns the `SHEET` rules, two operations
+  (`SetSheetNames`, `SetObjectAltText`), the `[spreadsheet]` table, the `calc_pdf_Export`
+  filter and a snapshot of sheet names and cell text whose `preserved` rule lets only
+  sheet names change. It shows that the contract needs nothing from the core about
+  spreadsheets: the default language lives on a different style, the snapshot is not
+  paragraphs, and the operations resolve sheets and frames instead of paragraphs and
+  tables. Its alt-text operation resembles the text family's on purpose; a shared helper
+  would have to name `draw:` elements, which only a family package may.
+
 
 ### Adding a family
 
 1. Create `families/<family>/` with an `ADAPTER`, its audit, operations and plan table;
-   declare each operation's `family`.
+   declare each operation's `family`. Where the family's default language lives, what its
+   snapshot is and what `preserved` allows are the family's decisions, not the core's.
 2. Add one line to the registry and one `[[modules]]` entry to `tach.toml`.
 3. Add `<PREFIX>` rules to the registry and `docs/RULES.md` (a test keeps them equal).
 4. Add synthetic fixtures for both layouts to `tests/documents.py` and the family's tests.
@@ -112,8 +125,8 @@ act on a document it was not written for.
 
 Every finding references a [registered rule](../src/odfa11y/report/rules.py) with its id,
 severity, category and *remedy*, the configuration key that holds the decision. The id's
-prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `PDF`,
-`VERA`, `FID` (outputs). Reports serialize as
+prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `SHEET`
+(spreadsheet family), `PDF`, `VERA`, `FID` (outputs). Reports serialize as
 `{"format": 2, "kind", "subject", "passed", "summary", "metadata", "findings"}`.
 
 ## Operations and the executor

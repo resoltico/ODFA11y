@@ -4,6 +4,38 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Added
+
+- **Spreadsheet family.** Spreadsheets (`.ods`, `.ots`, flat `.fods`) now have their own
+  semantic audit and plan, as the second implementation of the adapter contract. New rules
+  `SHEET001`–`SHEET008` report a sheet without a name or with a default name (`Sheet1`), a
+  data-like sheet with no header rows or with merged cells, a picture, chart or object without
+  a title or description, hyperlink text that is a raw address, empty sheets after the last
+  sheet with content, and hidden sheets, rows or columns. Two operations are configured in a
+  new `[spreadsheet]` table: `spreadsheet.sheet_names` renames sheets from an explicit
+  mapping, and `spreadsheet.alt_text` sets the title and description of frames, with
+  fingerprints as in `[text.alt_text]`. `odfa11y template` lists both, and the review
+  checklist has spreadsheet items. See [Rules](docs/RULES.md) and
+  [Configuration](docs/CONFIGURATION.md#renaming-sheets).
+- **Sheet renames never break a reference.** A rename fails, and nothing is written, for an
+  unknown sheet, an invalid or colliding new name, a chained or swapped rename, any sheet that
+  a formula, range or link refers to by name, and every sheet of a document that embeds
+  charts. References are not rewritten.
+- **Spreadsheet PDF export.** The pipeline exports spreadsheets with LibreOffice's
+  `calc_pdf_Export` filter and runs the PDF audit, veraPDF and the fidelity comparison on
+  them. With LibreOffice 24.2 a Calc export tags only its page header, footer and pictures
+  (not the cells) and fails veraPDF's PDF/UA-1 rule 7.1-3, so the `production` profile cannot
+  pass for a spreadsheet; [Accessibility](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports)
+  lists which PDF checks are meaningful for a Calc export.
+
+### Changed
+
+- Documents of a spreadsheet kind are no longer served by the generic adapter: `audit`
+  reports `adapter: spreadsheet` and no longer emits `ODF009` for them, `SHEET` findings can
+  now fail an audit or `--strict` run, and the pipeline's PDF stages run instead of being
+  `not-applicable`. Renaming a sheet changes the name Calc's default page
+  header prints, which the fidelity stage reports as `FID003`.
+
 ## [0.3.0] - 2026-10-07
 
 This release makes the ODF core independent of any document family: ODFA11y now recognises

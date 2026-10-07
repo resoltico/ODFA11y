@@ -8,7 +8,7 @@ implemented checks found no errors; it is not an accessibility certificate.
 
 | Layer | Evidence provided | What still needs review |
 | --- | --- | --- |
-| ODF audit | Package/XML readability, document kind, version consistency, metadata; for text documents also selected semantic properties; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, links and descriptions convey the intended meaning. |
+| ODF audit | Package/XML readability, document kind, version consistency, metadata; for text documents and spreadsheets also selected semantic properties; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, sheet names, links and descriptions convey the intended meaning. |
 | ODF remediation | Explicit, typed changes with per-target outcomes; unchanged content; no new ODF schema violations. | Whether the choices were right, and the visual result. |
 | LibreOffice export | A PDF produced with the requested PDF/UA and tagging options. | Whether this exporter and version produced correct accessible structure. |
 | Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page and a description (`/Contents` or the element's `/Alt`), extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
@@ -32,13 +32,61 @@ the evidence records the LibreOffice version so the difference is explainable.
 ## Document families
 
 Every ODF kind is recognised from its declared media type, as a package or as flat XML,
-and gets the common checks. Semantic audit and remediation exist per family; today only
-text documents (`.odt`, templates, master and web documents) have them. For any other
-family the audit says so with `ODF009`, only the common `[document]` decisions apply, a
-`[text]` plan is refused, and PDF export, PDF checks and fidelity comparison are
-`not-applicable` in the pipeline (the `production` profile fails instead, because it requires
-PDF validation). A document of a recognised kind therefore never receives
-rules that belong to another family, and silence about a family is never a pass.
+and gets the common checks. Semantic audit and remediation exist per family; today text
+documents (`.odt`, templates, master and web documents) and spreadsheets (`.ods`, `.ots`,
+`.fods`) have them. For any other family the audit says so with `ODF009`, only the common
+`[document]` decisions apply, a plan for another family's table is refused, and PDF export,
+PDF checks and fidelity comparison are `not-applicable` in the pipeline (the `production`
+profile fails instead, because it requires PDF validation). A document of a recognised kind
+therefore never receives rules that belong to another family, and silence about a family is
+never a pass.
+
+### Spreadsheets
+
+The `SHEET` rules check what can be read from the source: sheet names (empty or default),
+header rows and merged cells on sheets that look like tables of data, pictures and charts
+without a title or description, link text that is a raw address, empty sheets after the last
+one with content, and hidden sheets, rows and columns. They do not judge whether a sheet
+name, a header label or a description is good, do not inspect formulas, charts' data or
+conditional formatting, and do not look at drawn shapes. Two operations exist: renaming
+sheets (refused for any sheet that is referred to by name, see
+[Configuration](CONFIGURATION.md#renaming-sheets)) and describing frames. Merged cells,
+header rows, link text and hidden content are reported but not changed.
+
+### Spreadsheet PDF exports
+
+Spreadsheets are exported with LibreOffice's `calc_pdf_Export` filter and go through the
+same PDF audit, veraPDF and fidelity stages. What those checks establish for a Calc export
+was observed with LibreOffice 24.2.7 and veraPDF 1.30.2 on exports of small spreadsheets
+(authored by LibreOffice, with and without header rows, pictures, links and hidden content);
+a different release may differ, as it does for [link descriptions](#link-descriptions-depend-on-the-libreoffice-release).
+
+- **LibreOffice tags the page header and footer regions and pictures, not the cells.** The
+  structure tree held only `P` elements, which wrap the (usually empty) header and footer
+  areas, and a `Figure` per picture. Cell text is extractable but sits outside the tree: no
+  `Table`, `TH`, `TD`, heading or list element is produced, and hyperlinks have no `Link`
+  element.
+- **Meaningful for a Calc export:** `PDF000`, `PDF001` (the title comes from the document
+  metadata), `PDF003`, `PDF006`, `PDF009`, `PDF010` (cell text is extractable), `PDF007` (a
+  picture without a title or description in the source was reported, one with was not) and
+  `PDF016` (every hyperlink was reported, because no `Link` element exists, so a spreadsheet
+  with links cannot pass `production`, which fails on warnings).
+- **Passes without meaning:** the heading, list and table checks (`PDF008`, `PDF012`,
+  `PDF013`, `PDF014`, `PDF015`) have no structure to inspect, so passing them says nothing
+  about headings, reading order or table headers. `PDF004` passes because header and footer
+  elements exist, not because the cells are tagged. `PDF002` only tests that a language is
+  present: the catalog language was `en-US` whatever language the document declared (checked
+  with `de-DE`), so a person must check it.
+- **veraPDF** reported PDF/UA-1 clause 7.1, test 3 (content neither tagged nor an artifact)
+  on every Calc export tried, and clause 7.18.5, test 1 where a link existed. Under this
+  LibreOffice release a Calc export is therefore not PDF/UA-1 conformant, the `production`
+  profile cannot pass for a spreadsheet, and the source audit is the accessibility evidence
+  ODFA11y can provide for it; the PDF stages still record what the export contains.
+- **Fidelity comparison** is meaningful (pages, text, links and ink). Calc's default page
+  style prints the sheet name in the page header and `Page N` in the footer, so renaming a
+  sheet is a text difference (`FID003`) and the `verify` and `production` profiles fail it.
+  Change or remove the header in Calc first, or apply the plan with `remediate` and review
+  the printed result yourself.
 
 ## ODF schema validation
 
@@ -72,8 +120,9 @@ Only members an operation edits are re-serialized; every other member, and any f
 markup, comments and processing instructions inside edited ones, is carried over. The text
 guard compares, for text documents, the sequence of paragraph and heading strings after
 collapsing whitespace and treating non-breaking spaces as spaces (graphic title and
-description are excluded) and, for other families, the whole body text. It
-detects wording changes but is not a byte comparison, a rendering comparison or proof of
+description are excluded); for spreadsheets, the sheets in order and the text and position
+of every non-empty cell (sheet names may differ, since renaming them is the operation);
+and, for other families, the whole body text. It detects wording changes but is not a byte comparison, a rendering comparison or proof of
 unchanged pagination: that is what [fidelity comparison](FIDELITY.md) adds.
 
 ## Threat model
@@ -108,8 +157,12 @@ Before distribution, review:
 
 - **Headings**: the actual hierarchy and navigation, not just the levels.
 - **Alt text**: whether each description is meaningful in its context.
-- **Reading order**, including footnotes, floating objects, tables and graphics.
-- **Table headers**: whether they express the correct relationships.
+- **Reading order**, including footnotes, floating objects, tables and graphics; for a
+  spreadsheet, the order of sheets, rows and columns.
+- **Table headers**: whether they express the correct relationships; for a spreadsheet,
+  whether the first row and column labels describe the data on every sheet.
+- **Sheet names and hidden content** (spreadsheets): whether each name says what the sheet
+  holds, and whether hidden sheets, rows and columns hold nothing a reader needs.
 - **Link purpose**: whether each link is understandable in context.
 - **Colour**: whether colour carries information available nowhere else; contrast.
 - **Layout**: typography, pagination and appearance, and behaviour with assistive technology.

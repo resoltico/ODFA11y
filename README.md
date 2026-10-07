@@ -7,8 +7,10 @@ ODFA11y works on both the editable ODF source and the exported PDF, because an
 accessible source does not guarantee an accessible export. It recognises every kind of
 OpenDocument file, packaged or flat XML, and audits package structure, document kind,
 version, metadata and schema validity. For text documents (`.odt`) it also audits headings,
-graphics, tables and links, and runs the whole workflow; other families are recognised and
-checked in common, and each is added as its own plug-in without touching the core. It applies the changes *you* decide in one
+graphics, tables and links, and for spreadsheets (`.ods`, `.fods`) sheet names, header rows,
+merged cells, graphics, links, empty sheets and hidden content, and runs the whole workflow
+for both; other families are recognised and checked in common, and each is added as its own
+plug-in without touching the core. It applies the changes *you* decide in one
 TOML file, refusing anything that alters the text or breaks the ODF schema; exports with
 LibreOffice; inspects the PDF and runs veraPDF; compares the source and candidate renders;
 and publishes a hashed evidence directory. It is conservative by design: it never invents

@@ -6,10 +6,11 @@ writes to a path you choose.
 
 The commands work on any OpenDocument file, a ZIP package (`.odt`, `.ods`, `.odp`, `.odg`,
 templates, …) or a flat XML file (`.fodt`, `.fods`, …); the file's declared media type, not
-its extension, decides what it is. Text documents get the full workflow below. Other kinds
-get the common checks (package, kind, version, metadata, schema), `audit` notes with
-`ODF009` that no semantic audit exists for their family yet, and the common `[document]`
-decisions can still be applied; see [Architecture](ARCHITECTURE.md#document-families).
+its extension, decides what it is. Text documents and spreadsheets get the full workflow
+below. Other kinds get the common checks (package, kind, version, metadata, schema), `audit`
+notes with `ODF009` that no semantic audit exists for their family yet, and the common
+`[document]` decisions can still be applied; see
+[Architecture](ARCHITECTURE.md#document-families).
 
 ## 1. Establish the baseline
 
@@ -50,8 +51,10 @@ Each target reports `applied`, `unchanged` or `failed`. Any failure (a table or 
 that does not exist, a header count that conflicts, an invalid language) aborts the run
 and writes nothing. Before publishing, the executor also checks that visible text is
 unchanged (apart from counted spacer removals) and that the ODF schema shows no
-violation the source did not already have. A plan written for another family (a `[text]`
-table applied to a spreadsheet) is refused outright. Publication is atomic.
+violation the source did not already have; for a spreadsheet the guard compares every sheet
+name's position and every non-empty cell's text, so only sheet names may differ. A plan
+written for another family (a `[text]` table applied to a spreadsheet, a `[spreadsheet]`
+table applied to a text document) is refused outright. Publication is atomic.
 
 ## 3. Export and check the PDF
 
@@ -79,7 +82,10 @@ uv run --no-sync odfa11y compare original.odt reviewed.odt --diff-dir diffs
 ```
 
 Both documents are exported (only families with a PDF export can be) with the same LibreOffice and profile, then compared by page
-count and size, text, links and rendered ink; see [Fidelity](FIDELITY.md). `compare`
+count and size, text, links and rendered ink; see [Fidelity](FIDELITY.md). Renaming a
+sheet changes the name Calc's default page header prints, so the comparison reports it as
+a text difference (`FID003`) unless the header is changed first; see
+[spreadsheet PDF exports](ACCESSIBILITY.md#spreadsheet-pdf-exports). `compare`
 also takes two PDFs directly.
 
 ## 5. Or do it all, with evidence
@@ -101,7 +107,7 @@ effective profile is recorded in `run.json`.
 
 The pipeline runs the stages in order and stops at the first failed gate; later stages are
 recorded as `skipped`. A stage the document's family does not have (PDF export for a family
-LibreOffice export is not defined for) is `not-applicable`, which is not a failure, except under `production`, which requires PDF
+without a PDF filter) is `not-applicable`, which is not a failure, except under `production`, which requires PDF
 validation and therefore fails for such a document. The
 [evidence directory](EVIDENCE.md) is published whether the run passed or failed, even when
 the source cannot be read.
