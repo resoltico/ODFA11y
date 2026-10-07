@@ -145,7 +145,7 @@ integration; set `ODFA11Y_REQUIRE_INTEGRATION=1` to make a missing application f
 ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --durations=10
 ```
 
-[Checks](../.github/workflows/checks.yml) runs three kinds of job:
+[Checks](../.github/workflows/checks.yml) runs the required jobs below:
 
 - **Static analysis** (Linux): workflow syntax and security, secret scan, dependency
   advisories, policy, Ruff, ty and tach.
