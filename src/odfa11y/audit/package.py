@@ -6,32 +6,36 @@ from __future__ import annotations
 import zipfile
 from typing import TYPE_CHECKING
 
-from lxml import etree
-
-from odfa11y.odf import ODT_MIMETYPE, REQUIRED_XML, qn, select_elements
-from odfa11y.report import Severity
+from odfa11y.odf import (
+    ODT_MIMETYPE,
+    REQUIRED_XML,
+    declared_version,
+    is_unsafe_member_name,
+    qn,
+    select_elements,
+    validate,
+)
+from odfa11y.report import rules
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from pathlib import Path
+    from odfa11y.odf import OdtDocument, OdtPackage
+    from odfa11y.report import Report
 
-    from odfa11y.odf import OdtPackage
-    from odfa11y.report import AuditReport
+MAX_REPORTED_VIOLATIONS = 20
 
 
-def audit_package(package: OdtPackage, report: AuditReport) -> None:
+def audit_package(package: OdtPackage, report: Report) -> None:
     """Report package-level defects such as duplicate or missing required members."""
     names = list(package.member_names())
     duplicates = sorted({name for name in names if names.count(name) > 1})
     if duplicates:
         report.add(
-            "PKG006",
-            Severity.ERROR,
+            rules.PKG006,
             "ODT package contains duplicate ZIP member names.",
             details={"duplicates": duplicates},
         )
     if "mimetype" not in package.members:
-        report.add("PKG001", Severity.ERROR, "ODT package has no mimetype member.", fixable=False)
+        report.add(rules.PKG001, "ODT package has no mimetype member.")
     else:
         value = package.read("mimetype")
         try:
@@ -40,129 +44,96 @@ def audit_package(package: OdtPackage, report: AuditReport) -> None:
             decoded = "<non-ASCII>"
         if decoded != ODT_MIMETYPE:
             report.add(
-                "PKG002",
-                Severity.ERROR,
+                rules.PKG002,
                 f"mimetype is {decoded!r}; expected {ODT_MIMETYPE!r}.",
                 location="mimetype",
             )
         info = package.members["mimetype"].info
         if not names or names[0] != "mimetype":
-            report.add(
-                "PKG003",
-                Severity.ERROR,
-                "mimetype is not the first ZIP member.",
-                location="mimetype",
-                fixable=True,
-            )
+            report.add(rules.PKG003, location="mimetype")
         if info.compress_type != zipfile.ZIP_STORED:
             report.add(
-                "PKG004",
-                Severity.ERROR,
+                rules.PKG004,
                 "mimetype is compressed; ODF requires it to be stored uncompressed.",
                 location="mimetype",
-                fixable=True,
             )
 
     for name in REQUIRED_XML:
         if not package.has(name):
-            report.add(
-                "PKG005", Severity.ERROR, f"Required ODT member is missing: {name}", location=name
-            )
+            report.add(rules.PKG005, f"Required ODT member is missing: {name}", location=name)
+    unsafe = sorted(name for name in names if is_unsafe_member_name(name))
+    if unsafe:
+        report.add(rules.PKG007, details={"names": unsafe})
 
 
-def audit_versions(
-    trees: dict[str, etree._ElementTree], report: AuditReport, target_version: str
-) -> None:
-    """Report ODF version declarations that differ from the target version."""
-    for name in ("content.xml", "styles.xml", "meta.xml", "settings.xml"):
-        if name not in trees:
-            continue
-        root = trees[name].getroot()
-        value = root.get(qn("office", "version"))
-        if value != target_version:
-            report.add(
-                "ODF001",
-                Severity.ERROR,
-                f"{name} declares ODF version {value!r}; expected {target_version!r}.",
-                location=name,
-                fixable=True,
-            )
-    root = trees["META-INF/manifest.xml"].getroot()
-    value = root.get(qn("manifest", "version"))
-    if value != target_version:
+def audit_versions(document: OdtDocument, report: Report) -> None:
+    """Report ODF version declarations that disagree across members or the manifest."""
+    version = declared_version(document)
+    members = [
+        name
+        for name in ("content.xml", "styles.xml", "meta.xml", "settings.xml")
+        if document.has(name)
+    ]
+    declared = {
+        name: document.tree(name).getroot().get(qn("office", "version")) for name in members
+    }
+    if version is None or len(set(declared.values())) > 1:
         report.add(
-            "ODF001",
-            Severity.ERROR,
-            f"META-INF/manifest.xml declares ODF version {value!r}; expected {target_version!r}.",
-            location="META-INF/manifest.xml",
-            fixable=True,
+            rules.ODF001,
+            "Package members declare different or missing ODF versions.",
+            details={"versions": declared},
         )
-
-    root_entries = select_elements(root, "./manifest:file-entry[@manifest:full-path='/']")
+    if version is not None:
+        report.metadata["odf_version"] = version
+    manifest_root = document.tree("META-INF/manifest.xml").getroot()
+    manifest_version = manifest_root.get(qn("manifest", "version"))
+    if manifest_version is not None and manifest_version != version:
+        report.add(
+            rules.ODF003,
+            f"Manifest declares ODF version {manifest_version!r}; content declares {version!r}.",
+            location="META-INF/manifest.xml",
+        )
+    root_entries = select_elements(manifest_root, "./manifest:file-entry[@manifest:full-path='/']")
     if not root_entries:
+        report.add(rules.ODF002, location="META-INF/manifest.xml")
+        return
+    entry = root_entries[0]
+    entry_version = entry.get(qn("manifest", "version"))
+    if entry_version is not None and entry_version != version:
         report.add(
-            "ODF002",
-            Severity.ERROR,
-            "Manifest has no root file-entry for '/'.",
+            rules.ODF003,
+            (
+                f"Manifest root file-entry declares version {entry_version!r}; "
+                f"content declares {version!r}."
+            ),
             location="META-INF/manifest.xml",
-            fixable=False,
         )
-    else:
-        entry = root_entries[0]
-        entry_version = entry.get(qn("manifest", "version"))
-        media_type = entry.get(qn("manifest", "media-type"))
-        if entry_version != target_version:
-            report.add(
-                "ODF003",
-                Severity.ERROR,
-                (
-                    f"Manifest root file-entry declares version "
-                    f"{entry_version!r}; expected {target_version!r}."
-                ),
-                location="META-INF/manifest.xml",
-                fixable=True,
-            )
-        if media_type != ODT_MIMETYPE:
-            report.add(
-                "ODF004",
-                Severity.ERROR,
-                f"Manifest root media type is {media_type!r}; expected {ODT_MIMETYPE!r}.",
-                location="META-INF/manifest.xml",
-                fixable=True,
-            )
+    if entry.get(qn("manifest", "media-type")) != ODT_MIMETYPE:
+        report.add(
+            rules.ODF004,
+            f"Manifest root media type is not {ODT_MIMETYPE!r}.",
+            location="META-INF/manifest.xml",
+        )
 
 
-def validate_relaxng(
-    trees: dict[str, etree._ElementTree],
-    *,
-    schema: Path,
-    member_names: Iterable[str],
-    report: AuditReport,
-    rule_id: str,
-) -> None:
-    """Report Relax NG schema violations for the supplied validators."""
-    if not schema.is_file():
+def audit_schema(document: OdtDocument, report: Report) -> None:
+    """Report members that violate the bundled ODF schema for the declared version."""
+    result = validate(document)
+    report.metadata["schema_version"] = result.version
+    if not result.available:
         report.add(
-            rule_id, Severity.ERROR, f"Relax NG schema not found: {schema}", location=str(schema)
+            rules.ODF905,
+            f"No ODF schema is bundled for declared version {result.version!r}.",
         )
         return
-    try:
-        schema_tree = etree.parse(
-            str(schema), parser=etree.XMLParser(resolve_entities=False, no_network=True)
-        )
-        validator = etree.RelaxNG(schema_tree)
-    except (OSError, etree.Error, ValueError) as exc:
+    report.metadata["schema_violations"] = result.count
+    for member, messages in result.violations.items():
         report.add(
-            rule_id, Severity.ERROR, f"Could not load Relax NG schema: {exc}", location=str(schema)
+            rules.ODF900,
+            f"{member} does not validate against the ODF {result.version} schema.",
+            location=member,
+            details={
+                "count": len(messages),
+                "violations": list(messages[:MAX_REPORTED_VIOLATIONS]),
+            },
         )
-        return
-    for name in member_names:
-        tree = trees[name]
-        if not validator.validate(tree):
-            report.add(
-                rule_id,
-                Severity.ERROR,
-                f"{name} does not validate against {schema.name}.",
-                location=name,
-                details={"errors": [str(e) for e in validator.error_log]},
-            )

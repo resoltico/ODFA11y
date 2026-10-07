@@ -1,19 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Explicit ODT remediation and spacing normalization."""
+"""Explicit, text-preserving ODT remediation as typed operations under one executor."""
 
-from .config import load_remediation_config, validate_alt_text
-from .links import linkify_plain_addresses
-from .models import AltText, RemediationOptions, RemediationResult
-from .odt import remediate_odt
-from .spacing import normalize_paragraph_spacing
+from .apply import remediate
+from .graphics import SetAltText
+from .links import LinkifyAddresses, linkify_plain_addresses
+from .metadata import SetMetadata
+from .outcome import AltText, Operation, Outcome, RemediationResult, Status
+from .spacers import RemoveEmptySpacers
+from .spacing import NormalizeSpacing, clone_style_name
+from .tables import MarkHeaderRows
+from .version import SetOdfVersion
 
 __all__ = [
     "AltText",
-    "RemediationOptions",
+    "LinkifyAddresses",
+    "MarkHeaderRows",
+    "NormalizeSpacing",
+    "Operation",
+    "Outcome",
     "RemediationResult",
+    "RemoveEmptySpacers",
+    "SetAltText",
+    "SetMetadata",
+    "SetOdfVersion",
+    "Status",
+    "clone_style_name",
     "linkify_plain_addresses",
-    "load_remediation_config",
-    "normalize_paragraph_spacing",
-    "remediate_odt",
-    "validate_alt_text",
+    "remediate",
 ]

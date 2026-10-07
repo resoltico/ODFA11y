@@ -3,9 +3,32 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar, override
+
 from lxml import etree
 
 from odfa11y.odf import URI_RE, qn, select_elements, split_trailing_punctuation
+
+from .outcome import Operation, Outcome, Status
+
+if TYPE_CHECKING:
+    from odfa11y.odf import OdtDocument
+
+
+@dataclass(frozen=True, slots=True)
+class LinkifyAddresses(Operation):
+    """Turn visible URLs and email addresses into hyperlinks that keep their text."""
+
+    name: ClassVar[str] = "linkify_addresses"
+
+    @override
+    def apply(self, document: OdtDocument) -> tuple[Outcome, ...]:
+        count = linkify_plain_addresses(document.tree("content.xml"))
+        if not count:
+            return (Outcome(self.name, Status.UNCHANGED, "No plain addresses remain."),)
+        document.edit("content.xml")
+        return (Outcome(self.name, Status.APPLIED, f"Created {count} hyperlink(s).", count=count),)
 
 
 def linkify_plain_addresses(tree: etree._ElementTree) -> int:

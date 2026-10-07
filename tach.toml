@@ -4,8 +4,13 @@ root_module = "ignore"
 forbid_circular_dependencies = true
 exact = true
 
-# Dependencies point downward only: cli -> audit/remediation/pdf -> odf -> safe_xml.
-# audit, remediation and pdf are independent of each other; report and safe_xml are leaves.
+# Dependencies point downward only:
+#   cli -> pipeline -> audit / remediation / pdf / fidelity / evidence -> odf -> leaves.
+# audit, remediation, pdf, fidelity and evidence never import each other.
+
+[[modules]]
+path = "odfa11y.errors"
+depends_on = []
 
 [[modules]]
 path = "odfa11y.safe_xml"
@@ -16,32 +21,83 @@ path = "odfa11y.report"
 depends_on = []
 
 [[modules]]
+path = "odfa11y.external_tools"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
 path = "odfa11y.odf"
-depends_on = ["odfa11y.safe_xml"]
+depends_on = ["odfa11y.errors", "odfa11y.safe_xml"]
 
 [[modules]]
 path = "odfa11y.audit"
-depends_on = ["odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.remediation"
-depends_on = ["odfa11y.odf"]
+depends_on = ["odfa11y.errors", "odfa11y.odf"]
 
 [[modules]]
 path = "odfa11y.pdf"
-depends_on = ["odfa11y.report", "odfa11y.safe_xml"]
+depends_on = [
+  "odfa11y.errors",
+  "odfa11y.external_tools",
+  "odfa11y.report",
+  "odfa11y.safe_xml",
+]
 
 [[modules]]
-path = "odfa11y.cli"
+path = "odfa11y.fidelity"
+depends_on = ["odfa11y.errors", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.evidence"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
+path = "odfa11y.config"
+depends_on = ["odfa11y.errors", "odfa11y.fidelity", "odfa11y.odf", "odfa11y.remediation"]
+
+[[modules]]
+path = "odfa11y.pipeline"
 depends_on = [
   "odfa11y.audit",
+  "odfa11y.errors",
+  "odfa11y.evidence",
+  "odfa11y.fidelity",
   "odfa11y.odf",
   "odfa11y.pdf",
   "odfa11y.remediation",
   "odfa11y.report",
 ]
 
+[[modules]]
+path = "odfa11y.cli"
+depends_on = [
+  "odfa11y.audit",
+  "odfa11y.config",
+  "odfa11y.errors",
+  "odfa11y.evidence",
+  "odfa11y.external_tools",
+  "odfa11y.fidelity",
+  "odfa11y.odf",
+  "odfa11y.pdf",
+  "odfa11y.pipeline",
+  "odfa11y.remediation",
+  "odfa11y.report",
+]
+
 # A package's public API is exactly what its __init__ re-exports.
 [[interfaces]]
-from = ["odfa11y.audit", "odfa11y.cli", "odfa11y.odf", "odfa11y.pdf", "odfa11y.remediation", "odfa11y.report"]
+from = [
+  "odfa11y.audit",
+  "odfa11y.cli",
+  "odfa11y.config",
+  "odfa11y.evidence",
+  "odfa11y.fidelity",
+  "odfa11y.odf",
+  "odfa11y.pdf",
+  "odfa11y.pipeline",
+  "odfa11y.remediation",
+  "odfa11y.report",
+]
 expose = ["[^.]+"]

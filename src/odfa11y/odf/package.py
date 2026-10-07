@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import io
 import lzma
 import os
 import tempfile
@@ -15,9 +14,15 @@ from typing import TYPE_CHECKING
 
 from lxml import etree
 
+from odfa11y.errors import MissingMemberError, PackageError, XmlParseError
 from odfa11y.safe_xml import secure_xml_parser
 
-from .archive import check_archive_limits, clone_zipinfo, validate_archive
+from .archive import (
+    check_archive_limits,
+    clone_zipinfo,
+    is_unsafe_member_name,
+    validate_archive,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -92,7 +97,7 @@ class OdtPackage:
             self._read_archive()
         except UNREADABLE_ARCHIVE_ERRORS as exc:
             msg = f"Not a valid ZIP/ODT package: {self.source}: {exc}"
-            raise ValueError(msg) from exc
+            raise PackageError(msg) from exc
 
     def _read_archive(self) -> None:
         with zipfile.ZipFile(self.source, "r") as zf:
@@ -123,7 +128,7 @@ class OdtPackage:
 
         Raises
         ------
-        KeyError
+        MissingMemberError
             The requested member does not exist.
 
         """
@@ -131,7 +136,7 @@ class OdtPackage:
             return self.members[name].data
         except KeyError as exc:
             msg = f"ODT member not found: {name}"
-            raise KeyError(msg) from exc
+            raise MissingMemberError(msg) from exc
 
     def write_member(self, name: str, data: bytes) -> None:
         """Replace or append a member in memory."""
@@ -153,7 +158,7 @@ class OdtPackage:
 
         Raises
         ------
-        ValueError
+        XmlParseError
             The member contains malformed XML.
 
         """
@@ -162,26 +167,8 @@ class OdtPackage:
             root = etree.fromstring(data, parser=secure_xml_parser())
         except etree.XMLSyntaxError as exc:
             msg = f"Malformed XML in {name}: {exc}"
-            raise ValueError(msg) from exc
+            raise XmlParseError(msg) from exc
         return etree.ElementTree(root)
-
-    def write_xml(
-        self,
-        name: str,
-        tree: etree._ElementTree | etree._Element,
-        *,
-        pretty_print: bool = False,
-    ) -> None:
-        """Serialize an XML tree into a package member."""
-        root = tree.getroot() if isinstance(tree, etree._ElementTree) else tree
-        payload = etree.tostring(
-            root,
-            xml_declaration=True,
-            encoding="UTF-8",
-            standalone=None,
-            pretty_print=pretty_print,
-        )
-        self.write_member(name, payload)
 
     def member_names(self) -> Iterable[str]:
         """Return member names in archive order.
@@ -204,19 +191,24 @@ class OdtPackage:
 
         Raises
         ------
-        ValueError
-            The package lacks mimetype or fails archive validation.
+        PackageError
+            The package lacks mimetype, has duplicate or unsafe member names, or fails
+            archive validation.
 
         """
         destination = Path(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         if "mimetype" not in self.members:
             msg = "Cannot write ODT without the required mimetype member"
-            raise ValueError(msg)
+            raise PackageError(msg)
 
         if len(self.order) != len(set(self.order)):
             msg = "Cannot rewrite an ODT package with duplicate ZIP member names"
-            raise ValueError(msg)
+            raise PackageError(msg)
+        unsafe = sorted(name for name in self.order if is_unsafe_member_name(name))
+        if unsafe:
+            msg = f"Cannot rewrite an ODT package with unsafe member names: {unsafe}"
+            raise PackageError(msg)
 
         fd, temp_name = tempfile.mkstemp(
             prefix=f".{destination.name}.", suffix=".tmp", dir=str(destination.parent)
@@ -264,33 +256,3 @@ class OdtPackage:
                     continue
                 info = clone_zipinfo(member.info)
                 zf.writestr(info, member.data, compress_type=info.compress_type)
-
-    def clone(self) -> OdtPackage:
-        """Return an independent in-memory copy without writing to disk.
-
-        Returns
-        -------
-        OdtPackage
-            An independent copy of member bytes and ZIP metadata.
-
-        """
-        obj = object.__new__(OdtPackage)
-        obj.source = self.source
-        obj.order = list(self.order)
-        obj.members = {
-            name: Member(info=clone_zipinfo(member.info), data=bytes(member.data))
-            for name, member in self.members.items()
-        }
-        return obj
-
-
-def open_odt_from_bytes(data: bytes) -> zipfile.ZipFile:
-    """Small test helper; callers should normally use :class:`OdtPackage`.
-
-    Returns
-    -------
-    zipfile.ZipFile
-        An opened ZIP archive; the caller must close it.
-
-    """
-    return zipfile.ZipFile(io.BytesIO(data), "r")

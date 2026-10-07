@@ -7,23 +7,42 @@ import contextlib
 import tempfile
 import zipfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from hypothesis import example, given
 from hypothesis import strategies as st
 from lxml import etree
 
+from odfa11y.config import load_config
+from odfa11y.errors import ConfigError, PackageError
 from odfa11y.odf import (
     ODT_MIMETYPE,
     URI_RE,
+    OdtDocument,
     OdtPackage,
+    is_unsafe_member_name,
     qn,
     split_trailing_punctuation,
     text_is_preserved,
+    validate,
 )
-from odfa11y.remediation import linkify_plain_addresses, load_remediation_config
-from odfa11y.report import AuditReport, Severity
+from odfa11y.remediation import (
+    AltText,
+    LinkifyAddresses,
+    MarkHeaderRows,
+    RemoveEmptySpacers,
+    SetAltText,
+    SetMetadata,
+    Status,
+    linkify_plain_addresses,
+    remediate,
+)
+from odfa11y.report import RULES, Report
 
 from .fixtures import make_minimal_odt
+
+if TYPE_CHECKING:
+    from .fixtures import Features
 
 PROSE = st.text(alphabet="abc XYZ.,;:()[]{}/@-_&", max_size=12)
 ADDRESSES = st.sampled_from([
@@ -34,7 +53,7 @@ ADDRESSES = st.sampled_from([
 ])
 FRAGMENTS = st.lists(st.one_of(PROSE, ADDRESSES), max_size=8)
 MEMBER_NAMES = st.text(alphabet="abcdef/._-", min_size=1, max_size=12).filter(
-    lambda name: name != "mimetype" and not name.endswith("/") and name not in {".", ".."}
+    lambda name: name != "mimetype" and not name.endswith("/") and not is_unsafe_member_name(name)
 )
 MEMBERS = st.dictionaries(MEMBER_NAMES, st.binary(max_size=64), max_size=6)
 
@@ -99,18 +118,18 @@ def test_saved_package_round_trips_members_and_keeps_mimetype_first(
 
 
 @given(st.binary(max_size=256))
-def test_arbitrary_bytes_are_loaded_or_rejected_with_value_error(payload: bytes) -> None:
+def test_arbitrary_bytes_are_loaded_or_rejected_with_a_package_error(payload: bytes) -> None:
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "input.odt"
         path.write_bytes(payload)
-        with contextlib.suppress(ValueError):
+        with contextlib.suppress(PackageError):
             OdtPackage(path)
 
 
 @given(st.integers(min_value=0, max_value=4000), st.integers(min_value=0, max_value=255))
 @example(offset=118, value=0)  # invalid deflate block length once escaped as zlib.error
 @example(offset=1656, value=6)  # bogus member location once escaped as OSError on Windows
-def test_corrupted_package_bytes_are_loaded_or_rejected_with_value_error(
+def test_corrupted_package_bytes_are_loaded_or_rejected_with_a_package_error(
     offset: int, value: int
 ) -> None:
     with tempfile.TemporaryDirectory() as directory:
@@ -118,26 +137,73 @@ def test_corrupted_package_bytes_are_loaded_or_rejected_with_value_error(
         data = bytearray(source.read_bytes())
         data[offset % len(data)] = value
         source.write_bytes(bytes(data))
-        with contextlib.suppress(ValueError):
+        with contextlib.suppress(PackageError):
             OdtPackage(source)
 
 
 @given(st.binary(max_size=128))
-def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_value_error(
+def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_a_config_error(
     payload: bytes,
 ) -> None:
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "config.toml"
         path.write_bytes(payload)
-        with contextlib.suppress(ValueError):
-            load_remediation_config(path)
+        with contextlib.suppress(ConfigError):
+            load_config(path)
 
 
-@given(st.lists(st.tuples(st.text(max_size=6), st.sampled_from(list(Severity))), max_size=10))
-def test_report_counts_partition_findings(findings: list[tuple[str, Severity]]) -> None:
-    report = AuditReport(subject="synthetic")
-    for message, severity in findings:
-        report.add("TST001", severity, message)
-    assert report.error_count + report.warning_count + report.info_count == len(findings)
+@given(st.lists(st.sampled_from(sorted(RULES)), max_size=10))
+def test_report_counts_partition_findings(rule_ids: list[str]) -> None:
+    report = Report(kind="odt", subject="synthetic")
+    for rule_id in rule_ids:
+        report.add(RULES[rule_id])
+    assert report.error_count + report.warning_count + report.info_count == len(rule_ids)
     assert report.passed is (report.error_count == 0)
     assert report.as_dict()["summary"]["errors"] == report.error_count
+
+
+FEATURE_FLAGS = st.fixed_dictionaries({
+    "with_plain_email": st.booleans(),
+    "with_data_table": st.booleans(),
+    "with_image_without_alt": st.booleans(),
+    "add_blank_body_paragraph": st.booleans(),
+})
+CHOICES = st.fixed_dictionaries({
+    "title": st.booleans(),
+    "language": st.booleans(),
+    "alt": st.booleans(),
+    "headers": st.booleans(),
+    "linkify": st.booleans(),
+    "spacers": st.booleans(),
+})
+
+
+@given(FEATURE_FLAGS, CHOICES)
+def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempotent(
+    features: Features, choices: dict[str, bool]
+) -> None:
+    operations = []
+    if choices["title"]:
+        operations.append(SetMetadata(title="Generated title"))
+    if choices["language"]:
+        operations.append(SetMetadata(language="de-AT"))
+    if choices["alt"] and features.get("with_image_without_alt"):
+        operations.append(SetAltText({"Logo": AltText("Logo", "Description")}))
+    if choices["headers"] and features.get("with_data_table"):
+        operations.append(MarkHeaderRows({"Data": 1}))
+    if choices["linkify"]:
+        operations.append(LinkifyAddresses())
+    if choices["spacers"]:
+        operations.append(RemoveEmptySpacers())
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        source = make_minimal_odt(root / "source.odt", **features)
+        first = remediate(source, root / "first.odt", operations)
+        assert validate(OdtDocument.open(root / "first.odt")).violations == {}
+        second = remediate(root / "first.odt", root / "second.odt", operations)
+        assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
+        for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
+            assert OdtPackage(root / "first.odt").read(member) == OdtPackage(
+                root / "second.odt"
+            ).read(member)
+        assert first.destination == root / "first.odt"

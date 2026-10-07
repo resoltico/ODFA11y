@@ -3,38 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from .namespaces import NS, qn
-from .xpath import select_elements
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from lxml import etree
-
-
-def find_paragraphs_by_style(
-    tree: etree._ElementTree,
-    style_names: Iterable[str],
-    *,
-    include_headings: bool = False,
-) -> list[etree._Element]:
-    """Select paragraphs and optionally headings using named styles.
-
-    Returns
-    -------
-    list[etree._Element]
-        Matching paragraph elements, including headings only when requested.
-
-    """
-    wanted = set(style_names)
-    xpath = "//text:p" + (" | //text:h" if include_headings else "")
-    return [
-        p
-        for p in select_elements(tree, xpath)
-        if (p.get(qn("text", "style-name")) or "(none)") in wanted
-    ]
 
 
 def display_attr(qname: str) -> str:

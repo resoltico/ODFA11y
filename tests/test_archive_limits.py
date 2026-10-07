@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odt
+from odfa11y.errors import PackageError
 from odfa11y.odf import ODT_MIMETYPE, OdtPackage
 from odfa11y.odf import archive as archive_limits
 
@@ -23,10 +24,10 @@ def test_duplicate_zip_members_are_reported_and_cannot_be_rewritten(tmp_path: Pa
     content = OdtPackage(source).read("content.xml")
     with zipfile.ZipFile(source, "a") as archive, pytest.warns(UserWarning, match="Duplicate name"):
         archive.writestr("content.xml", content)
-    assert "PKG006" in {issue.rule_id for issue in audit_odt(source).issues}
+    assert "PKG006" in {f.rule_id for f in audit_odt(source).findings}
     destination = tmp_path / "existing.odt"
     destination.write_bytes(b"existing destination")
-    with pytest.raises(ValueError, match="duplicate ZIP"):
+    with pytest.raises(PackageError, match="duplicate ZIP"):
         OdtPackage(source).save(destination)
     assert destination.read_bytes() == b"existing destination"
 
@@ -37,7 +38,7 @@ def test_crc_corruption_is_rejected_without_a_second_decompression_pass(tmp_path
         archive.writestr("mimetype", ODT_MIMETYPE)
         archive.writestr("payload.bin", b"UNIQUE_CRC_SAMPLE")
     source.write_bytes(source.read_bytes().replace(b"UNIQUE_CRC_SAMPLE", b"CORRUPT_CRC_DATA_"))
-    with pytest.raises(ValueError, match="CRC"):
+    with pytest.raises(PackageError, match="CRC"):
         OdtPackage(source)
 
 
@@ -46,7 +47,7 @@ def test_member_count_limit_is_enforced_before_loading(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     monkeypatch.setattr(archive_limits, "MAX_ARCHIVE_MEMBERS", 1)
-    with pytest.raises(ValueError, match="member archive limit"):
+    with pytest.raises(PackageError, match="member archive limit"):
         OdtPackage(source)
 
 
@@ -62,7 +63,7 @@ def test_unpacked_size_limit_accepts_boundary_and_rejects_one_extra_byte(
     if accepted:
         assert OdtPackage(source).read("payload.bin") == b"x" * payload_size
     else:
-        with pytest.raises(ValueError, match="unpacked archive limit"):
+        with pytest.raises(PackageError, match="unpacked archive limit"):
             OdtPackage(source)
 
 
@@ -76,5 +77,13 @@ def test_io_failure_while_reading_a_member_is_reported_as_an_invalid_package(
         raise OSError(message)
 
     monkeypatch.setattr(zipfile.ZipFile, "read", failing_read)
-    with pytest.raises(ValueError, match="Not a valid ZIP/ODT package"):
+    with pytest.raises(PackageError, match="Not a valid ZIP/ODT package"):
         OdtPackage(source)
+
+
+def test_unsafe_member_names_cannot_be_written(tmp_path: Path) -> None:
+    package = OdtPackage(make_minimal_odt(tmp_path / "source.odt"))
+    package.write_member("../escape.txt", b"x")
+    with pytest.raises(PackageError, match="unsafe member names"):
+        package.save(tmp_path / "out.odt")
+    assert not (tmp_path / "out.odt").exists()

@@ -27,7 +27,9 @@ classifiers = [
 ]
 dependencies = [
   "lxml>=6.1.3,<7",
+  "pillow>=12.3.0,<13",
   "pypdf>=6.19.0,<7",
+  "pypdfium2>=5.14.0,<6",
 ]
 
 [dependency-groups]
@@ -142,8 +144,9 @@ min-file-size = 0
 max-file-lines = 300
 
 [tool.ruff.lint.per-file-ignores]
-# pytest assertions provide failure introspection; test names describe behavior.
-"tests/**" = ["assert", "undocumented-public-function"]
+# pytest assertions provide failure introspection; test names describe behavior; expected
+# values are literals, and identical renders must differ by exactly zero.
+"tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
 # The fixture exposes independent document features as named keyword arguments.
 "tests/fixtures.py" = ["too-many-arguments"]
 # Reports accept three identifiers plus named location/details/fixability fields.
@@ -154,6 +157,8 @@ max-file-lines = 300
 "src/odfa11y/cli/commands.py" = ["print", "suspicious-subprocess-import"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
 "src/odfa11y/pdf/export.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
+# Version probes run an explicitly selected local tool with an argument list.
+"src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 # veraPDF is an explicitly selected local validator, invoked with an argument list.
 "src/odfa11y/pdf/verapdf.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import"]
 # Reporting prints the CLI interface and queries explicitly selected local tools.
@@ -171,3 +176,5 @@ max-file-lines = 300
 "src/odfa11y/odf/xpath.py" = ["private-member-access"]
 # pypdf has no public registration API for synthetic indirect structure objects.
 "tests/test_pdf_inspection.py" = ["private-member-access"]
+# Same reason: synthetic PDFs register indirect structure objects.
+"tests/pdf_fixtures.py" = ["private-member-access"]

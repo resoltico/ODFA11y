@@ -1,58 +1,180 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Run veraPDF and read its machine-validation report."""
+"""Run veraPDF and turn its machine-validation report into findings."""
 
 from __future__ import annotations
 
-import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from lxml import etree
 
+from odfa11y.errors import ToolFailedError
+from odfa11y.external_tools import ToolIdentity, find_executable
+from odfa11y.report import rules
 from odfa11y.safe_xml import secure_xml_parser
 
+if TYPE_CHECKING:
+    from odfa11y.report import Report
 
-def run_verapdf(
-    pdf_path: str | Path,
+MAX_REPORTED_CHECKS = 3
+
+
+@dataclass(frozen=True, slots=True)
+class FailedRule:
+    """One failed validation rule with its standard clause and sample failing contexts."""
+
+    specification: str
+    clause: str
+    test_number: str
+    description: str
+    failed_checks: int
+    contexts: tuple[str, ...]
+    messages: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class VeraPdfResult:
+    """A completed validation: who ran, which profile, the verdict and the raw report."""
+
+    identity: ToolIdentity
+    profile: str
+    compliant: bool
+    failures: tuple[FailedRule, ...]
+    raw_xml: str
+
+
+def find_verapdf(requested: str | Path | None = None) -> str:
+    """Locate the veraPDF executable.
+
+    Returns
+    -------
+    str
+        The executable path.
+
+    """
+    return find_executable(requested, ("verapdf",))
+
+
+def validate_pdfua(
+    pdf: str | Path,
     *,
     executable: str | Path | None = None,
     flavour: str = "ua1",
     timeout: int = 180,
-) -> tuple[bool, str]:
-    """Validate a PDF with veraPDF and return compliance and its XML report.
+) -> VeraPdfResult:
+    """Validate a PDF against a veraPDF profile and parse the XML report.
+
+    A valid report is the outcome whatever the exit status; non-compliance is a result,
+    not an error.
 
     Returns
     -------
-    tuple[bool, str]
-        Compliance across all validation reports, and the original XML output.
+    VeraPdfResult
+        The verdict, failed rules and raw report.
 
     Raises
     ------
-    FileNotFoundError
-        The validator executable cannot be found.
-    RuntimeError
-        The validator fails or returns an invalid XML report.
+    ToolFailedError
+        The validator times out, fails without a report, cannot process the PDF, or
+        returns a report that is not valid veraPDF XML.
 
     """
-    exe = str(executable) if executable is not None else shutil.which("verapdf")
-    if not exe:
-        msg = "veraPDF was not found on PATH. Install veraPDF or pass --verapdf /path/to/verapdf."
-        raise FileNotFoundError(msg)
-    cmd = [exe, "-f", flavour, "--format", "xml", "--loglevel", "0", str(Path(pdf_path).resolve())]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
-    if proc.returncode != 0 and not proc.stdout.strip():
-        msg = f"veraPDF failed: {proc.stderr.strip()}"
-        raise RuntimeError(msg)
+    command = [
+        find_verapdf(executable),
+        "-f",
+        flavour,
+        "--format",
+        "xml",
+        "--loglevel",
+        "0",
+        str(Path(pdf).resolve()),
+    ]
     try:
-        root = etree.fromstring(proc.stdout.encode("utf-8"), parser=secure_xml_parser())
-    except etree.XMLSyntaxError as exc:
-        msg = (
-            f"Could not parse veraPDF report as XML. stdout={proc.stdout!r} stderr={proc.stderr!r}"
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
         )
-        raise RuntimeError(msg) from exc
-    nodes = [node for node in root.iter("*") if etree.QName(node).localname == "validationReport"]
-    if not nodes:
+    except subprocess.TimeoutExpired as exc:
+        msg = f"veraPDF timed out after {timeout} s"
+        raise ToolFailedError(msg) from exc
+    if completed.returncode != 0 and not completed.stdout.strip():
+        msg = f"veraPDF failed: {completed.stderr.strip()}"
+        raise ToolFailedError(msg)
+    return _parse(completed.stdout, completed.stderr)
+
+
+def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:
+    """Record the verdict, validator identity and one finding per failed rule."""
+    report.metadata["veraPDF"] = {
+        "version": result.identity.version,
+        "profile": result.profile,
+        "compliant": result.compliant,
+        "failed_rules": len(result.failures),
+    }
+    for failure in result.failures:
+        report.add(
+            rules.VERA001,
+            f"{failure.specification} clause {failure.clause} test {failure.test_number}: "
+            f"{failure.description}",
+            details={
+                "specification": failure.specification,
+                "clause": failure.clause,
+                "test_number": failure.test_number,
+                "failed_checks": failure.failed_checks,
+                "contexts": list(failure.contexts),
+                "messages": list(failure.messages),
+            },
+        )
+
+
+def _parse(stdout: str, stderr: str) -> VeraPdfResult:
+    try:
+        root = etree.fromstring(stdout.encode("utf-8"), parser=secure_xml_parser())
+    except etree.XMLSyntaxError as exc:
+        msg = f"Could not parse veraPDF report as XML. stdout={stdout!r} stderr={stderr!r}"
+        raise ToolFailedError(msg) from exc
+    reports = [node for node in root.iter("*") if etree.QName(node).localname == "validationReport"]
+    if not reports:
         msg = "veraPDF report contains no validationReport element."
-        raise RuntimeError(msg)
-    compliant = all(node.get("isCompliant") == "true" for node in nodes)
-    return compliant, proc.stdout
+        raise ToolFailedError(msg)
+    unprocessed = [r.get("jobEndStatus") for r in reports if r.get("jobEndStatus") != "normal"]
+    if unprocessed:
+        msg = f"veraPDF could not process the PDF: {', '.join(map(str, unprocessed))}"
+        raise ToolFailedError(msg)
+    core = next(
+        (
+            n
+            for n in root.iter("*")
+            if etree.QName(n).localname == "releaseDetails" and n.get("id") == "core"
+        ),
+        None,
+    )
+    return VeraPdfResult(
+        identity=ToolIdentity(
+            "veraPDF", (core.get("version") if core is not None else None) or "unknown"
+        ),
+        profile=reports[0].get("profileName") or "unknown",
+        compliant=all(r.get("isCompliant") == "true" for r in reports),
+        failures=tuple(
+            _failed_rule(rule)
+            for report in reports
+            for rule in report.iter("rule")
+            if rule.get("status") == "failed"
+        ),
+        raw_xml=stdout,
+    )
+
+
+def _failed_rule(rule: etree._Element) -> FailedRule:
+    checks = [check for check in rule.iter("check") if check.get("status") == "failed"]
+    shown = checks[:MAX_REPORTED_CHECKS]
+    return FailedRule(
+        specification=rule.get("specification") or "",
+        clause=rule.get("clause") or "",
+        test_number=rule.get("testNumber") or "",
+        description=(rule.findtext("description") or "").strip(),
+        failed_checks=int(rule.get("failedChecks") or len(checks)),
+        contexts=tuple((check.findtext("context") or "").strip() for check in shown),
+        messages=tuple((check.findtext("errorMessage") or "").strip() for check in shown),
+    )

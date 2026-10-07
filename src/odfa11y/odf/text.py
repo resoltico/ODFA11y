@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lxml import etree
 
-    from .package import OdtPackage
-
 from .namespaces import qn
 from .xpath import select_elements
 
@@ -50,8 +48,8 @@ def element_text(element: etree._Element) -> str:
     return "".join(element.itertext()).replace("\u00a0", " ").strip()
 
 
-def visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
-    """Collect normalized heading and paragraph text from a package's content.
+def visible_text_snapshot(tree: etree._ElementTree) -> tuple[str, ...]:
+    """Collect normalized heading and paragraph text from a content tree.
 
     Returns
     -------
@@ -59,7 +57,6 @@ def visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
         One entry per visible text block.
 
     """
-    tree = package.parse_xml("content.xml")
     blocks: list[str] = []
     for node in select_elements(tree, "//text:h | //text:p"):
         text = _visible_node_text(node).replace("\u00a0", " ")

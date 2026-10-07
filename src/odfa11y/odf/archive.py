@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import zipfile
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING
+
+from odfa11y.errors import PackageError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,7 +41,7 @@ def validate_archive(tmp: Path, expected_mimetype: str) -> None:
 
     Raises
     ------
-    ValueError
+    PackageError
         The archive is corrupt or violates the mimetype invariant.
 
     """
@@ -47,17 +50,17 @@ def validate_archive(tmp: Path, expected_mimetype: str) -> None:
         infos = zf.infolist()
         if not infos or infos[0].filename != "mimetype":
             msg = "Generated ODT does not place mimetype first"
-            raise ValueError(msg)
+            raise PackageError(msg)
         if infos[0].compress_type != zipfile.ZIP_STORED:
             msg = "Generated ODT compresses the mimetype member"
-            raise ValueError(msg)
+            raise PackageError(msg)
         if zf.read("mimetype").decode("ascii", "strict") != expected_mimetype:
             msg = "Generated ODT has an invalid mimetype value"
-            raise ValueError(msg)
+            raise PackageError(msg)
         bad = zf.testzip()
         if bad is not None:
             msg = f"Generated ODT failed ZIP CRC validation: {bad}"
-            raise ValueError(msg)
+            raise PackageError(msg)
 
 
 MAX_ARCHIVE_MEMBERS = 10_000
@@ -69,13 +72,33 @@ def check_archive_limits(infos: list[zipfile.ZipInfo]) -> None:
 
     Raises
     ------
-    ValueError
+    PackageError
         The member count or declared unpacked size exceeds its limit.
 
     """
     if len(infos) > MAX_ARCHIVE_MEMBERS:
         msg = f"ODT exceeds the {MAX_ARCHIVE_MEMBERS}-member archive limit"
-        raise ValueError(msg)
+        raise PackageError(msg)
     if sum(info.file_size for info in infos) > MAX_UNCOMPRESSED_BYTES:
         msg = f"ODT exceeds the {MAX_UNCOMPRESSED_BYTES}-byte unpacked archive limit"
-        raise ValueError(msg)
+        raise PackageError(msg)
+
+
+def is_unsafe_member_name(name: str) -> bool:
+    """Whether a ZIP member name is absolute, drive-qualified or climbs out of its directory.
+
+    Returns
+    -------
+    bool
+        True when extracting the name could leave the target directory.
+
+    """
+    posix = PurePosixPath(name)
+    windows = PureWindowsPath(name)
+    return (
+        posix.is_absolute()
+        or windows.is_absolute()
+        or bool(windows.drive)
+        or ".." in posix.parts
+        or ".." in windows.parts
+    )
