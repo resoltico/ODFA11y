@@ -11,7 +11,13 @@ from odfa11y.odf import OdfDocument, Part
 from odfa11y.report import Report, rules
 
 from .metadata import audit_metadata
-from .package import audit_kind, audit_schema, audit_structure, audit_versions
+from .package import (
+    audit_kind,
+    audit_schema,
+    audit_structure,
+    audit_versions,
+    storage_location,
+)
 
 PARSED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.MANIFEST)
 # Findings that end an audit early: what follows (and any plan made from it) would be guesswork.
@@ -39,7 +45,7 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
     try:
         document = OdfDocument.open(source)
     except (PackageError, OSError) as exc:
-        report.add(rules.PKG000, _describe(exc, source), location=source.name)
+        report.add(rules.PKG000, _describe(exc, source))
         return report
 
     if not audit_structure(document, report) or not audit_kind(document, report):
@@ -67,7 +73,7 @@ def _parseable(document: OdfDocument, report: Report) -> bool:
         try:
             document.tree(part)
         except PackageError as exc:
-            report.add(rules.XML001, str(exc), location=name)
+            report.add(rules.XML001, str(exc), location=storage_location(document, part))
             ok = ok and part is Part.SETTINGS
     return ok
 

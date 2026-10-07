@@ -17,7 +17,7 @@ from odfa11y.odf import (
     select_elements,
     validate,
 )
-from odfa11y.report import rules
+from odfa11y.report import Location, rules
 
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument, PackageStorage
@@ -25,7 +25,25 @@ if TYPE_CHECKING:
 
 MAX_REPORTED_VIOLATIONS = 20
 MIMETYPE = "mimetype"
+MIMETYPE_LOCATION = Location("package/mimetype", MIMETYPE)
 OFFICE_ROOT_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.SETTINGS)
+
+
+def storage_location(document: OdfDocument, part: Part) -> Location:
+    """Locate a part for a finding about how it is stored.
+
+    A flat document keeps every part in one file, so its findings name ``document``; a
+    package's name the part and the member that holds it.
+
+    Returns
+    -------
+    Location
+        The logical location, with the package member where there is one.
+
+    """
+    if document.layout == "flat":
+        return Location("document")
+    return Location(part.value, document.member_name(part))
 
 
 def audit_structure(document: OdfDocument, report: Report) -> bool:
@@ -46,7 +64,7 @@ def _audit_flat(document: OdfDocument, report: Report) -> bool:
     try:
         root = document.tree(Part.CONTENT).getroot()
     except XmlParseError as exc:
-        report.add(rules.XML001, str(exc), location=document.storage.source.name)
+        report.add(rules.XML001, str(exc), location=storage_location(document, Part.CONTENT))
         return False
     if root.tag != qn("office", "document"):
         report.add(
@@ -77,12 +95,20 @@ def _audit_package(document: OdfDocument, report: Report) -> bool:
     for part in (Part.MANIFEST, Part.CONTENT):
         if not document.has(part):
             name = package.member_for(part)
-            report.add(rules.PKG005, f"Required package member is missing: {name}", location=name)
+            report.add(
+                rules.PKG005,
+                f"Required package member is missing: {name}",
+                location=Location(part.value, name),
+            )
             usable = False
     for part in (Part.STYLES, Part.META):
         if not document.has(part):
             name = package.member_for(part)
-            report.add(rules.PKG002, f"Optional package member is missing: {name}", location=name)
+            report.add(
+                rules.PKG002,
+                f"Optional package member is missing: {name}",
+                location=Location(part.value, name),
+            )
     return usable
 
 
@@ -99,15 +125,15 @@ def _audit_mimetype(package: PackageStorage, names: list[str], report: Report) -
         report.add(
             rules.PKG001,
             "mimetype is not exactly an ASCII media type (stray whitespace or non-ASCII bytes).",
-            location=MIMETYPE,
+            location=MIMETYPE_LOCATION,
         )
     if not names or names[0] != MIMETYPE:
-        report.add(rules.PKG003, location=MIMETYPE)
+        report.add(rules.PKG003, location=MIMETYPE_LOCATION)
     if info.compress_type != zipfile.ZIP_STORED:
         report.add(
             rules.PKG004,
             "mimetype is compressed; ODF requires it to be stored uncompressed.",
-            location=MIMETYPE,
+            location=MIMETYPE_LOCATION,
         )
 
 
@@ -142,7 +168,7 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
             rules.ODF004,
             f"The manifest declares {detection.manifest_media_type!r}; the document declares "
             f"{detection.media_type!r}.",
-            location="META-INF/manifest.xml",
+            location=storage_location(document, Part.MANIFEST),
         )
     if kind.body_element is not None and detection.body_element != kind.body_element:
         report.add(
@@ -177,7 +203,7 @@ def _audit_content_root(document: OdfDocument, family: Family, report: Report) -
         report.add(
             rules.ODF011,
             f"The content root is {root.tag!r}; it must be office:document-content.",
-            location="content.xml",
+            location=storage_location(document, Part.CONTENT),
         )
 
 
@@ -218,11 +244,11 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
         report.add(
             rules.ODF003,
             f"Manifest declares ODF version {manifest_version!r}; content declares {version!r}.",
-            location="META-INF/manifest.xml",
+            location=storage_location(document, Part.MANIFEST),
         )
     root_entries = select_elements(manifest_root, "./manifest:file-entry[@manifest:full-path='/']")
     if not root_entries:
-        report.add(rules.ODF002, location="META-INF/manifest.xml")
+        report.add(rules.ODF002, location=storage_location(document, Part.MANIFEST))
         return
     entry_version = root_entries[0].get(qn("manifest", "version"))
     if entry_version is not None and entry_version != version:
@@ -232,7 +258,7 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
                 f"Manifest root file-entry declares version {entry_version!r}; "
                 f"content declares {version!r}."
             ),
-            location="META-INF/manifest.xml",
+            location=storage_location(document, Part.MANIFEST),
         )
 
 
@@ -251,12 +277,17 @@ def audit_schema(document: OdfDocument, report: Report) -> None:
     report.metadata["schema_violations"] = result.count
     report.metadata["schema_violations_unlocated"] = result.unlocated
     for member, messages in result.messages().items():
+        location = storage_location(document, _part_of(document, member))
         report.add(
             rules.ODF900,
-            f"{member} does not validate against the ODF {result.version} schema.",
-            location=member,
+            f"The {location.path} does not validate against the ODF {result.version} schema.",
+            location=location,
             details={
                 "count": len(messages),
                 "violations": list(messages[:MAX_REPORTED_VIOLATIONS]),
             },
         )
+
+
+def _part_of(document: OdfDocument, member: str) -> Part:
+    return next(part for part in Part if document.member_name(part) == member)

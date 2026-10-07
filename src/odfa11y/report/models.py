@@ -11,7 +11,36 @@ from .rules import Severity
 if TYPE_CHECKING:
     from .rules import Rule
 
-REPORT_FORMAT = 2
+REPORT_FORMAT = 3
+
+
+@dataclass(frozen=True, slots=True)
+class Location:
+    """Where a finding applies, independent of how the document is stored.
+
+    ``path`` is logical: a part of the document, optionally narrowed by ``/``-separated
+    segments such as ``paragraph[3]``. ``member`` names the stored package member and is set
+    only where that physical detail helps, for example for a package-level defect.
+    """
+
+    path: str
+    member: str | None = None
+
+    @property
+    def label(self) -> str:
+        """The path, followed by the member in parentheses when there is one."""
+        return self.path if self.member is None else f"{self.path} ({self.member})"
+
+    def as_dict(self) -> dict[str, str | None]:
+        """Serialize this location into JSON-compatible values.
+
+        Returns
+        -------
+        dict[str, str | None]
+            The logical path and the member, or None without one.
+
+        """
+        return {"path": self.path, "member": self.member}
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,7 +51,7 @@ class Finding:
     severity: Severity
     category: str
     message: str
-    location: str | None = None
+    location: Location | None = None
     details: dict[str, Any] = field(default_factory=dict)
     remedy: str | None = None
 
@@ -40,7 +69,7 @@ class Finding:
             "severity": self.severity.value,
             "category": self.category,
             "message": self.message,
-            "location": self.location,
+            "location": None if self.location is None else self.location.as_dict(),
             "details": self.details,
             "remedy": self.remedy,
         }
@@ -60,7 +89,7 @@ class Report:
         rule: Rule,
         message: str | None = None,
         *,
-        location: str | None = None,
+        location: Location | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         """Append a finding for a rule, defaulting the message to the rule title."""
