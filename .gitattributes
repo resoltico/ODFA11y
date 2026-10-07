@@ -1,2 +1,6 @@
 * text=auto eol=lf
 *.rng -text linguist-vendored
+# The corpus documents are hashed in tests/corpus/manifest.toml; no line-ending conversion
+# may change their bytes.
+tests/corpus/*.odt binary
+tests/corpus/*.fodt -text
