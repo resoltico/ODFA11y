@@ -62,6 +62,24 @@ def test_libreoffice_pdfua_export_has_core_markers(
 
 
 @pytest.mark.integration
+def test_libreoffice_export_content_is_fully_tagged(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    source = make_minimal_odt(tmp_path / "rich.odt", with_data_table=True, with_table_header=True)
+    package = PackageStorage(source)
+    package.write_member(
+        "content.xml",
+        package.read("content.xml").replace(b"<office:text>", b"<office:text>" + RICH_BODY, 1),
+    )
+    rich = package.save(tmp_path / "rich-doc.odt")
+    pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
+    report = audit_pdfua(pdf)
+    assert not {f.rule_id for f in report.findings} & {"PDF020", "PDF021", "PDF022", "PDF023"}
+    assert report.metadata["marked_content_ids"] >= 1
+
+
+@pytest.mark.integration
 def test_libreoffice_export_passes_real_verapdf_pdfua_validation(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

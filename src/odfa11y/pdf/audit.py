@@ -49,7 +49,7 @@ def _inspect(pdf_path: Path, report: Report) -> None:
         reader = PdfReader(stream, strict=True)
         check_limits(pdf_path, len(reader.pages))
         structure = _audit_metadata(reader, report)
-        audit_structure(structure, report, link_annotations(reader))
+        audit_structure(structure, report, link_annotations(reader), reader.pages)
         _audit_content(reader, report)
 
 

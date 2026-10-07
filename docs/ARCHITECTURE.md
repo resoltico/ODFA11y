@@ -148,12 +148,15 @@ reported as unlocated.
 
 [Export](../src/odfa11y/pdf/export.py) and [veraPDF](../src/odfa11y/pdf/verapdf.py) use
 argument lists, timeouts, a bounded output capture that kills the process tree on timeout,
-and a temporary LibreOffice profile, and publish files atomically. PDF input has size, page
-and structure-node limits. The [structure walker](../src/odfa11y/pdf/structure_walk.py)
-builds the reachable structure tree once, resolving `/OBJR` references to annotation and
-page; the [checks](../src/odfa11y/pdf/structure_checks.py) and the
+and a temporary LibreOffice profile, and publish files atomically. PDF input has size, page,
+structure-node and decoded-content limits. The [structure walker](../src/odfa11y/pdf/structure_walk.py)
+builds the reachable structure tree once, resolving `/OBJR` and marked-content (`/MCR` or
+integer) kids to their pages; the [checks](../src/odfa11y/pdf/structure_checks.py) and the
 [link correlation](../src/odfa11y/pdf/link_structure.py) read roles, headings, lists,
-tables, figures and the correspondence of link annotations to Link elements from it.
+tables, figures and the correspondence of link annotations to Link elements from it. The
+[marked-content check](../src/odfa11y/pdf/marked_content.py) scans each page's content stream
+once with a [linear tokenizer](../src/odfa11y/pdf/content_scan.py) and compares its MCIDs
+with those the tree refers to; decoded page content is capped per document.
 veraPDF's XML is parsed into failed rules with clause, test number and sample contexts; a
 missing validator, an execution failure and malformed output are distinct errors, while
 non-compliance is a finding. Nothing here is a sandbox.

@@ -4,6 +4,17 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Added
+
+- **Marked-content reconciliation in the built-in PDF audit.** Each page's content stream is
+  scanned and compared with the structure tree. New rules: `PDF020` (error, an MCID that no
+  structure element refers to), `PDF021` (warning, a reference to an MCID its page does not
+  contain), `PDF022` (warning, an MCID referred to more than once) and `PDF023` (error, text
+  shown outside tagged content and `/Artifact`). Content of form XObjects is not scanned. Decoded page
+  content above 64 MiB per document is refused as `PDF000`, like the other input limits.
+  Reports of tagged PDFs may now contain these findings; the audit is still not PDF/UA
+  validation.
+
 ## [0.3.0] - 2026-10-07
 
 This release makes the ODF core independent of any document family: ODFA11y now recognises
