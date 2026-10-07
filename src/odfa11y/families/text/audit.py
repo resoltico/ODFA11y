@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import rules
+from odfa11y.report import Location, rules
 
 from .links import URI_RE, split_trailing_punctuation
 from .prose import prose_slots
@@ -24,34 +24,34 @@ if TYPE_CHECKING:
 def audit_text(document: OdfDocument, report: Report) -> None:
     """Report the accessibility findings that belong to text documents."""
     content = document.tree(Part.CONTENT)
-    member = document.member_name(Part.CONTENT) or Part.CONTENT.value
-    audit_headings(content, report, member)
-    audit_images(content, report, member)
-    audit_tables(content, report, member)
-    _audit_links(content, report, member)
-    _audit_empty_spacers(document, report, member)
-    _audit_notes(content, report, member)
+    audit_headings(content, report)
+    audit_images(content, report)
+    audit_tables(content, report)
+    _audit_links(content, report)
+    _audit_empty_spacers(document, report)
+    _audit_notes(content, report)
     _audit_blinking(document, report)
     _audit_style_summary(document, report)
 
 
-def _audit_links(tree: etree._ElementTree, report: Report, member: str) -> None:
+def _audit_links(tree: etree._ElementTree, report: Report) -> None:
     """Report URLs and addresses in prose, exactly where linkification would act."""
-    for index, block in enumerate(
-        select_elements(tree, "//office:body//text:p | //office:body//text:h"), start=1
-    ):
+    counts = {"heading": 0, "paragraph": 0}
+    for block in select_elements(tree, "//office:body//text:p | //office:body//text:h"):
+        kind = "heading" if block.tag == qn("text", "h") else "paragraph"
+        counts[kind] += 1
         for owner, attr in prose_slots(block):
             for match in URI_RE.finditer(getattr(owner, attr)):
                 token, _suffix = split_trailing_punctuation(match.group(0))
                 report.add(
                     rules.TXT030,
                     "Visible URL/email address is not represented by a hyperlink element.",
-                    location=f"{member} paragraph {index}",
+                    location=Location(f"{Part.CONTENT}/{kind}[{counts[kind]}]"),
                     details={"text": token},
                 )
 
 
-def _audit_empty_spacers(document: OdfDocument, report: Report, member: str) -> None:
+def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
     catalog = catalog_of(document)
     styles = [
         paragraph.get(qn("text", "style-name"))
@@ -64,7 +64,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report, member: str) -> 
                 "Empty body paragraphs were found. If they are only visual "
                 "spacers, prefer paragraph spacing instead."
             ),
-            location=member,
+            location=Location(Part.CONTENT.value),
             details={
                 "count": len(styles),
                 "with_break_semantics": sum(catalog.has_break_semantics(s) for s in styles),
@@ -73,7 +73,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report, member: str) -> 
         )
 
 
-def _audit_notes(tree: etree._ElementTree, report: Report, member: str) -> None:
+def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
     notes = select_elements(tree, "//office:body//text:note")
     if not notes:
         return
@@ -87,23 +87,20 @@ def _audit_notes(tree: etree._ElementTree, report: Report, member: str) -> None:
             "Footnotes/endnotes are present; verify their reading order "
             "and PDF/UA export behaviour manually."
         ),
-        location=member,
+        location=Location(Part.CONTENT.value),
         details={"count": len(notes), "classes": classes},
     )
 
 
 def _audit_blinking(document: OdfDocument, report: Report) -> None:
-    found = [
-        document.member_name(part) or part.value
-        for part in (Part.CONTENT, Part.STYLES)
-        if document.has(part)
-        and select_elements(document.tree(part), "//*[@style:text-blinking='true']")
-    ]
-    if found:
+    if any(
+        select_elements(tree, "//*[@style:text-blinking='true']")
+        for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
+    ):
         report.add(
             rules.TXT050,
             "Blinking text styling is present.",
-            location=", ".join(dict.fromkeys(found)),
+            location=Location(Part.STYLES.value),
         )
 
 

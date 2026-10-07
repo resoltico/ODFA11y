@@ -12,7 +12,7 @@ from odfa11y.audit import audit_odf, render_template
 from odfa11y.config import load_config
 from odfa11y.families.text import ADAPTER
 from odfa11y.odf import PackageStorage
-from odfa11y.report import RULES, Severity
+from odfa11y.report import RULES, Location, Severity
 
 from .fixtures import make_minimal_odt
 
@@ -114,7 +114,7 @@ def test_schema_audit_rejects_malformed_but_renderable_markup(tmp_path: Path) ->
     report = audit_odf(tmp_path / "bad2.odt", schema=True)
     finding = next(f for f in report.findings if f.rule_id == "ODF900")
     assert finding.severity is Severity.WARNING
-    assert finding.location == "content.xml"
+    assert finding.location == Location("content", "content.xml")
 
 
 def test_schema_audit_reports_unsupported_versions_as_unavailable(tmp_path: Path) -> None:
