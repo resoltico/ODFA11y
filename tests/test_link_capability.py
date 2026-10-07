@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""The link-description probe: stub exports for each outcome, and the real export."""
+"""Named-link self-test, current-runtime behavior and real pipeline evidence."""
 
 from __future__ import annotations
 
@@ -169,14 +169,14 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     linked = tmp_path / "linked.odt"
     package.save(linked)
     pdf = export_pdfua(linked, tmp_path / "linked.pdf", ExportSettings(WRITER, soffice=soffice))
-    undescribed = "PDF019" in {f.rule_id for f in audit_pdfua(pdf).findings}
+    assert "PDF019" in {f.rule_id for f in audit_pdfua(pdf).findings}
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))
     link_failures = {("7.18.1", "2"), ("7.18.5", "2")}
-    assert bool({(f.clause, f.test_number) for f in result.failures} & link_failures) == undescribed
+    assert {(f.clause, f.test_number) for f in result.failures} == link_failures
 
     assert main(["doctor", "--soffice", soffice, "--format", "json"]) == 0
     reported = json.loads(capsys.readouterr().out)["pdfua_link_descriptions"]
-    assert reported == ("unsupported" if undescribed else "supported")
+    assert reported == "supported"
 
     record = run_pipeline(
         linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)
@@ -214,8 +214,8 @@ def test_the_one_link_reproduction_and_explicit_name_control(
     report = audit_pdfua(pdf)
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))
     failures = {(f.clause, f.test_number) for f in result.failures}
-    assert failures <= {("7.18.1", "2"), ("7.18.5", "2")}, failures
-    assert bool(failures) == ("PDF019" in {f.rule_id for f in report.findings})
+    assert failures == (set() if named else {("7.18.1", "2"), ("7.18.5", "2")}), failures
+    assert ("PDF019" in {f.rule_id for f in report.findings}) == (not named)
     if named:
         assert report.passed
         assert result.compliant

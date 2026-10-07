@@ -32,7 +32,8 @@ environment files, credentials, virtual environments and build outputs out of it
 sensitive files already committed. Run the [development checks](DEVELOPING.md#required-checks)
 and the [audit hygiene](DEVELOPING.md#audit-hygiene) scans before tagging. Hosted checks
 must pass; local success does not establish GitHub runner behavior. Runtime dependencies
-and developer tools are locked; LibreOffice, veraPDF and runner images still vary.
+and developer tools are locked. LibreOffice 26.8 is the minimum; the Linux installer and
+veraPDF are checksum-pinned, while macOS/Windows LibreOffice and runner images may vary.
 
 ## Start a release
 

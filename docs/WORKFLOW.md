@@ -58,7 +58,7 @@ table applied to a text document) is refused outright. Publication is atomic.
 
 ## 3. Export and check the PDF
 
-With LibreOffice installed (`soffice` or `libreoffice` on `PATH`, or `--soffice PATH`):
+With LibreOffice 26.8 or newer installed (`soffice` or `libreoffice` on `PATH`, or `--soffice PATH`):
 
 ```bash
 uv run --no-sync odfa11y export reviewed.odt reviewed.pdf
@@ -80,11 +80,9 @@ the authoritative PDF/UA-1 validator and reports each failed rule with its claus
 test number. If veraPDF cannot be found the report contains the warning `VERA000`;
 `--strict` makes that fail.
 
-For links, the doctor capability describes fallback for an unnamed hyperlink, not all
-link-description support. On current Writer, an explicit hyperlink **Name** (`office:name`)
-can produce a valid PDF/UA-1 description even when fallback is unsupported; see
-[link compatibility](ACCESSIBILITY.md#link-descriptions-depend-on-the-libreoffice-release).
-
+Writer hyperlinks require an explicit meaningful **Name** (`office:name`). The doctor
+self-test checks a named link; an unnamed link fails PDF/UA-1 validation. See
+[link descriptions](ACCESSIBILITY.md#link-descriptions).
 
 ## 4. Compare the renders
 
@@ -139,6 +137,8 @@ For several reports the highest status wins. Informational findings never fail a
 | Unknown TOML key or wrong type | Compare the field with [Configuration](CONFIGURATION.md); use unquoted booleans and positive integer header counts. |
 | `remediate` lists failed targets | Fix the named table, graphic key or header count; a selector that matches nothing is an error. |
 | "Remediation introduced ODF schema violations" | The operation produced markup the ODF schema rejects; the message lists the violations. |
-| `pdfua_link_descriptions: unsupported` or `PDF019` on every link | The installed LibreOffice exports links without a description; use a release that supports it (`doctor` reports which). |
+| `PDF019` | Give the Writer hyperlink a meaningful Name before export; check existing references before renaming it. |
+| `pdfua_link_descriptions: unsupported` | The supported runtime failed its named-link self-test; inspect the exporter installation. |
+| LibreOffice version rejected | Install LibreOffice 26.8 or newer; unidentifiable versions are also rejected. |
 | LibreOffice executable not found | Install LibreOffice and expose its CLI on `PATH`, or pass `--soffice`. |
 | `FID005` after spacing or spacer changes | Content moved. Review the diff images; if the movement is intended set `fidelity.pagination = "may-change"`. |

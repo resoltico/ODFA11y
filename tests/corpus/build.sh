@@ -8,6 +8,8 @@
 # changes and update the hashes in manifest.toml (see docs/DEVELOPING.md).
 set -eu
 
+uv run --no-sync odfa11y doctor --format json >/dev/null
+
 corpus=$(cd "$(dirname "$0")" && pwd)
 profile=$(mktemp -d)
 trap 'rm -rf "$profile"' EXIT

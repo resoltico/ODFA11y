@@ -10,6 +10,8 @@ on:
         default: false
 env:
   ODFA11Y_UV_VERSION: "0.12.23"
+  ODFA11Y_LIBREOFFICE_VERSION: "26.8.0.3"
+  ODFA11Y_LIBREOFFICE_SHA256: "d0a6031a3837e48f9854e6d2da6489b9fadbd814afa4741fa32a197741663a22"
   ODFA11Y_VERAPDF_VERSION: "1.30.2"
   ODFA11Y_VERAPDF_SHA256: "6cc6341cb1af644044054b81f00a6590a7918abb18f762243de115258bcad838"
 permissions:
@@ -150,8 +152,19 @@ jobs:
       - name: Install LibreOffice on Linux
         if: runner.os == 'Linux'
         run: |
+          archive="$RUNNER_TEMP/libreoffice.tar.gz"
+          directory="$RUNNER_TEMP/libreoffice"
+          filename="LibreOffice_${ODFA11Y_LIBREOFFICE_VERSION}_Linux_x86-64_deb.tar.gz"
+          curl --fail --location --retry 3 \
+            "https://downloadarchive.documentfoundation.org/libreoffice/old/$ODFA11Y_LIBREOFFICE_VERSION/deb/x86_64/$filename" \
+            --output "$archive"
+          echo "$ODFA11Y_LIBREOFFICE_SHA256  $archive" | sha256sum --check -
+          mkdir "$directory"
+          tar -xzf "$archive" -C "$directory"
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc
+          sudo apt-get install -y --no-install-recommends "$directory"/*/DEBS/*.deb
+          series="${ODFA11Y_LIBREOFFICE_VERSION%.*.*}"
+          echo "/opt/libreoffice$series/program" >> "$GITHUB_PATH"
       - name: Install LibreOffice on macOS
         if: runner.os == 'macOS'
         run: |
@@ -171,6 +184,7 @@ jobs:
         env:
           ODFA11Y_REQUIRE_INTEGRATION: "1"
         run: |
+          uv run --no-sync odfa11y doctor --format json
           uv run --no-sync pytest -m integration
   ci-gate:
     name: CI gate

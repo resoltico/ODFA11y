@@ -24,7 +24,8 @@ CONTENT = (
     'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
     'xmlns:xlink="http://www.w3.org/1999/xlink" office:version="1.3">'
     "<office:body><office:text><text:p>Read the "
-    '<text:a xlink:type="simple" xlink:href="https://example.com/">example link</text:a>.'
+    '<text:a office:name="Example site" xlink:type="simple" xlink:href="https://example.com/">'
+    "example link</text:a>."
     "</text:p></office:text></office:body></office:document-content>"
 )
 

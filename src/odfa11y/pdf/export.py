@@ -18,6 +18,8 @@ from odfa11y.staging import staging_sibling
 if TYPE_CHECKING:
     from odfa11y.external_tools import ToolIdentity
 
+MINIMUM_LIBREOFFICE_VERSION = (26, 8)
+
 EXPORT_OPTIONS: dict[str, dict[str, str]] = {
     "PDFUACompliance": {"type": "boolean", "value": "true"},
     "UseTaggedPDF": {"type": "boolean", "value": "true"},
@@ -28,15 +30,29 @@ EXPORT_OPTIONS: dict[str, dict[str, str]] = {
 
 
 def find_soffice(requested: str | Path | None = None) -> str:
-    """Locate the LibreOffice executable.
+    """Locate LibreOffice and require the supported minimum version.
 
     Returns
     -------
     str
         The executable path.
 
+    Raises
+    ------
+    ToolFailedError
+        LibreOffice is too old or its version cannot be determined.
+
     """
-    return find_executable(requested, ("soffice", "libreoffice"))
+    executable = find_executable(requested, ("soffice", "libreoffice"))
+    version = identify_soffice(executable).version
+    minimum = ".".join(str(part) for part in MINIMUM_LIBREOFFICE_VERSION)
+    if (
+        version == "unknown"
+        or tuple(int(part) for part in version.split(".")) < MINIMUM_LIBREOFFICE_VERSION
+    ):
+        msg = f"LibreOffice {version} is unsupported; install LibreOffice {minimum} or newer."
+        raise ToolFailedError(msg)
+    return executable
 
 
 def identify_soffice(executable: str) -> ToolIdentity:

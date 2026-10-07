@@ -40,7 +40,7 @@ uv run --no-sync odfa11y audit original.odt
 Python 3.14 is the baseline; [.python-version](.python-version) selects the development
 interpreter and [pyproject.toml](pyproject.toml) holds the supported range and
 dependencies. Commands use a POSIX shell. External applications are optional:
-[LibreOffice](https://www.libreoffice.org/) for export and comparison, and
+[LibreOffice 26.8 or newer](https://www.libreoffice.org/) for export and comparison, and
 [veraPDF](https://verapdf.org/) with its Java runtime for PDF/UA validation.
 
 The shortest complete path:
@@ -70,7 +70,7 @@ uv run --no-sync odfa11y check-evidence evidence
 | `pipeline SRC --config FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
 | `styles FILE` | Paragraph-style usage and effective spacing. |
 | `check-evidence DIR` | Verify an evidence directory against its manifest. |
-| `doctor` | Dependency and external-tool versions, and whether the installed LibreOffice describes hyperlinks in its PDF/UA export (`pdfua_link_descriptions`). |
+| `doctor` | Dependency and external-tool versions, and its named-link PDF/UA self-test (`pdfua_link_descriptions`). |
 
 Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
 [workflow](docs/WORKFLOW.md) is for human review between steps.
