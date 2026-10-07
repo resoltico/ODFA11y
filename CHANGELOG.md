@@ -65,6 +65,11 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Internal
 
+- **Uniform authored-code gates.** Nested and hidden source files reach lint and type
+  checks. Size, complexity and argument limits have no historical exemptions. Central
+  lint exceptions must select exact current rules, carry reasons, match authored scopes
+  and suppress real diagnostics; unused and overlapping masks, inline suppressions and
+  hidden analyzer configuration are rejected. See [Development](docs/DEVELOPING.md).
 - **Version authority.** `pyproject.toml` declares the app version. Installed reporting and
   release validation derive from it, with isolated wheel checks.
 - **Gate efficiency.** PR checks no longer duplicate branch-push checks; main, version-tag

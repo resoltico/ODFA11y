@@ -282,3 +282,13 @@ placeholders and annotation/phantom-only content. Base recognizes standard serve
 declarations and reviews nonblank authentication settings without reporting their values;
 boolean requirement flags are not credentials. These checks do not inspect opaque storage
 for secrets and do not replace the native human review.
+
+The final gate challenge demonstrated additional real bypasses: generated-directory name
+exclusions hiding authored files; aliased QName calls; type-checker built-in discovery;
+filename options; inherited or absent analyzer policy; unused/overlapping exceptions; and
+inline isort/type/security suppressions. Current-code negative controls reject these.
+One authored-file inventory supplies policy and explicit type inputs. Ruff's current rule
+catalogue and an unmasked diagnostic run verify every exception uniformly, with reasons
+and narrow scopes in the authoritative project file. No historical baseline is accepted.
+Semantic responsibility still requires design review: static metrics cannot certify
+architectural quality or establish a numeric perfect score.
