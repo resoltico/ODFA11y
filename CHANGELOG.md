@@ -75,6 +75,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Fixed
 
+- PDF audit enforces the file-size limit before constructing the PDF parser, so an
+  oversized input is rejected before parsing starts. The size threshold is unchanged.
 - The text-preservation check no longer counts the image bytes that a flat XML document embeds
   (`office:binary-data`) as visible text, so a flat and a packaged copy of one document
   compare equal.

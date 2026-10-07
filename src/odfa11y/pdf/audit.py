@@ -12,7 +12,7 @@ from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_limits import check_limits
+from odfa11y.pdf_limits import check_file_size, check_limits
 from odfa11y.report import Report, rules
 from odfa11y.safe_xml import parse_secure
 
@@ -46,6 +46,7 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
 
 def _inspect(pdf_path: Path, report: Report) -> None:
     with pdf_path.open("rb") as stream:
+        check_file_size(pdf_path)
         reader = PdfReader(stream, strict=True)
         check_limits(pdf_path, len(reader.pages))
         structure = _audit_metadata(reader, report)
