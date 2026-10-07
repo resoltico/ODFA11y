@@ -40,7 +40,7 @@ def analyzer_errors(config: dict[str, Any]) -> list[str]:
     errors = []
     if "extend" in ruff or ruff.get("lint", {}).get("external"):
         errors.append("pyproject.toml: Ruff configuration and rule exceptions must be central")
-    if ruff and ruff.get("lint", {}).get("select") != ["ALL"]:
+    if ruff.get("lint", {}).get("select") != ["ALL"]:
         errors.append("pyproject.toml: the authored Python lint gate must select ALL")
     if any(level == "ignore" for level in tool.get("ty", {}).get("rules", {}).values()):
         errors.append("pyproject.toml: type diagnostic suppression is forbidden")

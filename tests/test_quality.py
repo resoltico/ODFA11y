@@ -12,7 +12,8 @@ from tools.check_quality import check_repository
 
 def _repository(tmp_path: Path) -> Path:
     (tmp_path / "pyproject.toml").write_text(
-        "[tool.odfa11y.quality]\nmax-file-lines = 300\n", encoding="utf-8"
+        '[tool.odfa11y.quality]\nmax-file-lines = 300\n[tool.ruff.lint]\nselect = ["ALL"]\n',
+        encoding="utf-8",
     )
     return tmp_path
 
@@ -77,7 +78,7 @@ def test_project_satisfies_policy() -> None:
 def test_lint_exception_requires_a_reason(tmp_path: Path, settings: str) -> None:
     root = _repository(tmp_path)
     with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
-        stream.write(settings)
+        stream.write(settings.replace("[tool.ruff.lint]\n", ""))
     (root / "example.py").write_text("value = 1\n", encoding="utf-8")
     assert any("reason comment" in error for error in check_repository(root))
 

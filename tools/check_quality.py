@@ -101,7 +101,8 @@ def check_types(root: Path) -> int:
     Returns
     -------
     int
-        The analyzer's exit status; one for invalid config, empty discovery or unavailable execution.
+        The analyzer's exit status; one for invalid configuration, empty discovery
+        or unavailable execution.
 
     """
     try:

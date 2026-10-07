@@ -63,7 +63,9 @@ def test_ruff_checks_nested_hidden_and_ignored_authored_code_but_skips_root_outp
 
 @pytest.mark.parametrize("directory", ["src/domain/dist", ".vscode", ".ignored"])
 def test_type_gate_uses_explicit_authored_inputs(tmp_path: Path, directory: str) -> None:
-    (tmp_path / "pyproject.toml").write_text('[tool.ty.src]\ninclude=["src", "tests", "tools"]\n')
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff.lint]\nselect=["ALL"]\n[tool.ty.src]\ninclude=["src", "tests", "tools"]\n'
+    )
     (tmp_path / ".gitignore").write_text(".ignored/\n")
     target = tmp_path / directory
     target.mkdir(parents=True)
@@ -80,7 +82,7 @@ def test_type_gate_uses_explicit_authored_inputs(tmp_path: Path, directory: str)
 def test_type_gate_rejects_empty_discovery_and_unavailable_execution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (tmp_path / "pyproject.toml").write_text("[tool.ty]\n")
+    (tmp_path / "pyproject.toml").write_text('[tool.ruff.lint]\nselect=["ALL"]\n[tool.ty]\n')
     assert check_quality.check_types(tmp_path) == 1
     (tmp_path / "valid.py").write_text("value: int = 1\n")
     monkeypatch.setattr(check_quality.sys, "executable", str(tmp_path / "missing-python"))
@@ -90,7 +92,7 @@ def test_type_gate_rejects_empty_discovery_and_unavailable_execution(
 def test_type_gate_preserves_analyzer_failure_status(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (tmp_path / "pyproject.toml").write_text("[tool.ty]\n")
+    (tmp_path / "pyproject.toml").write_text('[tool.ruff.lint]\nselect=["ALL"]\n[tool.ty]\n')
     (tmp_path / "valid.py").write_text("value: int = 1\n")
     monkeypatch.setattr(
         check_quality.subprocess, "run", lambda *_args, **_kwargs: SimpleNamespace(returncode=7)
