@@ -149,7 +149,7 @@ run alone does not prove that packaging included the required modules.
 
 Read [AGENTS.md](../AGENTS.md) before changing the project and
 [Architecture](ARCHITECTURE.md) for implementation boundaries. Follow
-[Releasing](RELEASING.md) for tags; record release outcomes in the changelog's Unreleased
+[Releasing](RELEASING.md) for starting a release; record release outcomes in the changelog's Unreleased
 section as work lands.
 
 
