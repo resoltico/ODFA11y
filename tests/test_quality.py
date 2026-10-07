@@ -127,7 +127,10 @@ def test_specialized_content_names_are_rejected_in_orchestration(
         root,
         "pipeline",
         "run.py",
-        source=f'from x import qn\nqualified = qn("{prefix}", "content")\nxpath = "//{prefix}:content"\n',
+        source=f'''from x import qn
+qualified = qn("{prefix}", "content")
+xpath = "//{prefix}:content"
+''',
     )
     errors = check_repository(root)
     assert len(errors) == 2
