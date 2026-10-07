@@ -115,11 +115,20 @@ def test_dry_run_reports_outcomes_and_writes_nothing(tmp_path: Path) -> None:
 
 def test_destination_must_differ_from_the_source(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
-    link = tmp_path / "alias.odt"
-    link.symlink_to(source)
-    for destination in (source, tmp_path / "." / "source.odt", link):
+    for destination in (source, tmp_path / "." / "source.odt"):
         with pytest.raises(OutputError):
             remediate(source, destination, [])
+
+
+def test_a_symlink_to_the_source_is_not_a_different_destination(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    link = tmp_path / "alias.odt"
+    try:
+        link.symlink_to(source)
+    except OSError:
+        pytest.skip("symbolic links are not available")
+    with pytest.raises(OutputError):
+        remediate(source, link, [])
 
 
 def test_text_changes_are_rejected_before_publication(tmp_path: Path) -> None:
