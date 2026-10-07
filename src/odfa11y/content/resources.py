@@ -62,6 +62,8 @@ def local_resource_path(href: str) -> str | None:
             parts.pop()
         elif part != ".":
             parts.append(part)
+    if path.endswith(("/.", "/..")):
+        parts.append("")
     if parts and not parts[-1]:
         parts.pop()
     normalized = "/".join(parts) or "."

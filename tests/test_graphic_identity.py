@@ -44,6 +44,8 @@ def _graphic(tmp_path: Path) -> tuple[OdfDocument, etree._Element]:
         ("Pictures//file.svg", "Pictures//file.svg"),
         ("a//../b.svg", "a/b.svg"),
         ("a///../b.svg", "a//b.svg"),
+        ("a//.", "a/"),
+        ("a///..", "a/"),
         ("Object%201/", "Object 1"),
         (".", "."),
         ("#fragment", None),
