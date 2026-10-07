@@ -165,6 +165,18 @@ def map_link(
     target[NameObject("/K")] = ArrayObject([*items, reference])
 
 
+def dictionary(reference: IndirectObject) -> DictionaryObject:
+    """Resolve a reference to the dictionary it names.
+
+    Returns
+    -------
+    DictionaryObject
+        The referenced dictionary, for direct editing.
+
+    """
+    return cast("DictionaryObject", reference.get_object())
+
+
 def annotation_references(writer: PdfWriter) -> list[IndirectObject]:
     """List the first page's annotations.
 
@@ -184,6 +196,7 @@ def _link_annotation(uri: str, x: float, y: float) -> DictionaryObject:
         NameObject("/Type"): NameObject("/Annot"),
         NameObject("/Subtype"): NameObject("/Link"),
         NameObject("/Rect"): ArrayObject([FloatObject(v) for v in (x, y, x + 40, y + 10)]),
+        NameObject("/Contents"): TextStringObject(uri),
         NameObject("/A"): DictionaryObject({
             NameObject("/S"): NameObject("/URI"),
             NameObject("/URI"): TextStringObject(uri),

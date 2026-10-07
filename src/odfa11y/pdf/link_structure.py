@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from pypdf.errors import PdfReadError
-from pypdf.generic import ArrayObject, IndirectObject
+from pypdf.generic import ArrayObject, IndirectObject, PdfObject
 
 from odfa11y.report import rules
 
@@ -16,6 +16,7 @@ from .structure_walk import pdf_dictionary
 
 if TYPE_CHECKING:
     from pypdf import PdfReader
+    from pypdf.generic import DictionaryObject
 
     from odfa11y.report import Report
 
@@ -31,6 +32,7 @@ class LinkAnnotation:
     xref: int | None
     page_xref: int | None
     page_number: int
+    has_description: bool
 
     def describe(self) -> dict[str, int | None]:
         """Identify the annotation in a finding.
@@ -60,23 +62,31 @@ def link_annotations(reader: PdfReader) -> list[LinkAnnotation]:
         items = raw.get_object() if raw is not None else None
         if not isinstance(items, ArrayObject):
             continue
-        found.extend(
-            LinkAnnotation(
-                item.idnum if isinstance(item, IndirectObject) else None,
-                page_ref.idnum if page_ref is not None else None,
-                number,
-            )
-            for item in items
-            if _is_link(item)
-        )
+        for item in items:
+            annotation = _link_dictionary(item)
+            if annotation is not None:
+                found.append(
+                    LinkAnnotation(
+                        item.idnum if isinstance(item, IndirectObject) else None,
+                        page_ref.idnum if page_ref is not None else None,
+                        number,
+                        _has_text(annotation.get("/Contents")),
+                    )
+                )
     return found
 
 
-def _is_link(item: object) -> bool:
+def _link_dictionary(item: object) -> DictionaryObject | None:
     try:
-        return pdf_dictionary(item).get("/Subtype") == "/Link"
+        annotation = pdf_dictionary(item)
     except PdfReadError:
-        return False  # a malformed annotation entry is not a link we can correlate
+        return None  # a malformed annotation entry is not a link we can correlate
+    return annotation if annotation.get("/Subtype") == "/Link" else None
+
+
+def _has_text(value: object) -> bool:
+    resolved = value.get_object() if isinstance(value, PdfObject) else value
+    return isinstance(resolved, str) and bool(resolved.strip())
 
 
 def check_link_structure(
@@ -84,18 +94,22 @@ def check_link_structure(
 ) -> None:
     """Report links whose annotations and structure elements do not correspond.
 
-    Findings: annotations without a Link element, Link elements without an annotation, and
-    annotations referenced from another page. Several Link elements on the annotation's own
-    page may share it: LibreOffice emits one per line of a wrapped link. The check claims only
-    this correspondence; veraPDF remains the validator.
+    Findings: annotations without a Link element, Link elements without an annotation,
+    annotations referenced from another page, and links with no alternate description (the
+    annotation's ``/Contents`` or the ``/Alt`` of a Link element that refers to it). Several
+    Link elements on the annotation's own page may share it: LibreOffice emits one per line of
+    a wrapped link. The check claims only these correspondences; veraPDF remains the validator.
     """
     link_nodes = [node for node in nodes if node.role == "Link"]
     known = {a.xref for a in annotations if a.xref is not None}
     mapped: dict[int, list[int | None]] = defaultdict(list)
+    alternates: set[int] = set()
     for node in link_nodes:
         for reference in node.object_references:
             if reference.object_xref in known and reference.object_xref is not None:
                 mapped[reference.object_xref].append(reference.page_xref)
+                if _has_text(node.element.get("/Alt")):
+                    alternates.add(reference.object_xref)
     report.metadata["link_annotations"] = len(annotations)
     report.metadata["link_structure_elements"] = len(link_nodes)
     unmatched = [a for a in annotations if a.xref is None or a.xref not in mapped]
@@ -129,5 +143,14 @@ def check_link_structure(
             details={
                 "count": len(conflicts),
                 "annotations": [a.describe() for a in conflicts[:MAX_LISTED]],
+            },
+        )
+    undescribed = [a for a in annotations if not a.has_description and a.xref not in alternates]
+    if undescribed:
+        report.add(
+            rules.PDF019,
+            details={
+                "count": len(undescribed),
+                "annotations": [a.describe() for a in undescribed[:MAX_LISTED]],
             },
         )

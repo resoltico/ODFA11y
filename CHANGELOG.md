@@ -73,7 +73,9 @@ all changed. Review the **Breaking** list before upgrading.
   suggests; an entry carrying one fails when the object it addresses has drifted.
 - **PDF link correspondence.** Each link annotation must be referenced by a Link element on its
   page (`PDF016`); `PDF017` reports a Link element that refers to no annotation and `PDF018` an
-  annotation mapped twice or from another page.
+  annotation referenced from another page; `PDF019` reports a link with neither `/Contents`
+  nor a Link element `/Alt` (newer LibreOffice releases omit the description that older ones
+  derive from the link text).
 - **Resource limits.** Tool output is captured only up to a size limit and a timed-out tool's
   process tree is killed; PDFs above 256 MiB, 5,000 pages or 500,000 structure elements are
   refused; flat XML is limited to 256 MiB.

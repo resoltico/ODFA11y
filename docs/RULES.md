@@ -85,6 +85,7 @@ Owned by the text family (`TXT`). A document of another family never produces th
 | `PDF016` | Warning | A link annotation is not represented by a Link structure element. |  |
 | `PDF017` | Warning | A Link structure element refers to no link annotation. |  |
 | `PDF018` | Error | A link annotation is mapped by more than one element, or from another page. |  |
+| `PDF019` | Error | A link has no alternate description: neither the annotation's `/Contents` nor an `/Alt` on a Link element that refers to it. |  |
 | `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
 | `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 

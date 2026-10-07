@@ -11,7 +11,7 @@ implemented checks found no errors; it is not an accessibility certificate.
 | ODF audit | Package/XML readability, document kind, version consistency, metadata; for text documents also selected semantic properties; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, links and descriptions convey the intended meaning. |
 | ODF remediation | Explicit, typed changes with per-target outcomes; unchanged content; no new ODF schema violations. | Whether the choices were right, and the visual result. |
 | LibreOffice export | A PDF produced with the requested PDF/UA and tagging options. | Whether this exporter and version produced correct accessible structure. |
-| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page, extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
+| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, that every link annotation has a Link element referring to it on its page and a description (`/Contents` or the element's `/Alt`), extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
 | veraPDF | Machine-verifiable PDF/UA-1 rules, each failure with its clause and test number. | Human checkpoints and the actual reading experience. |
 | Fidelity comparison | Source and candidate renders agree on pages, text, links and rendered ink under the policy. | Whether an intended change looks right. |
 

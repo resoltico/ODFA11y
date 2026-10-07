@@ -6,11 +6,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from pypdf.generic import ArrayObject, BooleanObject, DictionaryObject, NameObject, NumberObject
+from pypdf.generic import (
+    ArrayObject,
+    BooleanObject,
+    DictionaryObject,
+    NameObject,
+    NumberObject,
+    TextStringObject,
+)
 
 from odfa11y.pdf import audit_pdfua
 
-from .pdf_fixtures import annotation_references, link_elements, map_link, tagged_writer
+from .pdf_fixtures import annotation_references, dictionary, link_elements, map_link, tagged_writer
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -186,6 +193,26 @@ def test_one_annotation_shared_by_several_elements_on_its_page_is_a_wrapped_link
     map_link(writer, second, annotation)
     report = audit(tmp_path, writer)
     assert not ids(report) & {"PDF016", "PDF017", "PDF018"}
+
+
+def test_a_link_without_any_description_is_an_error(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1", ("P", ["Link"])], link_annotations=1)
+    annotation = annotation_references(writer)[0]
+    map_link(writer, link_elements(writer)[0], annotation)
+    assert "PDF019" not in ids(audit(tmp_path, writer))
+    del dictionary(annotation)["/Contents"]
+    finding = next(f for f in audit(tmp_path, writer).findings if f.rule_id == "PDF019")
+    assert finding.details["count"] == 1
+
+
+def test_an_alternate_description_on_the_link_element_describes_the_link(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1", ("P", ["Link"])], link_annotations=1)
+    annotation = annotation_references(writer)[0]
+    element = link_elements(writer)[0]
+    map_link(writer, element, annotation)
+    del dictionary(annotation)["/Contents"]
+    dictionary(element)[NameObject("/Alt")] = TextStringObject("Contact the author")
+    assert "PDF019" not in ids(audit(tmp_path, writer))
 
 
 def test_a_mapping_declared_on_another_page_is_an_error(tmp_path: Path) -> None:

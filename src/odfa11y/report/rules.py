@@ -145,6 +145,7 @@ PDF015 = _rule("PDF015", WARNING, PDF, "Table has no header cells.")
 PDF016 = _rule("PDF016", WARNING, PDF, "A link annotation is not represented by a Link element.")
 PDF017 = _rule("PDF017", WARNING, PDF, "A Link structure element refers to no link annotation.")
 PDF018 = _rule("PDF018", ERROR, PDF, "A link annotation is referenced from another page.")
+PDF019 = _rule("PDF019", ERROR, PDF, "A link has no alternate description.")
 VERA000 = _rule("VERA000", WARNING, VAL, "The requested veraPDF validator is unavailable.")
 VERA001 = _rule("VERA001", ERROR, VAL, "veraPDF reports a failed PDF/UA-1 rule.")
 
