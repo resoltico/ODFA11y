@@ -190,7 +190,7 @@ def test_generated_root_build_outputs_are_excluded_but_ignored_authored_files_ar
     ignored = root / ".authored"
     ignored.mkdir()
     (ignored / "source.py").write_text("\n" * 301)
-    assert any(".authored/source.py" in error for error in check_repository(root))
+    assert any(str(Path(".authored") / "source.py") in error for error in check_repository(root))
 
 
 @pytest.mark.parametrize(

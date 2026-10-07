@@ -251,7 +251,6 @@ def _ruff_json(root: Path, arguments: list[str]) -> list[dict]:
         shell=False,
         check=False,
         capture_output=True,
-        text=True,
         timeout=30,
     )
     if completed.returncode not in {0, 1}:
