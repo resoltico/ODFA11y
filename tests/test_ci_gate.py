@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: MPL-2.0
+"""The one required check: the ruleset, the gate job and the jobs it waits for must agree."""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = (ROOT / ".github/workflows/checks.yml").read_text(encoding="utf-8")
+RULESET = json.loads((ROOT / ".github/rulesets/default-branch.json").read_text(encoding="utf-8"))
+GITHUB_ACTIONS_APP_ID = 15368
+
+
+def job_block(job_id: str) -> str:
+    """Return the text of a top-level workflow job.
+
+    Returns
+    -------
+    str
+        The job's lines up to the next top-level job.
+
+    """
+    match = re.search(rf"^  {re.escape(job_id)}:\n((?:    .*\n|\n)+)", WORKFLOW, re.MULTILINE)
+    assert match, f"job {job_id} not found"
+    return match.group(1)
+
+
+def job_ids() -> list[str]:
+    """List the workflow's top-level job ids.
+
+    Returns
+    -------
+    list[str]
+        Job ids in file order.
+
+    """
+    jobs = WORKFLOW.split("\njobs:\n", 1)[1]
+    return re.findall(r"^  ([a-z][a-z0-9-]*):\n", jobs, re.MULTILINE)
+
+
+def test_the_ruleset_requires_exactly_the_gate_job_by_its_display_name() -> None:
+    gate_name = re.search(r"^    name: (.+)$", job_block("ci-gate"), re.MULTILINE)
+    assert gate_name
+    checks = next(
+        rule["parameters"]["required_status_checks"]
+        for rule in RULESET["rules"]
+        if rule["type"] == "required_status_checks"
+    )
+    assert checks == [{"context": gate_name.group(1), "integration_id": GITHUB_ACTIONS_APP_ID}]
+
+
+def test_the_gate_always_runs_and_waits_for_every_other_non_release_job() -> None:
+    block = job_block("ci-gate")
+    assert "if: always()" in block
+    needed = re.search(r"needs: \[(.+)\]", block)
+    assert needed
+    waited = {name.strip() for name in needed.group(1).split(",")}
+    assert waited == set(job_ids()) - {"ci-gate", "draft"}
+
+
+def test_the_release_job_depends_on_the_gate_alone() -> None:
+    assert re.search(r"needs: \[ci-gate\]", job_block("draft"))
+
+
+def test_the_gate_demands_success_not_merely_absence_of_failure() -> None:
+    assert '.result == "success"' in job_block("ci-gate")
+
+
+def test_the_ruleset_blocks_deletion_and_history_rewrites() -> None:
+    assert {rule["type"] for rule in RULESET["rules"]} >= {"deletion", "non_fast_forward"}

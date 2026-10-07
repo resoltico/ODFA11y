@@ -1,85 +1,91 @@
 # Accessibility scope and limits
 
-ODFA11y targets an ODF 1.4 Writer source and a PDF/UA-1 export. The source and PDF
-have separate structures, so both need inspection. A report passing means only
-that its implemented error checks found no errors; it is not an accessibility
-certificate.
+ODFA11y works on an ODF Writer source and its PDF/UA-1 export. The source and the PDF
+have separate structures, so both are inspected. A passing report means only that the
+implemented checks found no errors; it is not an accessibility certificate.
 
-## What the tools establish
+## What each tool establishes
 
 | Layer | Evidence provided | What still needs review |
 | --- | --- | --- |
-| ODT audit | Package/XML readability, version declarations, metadata and selected semantic properties. Optional Relax NG validation checks supplied schemas. | Whether headings, table headers, links and descriptions convey the intended meaning. |
-| ODT remediation | Explicit metadata, hyperlink, graphic-description, header-row and spacing changes, with a normalized text guard. | Correct choices, typography, page breaks and visual appearance after editing. |
-| LibreOffice export | A PDF produced using the requested PDF/UA and tagging filter options. | Whether this exporter/version produced correct accessible structure. |
-| pypdf diagnostics | Parsed PDF metadata, tagging markers, reachable structure roles, Figure `/Alt`, link counts and extractable text. | Complete PDF/UA requirements, reading order and semantic quality. |
-| veraPDF | Machine-verifiable results for the requested PDF/UA-1 profile. | Human checkpoints and the user's actual reading experience. |
+| ODT audit | Package/XML readability, version consistency, metadata, selected semantic properties; with `--schema`, validity against the bundled ODF schema. | Whether headings, table headers, links and descriptions convey the intended meaning. |
+| ODT remediation | Explicit, typed changes with per-target outcomes; unchanged text; no new ODF schema violations. | Whether the choices were right, and the visual result. |
+| LibreOffice export | A PDF produced with the requested PDF/UA and tagging options. | Whether this exporter and version produced correct accessible structure. |
+| Built-in PDF audit | Metadata, tagging markers, structure roles, heading sequence, list/table shape, figure `/Alt`, link structure, extractable text. | Everything veraPDF and a person check; it is a smoke test, not PDF/UA validation. |
+| veraPDF | Machine-verifiable PDF/UA-1 rules, each failure with its clause and test number. | Human checkpoints and the actual reading experience. |
+| Fidelity comparison | Source and candidate renders agree on pages, text, links and rendered ink under the policy. | Whether an intended change looks right. |
 
-The PDF inspector resolves custom roles through `/RoleMap`, including custom
-roles that resolve to Figure or numbered headings. Cyclic or unmapped role chains
-produce findings; repeated structure-tree objects are visited once. Link counts
-and extractable-text counts are observations, not guarantees of usable navigation
-or correct reading order. PDF parsing uses pypdf's strict mode.
+The PDF audit resolves custom roles through `/RoleMap`, visits each structure object once
+and parses strictly. It does not detect visible content missing from the structure tree;
+that needs marked-content parsing and is veraPDF's job.
+
+## ODF schema validation
+
+The official OASIS ODF 1.3 and 1.4 Relax NG schemas ship unmodified with the package, with
+their source URLs and SHA-256 digests recorded and verified by tests. `audit --schema`
+validates every member against the schema for the declared version (versions without a
+bundled schema are reported `ODF905`). Validation never touches the network.
+
+LibreOffice output is not strictly schema-valid: even a plain document usually fails in
+`styles.xml`. An absolute gate would therefore reject real inputs, so `ODF900` is a
+warning and the gate that matters is *differential*: `remediate` compares violation
+messages before and after and refuses a result with any violation the source did not have.
+`document.odf_version` relabels the package; the result must still validate for the new
+version. A relabelled or untouched document is "no new violations", never "ODF-conformant".
 
 ## Preservation boundaries
 
-Remediation never invents alternative text, heading levels or table-header choices.
-It does not automatically split merged cells, repair heading hierarchies or remove
-manually typed numbering. Table and link heuristics can produce false positives;
-review the finding in its document context.
+Remediation never invents alternative text, heading levels or table-header choices. It
+does not split merged cells, repair heading hierarchies or remove manually typed
+numbering. Table and link heuristics can produce false positives; review the finding in
+context.
 
-The text guard compares the sequence of paragraph/heading strings after collapsing
-whitespace and treating nonbreaking spaces as ordinary spaces. Graphic title and
-description metadata are excluded. This detects many wording changes but is not
-a byte-for-byte comparison, a rendering comparison or proof of unchanged
-pagination. Changing spacing, headers or hyperlinks can affect layout.
+Only members an operation edits are re-serialized; every other member, and any foreign
+markup, comments and processing instructions inside edited ones, is carried over. The text
+guard compares the sequence of paragraph and heading strings after collapsing whitespace
+and treating non-breaking spaces as spaces; graphic title and description are excluded. It
+detects wording changes but is not a byte comparison, a rendering comparison or proof of
+unchanged pagination: that is what [fidelity comparison](FIDELITY.md) adds.
 
-ODT input is limited to 10,000 ZIP members and 256 MiB of declared uncompressed
-member data, checked before loading member contents. Larger documents are rejected;
-these bounds do not replace process isolation and resource limits for hostile inputs.
-Ambiguous duplicate ZIP names cannot be rewritten.
+## Threat model
 
-The ODT writer validates the rewritten ZIP, places `mimetype` first and stores it
-uncompressed before replacing the destination. It preserves member metadata and
-compression where possible, not byte identity. Using the same source and
-destination path can replace the original; use separate paths for review.
+Inputs are untrusted ZIP, XML and PDF files. ODT input is limited to 10,000 members and
+256 MiB of declared uncompressed data, checked before loading; packages are never
+extracted, so path traversal does not apply, and the writer refuses unsafe member names.
+XML entity resolution and network access are disabled. LibreOffice and veraPDF are run
+with argument lists (never a shell), a temporary profile and timeouts. Outputs are
+published atomically, and a source is never overwritten.
 
-Version remediation changes declarations. It is not a complete conversion of all
-ODF constructs. Schemas are external and validation is opt-in; declaring `1.4`
-does not establish ODF 1.4 conformance.
+These controls do not sandbox anything. Rendering for fidelity uses pdfium, native code
+that parses PDFs, and veraPDF is a Java application; process untrusted documents in an
+isolated environment with operating-system resource limits.
 
 ## Spacer removal
 
-`--remove-empty-spacers` is opt-in. It removes only empty body paragraphs without
-protected graphic/bookmark/tab/break content, table/text-box/annotation/list ancestry,
-or page/master-page style semantics. The wording guard permits exactly the counted
-empty-block removals while preserving all other normalized blocks and their order.
-Review pagination and layout after enabling it; keep it disabled when their role
-has not been established.
+`remove_empty_spacers` is opt-in. It removes only empty body paragraphs without protected
+graphic, bookmark, tab or break content, table/text-box/annotation/list ancestry, or page
+or master-page style semantics. The text guard permits exactly the counted removals.
+Removing spacers usually moves content, so the default fidelity gate flags it; review the
+diff images and set `fidelity.pagination = "may-change"` when the movement is intended.
 
 ## Human acceptance
 
 Before distribution, review:
 
-- The actual heading hierarchy and navigation.
-- Reading order, including footnotes, tables and graphics.
-- Whether table headers express the correct relationships.
-- Alternative-text meaning and link purpose in context.
-- Contrast, colour-only meaning, typography and pagination.
-- Text selection and the document's behavior with assistive technology.
+- **Headings**: the actual hierarchy and navigation, not just the levels.
+- **Alt text**: whether each description is meaningful in its context.
+- **Reading order**, including footnotes, floating objects, tables and graphics.
+- **Table headers**: whether they express the correct relationships.
+- **Link purpose**: whether each link is understandable in context.
+- **Colour**: whether colour carries information available nowhere else; contrast.
+- **Layout**: typography, pagination and appearance, and behaviour with assistive technology.
 
-A document can contain nonempty alternative text and tagged elements yet remain
-unusable. Treat automated reports as evidence for specific checks, with human
-review completing the acceptance process.
+A document can contain non-empty alternative text and tagged elements and still be
+unusable. `REVIEW.md` in an [evidence bundle](EVIDENCE.md) carries this checklist.
 
 ## Standards and tool references
 
-- [ODF 1.4 specification](https://docs.oasis-open.org/office/OpenDocument/v1.4/): source package and XML format.
-- [LibreOffice PDF/UA guidance](https://help.libreoffice.org/latest/en-US/text/shared/01/ref_pdf_export_universal_accessibility.html): source-document/export expectations.
-- [LibreOffice PDF filter parameters](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html): requested export options.
-- [pypdf documentation](https://pypdf.readthedocs.io/en/stable/): PDF parsing, text and metadata APIs.
-- [veraPDF validation](https://docs.verapdf.org/validation/): standards validation and its scope.
-
-LibreOffice and validator behavior can change with their versions. Retain tool
-versions with production evidence when reproducibility matters. Python dependency
-locking does not freeze external applications or operating-system images.
+- [ODF 1.4 specification](https://docs.oasis-open.org/office/OpenDocument/v1.4/) and its [schemas](https://docs.oasis-open.org/office/OpenDocument/v1.4/os/schemas/).
+- [LibreOffice PDF/UA guidance](https://help.libreoffice.org/latest/en-US/text/shared/01/ref_pdf_export_universal_accessibility.html) and [PDF filter parameters](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html).
+- [veraPDF](https://docs.verapdf.org/): the PDF/UA validator.
+- [pypdf](https://pypdf.readthedocs.io/en/stable/) and [pypdfium2](https://pypdfium2.readthedocs.io/): PDF parsing and rendering.

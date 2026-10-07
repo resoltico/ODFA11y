@@ -68,8 +68,10 @@ if the new direction is intended.
 
 [Hypothesis](https://hypothesis.readthedocs.io/) properties in
 `tests/test_properties.py` state invariants over generated input: lossless address
-splitting, text-preserving linkification, package round trips, and rejection of
-arbitrary or corrupted archives and configuration with `ValueError` only. The profile
+splitting, text-preserving linkification, package round trips, rejection of arbitrary or
+corrupted archives and configuration with `PackageError`/`ConfigError` only, and that any
+applicable subset of operations keeps a schema-valid document schema-valid and is
+idempotent. The profile
 in `tests/conftest.py` is deterministic and bounded; a failure is reproducible by
 rerunning pytest, and a found counterexample belongs in an `@example` beside a fix.
 Coverage uses branch measurement with the floor in `pyproject.toml`; raise the floor
@@ -89,11 +91,14 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
 
 - **Static analysis** (Linux): workflow syntax and security, secret scan, dependency
   advisories, policy, Ruff, ty and tach.
-- **Quality** (Linux, macOS, Windows): unit tests (with coverage on Linux), a build of
+- **Quality** (Linux, macOS, Windows; the job is `test` in the workflow): unit tests (with coverage on Linux), a build of
   the source archive and wheel, and unit tests against the wheel installed with
   hashed locked dependencies, including metadata, license and `py.typed` checks.
 - **Integration** (Linux): installs LibreOffice and a checksum-pinned veraPDF, then
-  runs the integration tests with `ODFA11Y_REQUIRE_INTEGRATION=1`.
+  runs the integration tests (real exports, real validation, the full pipeline) with
+  `ODFA11Y_REQUIRE_INTEGRATION=1`.
+- **CI gate**: waits for the three jobs above and fails unless all succeeded. It is the
+  only check a branch ruleset should require; see [Releasing](RELEASING.md#repository-settings).
 
 Workflow syntax and shell commands are checked by the actionlint version pinned
 in the workflow. It uses the Linux runner's Go toolchain and ShellCheck. With that
@@ -144,8 +149,8 @@ run alone does not prove that packaging included the required modules.
 
 Read [AGENTS.md](../AGENTS.md) before changing the project and
 [Architecture](ARCHITECTURE.md) for implementation boundaries. Follow
-[Releasing](RELEASING.md) for tags; start adding changelog outcomes only after the
-initial public `v0.1.0` release.
+[Releasing](RELEASING.md) for tags; record release outcomes in the changelog's Unreleased
+section as work lands.
 
 
 ## Audit hygiene

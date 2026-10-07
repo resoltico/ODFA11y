@@ -1,105 +1,112 @@
 # Architecture
 
-The CLI routes operations to separate package, audit, remediation and PDF layers.
-All findings use the shared [report model](../src/odfa11y/report/models.py); rendering and
-exit-status policy live in [report/render.py](../src/odfa11y/report/render.py).
+> **A run is: parse once, check or operate on one shared document, emit typed findings
+> from one rule registry, and record everything in one run record.**
 
 ```mermaid
 flowchart LR
-    ODT[Original ODT] --> Audit[Read-only ODT audit]
-    ODT --> Edit[Explicit remediation]
-    Config[Configuration and CLI choices] --> Edit
-    Edit --> Source[Reviewed ODT]
-    Source --> Audit
-    Source --> Export[LibreOffice export]
-    Export --> PDF[PDF]
-    PDF --> Inspect[pypdf diagnostics]
-    PDF --> Validate[Optional veraPDF validation]
-    Audit --> Reports[Audit reports]
-    Inspect --> Reports
-    Validate --> Reports
+    ODT[Original ODT] --> Audit[Read-only audit]
+    Config[odfa11y.toml] --> Ops[Typed operations]
+    ODT --> Ops
+    Ops --> Gate{Executor postconditions}
+    Gate -->|text kept, no new schema violations| Reviewed[Remediated ODT]
+    Reviewed --> Export[LibreOffice export]
+    ODT --> ExportSrc[LibreOffice export]
+    Export --> Inspect[PDF audit]
+    Export --> Vera[veraPDF]
+    Export --> Compare[Fidelity comparison]
+    ExportSrc --> Compare
+    Audit --> Evidence[Evidence bundle]
+    Inspect --> Evidence
+    Vera --> Evidence
+    Compare --> Evidence
 ```
-
-The diagram shows responsibilities. The combined `pipeline` command gates export on the source audit; see the
-[workflow contract](WORKFLOW.md#combined-commands).
 
 ## Packages and dependency rules
 
 | Package | Responsibility |
 | --- | --- |
-| `odfa11y.safe_xml` | The one XML parser for untrusted input: no entity expansion, no network. |
-| `odfa11y.report` | Findings, severities, the report container, text/JSON rendering and exit codes. |
-| `odfa11y.odf` | ODT ZIP packages, XML namespaces, typed XPath selection, styles and visible text. |
-| `odfa11y.audit` | Read-only ODT audit: package, metadata and semantic checks. |
-| `odfa11y.remediation` | Explicit configuration, text-preserving edits and spacing normalization. |
-| `odfa11y.pdf` | LibreOffice export, pypdf inspection and veraPDF invocation. |
-| `odfa11y.cli` | Argument parsing, option assembly and command output. |
+| `errors` | The domain exceptions; the CLI reports exactly these. |
+| `safe_xml` | The one XML parser for untrusted input: no entity expansion, no network. |
+| `external_tools` | Locate and identify LibreOffice and veraPDF. |
+| `report` | The rule registry, findings, reports, rendering and exit statuses. |
+| `odf` | ODT packages, the parsed `OdtDocument`, XML selection, styles, text, bundled schemas. |
+| `audit` | Read-only ODT checks and configuration templates. |
+| `remediation` | Typed operations and the executor. |
+| `pdf` | LibreOffice export, structural PDF audit, veraPDF. |
+| `fidelity` | PDF text, link and rendered-ink comparison. |
+| `evidence` | Manifests, the review sheet and atomic bundle publication. |
+| `config` | The TOML file → operations and fidelity policy. |
+| `pipeline` | The ordered stages and the run record. |
+| `cli` | Argument parsing and command output. |
 
-Dependencies point one way: `cli` uses `audit`, `remediation` and `pdf`; those use
-`odf`, `report` and `safe_xml`. `audit`, `remediation` and `pdf` never import each other,
-and `pdf` does not depend on `odf`. [tach.toml](../tach.toml) is the authority:
-`tach check` rejects an undeclared dependency, a cycle, or an import that bypasses a
-package's public interface. A package's public API is exactly what its `__init__.py`
-re-exports; other modules inside a package are implementation details and use
-unprefixed names for what their siblings share.
+Dependencies point one way: `cli` → `pipeline` → `audit`, `remediation`, `pdf`,
+`fidelity`, `evidence` → `odf` → the leaves. Those five never import each other, and
+`pdf` does not depend on `odf`. [tach.toml](../tach.toml) is the authority: `tach check`
+rejects an undeclared dependency, a cycle, or an import that bypasses a package's public
+interface, and a package's public API is exactly what its `__init__.py` re-exports.
 
-## Package boundary
+## The document model
 
-[OdtPackage](../src/odfa11y/odf/package.py) loads ZIP members into memory, retains
-archive order and metadata, and parses XML with entity resolution and network
-access disabled. [Archive validation](../src/odfa11y/odf/archive.py) checks
-CRC integrity and the ODT mimetype invariant. Saving writes to a temporary file
-in the destination directory, validates it, then replaces the destination.
+[OdtDocument](../src/odfa11y/odf/document.py) wraps a loaded package and parses each XML
+member once. `tree()` reads; `edit()` returns the same tree and marks the member edited.
+`save()` re-serializes only edited members, so untouched members stay byte-identical, and
+the [package writer](../src/odfa11y/odf/package.py) validates the archive (first,
+uncompressed `mimetype`) and replaces the destination atomically. The
+[style catalog](../src/odfa11y/odf/styles.py) works on the live trees, and the
+[text snapshot](../src/odfa11y/odf/text.py) is read from them, so nothing is re-parsed.
 
-Member count and declared unpacked size are bounded before decompression. CRC checks
-run while reading each member by its ZIP record; rewriting duplicate names is rejected.
-These controls establish packaging properties, not a complete untrusted-document sandbox.
+Audit checks use `tree()` only, which is why an audit cannot modify a document.
 
-## Audit boundary
+## Findings and rules
 
-[ODT audit orchestration](../src/odfa11y/audit/odt.py) delegates package/version,
-metadata and semantic checks to focused modules. Audits do not save the source.
-Unparseable required members prevent dependent checks; optional schema validation
-adds findings from supplied Relax NG validators.
+Every finding references a [registered rule](../src/odfa11y/report/rules.py) with its id,
+severity, category and *remedy*, the configuration key that holds the decision. Reports
+serialize as `{"format": 1, "kind", "subject", "passed", "summary", "metadata", "findings"}`.
 
-Findings retain a rule ID, severity, message, location, details and `fixable` hint.
-[The rule reference](RULES.md) describes the checks. The hint is not an automatic
-repair plan or a guarantee that no human input is required.
+## Operations and the executor
 
-## Editing boundary
+An [operation](../src/odfa11y/remediation/outcome.py) is a frozen dataclass: its fields
+are its parameters, `apply(document)` returns one `Outcome` per target (`applied`,
+`unchanged` or `failed`), and `as_dict()` records it. Applying twice never accumulates
+changes. The TOML configuration *is* the plan: declarative, strict and reviewed by a
+person; there is no second plan format.
 
-[Remediation](../src/odfa11y/remediation/odt.py) applies explicit options, using separate
-metadata and hyperlink helpers. [Configuration loading](../src/odfa11y/remediation/config.py)
-validates TOML field names and types; [CLI options](../src/odfa11y/cli/options.py)
-apply explicit overrides. Unmatched table/graphic identifiers are skipped.
+The [executor](../src/odfa11y/remediation/apply.py) applies operations in order and
+publishes only if: no outcome failed; every `applied` outcome made at least one `edit()`
+(and `unchanged` made none), which catches a lost edit; visible text is preserved apart
+from counted spacer removals; and the ODF schema shows no violation the source did not
+already have. Failure writes nothing. It also refuses to write over its source.
 
-[Style resolution](../src/odfa11y/odf/styles.py) overlays defaults and parent styles
-from styles and content XML, stopping inheritance cycles.
-[Spacing normalization](../src/odfa11y/remediation/spacing.py) creates distinct target styles
-instead of globally rewriting the reference or base styles.
+## Schema validation
 
-The shared [text snapshot](../src/odfa11y/odf/text.py) checks normalized
-paragraph/heading text before saving. Its precise boundaries and the controlled spacer-removal
-exception are documented in [Accessibility and limits](ACCESSIBILITY.md).
+The [bundled schemas](../src/odfa11y/odf/schema.py) are unmodified OASIS files with
+recorded digests. Violation messages carry no line numbers, so a multiset comparison
+before and after an edit identifies violations the edit introduced.
 
 ## PDF boundary
 
-[Export](../src/odfa11y/pdf/export.py) and [validator invocation](../src/odfa11y/pdf/verapdf.py) use argument lists,
-subprocess timeouts and a temporary LibreOffice profile. The exported PDF and ODT
-are separate outputs; there is no rollback across pipeline stages.
+[Export](../src/odfa11y/pdf/export.py) and [veraPDF](../src/odfa11y/pdf/verapdf.py) use
+argument lists, timeouts and a temporary LibreOffice profile, and publish files
+atomically. The [structure walker](../src/odfa11y/pdf/structure_walk.py) builds the
+reachable structure tree once; the [checks](../src/odfa11y/pdf/structure_checks.py) read
+roles, headings, lists, tables, figures and links from it. veraPDF's XML is parsed into
+failed rules with clause, test number and sample contexts; a missing validator, an
+execution failure and malformed output are distinct errors, while non-compliance is a
+finding.
 
-[PDF diagnostics](../src/odfa11y/pdf/audit.py) read parsed objects with pypdf and securely
-parse XMP XML. [Structure inspection](../src/odfa11y/pdf/structure.py) follows the
-reachable structure tree, resolves role mappings and checks Figure descriptions.
-It does not implement complete PDF/UA conformance; veraPDF supplies separate
-machine-validation evidence when explicitly requested.
+## Pipeline and evidence
 
-## Packaging boundary
+[`run_pipeline`](../src/odfa11y/pipeline/run.py) runs the stages in a fixed order, stops
+at the first failed gate and records the rest as skipped. Its
+[run record](../src/odfa11y/pipeline/record.py) is serialized without timestamps or
+absolute paths and published, with artifacts, review sheet and manifest, as one
+[evidence bundle](EVIDENCE.md).
 
-[pyproject.toml](../pyproject.toml) is the authority for project metadata,
-dependencies, development tool groups, lint, type-check and coverage settings and
-Hatchling build selection. The version is read
-from [the package initializer](../src/odfa11y/__init__.py), which holds only the version.
-The wheel ships `py.typed`, so the annotations are part of the contract. There is no `setup.py`
-or separate inclusion manifest. See [Development](DEVELOPING.md#packaging) for
-source-archive and wheel contents.
+## Packaging
+
+[pyproject.toml](../pyproject.toml) is the authority for metadata, dependencies,
+development tool groups and the lint, type and coverage settings, and for Hatchling build
+selection. The version is read from [the package initializer](../src/odfa11y/__init__.py),
+which holds only the version. The wheel ships `py.typed` and the ODF schemas. See
+[Development](DEVELOPING.md#packaging).

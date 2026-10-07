@@ -15,8 +15,9 @@ through the private channel. Never send customer documents or credentials.
 ## Processing boundaries
 
 XML entity resolution and network access are disabled. ODT writes are validated
-before replacement, and ambiguous duplicate ZIP members cannot be rewritten.
-These controls do not sandbox the parser or external applications. Archives are loaded into memory after member-count/unpacked-size checks; hostile
+before replacement, and duplicate or unsafe ZIP member names cannot be rewritten.
+These controls do not sandbox the parser, the pdfium renderer used for fidelity
+comparison or external applications. Archives are loaded into memory after member-count/unpacked-size checks; hostile
 documents can still exhaust process resources.
 
 Process untrusted documents in an isolated environment with operating-system

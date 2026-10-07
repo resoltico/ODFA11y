@@ -90,6 +90,7 @@ jobs:
           import tomllib
           from pathlib import Path
           import odfa11y
+          import odfa11y.odf
 
           project = tomllib.loads(Path("pyproject.toml").read_text())["project"]
           package = importlib.metadata.distribution(project["name"])
@@ -98,6 +99,9 @@ jobs:
           assert package.metadata["Requires-Python"] == project["requires-python"]
           assert package.metadata["License-Expression"] == project["license"]
           assert any(str(p).endswith("odfa11y/py.typed") for p in package.files)
+          bundled = {Path(str(p)).name for p in package.files if "odf/schemas/" in str(p)}
+          assert {"OpenDocument-v1.4-schema.rng", "PROVENANCE.toml"} <= bundled
+          assert odfa11y.odf.provenance()
           license_file, = (p for p in package.files if str(p).endswith("/licenses/LICENSE"))
           assert package.locate_file(license_file).read_bytes() == Path("LICENSE").read_bytes()
           PYTHON
@@ -159,10 +163,26 @@ jobs:
         run: |
           verapdf --version
           uv run --no-sync pytest -m integration
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [static, test, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every needed job to have succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          if ! echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null; then
+            echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success") | "\(.key): \(.value.result)"'
+            exit 1
+          fi
   draft:
     name: Create draft release from tested distributions
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [static, test, integration]
+    needs: [ci-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
