@@ -220,3 +220,10 @@ as a migration path. Keep legitimate published records and fixture provenance.
 
 Production implementation may now proceed against these contracts. A new observation
 that contradicts them reopens the relevant design/QA decision before more code is added.
+
+Implementation challenge refinements: header wrappers must not change reviewed graphic
+positions. Repeat cuts that would duplicate headings, frames or XML/drawing identities
+are rejected before mutation. Protected logical table data ignores generated style names;
+reviewed target fingerprints retain them. Spreadsheet postconditions protect full sheet
+structure, not just displayed strings. The Base adapter accepts the standard `base` media
+type; retired `database` and `sun.xml.base` producer aliases are rejected.

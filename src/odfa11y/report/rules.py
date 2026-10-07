@@ -86,7 +86,7 @@ ODF004 = _rule("ODF004", ERROR, ODF, "Manifest root media type differs from the 
 ODF005 = _rule("ODF005", ERROR, ODF, "The media type is not an OpenDocument document type.")
 ODF006 = _rule("ODF006", ERROR, ODF, "The document body does not match its media type.")
 ODF007 = _rule("ODF007", WARNING, ODF, "The file extension does not match the media type.")
-ODF008 = _rule("ODF008", WARNING, ODF, "The document kind is deprecated or legacy.")
+ODF008 = _rule("ODF008", WARNING, ODF, "The document kind is deprecated.")
 ODF009 = _rule("ODF009", INFO, ODF, "No semantic audit exists for this document family.")
 ODF010 = _rule("ODF010", ERROR, ODF, "A flat XML document's root is not office:document.")
 ODF011 = _rule("ODF011", ERROR, ODF, "A package's content root is not office:document-content.")
@@ -101,16 +101,25 @@ META003 = _rule(
     "Metadata and default style languages disagree.",
     "document.language",
 )
-TXT001 = _rule("TXT001", ERROR, SEM, "Heading has no valid outline level.")
-TXT002 = _rule("TXT002", ERROR, SEM, "Heading hierarchy starts too deep or skips a level.")
+TXT001 = _rule("TXT001", ERROR, SEM, "Heading has no valid outline level.", "text.heading_levels")
+TXT002 = _rule(
+    "TXT002",
+    ERROR,
+    SEM,
+    "Heading hierarchy starts too deep or skips a level.",
+    "text.heading_levels",
+)
 TXT003 = _rule("TXT003", WARNING, SEM, "Heading text resembles manually typed numbering.")
 TXT004 = _rule("TXT004", INFO, SEM, "No structural headings were found.")
 TXT005 = _rule("TXT005", WARNING, SEM, "Footnotes or endnotes need reading-order review.")
 TXT010 = _rule(
-    "TXT010", ERROR, SEM, "Graphic has neither accessible title nor description.", "text.alt_text"
+    "TXT010", ERROR, SEM, "Graphic has neither accessible title nor description.", "text.graphics"
 )
 TXT020 = _rule("TXT020", ERROR, SEM, "Table has merged or split cells.")
-TXT021 = _rule("TXT021", WARNING, SEM, "Data-like table has no header rows.", "text.table_headers")
+TXT022 = _rule("TXT022", ERROR, SEM, "Table grid or header bands cannot be resolved safely.")
+TXT021 = _rule(
+    "TXT021", WARNING, SEM, "Data-like table has no semantic headers.", "text.table_headers"
+)
 TXT030 = _rule(
     "TXT030",
     WARNING,
@@ -142,7 +151,7 @@ SHEET005 = _rule(
     ERROR,
     SEM,
     "Picture, chart or object has neither accessible title nor description.",
-    "spreadsheet.alt_text",
+    "spreadsheet.graphics",
 )
 SHEET006 = _rule("SHEET006", WARNING, LNK, "Hyperlink text is a raw address.")
 SHEET007 = _rule("SHEET007", WARNING, SEM, "Empty sheet follows the last sheet with content.")

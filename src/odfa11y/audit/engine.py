@@ -41,7 +41,7 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
 
     """
     source = Path(source)
-    report = Report(kind="odf", subject=str(source))
+    report = Report(kind="odf", subject=str(source), sources=(source,))
     try:
         document = OdfDocument.open(source)
     except (PackageError, OSError) as exc:

@@ -14,7 +14,12 @@ import pytest
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, RemediationError, ToolFailedError
-from odfa11y.families.text import HeaderRows, LinkifyAddresses, MarkHeaderRows, RemoveEmptySpacers
+from odfa11y.families.text import (
+    LinkifyAddresses,
+    MarkTableHeaders,
+    RemoveEmptySpacers,
+    TableHeaders,
+)
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.fidelity import compare as compare_module
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
@@ -170,9 +175,9 @@ def test_duplicate_table_names_are_ambiguous_and_fail(tmp_path: Path) -> None:
     package.write_member("content.xml", content[:end] + content[start:end] + content[end:])
     twin = tmp_path / "twin.odt"
     package.save(twin)
-    (outcome,) = MarkHeaderRows({"Data": HeaderRows(1)}).apply(OdfDocument.open(twin))
+    (outcome,) = MarkTableHeaders({"Data": TableHeaders(1)}).apply(OdfDocument.open(twin))
     assert outcome.status is Status.FAILED
-    assert "must be unique" in outcome.message
+    assert "must resolve to exactly one table" in outcome.message
 
 
 @POSIX_ONLY

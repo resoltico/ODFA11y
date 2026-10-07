@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lxml import etree
 
+from odfa11y.content import table_content_fingerprint
 from odfa11y.odf import qn, select_elements
 
 INERT_INLINE_TAGS = frozenset({qn("text", "span"), qn("text", "s")})
@@ -55,9 +56,16 @@ def visible_text_snapshot(tree: etree._ElementTree) -> tuple[str, ...]:
 
     """
     blocks: list[str] = []
-    for node in select_elements(tree, "//office:body//text:h | //office:body//text:p"):
-        text = _visible_node_text(node).replace("\u00a0", " ")
-        blocks.append(" ".join(text.split()))
+    for node in select_elements(
+        tree, "//office:body//text:h | //office:body//text:p | //office:body//table:table"
+    ):
+        if any(parent.tag == qn("table", "table") for parent in node.iterancestors()):
+            continue
+        if node.tag == qn("table", "table"):
+            blocks.append("table:" + table_content_fingerprint(node))
+        else:
+            text = _visible_node_text(node).replace("\u00a0", " ")
+            blocks.append(" ".join(text.split()))
     return tuple(blocks)
 
 

@@ -1,8 +1,8 @@
 # Architecture
 
 > **The ODF core understands OpenDocument structure; a document family understands what its
-> documents mean. No family-specific element name, rule or operation exists outside that
-> family's package.**
+> documents mean. Families own semantic decisions. Shared ODF vocabulary lives in `content`; orchestration
+> does not select family XML or contain family rules.**
 
 A run parses a document once, checks or edits that one shared document, emits typed
 findings from one rule registry, and records everything in one run record.
@@ -38,6 +38,7 @@ flowchart LR
 | `external_tools` | Locate, identify and run LibreOffice and veraPDF with bounded output. |
 | `report` | The rule registry, findings, reports, rendering and exit statuses. |
 | `odf` | Storage layouts, logical parts, document kinds, detection, schema validation. |
+| `content` | Shared ODF primitives for language, graphics, table grids and protected payloads; no family decisions. |
 | `adapter` | The contract between the core and families: `FamilyAdapter`, `Operation`, `Outcome`. |
 | `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
 | `families.spreadsheet` | Everything specific to spreadsheets: audit rules, operations, snapshot, plan table. |
@@ -52,7 +53,7 @@ flowchart LR
 | `cli` | Argument parsing and command output. |
 
 Dependencies point one way: `cli` → `pipeline`, `config` → `audit`, `remediation`, `pdf`,
-`fidelity`, `evidence` → `families` → `families.<family>` → `adapter` → `odf` → the leaves.
+`fidelity`, `evidence` → `families` → `families.<family>` → `content`, `adapter` → `odf` → the leaves.
 The five engines never import each other, and **families never import each other**, nor
 does anything below the registry import a family. [tach.toml](../tach.toml) is the
 authority: `tach check` rejects an undeclared dependency, a cycle, or an import that
@@ -78,7 +79,7 @@ checks use `tree()` only, which is why an audit cannot modify a document.
 
 [kinds.py](../src/odfa11y/odf/kinds.py) lists every OpenDocument media type with its family
 (`text`, `spreadsheet`, `presentation`, `graphics`, `formula`, `chart`, `image`,
-`database`), template flag and body element, including the deprecated and legacy ones.
+`database`), template flag and body element, including the standard's deprecated image family. Retired database producer aliases are rejected.
 [Detection](../src/odfa11y/odf/detect.py) reads the declared media type (the `mimetype` file,
 or `office:mimetype` of a flat document, falling back to the manifest), the manifest's
 media type, the body element and the file extension. The file extension never selects the
@@ -95,16 +96,16 @@ audit exists, and the body text must not change.
 
 Two families are implemented, and neither imports the other:
 
-- `text` (text, templates, master and web documents) owns the `TXT` rules, five operations
+- `text` (text, templates, master and web documents) owns the `TXT` rules, explicit semantic operations
   and the `[text]` configuration table.
 - `spreadsheet` (`.ods`, `.ots`, flat `.fods`) owns the `SHEET` rules, two operations
-  (`SetSheetNames`, `SetObjectAltText`), the `[spreadsheet]` table, the `calc_pdf_Export`
-  filter and a snapshot of sheet names and cell text whose `preserved` rule lets only
-  sheet names change. It shows that the contract needs nothing from the core about
+  (`SetSheetNames`, `SetGraphicDescriptions`), the `[spreadsheet]` table, the `calc_pdf_Export`
+  filter and a snapshot of protected sheet XML whose `preserved` rule lets only
+  sheet names and graphic descriptions change. It shows that the contract needs nothing from the core about
   spreadsheets: the default language lives on a different style, the snapshot is not
   paragraphs, and the operations resolve sheets and frames instead of paragraphs and
-  tables. Its alt-text operation resembles the text family's on purpose; a shared helper
-  would have to name `draw:` elements, which only a family package may.
+  tables. Both families bind the shared graphic editor to their own operation contract. The common
+  helper understands `draw:` vocabulary without selecting family rules.
 
 
 ### Adding a family
@@ -127,7 +128,7 @@ Every finding references a [registered rule](../src/odfa11y/report/rules.py) wit
 severity, category and *remedy*, the configuration key that holds the decision. The id's
 prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `SHEET` (spreadsheet family), `PDF`,
 `VERA`, `FID` (outputs). Reports serialize as
-`{"format": 3, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
+`{"format": 4, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
 `location` is `{"path", "member"}` or null: a storage-neutral logical path, and the package
 member only where it helps ([locations](RULES.md#locations)).
 
@@ -136,7 +137,7 @@ member only where it helps ([locations](RULES.md#locations)).
 An [operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass: its fields are its
 parameters, `apply(document)` returns one `Outcome` per target (`applied`, `unchanged` or
 `failed`), and `as_dict()` records it. Applying twice never accumulates changes. Operations
-that need resolving first (alt text, header rows, spacing) resolve and validate every
+that need resolving first (graphics, heading levels, table headers, spacing) resolve and validate every
 selector before the first edit. The TOML configuration *is* the plan: declarative, strict
 and reviewed by a person; there is no second plan format.
 
@@ -144,7 +145,7 @@ The [executor](../src/odfa11y/remediation/apply.py) applies operations in order 
 publishes only if: every operation belongs to the document's family; no outcome failed;
 every `applied` outcome made at least one `edit()` (and `unchanged` made none), which
 catches a lost edit; the family's snapshot of visible content is preserved apart from
-counted spacer removals; and the ODF schema shows no violation the source did not already
+counted spacer removals; opaque package and embedded payloads are unchanged; and the ODF schema shows no violation the source did not already
 have. Failure writes nothing. It also refuses to write over its source.
 
 ## Schema validation

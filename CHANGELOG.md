@@ -4,6 +4,37 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Breaking
+
+- **Plans and Python operations.** Graphic descriptions use `[text.graphics]` and
+  `[spreadsheet.graphics]`, the shared `GraphicDescription`, and each family's
+  `SetGraphicDescriptions`. Table decisions use `MarkTableHeaders` with structured
+  `TableHeaders(rows, columns, fingerprint)` entries; integer TOML shorthand is rejected.
+  Update imports and configuration to these contracts; no aliases or migration shims exist.
+- **Finding locations.** Reports are format 4. Named targets use percent-encoded
+  `[name=…]`, heading XML identities use `[id=…]`, and unnamed targets use plain ordinals
+  such as `table[2]`. Update consumers to the grammar in [Rules](docs/RULES.md#locations).
+- **Base media types.** Retired `application/vnd.oasis.opendocument.database` and
+  `application/vnd.sun.xml.base` aliases are rejected. The standard Base media type is
+  `application/vnd.oasis.opendocument.base`.
+
+### Added
+
+- **Explicit text semantics.** Reviewed heading levels and leading table header columns
+  are configurable. Targets are preflighted before editing; repeated table declarations
+  are split only when that preserves data and identities. Crossing spans and unsafe repeat
+  splits fail without publication. Writer exports corrected heading roles. Its current
+  header-column export omits PDF `TH`; strict PDF gates continue to reject that omission,
+  even when veraPDF reports compliance.
+
+### Fixed
+
+- **Preservation and reviewed targets.** Table fingerprints cover complete logical data;
+  graphic fingerprints include position and payload bytes while remaining stable across
+  header-wrapper edits. Spreadsheet postconditions protect formulas, values, references,
+  repeats and geometry. Opaque package resources and flat binary data cannot change during
+  source remediation. Malformed or non-leading table header bands produce `TXT022`.
+
 ## [0.4.0] - 2026-10-07
 
 ### Breaking

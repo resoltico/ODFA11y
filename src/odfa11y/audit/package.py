@@ -185,9 +185,8 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
             f"The file extension {detection.extension!r} does not match a {kind.name} document "
             f"({', '.join(sorted(expected))}).",
         )
-    if kind.deprecated or kind.legacy:
-        state = "deprecated" if kind.deprecated else "legacy"
-        report.add(rules.ODF008, f"The {kind.media_type} media type is {state}.")
+    if kind.deprecated:
+        report.add(rules.ODF008, f"The {kind.media_type} media type is deprecated.")
     _audit_content_root(document, kind.family, report)
     return True
 

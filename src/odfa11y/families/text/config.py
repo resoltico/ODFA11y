@@ -6,18 +6,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from odfa11y.adapter import config_tables
+from odfa11y.content import GraphicDescription
 from odfa11y.errors import ConfigError
 
-from .graphics import AltText, SetAltText
+from .graphics import SetGraphicDescriptions
+from .headings import MAX_HEADING_LEVEL, HeadingLevel, SetHeadingLevels
 from .linkify import LinkifyAddresses
 from .remove_spacers import RemoveEmptySpacers
 from .spacing import NormalizeSpacing
-from .tables import HeaderRows, MarkHeaderRows
+from .tables import MarkTableHeaders, TableHeaders
 
 if TYPE_CHECKING:
     from odfa11y.adapter import Operation
 
-TEXT_KEYS = {"remediation", "alt_text", "table_headers", "spacing"}
+TEXT_KEYS = {"remediation", "graphics", "table_headers", "spacing", "heading_levels"}
 
 
 def parse_text_table(data: dict[str, object]) -> list[Operation]:
@@ -32,7 +34,8 @@ def parse_text_table(data: dict[str, object]) -> list[Operation]:
     config_tables.known(data, TEXT_KEYS, "text")
     operations: list[Operation] = []
     operations += _remediation(config_tables.table(data, "remediation"))
-    operations += _graphics(config_tables.table(data, "alt_text"))
+    operations += _graphics(config_tables.table(data, "graphics"))
+    operations += _headings(config_tables.table(data, "heading_levels"))
     operations += _tables(config_tables.table(data, "table_headers"))
     operations += _spacing(config_tables.table(data, "spacing"))
     return operations
@@ -52,39 +55,35 @@ def _remediation(table: dict[str, object]) -> list[Operation]:
 
 
 def _graphics(table: dict[str, object]) -> list[Operation]:
-    entries: dict[str, AltText] = {}
+    entries: dict[str, GraphicDescription] = {}
     for key in table:
         entry = config_tables.table(table, key)
-        label = f"text.alt_text.{key}"
+        label = f"text.graphics.{key}"
         config_tables.known(entry, {"title", "description", "fingerprint"}, label)
         texts = config_tables.typed(entry, str, label)
-        entries[key] = AltText(
+        entries[key] = GraphicDescription(
             texts.get("title"), texts.get("description"), texts.get("fingerprint")
         )
-    return [SetAltText(entries)] if entries else []
+    return [SetGraphicDescriptions(entries)] if entries else []
 
 
 def _tables(table: dict[str, object]) -> list[Operation]:
-    entries: dict[str, HeaderRows] = {}
-    for name, value in table.items():
+    entries: dict[str, TableHeaders] = {}
+    for name in table:
         label = f"text.table_headers.{name}"
-        if isinstance(value, dict):
-            config_tables.known(value, {"rows", "fingerprint"}, label)
-            rows = config_tables.typed({k: v for k, v in value.items() if k == "rows"}, int, label)
-            texts = config_tables.typed(
-                {k: v for k, v in value.items() if k == "fingerprint"}, str, label
-            )
-            count, fingerprint = rows.get("rows"), texts.get("fingerprint")
-        else:
-            count, fingerprint = (
-                config_tables.typed({name: value}, int, "text.table_headers")[name],
-                None,
-            )
-        if count is None or count < 1:
-            msg = f"{label} must be a positive integer"
+        value = config_tables.table(table, name)
+        config_tables.known(value, {"rows", "columns", "fingerprint"}, label)
+        counts = config_tables.typed(
+            {k: v for k, v in value.items() if k in {"rows", "columns"}}, int, label
+        )
+        fingerprint = config_tables.typed(
+            {k: v for k, v in value.items() if k == "fingerprint"}, str, label
+        ).get("fingerprint")
+        if not counts or any(count < 1 for count in counts.values()):
+            msg = f"{label} must contain positive rows or columns"
             raise ConfigError(msg)
-        entries[name] = HeaderRows(count, fingerprint)
-    return [MarkHeaderRows(entries)] if entries else []
+        entries[name] = TableHeaders(counts.get("rows"), counts.get("columns"), fingerprint)
+    return [MarkTableHeaders(entries)] if entries else []
 
 
 def _spacing(table: dict[str, object]) -> list[Operation]:
@@ -116,3 +115,21 @@ def _spacing(table: dict[str, object]) -> list[Operation]:
             include_headings=flags.get("include_headings", False),
         )
     ]
+
+
+def _headings(table: dict[str, object]) -> list[Operation]:
+    entries = {}
+    for target in table:
+        value = config_tables.table(table, target)
+        label = f"text.heading_levels.{target}"
+        config_tables.known(value, {"level", "fingerprint"}, label)
+        levels = config_tables.typed({k: v for k, v in value.items() if k == "level"}, int, label)
+        fingerprints = config_tables.typed(
+            {k: v for k, v in value.items() if k == "fingerprint"}, str, label
+        )
+        level = levels.get("level")
+        if level is None or not 1 <= level <= MAX_HEADING_LEVEL:
+            msg = f"{label}.level must be an integer from 1 to 10"
+            raise ConfigError(msg)
+        entries[target] = HeadingLevel(level, fingerprints.get("fingerprint"))
+    return [SetHeadingLevels(entries)] if entries else []

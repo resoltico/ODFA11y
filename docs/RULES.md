@@ -35,7 +35,7 @@ Also common to every family. `ODF009` says that a document's family has no seman
 | `ODF005` | Error | The media type is not an OpenDocument document type. |  |
 | `ODF006` | Error | The document body does not match its media type. |  |
 | `ODF007` | Warning | The file extension does not match the media type. |  |
-| `ODF008` | Warning | The document kind is deprecated or legacy. |  |
+| `ODF008` | Warning | The document kind is deprecated. |  |
 | `ODF009` | Info | No semantic audit exists for this document family. |  |
 | `ODF010` | Error | A flat XML document's root is not office:document. |  |
 | `ODF011` | Error | A package's content root is not office:document-content. |  |
@@ -56,9 +56,10 @@ Owned by the text family (`TXT`). A document of another family never produces th
 | `TXT003` | Warning | Heading text resembles manually typed numbering. |  |
 | `TXT004` | Info | No structural headings were found. |  |
 | `TXT005` | Warning | Footnotes or endnotes need reading-order review. |  |
-| `TXT010` | Error | Graphic has neither accessible title nor description. | `text.alt_text` |
+| `TXT010` | Error | Graphic has neither accessible title nor description. | `text.graphics` |
 | `TXT020` | Error | Table has merged or split cells. |  |
-| `TXT021` | Warning | Data-like table has no header rows. | `text.table_headers` |
+| `TXT022` | Error | Table grid or header bands cannot be resolved safely. |  |
+| `TXT021` | Warning | Data-like table has no semantic headers. | `text.table_headers` |
 | `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.remediation.linkify_plain_addresses` |
 | `TXT040` | Info | Empty paragraphs may be visual spacers. | `text.remediation.remove_empty_spacers` |
 | `TXT050` | Error | Blinking text styling is declared. |  |
@@ -73,7 +74,7 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `SHEET002` | Warning | Sheet keeps its default name. | `spreadsheet.sheet_names` |
 | `SHEET003` | Warning | Data sheet marks no header rows. |  |
 | `SHEET004` | Warning | Data sheet merges cells. |  |
-| `SHEET005` | Error | Picture, chart or object has neither accessible title nor description. | `spreadsheet.alt_text` |
+| `SHEET005` | Error | Picture, chart or object has neither accessible title nor description. | `spreadsheet.graphics` |
 | `SHEET006` | Warning | Hyperlink text is a raw address. |  |
 | `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
 | `SHEET008` | Warning | Hidden sheets, rows or columns are present. |  |
@@ -156,13 +157,13 @@ path     = part [ "/" segment ]
 part     = "content" | "styles" | "meta" | "manifest" | "package" | "document"
 segment  = "heading[" N "]" | "paragraph[" N "]" | "table[" ref "]" | "frame[" ref "]"
          | "title" | "language" | "mimetype"
-ref      = name | "#" N
+ref      = "name=" percent_encoded_name | N
 ```
 
 `N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
 `text:h`, `paragraph[3]` the third `text:p` (headings are not paragraphs here). `ref` is the
-element's declared name (`table[Data]`, `frame[Logo]`) or, when it has none, `#` and its
-index among tables or graphics (`table[#2]`). `meta/title` and `meta/language` name the
+element's percent-encoded declared name (`table[name=Data]`, `frame[name=Logo]`) or, when it has none, its
+index among tables or graphics (`table[2]`). `meta/title` and `meta/language` name the
 missing or conflicting metadata field. `styles` covers style definitions wherever they are
 stored, `package/mimetype` is the ZIP `mimetype` member, and `document` is a flat file or
 a schema or parse defect in one. The text report prints `path` followed by the member in

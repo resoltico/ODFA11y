@@ -70,7 +70,7 @@ def test_audit_detects_missing_graphic_alt_text(tmp_path: Path) -> None:
     finding = next(f for f in report.findings if f.rule_id == "TXT010")
     assert finding.severity is Severity.ERROR
     assert finding.details["frame"] == "Logo"
-    assert finding.remedy == "text.alt_text"
+    assert finding.remedy == "text.graphics"
 
 
 def test_every_emitted_rule_is_registered(tmp_path: Path) -> None:
@@ -128,7 +128,7 @@ def test_template_comments_out_every_open_decision(tmp_path: Path) -> None:
         tmp_path / "t.odt", with_plain_email=True, with_data_table=True, with_image_without_alt=True
     )
     text = render_template(audit_odf(source), ADAPTER)
-    assert '[text.alt_text."Logo"]' in text
+    assert '[text.graphics."Logo"]' in text
     assert '"Data" = { rows = 1, fingerprint = ' in text
     assert "linkify_plain_addresses" in text
     assert "fingerprint = " in text

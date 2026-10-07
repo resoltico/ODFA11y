@@ -36,7 +36,7 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
 
     """
     pdf_path = Path(pdf_path)
-    report = Report(kind="pdf", subject=str(pdf_path))
+    report = Report(kind="pdf", subject=str(pdf_path), sources=(pdf_path,))
     try:
         _inspect(pdf_path, report)
     except (OSError, PyPdfError, ValueError, KeyError, ToolFailedError) as exc:

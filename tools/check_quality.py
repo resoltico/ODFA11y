@@ -33,7 +33,7 @@ FAMILY_PREFIXES = frozenset({
 })
 FAMILY_NAME = re.compile(r"(?:^|[/@\[ (|])(?:" + "|".join(sorted(FAMILY_PREFIXES)) + r"):[A-Za-z]")
 CORE_ROOT = ("src", "odfa11y")
-FAMILY_ROOT = (*CORE_ROOT, "families")
+CONTENT_ROOTS = {(*CORE_ROOT, "families"), (*CORE_ROOT, "content")}
 
 
 def check_repository(root: Path) -> list[str]:
@@ -75,14 +75,14 @@ def check_repository(root: Path) -> list[str]:
 
 
 def _is_core(path: Path) -> bool:
-    return path.parts[:2] == CORE_ROOT and path.parts[:3] != FAMILY_ROOT
+    return path.parts[:2] == CORE_ROOT and path.parts[:3] not in CONTENT_ROOTS
 
 
 def _check_core_purity(path: Path, source: str) -> list[str]:
     """Reject family-specific XML names in the ODF core.
 
-    The core understands OpenDocument structure; only a family package may name that
-    family's elements. Docstrings are prose and exempt.
+    The core understands OpenDocument structure; families and shared content primitives may name
+    content vocabulary, while orchestration packages may not. Docstrings are prose and exempt.
 
     Returns
     -------

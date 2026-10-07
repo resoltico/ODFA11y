@@ -10,14 +10,14 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
+from odfa11y.content import GraphicDescription
 from odfa11y.families.spreadsheet import (
-    ObjectAltText,
-    SetObjectAltText,
+    SetGraphicDescriptions,
     SetSheetNames,
     sheet_snapshot,
     sheets_preserved,
 )
-from odfa11y.odf import OdfDocument, Part, select_elements, validate
+from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 
 from .spreadsheet_fixtures import LAYOUTS, make_spreadsheet, picture, row, sheet, text_cell
 
@@ -52,7 +52,7 @@ def test_alt_text_is_applied_once_then_unchanged_and_stays_schema_valid(
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     before = validate(document)
-    operation = SetObjectAltText({"Logo": ObjectAltText("Logo", "The company logo")})
+    operation = SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "The company logo")})
     assert statuses(operation, document) == (Status.APPLIED,)
     assert frame_text(document, "Logo") == [
         ("image", None),
@@ -69,10 +69,10 @@ def test_a_frame_is_addressed_by_its_name_its_image_path_or_its_file_name(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    operation = SetObjectAltText({
-        "Logo": ObjectAltText("by name"),
-        "Pictures/seal.png": ObjectAltText("by path"),
-        "badge.png": ObjectAltText("by file"),
+    operation = SetGraphicDescriptions({
+        "Logo": GraphicDescription("by name"),
+        "Pictures/seal.png": GraphicDescription("by path"),
+        "badge.png": GraphicDescription("by file"),
     })
     assert statuses(operation, document) == (Status.APPLIED,) * 3
     assert frame_text(document, "Seal")[1] == ("title", "by path")
@@ -84,8 +84,10 @@ def test_changed_text_is_applied_and_an_unset_field_is_left_alone(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    SetObjectAltText({"Logo": ObjectAltText("Old", "Described")}).apply(document)
-    assert statuses(SetObjectAltText({"Logo": ObjectAltText("New")}), document) == (Status.APPLIED,)
+    SetGraphicDescriptions({"Logo": GraphicDescription("Old", "Described")}).apply(document)
+    assert statuses(SetGraphicDescriptions({"Logo": GraphicDescription("New")}), document) == (
+        Status.APPLIED,
+    )
     assert frame_text(document, "Logo")[1:] == [("title", "New"), ("desc", "Described")]
 
 
@@ -94,7 +96,10 @@ def test_a_selector_that_matches_nothing_fails_everything_before_any_edit(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    operation = SetObjectAltText({"Logo": ObjectAltText("Fine"), "Nowhere": ObjectAltText("x")})
+    operation = SetGraphicDescriptions({
+        "Logo": GraphicDescription("Fine"),
+        "Nowhere": GraphicDescription("x"),
+    })
     outcomes = operation.apply(document)
     assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Nowhere")]
     assert document.edit_count == 0
@@ -107,8 +112,8 @@ def test_a_fingerprint_binds_the_entry_to_the_frame_that_was_reviewed(
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     fingerprint = _audited_fingerprint(tmp_path, layout, "Logo")
-    right = SetObjectAltText({"Logo": ObjectAltText("Logo", fingerprint=fingerprint)})
-    wrong = SetObjectAltText({"Logo": ObjectAltText("Logo", fingerprint="0" * 12)})
+    right = SetGraphicDescriptions({"Logo": GraphicDescription("Logo", fingerprint=fingerprint)})
+    wrong = SetGraphicDescriptions({"Logo": GraphicDescription("Logo", fingerprint="0" * 12)})
     [outcome] = wrong.apply(document)
     assert outcome.status is Status.FAILED
     assert "no longer the object" in outcome.message
@@ -129,16 +134,16 @@ def test_a_fingerprint_survives_a_sheet_rename_in_the_same_plan(tmp_path: Path) 
     document = open_sheets(tmp_path, "package", *SHEETS)
     fingerprint = _audited_fingerprint(tmp_path, "package", "Badge")
     assert statuses(SetSheetNames({"Other": "Badges"}), document) == (Status.APPLIED,)
-    entry = ObjectAltText("Badge", fingerprint=fingerprint)
-    assert statuses(SetObjectAltText({"Badge": entry}), document) == (Status.APPLIED,)
+    entry = GraphicDescription("Badge", fingerprint=fingerprint)
+    assert statuses(SetGraphicDescriptions({"Badge": entry}), document) == (Status.APPLIED,)
 
 
 def test_the_same_name_on_a_moved_sheet_is_not_the_reviewed_frame(tmp_path: Path) -> None:
     fingerprint = _audited_fingerprint(tmp_path, "package", "Badge")
     moved = open_sheets(tmp_path, "flat", SHEETS[1], SHEETS[0])
-    [outcome] = SetObjectAltText({"Badge": ObjectAltText("x", fingerprint=fingerprint)}).apply(
-        moved
-    )
+    [outcome] = SetGraphicDescriptions({
+        "Badge": GraphicDescription("x", fingerprint=fingerprint)
+    }).apply(moved)
     assert outcome.status is Status.FAILED
 
 
@@ -147,31 +152,31 @@ def test_two_selectors_setting_different_text_on_one_frame_both_fail(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    conflicting = SetObjectAltText({
-        "Logo": ObjectAltText("One"),
-        "logo.png": ObjectAltText("Two"),
+    conflicting = SetGraphicDescriptions({
+        "Logo": GraphicDescription("One"),
+        "logo.png": GraphicDescription("Two"),
     })
     outcomes = conflicting.apply(document)
     assert {o.key for o in outcomes} == {"Logo", "logo.png"}
     assert {o.status for o in outcomes} == {Status.FAILED}
-    agreeing = SetObjectAltText({
-        "Logo": ObjectAltText("Same"),
-        "logo.png": ObjectAltText("Same", "Extra"),
+    agreeing = SetGraphicDescriptions({
+        "Logo": GraphicDescription("Same"),
+        "logo.png": GraphicDescription("Same", "Extra"),
     })
     assert statuses(agreeing, document) == (Status.APPLIED, Status.APPLIED)
     assert frame_text(document, "Logo")[1:] == [("title", "Same"), ("desc", "Extra")]
 
 
 def test_the_operation_describes_itself_with_its_entries() -> None:
-    operation = SetObjectAltText({"Logo": ObjectAltText("T", None, "abc")})
+    operation = SetGraphicDescriptions({"Logo": GraphicDescription("T", None, "abc")})
     assert operation.as_dict() == {
-        "operation": "set_object_alt_text",
+        "operation": "set_graphic_descriptions",
         "entries": {"Logo": {"title": "T", "description": None, "fingerprint": "abc"}},
     }
 
 
 @by_layout
-def test_the_snapshot_lists_sheets_and_the_position_of_every_non_empty_cell(
+def test_the_snapshot_binds_sheet_data_and_repeated_cell_positions(
     tmp_path: Path, layout: str
 ) -> None:
     repeated = row(
@@ -181,20 +186,41 @@ def test_the_snapshot_lists_sheets_and_the_position_of_every_non_empty_cell(
         attributes="table:number-rows-repeated='2'",
     )
     document = open_sheets(tmp_path, layout, sheet("Budget", repeated, row(text_cell("c"))))
-    assert sheet_snapshot(document) == (
-        "sheet\tBudget",
-        "cell\t1,1\ta",
-        "cell\t1,5\tb",
-        "cell\t3,1\tc",
-    )
+    before = sheet_snapshot(document)
+    assert before[0] == "sheet\tBudget"
+    assert len(before) == 2
+    assert before[1].startswith("content\t")
+    cells = select_elements(document.tree(Part.CONTENT), "//table:table-cell")
+    cells[1].set(qn("table", "number-columns-repeated"), "4")
+    assert sheet_snapshot(document) != before
 
 
 @by_layout
 def test_alt_text_never_changes_the_snapshot(tmp_path: Path, layout: str) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     before = sheet_snapshot(document)
-    SetObjectAltText({"Logo": ObjectAltText("Title", "Description")}).apply(document)
+    SetGraphicDescriptions({"Logo": GraphicDescription("Title", "Description")}).apply(document)
     assert sheet_snapshot(document) == before
+
+
+@by_layout
+@pytest.mark.parametrize(
+    "attribute",
+    [
+        ("office", "value"),
+        ("table", "formula"),
+        ("table", "number-rows-spanned"),
+        ("xlink", "href"),
+    ],
+)
+def test_the_snapshot_detects_data_and_reference_changes_without_changed_words(
+    tmp_path: Path, layout: str, attribute: tuple[str, str]
+) -> None:
+    document = open_sheets(tmp_path, layout, sheet("Values", row(text_cell("Same words"))))
+    before = sheet_snapshot(document)
+    cell = select_elements(document.tree(Part.CONTENT), "//table:table-cell")[0]
+    cell.set(qn(*attribute), "changed")
+    assert not sheets_preserved(before, sheet_snapshot(document), 0)
 
 
 def test_only_sheet_names_may_differ_between_snapshots() -> None:

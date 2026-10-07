@@ -15,15 +15,15 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.config import load_config
+from odfa11y.content import GraphicDescription
 from odfa11y.errors import ConfigError, PackageError
 from odfa11y.families.text import (
     URI_RE,
-    AltText,
-    HeaderRows,
     LinkifyAddresses,
-    MarkHeaderRows,
+    MarkTableHeaders,
     RemoveEmptySpacers,
-    SetAltText,
+    SetGraphicDescriptions,
+    TableHeaders,
     linkify_plain_addresses,
     split_trailing_punctuation,
     text_is_preserved,
@@ -181,9 +181,11 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
     if choices["language"]:
         operations.append(SetMetadata(language="de-AT"))
     if choices["alt"] and features.get("with_image_without_alt"):
-        operations.append(SetAltText({"Logo": AltText("Logo", "Description")}))
+        operations.append(
+            SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "Description")})
+        )
     if choices["headers"] and features.get("with_data_table"):
-        operations.append(MarkHeaderRows({"Data": HeaderRows(1)}))
+        operations.append(MarkTableHeaders({"Data": TableHeaders(1)}))
     if choices["linkify"]:
         operations.append(LinkifyAddresses())
     if choices["spacers"]:

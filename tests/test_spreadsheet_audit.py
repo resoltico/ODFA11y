@@ -57,7 +57,7 @@ def test_a_sheet_without_a_name_is_an_error(tmp_path: Path, layout: str) -> None
     [finding] = found(report, "SHEET001")
     assert finding.severity.value == "error"
     assert finding.location is not None
-    assert finding.location.path == "content/sheet[#2]"
+    assert finding.location.path == "content/sheet[2]"
     assert not found(audit(tmp_path, layout, CONTENT), "SHEET001")
 
 
@@ -120,10 +120,10 @@ def test_a_picture_without_accessible_text_is_an_error_with_a_fingerprinted_sele
     report = audit(tmp_path, layout, body)
     [finding] = found(report, "SHEET005")
     assert finding.severity.value == "error"
-    assert finding.remedy == "spreadsheet.alt_text"
+    assert finding.remedy == "spreadsheet.graphics"
     assert finding.details["frame"] == "Logo"
     assert finding.details["href"] == "Pictures/logo.png"
-    assert len(str(finding.details["fingerprint"])) == 12
+    assert len(str(finding.details["fingerprint"])) == 16
     assert report.metadata["graphic_object_count"] == 2
 
 
@@ -220,7 +220,7 @@ def test_the_template_lists_each_decision_with_its_fingerprint(tmp_path: Path) -
     path = make_spreadsheet(tmp_path, "package", body)
     template = render_template(audit_odf(path), adapter_for(OdfDocument.open(path).kind))
     assert '# [spreadsheet.sheet_names]\n# "Sheet1" = ""' in template
-    assert '# [spreadsheet.alt_text."Logo"]' in template
+    assert '# [spreadsheet.graphics."Logo"]' in template
     assert "# fingerprint = " in template
     assert all(line.startswith("#") or not line for line in template.splitlines())
 
@@ -234,12 +234,15 @@ def test_spreadsheet_findings_have_the_same_logical_locations_in_both_layouts(
         (f.rule_id, f.location) for f in findings[1]
     ]
     assert {f.location.path for f in findings[0] if f.location} >= {
-        "content/sheet[Sheet1]",
-        "content/frame[Logo]",
+        "content/sheet[name=Sheet1]",
+        "content/frame[name=Logo]",
     }
 
 
 def test_embedded_image_bytes_are_not_visible_cell_text(tmp_path: Path) -> None:
     path = make_spreadsheet(tmp_path, "flat", sheet("Logos", row(picture(data="aW1hZ2U="))))
     document = OdfDocument.open(path)
-    assert adapter_for(document.kind).snapshot(document) == ("sheet\tLogos",)
+    snapshot = adapter_for(document.kind).snapshot(document)
+    assert snapshot[0] == "sheet\tLogos"
+    assert len(snapshot) == 2
+    assert snapshot[1].startswith("content\t")

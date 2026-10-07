@@ -35,13 +35,13 @@ remove_empty_spacers = false
 # Uncomment only for a real data table named Data with one header row. The fingerprint
 # (printed by `odfa11y template`) makes the run fail if the table is no longer the one
 # you reviewed.
-# Data = { rows = 1, fingerprint = "0123456789ab" }
+# Data = { rows = 1, fingerprint = "0123456789abcdef" }
 
 # Uncomment only after identifying the graphic and writing meaningful alt text.
-# [text.alt_text.Logo]
+# [text.graphics.Logo]
 # title = "Organisation name"
 # description = "Description of the information conveyed by the graphic"
-# fingerprint = "0123456789ab"
+# fingerprint = "0123456789abcdef"
 
 # [text.spacing]
 # reference_text = "Text of the paragraph whose spacing is the reference"
@@ -52,10 +52,10 @@ remove_empty_spacers = false
 # [spreadsheet.sheet_names]
 # "Sheet1" = "Budget 2026"
 #
-# [spreadsheet.alt_text."Company logo"]
+# [spreadsheet.graphics."Company logo"]
 # title = "Organisation name"
 # description = "Description of the information conveyed by the picture"
-# fingerprint = "0123456789ab"
+# fingerprint = "0123456789abcdef"
 
 [fidelity]
 pagination = "same"
@@ -72,14 +72,15 @@ A test extracts this block and loads it through the real reader.
 | `document.language` | Language tag such as `"en-GB"`; sets metadata and, for families that keep a default language in their styles, that default too. | Existing languages kept. |
 | `text.remediation.linkify_plain_addresses` | Boolean. | `false`. |
 | `text.remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
-| `text.table_headers.TABLE_NAME` | Positive integer (leading direct rows to mark as headers) or `{ rows = N, fingerprint = "…" }`. | No change. |
-| `text.alt_text.KEY.title`, `.description` | String. | Existing text kept. |
-| `text.alt_text.KEY.fingerprint` | The fingerprint of the addressed graphic(s). | Not checked. |
+| `text.table_headers.TABLE_NAME` | Structured decision `{ rows = N, columns = M, fingerprint = "…" }`; at least one positive leading logical count. Repeats are counted; an omitted axis stays unchanged. | No change. |
+| `text.heading_levels."TARGET"` | `{ level = N, fingerprint = "…" }`, level 1–10. Use the exact logical target from the report. Ordinal targets require a reviewed fingerprint. | No change. |
+| `text.graphics.KEY.title`, `.description` | String. | Existing text kept. |
+| `text.graphics.KEY.fingerprint` | The fingerprint of the addressed graphic(s). | Not checked. |
 | `text.spacing.reference_text` | Text contained in the reference paragraph (required with `[text.spacing]`). | — |
 | `text.spacing.target_styles` | Non-empty list of paragraph style names (required with `[text.spacing]`). | — |
 | `text.spacing.exact_reference`, `text.spacing.include_headings` | Boolean. | `false`. |
 | `spreadsheet.sheet_names."CURRENT"` | The new name of the sheet currently named `CURRENT`: not blank, without `[ ] * ? : / \`, no apostrophe at either end. | Sheet keeps its name. |
-| `spreadsheet.alt_text.KEY.title`, `.description`, `.fingerprint` | As for `text.alt_text`, addressing frames in sheets. | See `text.alt_text`. |
+| `spreadsheet.graphics.KEY.title`, `.description`, `.fingerprint` | As for `text.graphics`, addressing frames in sheets. | See `text.graphics`. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
 | `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
@@ -88,8 +89,8 @@ A test extracts this block and loads it through the real reader.
 Unknown keys, wrong types, non-table sections and non-positive counts are rejected with
 the offending key named. TOML booleans are `true`/`false`, not strings. An empty file is
 valid and requests no change. Operations run in a fixed order (version, metadata, then the
-family's operations: for text, linkify, spacer removal, graphics, header rows, spacing; for
-spreadsheets, sheet names, then alt text), so a configuration always means the same thing.
+family's operations: for text, linkify, spacer removal, graphics, heading levels, table headers, spacing; for
+spreadsheets, sheet names, then graphics), so a configuration always means the same thing.
 
 ## Every selector must match, and mean what you reviewed
 
@@ -97,23 +98,31 @@ A table name, graphic key or spacing reference that matches nothing fails the wh
 and nothing is written; the message lists every miss. Use a table's actual `table:name`
 (not its position or caption). Graphic keys match the `draw:frame` name, the complete
 image `href`, then the image file name, exactly; quote TOML keys containing dots or
-slashes, for example `[text.alt_text."Pictures/logo.svg"]`. A table that already has header
-rows is *unchanged* when the count agrees and a conflict when it does not.
+slashes, for example `[text.graphics."Pictures/logo.svg"]`. A table that already has header
+rows or columns is *unchanged* when the count agrees; an explicit different count revises the boundary. Spans crossing a chosen boundary and non-leading header bands are rejected.
 
 Selectors are resolved before anything is edited. Two entries that address the same graphic
 and set the *same field to different values* both fail; entries that set different fields,
 or the same value, combine.
 
 A **fingerprint** binds an entry to the object you reviewed. It is a short digest of the
-object's identity and of facts no operation changes (a graphic's name, image file, size and
-anchor; a table's name, shape and first-row text), so it stays the same after the plan has
-been applied. If the document has drifted so that the key now addresses something else, the
+object's identity and protected facts (a graphic's structural position, dimensions, references
+and payload bytes; a table's complete logical data, attributes and grid), excluding the
+accessibility metadata the operation edits. If the document has drifted so that the key now addresses something else, the
 entry fails with "no longer the object this plan was reviewed against". `odfa11y template`
 prints the fingerprint of every object it suggests; leaving it out turns the check off.
 
 Describing a graphic is a judgement about this document's meaning. The presence of a
 title or description is only a structural check; do not give every image an arbitrary
 description just to make a finding disappear.
+
+## Heading levels
+
+Use the report target, such as `content/heading[2]` or `content/heading[id=section]`,
+quoted as the TOML table key. Choose the level; the template never enables a guessed
+choice. Every target is resolved before editing. Only `text:outline-level` changes.
+The fingerprint ignores that attribute, so repeated application is unchanged, and rejects
+changed heading content or an ordinal that now selects a different heading.
 
 ## Renaming sheets
 

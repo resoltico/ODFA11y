@@ -8,18 +8,17 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 import pytest
-from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.content import GraphicDescription
 from odfa11y.errors import OutputError, RemediationError
 from odfa11y.families.text import (
     ADAPTER,
-    AltText,
-    HeaderRows,
     LinkifyAddresses,
-    MarkHeaderRows,
+    MarkTableHeaders,
     RemoveEmptySpacers,
-    SetAltText,
+    SetGraphicDescriptions,
+    TableHeaders,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
 from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
@@ -44,7 +43,7 @@ class Misbehaving(Operation):
         if self.action == "change-text":
             paragraph.text = "Different words"
         elif self.action == "break-schema":
-            etree.SubElement(paragraph, qn("table", "table"))
+            paragraph.set(qn("text", "outline-level"), "1")
         return (Outcome(self.name, Status.APPLIED, "did something", count=1),)
 
 
@@ -70,8 +69,8 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     )
     operations = [
         SetMetadata(title="New title", language="en-GB"),
-        SetAltText({"Logo": AltText("Example logo", "Sample")}),
-        MarkHeaderRows({"Data": HeaderRows(1)}),
+        SetGraphicDescriptions({"Logo": GraphicDescription("Example logo", "Sample")}),
+        MarkTableHeaders({"Data": TableHeaders(1)}),
         LinkifyAddresses(),
     ]
     destination = tmp_path / "out.odt"
@@ -95,8 +94,8 @@ def test_failed_outcomes_abort_the_run_listing_every_failure_and_write_nothing(
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing")
     operations = [
-        SetAltText({"A": AltText("x"), "B": AltText("y")}),
-        MarkHeaderRows({"C": HeaderRows(1)}),
+        SetGraphicDescriptions({"A": GraphicDescription("x"), "B": GraphicDescription("y")}),
+        MarkTableHeaders({"C": TableHeaders(1)}),
     ]
     with pytest.raises(RemediationError) as raised:
         remediate(source, destination, operations)
@@ -210,7 +209,9 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
     assert after.read("meta.xml") != before.read("meta.xml")
 
     remediate(
-        marked, tmp_path / "out2.odt", [LinkifyAddresses(), SetAltText({"Logo": AltText("T")})]
+        marked,
+        tmp_path / "out2.odt",
+        [LinkifyAddresses(), SetGraphicDescriptions({"Logo": GraphicDescription("T")})],
     )
     content_after = PackageStorage(tmp_path / "out2.odt").read("content.xml")
     assert b"keep me" in content_after

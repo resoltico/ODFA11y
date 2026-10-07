@@ -43,7 +43,9 @@ def compare_pdfs(
 
     """
     source, candidate = Path(source), Path(candidate)
-    report = Report(kind="fidelity", subject=f"{candidate.name} vs {source.name}")
+    report = Report(
+        kind="fidelity", subject=f"{candidate.name} vs {source.name}", sources=(candidate, source)
+    )
     report.metadata["policy"] = policy.as_dict()
     before, after = read_snapshot(source), read_snapshot(candidate)
     report.metadata["pages"] = {"source": len(before.pages), "candidate": len(after.pages)}

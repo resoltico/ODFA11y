@@ -8,15 +8,15 @@ from pathlib import Path
 import pytest
 
 from odfa11y.config import load_config
+from odfa11y.content import GraphicDescription
 from odfa11y.errors import ConfigError
 from odfa11y.families.text import (
-    AltText,
-    HeaderRows,
     LinkifyAddresses,
-    MarkHeaderRows,
+    MarkTableHeaders,
     NormalizeSpacing,
     RemoveEmptySpacers,
-    SetAltText,
+    SetGraphicDescriptions,
+    TableHeaders,
 )
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.remediation import SetMetadata, SetOdfVersion
@@ -33,10 +33,10 @@ linkify_plain_addresses = true
 remove_empty_spacers = true
 
 [text.table_headers]
-Data = 1
+Data = { rows = 1 }
 Other = { rows = 2, fingerprint = "abc" }
 
-[text.alt_text.Logo]
+[text.graphics.Logo]
 title = "Organisation"
 description = "Organisation logo."
 fingerprint = "def"
@@ -75,8 +75,10 @@ def test_full_configuration_yields_operations_in_canonical_order(tmp_path: Path)
         SetMetadata("Decision", "Decision letter", "en-GB"),
         LinkifyAddresses(),
         RemoveEmptySpacers(),
-        SetAltText({"Logo": AltText("Organisation", "Organisation logo.", "def")}),
-        MarkHeaderRows({"Data": HeaderRows(1), "Other": HeaderRows(2, "abc")}),
+        SetGraphicDescriptions({
+            "Logo": GraphicDescription("Organisation", "Organisation logo.", "def")
+        }),
+        MarkTableHeaders({"Data": TableHeaders(1), "Other": TableHeaders(2, fingerprint="abc")}),
         NormalizeSpacing("Reference", ("BodyTight",), exact_reference=True),
     )
     assert config.fidelity == FidelityPolicy("may-change", 0.3, 180, 100)
@@ -100,17 +102,17 @@ def test_false_flags_request_nothing(tmp_path: Path) -> None:
         ("[document]\nlanguage = 7", "document.language must be str"),
         ('[document]\nodf_version = "1.2"', "document.odf_version must be one of"),
         ('[text.remediation]\nlinkify_plain_addresses = "false"', "must be bool"),
-        ("[text.table_headers]\nData = true", "must be int"),
-        ("[text.table_headers]\nData = 0", "must be a positive integer"),
+        ("[text.table_headers]\nData = true", "must be a table"),
+        ("[text.table_headers]\nData = 0", "must be a table"),
         (
             "[text.table_headers]\nData = { rows = 1, extra = 1 }",
             "Unknown text.table_headers.Data keys",
         ),
-        ('[text.table_headers.Data]\nfingerprint = "x"', "must be a positive integer"),
+        ('[text.table_headers.Data]\nfingerprint = "x"', "must contain positive rows or columns"),
         ("[text]\nspacing = 1", "must be a table"),
         ("[text]\nheadings = 1", "Unknown text keys"),
-        ("[text.alt_text.Logo]\ndescription = 7", "must be str"),
-        ('[text.alt_text.Logo]\ndescripton = "Typo"', "Unknown text.alt_text.Logo keys"),
+        ("[text.graphics.Logo]\ndescription = 7", "must be str"),
+        ('[text.graphics.Logo]\ndescripton = "Typo"', "Unknown text.graphics.Logo keys"),
         ('document = "invalid"', "must be a table"),
         ("[unknown]", "Unknown configuration keys"),
         ("[presentation]", "Unknown configuration keys"),

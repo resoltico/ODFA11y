@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from odfa11y.content import GraphicDescription
 from odfa11y.evidence import check_bundle
 from odfa11y.evidence.redact import ABSOLUTE_PATH
-from odfa11y.families.text import AltText, SetAltText
+from odfa11y.families.text import SetGraphicDescriptions
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
@@ -138,7 +139,7 @@ def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     source = make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
-    plan = [SetAltText({"Missing": AltText("x")})]
+    plan = [SetGraphicDescriptions({"Missing": GraphicDescription("x")})]
     run_pipeline(source, plan, FidelityPolicy(), out, PipelineOptions())
     assert_path_free(out, tmp_path)
 

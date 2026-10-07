@@ -133,3 +133,13 @@ def test_core_prose_and_common_prefixes_are_allowed(tmp_path: Path) -> None:
     )
     _core_file(root, "odf", "kinds.py", source=source)
     assert check_repository(root) == []
+
+
+def test_shared_content_vocabulary_is_allowed_but_does_not_exempt_orchestration(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, "content", "tables.py", source='value = "//table:table-row"\n')
+    assert check_repository(root) == []
+    _core_file(root, "pipeline", "run.py", source='value = "//table:table-row"\n')
+    assert any("family" in error for error in check_repository(root))
