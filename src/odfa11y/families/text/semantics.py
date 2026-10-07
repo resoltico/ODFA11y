@@ -6,8 +6,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from odfa11y.odf import NS, qn, select_elements
-from odfa11y.report import rules
+from odfa11y.odf import NS, Part, qn, select_elements
+from odfa11y.report import Location, rules
 
 from .fingerprint import graphics_fingerprint, table_fingerprint
 from .graphics import frame_keys
@@ -26,7 +26,7 @@ MAX_DATA_HEADER_LENGTH = 80
 MAX_SIMPLE_HEADING_NUMBER = 99
 
 
-def audit_headings(tree: etree._ElementTree, report: Report, member: str) -> None:
+def audit_headings(tree: etree._ElementTree, report: Report) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
     headings = select_elements(tree, "//office:body//text:h")
     report.metadata["heading_count"] = len(headings)
@@ -38,12 +38,14 @@ def audit_headings(tree: etree._ElementTree, report: Report, member: str) -> Non
             level = int(raw) if raw is not None else 0
         except ValueError:
             level = 0
-        location = f"{member} heading {index}: {text[:80]}"
+        location = Location(f"{Part.CONTENT}/heading[{index}]")
+        excerpt = {"text": text[:80]}
         if level < 1:
             report.add(
                 rules.TXT001,
                 "Heading has no valid text:outline-level.",
                 location=location,
+                details=excerpt,
             )
             continue
         if previous_level is None and level > 1:
@@ -51,12 +53,14 @@ def audit_headings(tree: etree._ElementTree, report: Report, member: str) -> Non
                 rules.TXT002,
                 f"Heading hierarchy starts at level {level}; expected level 1.",
                 location=location,
+                details=excerpt,
             )
         elif previous_level is not None and level > previous_level + 1:
             report.add(
                 rules.TXT002,
                 f"Heading hierarchy skips from level {previous_level} to {level}.",
                 location=location,
+                details=excerpt,
             )
         previous_level = level
         if _looks_manually_numbered_heading(text):
@@ -73,11 +77,11 @@ def audit_headings(tree: etree._ElementTree, report: Report, member: str) -> Non
         report.add(
             rules.TXT004,
             "No structural headings were found. This may be legitimate for a very short document.",
-            location=member,
+            location=Location(Part.CONTENT.value),
         )
 
 
-def audit_images(tree: etree._ElementTree, report: Report, member: str) -> None:
+def audit_images(tree: etree._ElementTree, report: Report) -> None:
     """Report graphics and embedded objects that lack alternative text."""
     frames = select_elements(
         tree, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
@@ -88,7 +92,6 @@ def audit_images(tree: etree._ElementTree, report: Report, member: str) -> None:
         title = frame.findtext("svg:title", namespaces=NS)
         desc = frame.findtext("svg:desc", namespaces=NS)
         declared_name = frame.get(qn("draw", "name"))
-        name = declared_name or f"frame-{index}"
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         selector = declared_name or href
@@ -97,7 +100,7 @@ def audit_images(tree: etree._ElementTree, report: Report, member: str) -> None:
             report.add(
                 rules.TXT010,
                 "Graphic object has neither accessible title nor description.",
-                location=f"{member} draw:frame {name}",
+                location=Location(f"{Part.CONTENT}/frame[{declared_name or f'#{index}'}]"),
                 details={
                     "frame": declared_name,
                     "href": href,
@@ -106,14 +109,13 @@ def audit_images(tree: etree._ElementTree, report: Report, member: str) -> None:
             )
 
 
-def audit_tables(tree: etree._ElementTree, report: Report, member: str) -> None:
+def audit_tables(tree: etree._ElementTree, report: Report) -> None:
     """Report table structure defects such as missing header rows."""
     tables = select_elements(tree, "//office:body//table:table")
     report.metadata["table_count"] = len(tables)
     for index, table in enumerate(tables, start=1):
         declared_name = table.get(qn("table", "name"))
-        name = declared_name or f"table-{index}"
-        location = f"{member} table {name}"
+        location = Location(f"{Part.CONTENT}/table[{declared_name or f'#{index}'}]")
         merged = select_elements(
             table,
             (
