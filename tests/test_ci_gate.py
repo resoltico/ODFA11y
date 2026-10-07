@@ -73,7 +73,7 @@ def test_a_draft_release_is_created_only_by_a_manual_run_on_main() -> None:
     assert "environment: release" in block
     assert "--target" in block
     assert "--verify-tag" not in block
-    assert "refs/tags" not in WORKFLOW
+    assert "refs/tags" not in block
 
 
 def test_the_gate_demands_success_not_merely_absence_of_failure() -> None:
@@ -82,3 +82,26 @@ def test_the_gate_demands_success_not_merely_absence_of_failure() -> None:
 
 def test_the_ruleset_blocks_deletion_and_history_rewrites() -> None:
     assert {rule["type"] for rule in RULESET["rules"]} >= {"deletion", "non_fast_forward"}
+
+
+def test_check_triggers_cover_prs_main_tags_and_manual_branch_runs() -> None:
+    triggers = WORKFLOW.split("\nenv:", 1)[0]
+    assert '  push:\n    branches: [main]\n    tags: ["v*"]\n' in triggers
+    assert "  pull_request:\n" in triggers
+    assert "  workflow_dispatch:\n" in triggers
+    assert "paths:" not in triggers
+    assert "paths-ignore:" not in triggers
+    # These jobs also run on manually selected branches; only release creation is restricted.
+    for job in ("static", "test", "integration"):
+        assert not re.search(r"^    if:", job_block(job), re.MULTILINE)
+
+
+def test_tag_and_manual_release_runs_cannot_restore_go_analysis_caches() -> None:
+    cache = re.search(
+        r"- name: Cache pinned Go analysis tools\n((?: {8}.*\n)+)",
+        WORKFLOW,
+    )
+    assert cache is not None
+    block = cache.group(1)
+    assert "if: github.event_name != 'workflow_dispatch' || !inputs.release" in block
+    assert "lookup-only: ${{ startsWith(github.ref, 'refs/tags/') }}" in block
