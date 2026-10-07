@@ -5,13 +5,14 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.errors import RemediationError
+from odfa11y.errors import MissingMemberError, RemediationError
 from odfa11y.families import REGISTRY, adapter_for
 from odfa11y.families.text import AltText, SetAltText
 from odfa11y.fidelity import FidelityPolicy
@@ -175,6 +176,45 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     assert run["document"]["kind"] == "spreadsheet"
     assert run["document"]["adapter"] == "generic"
     assert (tmp_path / "out" / "remediated.ods").is_file()
+
+
+def test_remediation_refuses_an_unrecognised_document(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
+    destination = tmp_path / "out.odt"
+    with pytest.raises(RemediationError, match="not a recognised OpenDocument"):
+        remediate(source, destination, [SetMetadata(title="x")])
+    assert not destination.exists()
+
+
+def test_remediation_refuses_a_package_without_a_meta_part(tmp_path: Path) -> None:
+    source = tmp_path / "nometa.odt"
+    with (
+        zipfile.ZipFile(make_package(tmp_path, "text")) as full,
+        zipfile.ZipFile(source, "w") as cut,
+    ):
+        for member in full.infolist():
+            if member.filename != "meta.xml":
+                cut.writestr(member, full.read(member.filename))
+    destination = tmp_path / "out.odt"
+    with pytest.raises(MissingMemberError, match="no meta part"):
+        remediate(source, destination, [SetMetadata(title="x")])
+    assert not destination.exists()
+
+
+def test_the_production_profile_fails_for_a_family_without_pdf_validation(
+    tmp_path: Path,
+) -> None:
+    record = run_pipeline(
+        make_package(tmp_path, "spreadsheet"),
+        [],
+        FidelityPolicy(),
+        tmp_path / "out",
+        PipelineOptions(profile="production"),
+    )
+    assert not record.passed
+    failed = next(stage for stage in record.stages if stage.status == "failed")
+    assert failed.name == "export-source"
+    assert "requires PDF validation" in (failed.reason or "")
 
 
 def test_a_new_family_needs_only_a_registry_entry(

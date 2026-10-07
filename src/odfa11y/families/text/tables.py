@@ -37,7 +37,7 @@ class MarkHeaderRows(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        tables = select_elements(document.tree(Part.CONTENT), "//table:table")
+        tables = select_elements(document.tree(Part.CONTENT), "//office:body//table:table")
         return tuple(
             self._mark(
                 document,

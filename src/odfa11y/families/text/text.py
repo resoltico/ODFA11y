@@ -54,7 +54,7 @@ def visible_text_snapshot(tree: etree._ElementTree) -> tuple[str, ...]:
 
     """
     blocks: list[str] = []
-    for node in select_elements(tree, "//text:h | //text:p"):
+    for node in select_elements(tree, "//office:body//text:h | //office:body//text:p"):
         text = _visible_node_text(node).replace("\u00a0", " ")
         blocks.append(" ".join(text.split()))
     return tuple(blocks)

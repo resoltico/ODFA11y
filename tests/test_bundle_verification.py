@@ -201,3 +201,12 @@ def test_nested_manifest_artifacts_are_inventoried_not_exempted(tmp_path: Path) 
     target = bundle(tmp_path, {"sub/manifest.json": b"{}"})
     assert "sub/manifest.json" in json.loads((target / "manifest.json").read_text())["files"]
     assert check_bundle(target) == []
+
+
+def test_a_manifest_name_that_is_not_valid_text_is_reported_not_fatal(tmp_path: Path) -> None:
+    directory = bundle(tmp_path)
+    manifest = json.loads((directory / "manifest.json").read_text())
+    manifest["files"]["bad\ud800.txt"] = "0" * 64
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    problems = check_bundle(directory)
+    assert any("unsafe name" in problem for problem in problems)

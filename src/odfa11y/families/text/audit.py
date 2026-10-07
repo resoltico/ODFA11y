@@ -37,7 +37,9 @@ def audit_text(document: OdfDocument, report: Report) -> None:
 
 def _audit_links(tree: etree._ElementTree, report: Report, member: str) -> None:
     """Report URLs and addresses in prose, exactly where linkification would act."""
-    for index, block in enumerate(select_elements(tree, "//text:p | //text:h"), start=1):
+    for index, block in enumerate(
+        select_elements(tree, "//office:body//text:p | //office:body//text:h"), start=1
+    ):
         for owner, attr in prose_slots(block):
             for match in URI_RE.finditer(getattr(owner, attr)):
                 token, _suffix = split_trailing_punctuation(match.group(0))
@@ -72,7 +74,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report, member: str) -> 
 
 
 def _audit_notes(tree: etree._ElementTree, report: Report, member: str) -> None:
-    notes = select_elements(tree, "//text:note")
+    notes = select_elements(tree, "//office:body//text:note")
     if not notes:
         return
     classes: dict[str, int] = {}

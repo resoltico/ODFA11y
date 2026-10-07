@@ -149,9 +149,12 @@ class _Run:
 
     def _no_pdf(self, name: str) -> StageResult:
         kind = self.record.document.get("kind") or "this kind of"
-        return StageResult(
-            name, "not-applicable", f"no PDF export is defined for {kind} documents", gate=False
-        )
+        reason = f"no PDF export is defined for {kind} documents"
+        if self.record.profile.verapdf_required:
+            return StageResult(
+                name, "failed", f"{reason}; the profile requires PDF validation", error=True
+            )
+        return StageResult(name, "not-applicable", reason, gate=False)
 
     def _gate(self, name: str, report: Report) -> StageResult:
         failed = exit_status([report], strict=self.record.strict) != 0

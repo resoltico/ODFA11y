@@ -83,7 +83,9 @@ class NormalizeSpacing(Operation):
         clones = {derived_style_name(style): style for style in self.target_styles}
         if len(clones) != len(set(self.target_styles)):
             return (self._failed("Two target styles map to the same derived style name."),)
-        selector = "//text:p" + (" | //text:h" if self.include_headings else "")
+        selector = "//office:body//text:p" + (
+            " | //office:body//text:h" if self.include_headings else ""
+        )
         paragraphs = select_elements(tree, selector)
         direct = [p for p in paragraphs if _style_key(p) in self.target_styles]
         derived = [p for p in paragraphs if _style_key(p) in clones]
@@ -96,7 +98,7 @@ class NormalizeSpacing(Operation):
         return Outcome(self.name, Status.FAILED, message)
 
     def _reference(self, tree: etree._ElementTree) -> etree._Element | None:
-        for node in select_elements(tree, "//text:p | //text:h"):
+        for node in select_elements(tree, "//office:body//text:p | //office:body//text:h"):
             current = "".join(node.itertext()).strip()
             if (
                 (self.reference_text == current)

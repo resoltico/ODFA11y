@@ -51,6 +51,9 @@ def remediate(
     source, destination = Path(source), Path(destination)
     _require_distinct(source, destination)
     document = OdfDocument.open(source)
+    if document.kind is None:
+        msg = f"{source.name} is not a recognised OpenDocument document; nothing was written."
+        raise RemediationError(msg)
     adapter = adapter_for(document.kind)
     _require_matching_family(document, adapter, operations)
     snapshot_before = adapter.snapshot(document)

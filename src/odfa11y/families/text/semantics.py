@@ -28,7 +28,7 @@ MAX_SIMPLE_HEADING_NUMBER = 99
 
 def audit_headings(tree: etree._ElementTree, report: Report, member: str) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
-    headings = select_elements(tree, "//text:h")
+    headings = select_elements(tree, "//office:body//text:h")
     report.metadata["heading_count"] = len(headings)
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
@@ -79,8 +79,10 @@ def audit_headings(tree: etree._ElementTree, report: Report, member: str) -> Non
 
 def audit_images(tree: etree._ElementTree, report: Report, member: str) -> None:
     """Report graphics and embedded objects that lack alternative text."""
-    frames = select_elements(tree, "//draw:frame[draw:image or draw:object or draw:object-ole]")
-    all_frames = select_elements(tree, "//draw:frame")
+    frames = select_elements(
+        tree, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
+    )
+    all_frames = select_elements(tree, "//office:body//draw:frame")
     report.metadata["graphic_object_count"] = len(frames)
     for index, frame in enumerate(frames, start=1):
         title = frame.findtext("svg:title", namespaces=NS)
@@ -106,7 +108,7 @@ def audit_images(tree: etree._ElementTree, report: Report, member: str) -> None:
 
 def audit_tables(tree: etree._ElementTree, report: Report, member: str) -> None:
     """Report table structure defects such as missing header rows."""
-    tables = select_elements(tree, "//table:table")
+    tables = select_elements(tree, "//office:body//table:table")
     report.metadata["table_count"] = len(tables)
     for index, table in enumerate(tables, start=1):
         declared_name = table.get(qn("table", "name"))
@@ -116,7 +118,7 @@ def audit_tables(tree: etree._ElementTree, report: Report, member: str) -> None:
             table,
             (
                 ".//*[@table:number-columns-spanned or "
-                "@table:number-rows-spanned] | .//table:covered-table-cell"
+                "@table:number-rows-spanned] | .//office:body//table:covered-table-cell"
             ),
         )
         if merged:

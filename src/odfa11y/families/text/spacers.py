@@ -32,6 +32,6 @@ def spacer_candidates(tree: etree._ElementTree) -> list[etree._Element]:
     """
     return [
         paragraph
-        for paragraph in select_elements(tree, "//text:p")
+        for paragraph in select_elements(tree, "//office:body//text:p")
         if is_empty_paragraph(paragraph) and not select_elements(paragraph, PROTECTED_ANCESTORS)
     ]

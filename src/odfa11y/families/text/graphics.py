@@ -46,7 +46,7 @@ class SetAltText(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        frames = select_elements(document.tree(Part.CONTENT), "//draw:frame")
+        frames = select_elements(document.tree(Part.CONTENT), "//office:body//draw:frame")
         matched = {
             key: [frame for frame in frames if key in frame_keys(frame)] for key in self.entries
         }

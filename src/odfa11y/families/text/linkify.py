@@ -44,7 +44,7 @@ def linkify_plain_addresses(tree: etree._ElementTree) -> int:
 
     """
     count = 0
-    for block in select_elements(tree, "//text:p | //text:h"):
+    for block in select_elements(tree, "//office:body//text:p | //office:body//text:h"):
         # Collect the slots first: inserting links mutates the tree while we walk it.
         for owner, attr in list(prose_slots(block)):
             count += _linkify_slot(owner, attr)

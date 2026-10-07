@@ -206,7 +206,9 @@ class StyleCatalog:
 
         """
         counts: Counter[str] = Counter()
-        for p in select_elements(self.content_tree, "//text:p | //text:h"):
+        for p in select_elements(
+            self.content_tree, "//office:body//text:p | //office:body//text:h"
+        ):
             name = p.get(qn("text", "style-name")) or "(none)"
             counts[name] += 1
         rows: list[ParagraphStyleUsage] = []
