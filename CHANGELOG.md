@@ -28,6 +28,12 @@ Notable changes to this project are documented in this file. The format is based
   when LibreOffice is missing or its export fails, after printing the versions it found.
   The capability is not recorded in `run.json`.
 
+### Changed
+
+- The package description and README now state the support boundary: every OpenDocument kind
+  is recognised and checked in common, while semantic audit, remediation and PDF/UA export
+  exist only for text documents.
+
 ## [0.3.0] - 2026-10-07
 
 This release makes the ODF core independent of any document family: ODFA11y now recognises
