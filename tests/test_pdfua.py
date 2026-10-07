@@ -101,7 +101,9 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
         "PDF018",
     }
     assert report.metadata["link_structure_elements"] >= 1
-    assert validate_pdfua(pdf, executable=verapdf).compliant
+    result = validate_pdfua(pdf, executable=verapdf)
+    failed = [f"{f.clause}-{f.test_number}: {f.description}" for f in result.failures]
+    assert result.compliant, failed
 
 
 @pytest.mark.integration

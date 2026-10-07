@@ -126,7 +126,16 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     ]
     options = PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf)
     record = run_pipeline(source, operations, FidelityPolicy(), tmp_path / "out", options)
-    assert statuses(record) == dict.fromkeys(STAGE_NAMES, "passed")
+    why = [
+        (
+            stage.name,
+            stage.reason,
+            [f.message for f in stage.report.findings] if stage.report else [],
+        )
+        for stage in record.stages
+        if stage.status != "passed"
+    ]
+    assert statuses(record) == dict.fromkeys(STAGE_NAMES, "passed"), why
     assert record.exit_status == 0
     assert check_bundle(tmp_path / "out") == []
     run = json.loads((tmp_path / "out" / "run.json").read_text())
