@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.external_tools import identify, run_bounded
+from odfa11y import external_tools
+from odfa11y.external_tools import ToolRun, identify, run_bounded
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -114,3 +115,25 @@ def test_an_interruption_kills_the_tool_instead_of_orphaning_it(tmp_path: Path) 
             return
         time.sleep(0.1)
     pytest.fail("the tool survived the interruption")
+
+
+def test_windows_identification_reads_the_file_version_instead_of_running_the_tool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[list[str]] = []
+
+    def fake(command: list[str], *, timeout: float) -> ToolRun:
+        seen.append(command)
+        assert timeout > 0
+        return ToolRun(0, "26.2.6.2\r\n", "", stdout_truncated=False, stderr_truncated=False)
+
+    monkeypatch.setattr(external_tools, "run_bounded", fake)
+    monkeypatch.setattr(sys, "platform", "win32")
+    identity = external_tools.identify_running_or_by_file(
+        "LibreOffice", "C:\\Program Files\\O'Neil\\soffice.exe", ("--version",)
+    )
+    assert identity.version == "26.2.6.2"
+    assert len(seen) == 1
+    assert seen[0][0] == "powershell"
+    assert "O''Neil" in seen[0][-1]  # a quote in the path cannot end the literal
+    assert "--version" not in " ".join(seen[0])

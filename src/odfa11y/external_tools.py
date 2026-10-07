@@ -8,6 +8,7 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -204,3 +205,42 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
         return ToolIdentity(name, "unknown")
     found = VERSION_RE.search(completed.stdout or completed.stderr)
     return ToolIdentity(name, found.group(0) if found else "unknown")
+
+
+def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
+    """Read an executable's product version from its file metadata, without running it.
+
+    For applications whose ``--version`` does not return on Windows (LibreOffice's
+    ``soffice.exe`` starts a session and never prints). Failure yields ``unknown``.
+
+    Returns
+    -------
+    ToolIdentity
+        The product version, or ``unknown`` when it cannot be read.
+
+    """
+    quoted = executable.replace("'", "''")
+    script = f"(Get-Item -LiteralPath '{quoted}').VersionInfo.ProductVersion"
+    command = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
+    try:
+        completed = run_bounded(command, timeout=IDENTIFY_TIMEOUT_SECONDS)
+    except OSError, subprocess.TimeoutExpired:
+        return ToolIdentity(name, "unknown")
+    found = VERSION_RE.search(completed.stdout)
+    return ToolIdentity(name, found.group(0) if found else "unknown")
+
+
+def identify_running_or_by_file(
+    name: str, executable: str, version_args: tuple[str, ...]
+) -> ToolIdentity:
+    """Identify an application by running it, or by its file version on Windows.
+
+    Returns
+    -------
+    ToolIdentity
+        The reported version, or ``unknown``.
+
+    """
+    if sys.platform == "win32":
+        return identify_by_file_version(name, executable)
+    return identify(name, executable, version_args)

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import OutputError, ToolFailedError
-from odfa11y.external_tools import find_executable, identify, run_bounded
+from odfa11y.external_tools import find_executable, identify_running_or_by_file, run_bounded
 from odfa11y.staging import staging_sibling
 
 if TYPE_CHECKING:
@@ -42,13 +42,15 @@ def find_soffice(requested: str | Path | None = None) -> str:
 def identify_soffice(executable: str) -> ToolIdentity:
     """Report LibreOffice's version.
 
+    ``soffice --version`` never returns on Windows, so there the file's product version is read.
+
     Returns
     -------
     ToolIdentity
         The name and version, or ``unknown`` when it cannot be read.
 
     """
-    return identify("LibreOffice", executable, ("--version",))
+    return identify_running_or_by_file("LibreOffice", executable, ("--version",))
 
 
 @dataclass(frozen=True, slots=True)
