@@ -1,0 +1,33 @@
+name: Dependency audit
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+env:
+  ODFA11Y_UV_VERSION: "0.12.23"
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+jobs:
+  vulnerabilities:
+    name: Known vulnerabilities in locked dependencies
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: ${{ env.ODFA11Y_UV_VERSION }}
+      - name: Restore locked Python environment
+        run: uv sync --locked --group audit
+      - name: Audit locked dependencies
+        run: |
+          uv export --locked --group audit --no-emit-project --output-file "$RUNNER_TEMP/audit-requirements.txt" > /dev/null
+          uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r "$RUNNER_TEMP/audit-requirements.txt"

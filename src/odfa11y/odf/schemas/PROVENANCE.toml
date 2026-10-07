@@ -1,0 +1,17 @@
+# Unmodified copies of the OASIS ODF Relax NG schemas. The SHA-256 values are verified by tests.
+
+["OpenDocument-v1.3-schema.rng"]
+url = "https://docs.oasis-open.org/office/OpenDocument/v1.3/os/schemas/OpenDocument-v1.3-schema.rng"
+sha256 = "40bad03efdbb02825230d357da0aa6ac679934c5bf56c6281752c0c24d58e4e6"
+
+["OpenDocument-v1.3-manifest-schema.rng"]
+url = "https://docs.oasis-open.org/office/OpenDocument/v1.3/os/schemas/OpenDocument-v1.3-manifest-schema.rng"
+sha256 = "8aee71f03484be112af972d622cc9031280c007b0a454ae8815e8e333c9bdd17"
+
+["OpenDocument-v1.4-schema.rng"]
+url = "https://docs.oasis-open.org/office/OpenDocument/v1.4/os/schemas/OpenDocument-v1.4-schema.rng"
+sha256 = "4034ec6be29205d5fc1ee5f42468ac6ef824287b3aba6d9289032af4fafbda7f"
+
+["OpenDocument-v1.4-manifest-schema.rng"]
+url = "https://docs.oasis-open.org/office/OpenDocument/v1.4/os/schemas/OpenDocument-v1.4-manifest-schema.rng"
+sha256 = "f96e1fe95f4e3609717a307c28e2fe0654c890fe70ea03eb8a53caa20b684782"

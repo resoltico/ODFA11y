@@ -1,31 +1,54 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Execute the document audit and remediation commands."""
+"""Execute the commands and map failures to exit statuses."""
 
 from __future__ import annotations
 
-import subprocess
+import json
+import platform
 import sys
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import audit_odt
-from odfa11y.pdf import audit_pdfua, export_pdfua
-from odfa11y.remediation import normalize_paragraph_spacing, remediate_odt
-from odfa11y.report import max_severity_exit_code, render_report
+import PIL
+import pypdf
+import pypdfium2
+from lxml import etree
 
-from .options import options_from_args
+from odfa11y import __version__
+from odfa11y.audit import audit_odt, render_template
+from odfa11y.config import Config, load_config
+from odfa11y.errors import OdfA11yError, ToolNotFoundError
+from odfa11y.evidence import check_bundle
+from odfa11y.external_tools import identify
+from odfa11y.fidelity import compare_pdfs
+from odfa11y.odf import SUPPORTED_VERSIONS, OdtDocument
+from odfa11y.pdf import (
+    audit_pdfua,
+    check_pdfua,
+    export_pdfua,
+    find_soffice,
+    find_verapdf,
+    identify_soffice,
+)
+from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.remediation import remediate
+from odfa11y.report import exit_status, render_reports
+
 from .parser import build_parser
-from .reporting import append_verapdf_result, doctor, print_multi_reports, style_report
 
 if TYPE_CHECKING:
     import argparse
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
-    from odfa11y.remediation import RemediationResult
-    from odfa11y.report import AuditReport
+    from odfa11y.report import Report
+
+EXECUTION_FAILURE = 3
+PDF_MAGIC = b"%PDF"
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Execute a command and return its documented severity exit code.
+def main(argv: list[str] | None = None) -> int:
+    """Run a command and return its documented exit status.
 
     Returns
     -------
@@ -36,112 +59,161 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": _audit,
+        "template": _template,
         "remediate": _remediate,
-        "styles": lambda args: style_report(args.source, args.format),
-        "normalize-spacing": _normalize_spacing,
-        "export-pdfua": _export,
-        "verify-pdf": _verify_pdf,
-        "verify": _verify,
+        "export": _export,
+        "compare": _compare,
         "pipeline": _pipeline,
-        "doctor": lambda args: doctor(args.format),
+        "styles": _styles,
+        "check-evidence": _check_evidence,
+        "doctor": _doctor,
     }
     try:
         return handlers[args.command](args)
-    except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+    except (OdfA11yError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
-        return 3
+        return EXECUTION_FAILURE
 
 
-def _odt_report(args: argparse.Namespace) -> AuditReport:
-    return audit_odt(
-        args.source,
-        target_version=args.target_version,
-        schema=args.schema,
-        manifest_schema=args.manifest_schema,
-    )
+def _is_pdf(path: Path) -> bool:
+    with path.open("rb") as stream:
+        return stream.read(len(PDF_MAGIC)) == PDF_MAGIC
 
 
 def _audit(args: argparse.Namespace) -> int:
-    report = _odt_report(args)
-    print(render_report(report, output_format=args.format))
-    return max_severity_exit_code(report, strict=args.strict)
+    reports: list[Report] = []
+    for source in args.sources:
+        if _is_pdf(source):
+            reports.append(audit_pdfua(source))
+            if args.verapdf or args.verapdf_path:
+                report, _result = check_pdfua(
+                    source, subject=str(source), executable=args.verapdf_path
+                )
+                reports.append(report)
+        else:
+            reports.append(audit_odt(source, schema=args.schema))
+    print(render_reports(reports, output_format=args.format))
+    return exit_status(reports, strict=args.strict)
 
 
-def _print_remediation(result: RemediationResult) -> None:
-    print(f"Wrote: {result.destination}")
-    for change in result.changes:
-        print(f"- {change}")
-    if not result.changes:
-        print("- No changes were necessary.")
-
-
-def _remediate(args: argparse.Namespace) -> int:
-    result = remediate_odt(args.source, args.destination, options=options_from_args(args))
-    _print_remediation(result)
+def _template(args: argparse.Namespace) -> int:
+    print(render_template(audit_odt(args.source)), end="")
     return 0
 
 
-def _normalize_spacing(args: argparse.Namespace) -> int:
-    result = normalize_paragraph_spacing(
-        args.source,
-        args.destination,
-        reference_text=args.reference_text,
-        target_styles=args.target_style,
-        contains=not args.exact_reference,
-        include_headings=args.include_headings,
-    )
-    print(f"Wrote: {result.destination}")
-    for change in result.changes:
-        print(f"- {change}")
+def _remediate(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    result = remediate(args.source, args.destination, config.operations, dry_run=args.dry_run)
+    if args.format == "json":
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+        return 0
+    print("Dry run; nothing written." if args.dry_run else f"Wrote: {result.destination}")
+    for outcome in result.outcomes:
+        key = f" [{outcome.key}]" if outcome.key else ""
+        print(f"- {outcome.status.value:9} {outcome.operation}{key}: {outcome.message}")
+    if not result.outcomes:
+        print("- No operations were configured.")
+    print(f"Schema: {result.schema_check}")
     return 0
 
 
 def _export(args: argparse.Namespace) -> int:
-    pdf = export_pdfua(args.source, args.destination, soffice=args.soffice, timeout=args.timeout)
-    print(pdf)
+    print(export_pdfua(args.source, args.destination, soffice=args.soffice, timeout=args.timeout))
     return 0
 
 
-def _verify_pdf(args: argparse.Namespace) -> int:
-    report = audit_pdfua(args.pdf)
-    append_verapdf_result(report, args.pdf, args.verapdf)
-    print(render_report(report, output_format=args.format))
-    return max_severity_exit_code(report, strict=args.strict)
+def _compare(args: argparse.Namespace) -> int:
+    policy = (load_config(args.config) if args.config else Config()).fidelity
+    with tempfile.TemporaryDirectory(prefix="odfa11y-compare-") as scratch:
+        work = Path(scratch)
+        left = _as_pdf(args.source, work / "source.pdf", args, work / "profile")
+        right = _as_pdf(args.candidate, work / "candidate.pdf", args, work / "profile")
+        report = compare_pdfs(left, right, policy, diff_dir=args.diff_dir)
+    report.subject = f"{args.candidate.name} vs {args.source.name}"
+    print(render_reports([report], output_format=args.format))
+    return exit_status([report], strict=args.strict)
 
 
-def _verify(args: argparse.Namespace) -> int:
-    reports = [_odt_report(args)]
-    if args.pdf:
-        pdf_report = audit_pdfua(args.pdf)
-        append_verapdf_result(pdf_report, args.pdf, args.verapdf)
-        reports.append(pdf_report)
-    return print_multi_reports(reports, args.format, strict=args.strict)
+def _as_pdf(path: Path, rendered: Path, args: argparse.Namespace, profile: Path) -> Path:
+    if _is_pdf(path):
+        return path
+    return export_pdfua(
+        path, rendered, soffice=args.soffice, timeout=args.timeout, profile_dir=profile
+    )
 
 
 def _pipeline(args: argparse.Namespace) -> int:
-    options = options_from_args(args)
-    remediation = remediate_odt(args.source, args.destination, options=options)
-    odt_report = audit_odt(
-        args.destination,
-        target_version=options.target_version or "1.4",
-        schema=args.schema,
-        manifest_schema=args.manifest_schema,
+    config = load_config(args.config)
+    options = PipelineOptions(
+        soffice=str(args.soffice) if args.soffice else None,
+        verapdf=args.verapdf,
+        verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
+        timeout=args.timeout,
+        strict=args.strict,
     )
-    if max_severity_exit_code(odt_report, strict=args.strict):
-        if args.format == "text":
-            print("PDF export skipped because the ODT audit failed.")
-        return print_multi_reports([odt_report], args.format, strict=args.strict)
-    export_pdfua(args.destination, args.pdf, soffice=args.soffice)
-    pdf_report = audit_pdfua(args.pdf)
-    append_verapdf_result(pdf_report, args.pdf, args.verapdf)
-    if args.format == "text":
-        print(f"Remediated ODT: {remediation.destination}")
-        for change in remediation.changes:
-            print(f"- {change}")
-        print(f"PDF/UA export: {args.pdf}")
-        print()
-    return print_multi_reports([odt_report, pdf_report], args.format, strict=args.strict)
+    record = run_pipeline(args.source, config.operations, config.fidelity, args.output_dir, options)
+    if args.format == "json":
+        print(json.dumps(record.as_dict(), indent=2, sort_keys=True))
+    else:
+        print(f"Evidence: {args.output_dir}")
+        for stage in record.stages:
+            detail = f" ({stage.reason})" if stage.reason else ""
+            print(f"- {stage.status:7} {stage.name}{detail}")
+        reports = [s.report for s in record.stages if s.gate and s.report and not s.report.passed]
+        if reports:
+            print()
+            print(render_reports(reports))
+    return record.exit_status
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+def _styles(args: argparse.Namespace) -> int:
+    rows = OdtDocument.open(args.source).catalog.paragraph_usage()
+    if args.format == "json":
+        data = [
+            {"style": r.style_name, "count": r.count, "parent": r.parent, "spacing": r.spacing}
+            for r in rows
+        ]
+        print(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True))
+        return 0
+    print(f"Paragraph styles in {args.source}:")
+    for row in rows:
+        print(
+            f"- {row.style_name}: {row.count} use(s); parent={row.parent!r}; spacing={row.spacing}"
+        )
+    return 0
+
+
+def _check_evidence(args: argparse.Namespace) -> int:
+    problems = check_bundle(args.directory)
+    for problem in problems:
+        print(problem)
+    print("Evidence bundle is intact." if not problems else f"{len(problems)} problem(s) found.")
+    return 2 if problems else 0
+
+
+def _doctor(args: argparse.Namespace) -> int:
+    info: dict[str, object] = {
+        "odfa11y": __version__,
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "lxml": etree.__version__,
+        "pypdf": pypdf.__version__,
+        "pypdfium2": pypdfium2.version.PYPDFIUM_INFO.version,
+        "pillow": PIL.__version__,
+        "odf_schemas": list(SUPPORTED_VERSIONS),
+        "LibreOffice": _tool(lambda: identify_soffice(find_soffice()).version),
+        "veraPDF": _tool(lambda: identify("veraPDF", find_verapdf(), ("--version",)).version),
+    }
+    if args.format == "json":
+        print(json.dumps(info, indent=2, sort_keys=True))
+    else:
+        for key, value in info.items():
+            print(f"{key}: {value or 'not found'}")
+    return 0
+
+
+def _tool(probe: Callable[[], str]) -> str | None:
+    try:
+        return probe()
+    except ToolNotFoundError:
+        return None

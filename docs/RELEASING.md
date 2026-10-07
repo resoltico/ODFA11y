@@ -1,41 +1,44 @@
 # Publication and releases
 
-The initial public version will be **v0.1.0**. The package version is read from
-`src/odfa11y/__init__.py`. Keep `CHANGELOG.md` unchanged until this first release
-is publicly published; thereafter record notable net outcomes for subsequent
-releases in its Unreleased section.
+The package version is read from `src/odfa11y/__init__.py`. Record notable net outcomes
+in the Unreleased section of `CHANGELOG.md` as work lands; at release, rename that section
+to the new version and date and set the same version in the package.
 
-## Before creating the public repository
+## Repository settings
 
-Review the intended initial commit, including hidden files. Keep private documents,
-reports, environment files, credentials, virtual environments and generated build
-outputs out of it. `.gitignore` prevents accidental staging of common local inputs;
-it does not remove sensitive files already committed or deliberately force-added.
-Run the required [development checks](DEVELOPING.md#required-checks), dependency
-advisory review and redacted secret scan from [Audit hygiene](DEVELOPING.md#audit-hygiene).
+These are GitHub settings, not promises this source tree can enforce:
 
-Once the repository exists, enable GitHub private vulnerability reporting, secret
-scanning/push protection where available, and branch rules requiring the Static analysis, Integration and
-Linux, macOS and Windows Quality checks. Restrict creation/modification of release tags to the maintainer.
-These are repository settings, not promises that this source tree can enforce.
-Do not add deployment or package-registry credentials just to enable GitHub releases.
+- Enable private vulnerability reporting and secret scanning/push protection where
+  available. Restrict creation and modification of release tags to the maintainer.
+- Require exactly one status check, **`CI gate`**, on the default branch. The gate is a
+  final job that waits for the static, per-OS test and integration jobs and fails unless
+  every one succeeded (a skipped or cancelled job fails it), so jobs can be added or
+  renamed without touching the setting. [`.github/rulesets/default-branch.json`](../.github/rulesets/default-branch.json)
+  holds the ruleset as code: import it under *Settings → Rules → Rulesets → Import a
+  ruleset* (or `gh api repos/OWNER/REPO/rulesets --input .github/rulesets/default-branch.json`),
+  then remove any older protection that requires individual job checks. A test keeps the
+  ruleset and the workflow's gate name in agreement.
+- Do not add deployment or package-registry credentials just to enable GitHub releases.
 
-The hosted checks must run successfully before release. Local success does not
-establish GitHub runner behavior. Runtime dependencies and developer tools are
-locked; external LibreOffice and runner image versions still vary.
+Review the intended release, including hidden files: keep private documents, reports,
+environment files, credentials, virtual environments and build outputs out of it.
+`.gitignore` prevents accidental staging of common local inputs; it does not remove
+sensitive files already committed. Run the [development checks](DEVELOPING.md#required-checks)
+and the [audit hygiene](DEVELOPING.md#audit-hygiene) scans before tagging. Hosted checks
+must pass; local success does not establish GitHub runner behavior. Runtime dependencies
+and developer tools are locked; LibreOffice, veraPDF and runner images still vary.
 
 ## Prepare the version tag
 
-After reviewing and committing the intended release, create an annotated tag that
-exactly matches the package version. For the initial release:
+After committing the release, create an annotated tag that exactly matches the package
+version, for example:
 
 ```bash
-git tag -a v0.1.0 -m 'ODFA11y v0.1.0'
-git push origin v0.1.0
+git tag -a v0.2.0 -m 'ODFA11y v0.2.0'
+git push origin v0.2.0
 ```
 
-Do not move an already published version tag or replace its package assets. Prepare
-a new version when public behavior or artifacts need to change.
+Do not move a published tag or replace its assets; prepare a new version instead.
 
 ## What the workflow does
 
@@ -43,8 +46,8 @@ The existing [Checks workflow](../.github/workflows/checks.yml) also handles ver
 tags, so release logic reuses the same gates:
 
 1. Run policy, lint, type and boundary checks, tests (including real LibreOffice and
-   veraPDF integration), known-dependency advisories, workflow security and
-   a redacted history secret scan.
+   veraPDF integration), known-dependency advisories, workflow security and a redacted
+   history secret scan; the `CI gate` job summarises them.
 2. Build a wheel from the source archive and test its isolated installation.
 3. Preserve the tested Linux wheel and source archive as an immutable workflow artifact.
 4. Download those exact assets into the release job; do not rebuild after testing.
@@ -52,11 +55,23 @@ tags, so release logic reuses the same gates:
 6. Extract the matching version section from the tagged checkout's `CHANGELOG.md`.
    Include its heading/date and retain all internal wording and Markdown; only outer
    whitespace is trimmed. Missing or duplicate version sections fail the release.
-7. Create a **draft** GitHub release containing the wheel, source archive and those
+7. Attest the build provenance of both distributions (`actions/attest-build-provenance`) and
+   write `SHA256SUMS`.
+8. Create a **draft** GitHub release containing the wheel, source archive, `SHA256SUMS` and those
    exact changelog notes. Unreleased and adjacent release sections are excluded.
 
-A failed gate prevents the draft job. The release job alone gets the repository
-write permission needed for its assets; it uses GitHub's scoped workflow token,
+CI also rebuilds the distributions and requires byte-identical results, so the assets can be
+reproduced from the tagged source with `uv build`. Consumers can verify a downloaded asset with
+`gh attestation verify FILE --repo resoltico/odfa11y` and `sha256sum --check SHA256SUMS`.
+Provenance attestations require a repository that supports them; if the draft job fails at that
+step, fix the repository setting rather than removing the step.
+
+A weekly `Dependency audit` workflow re-checks the locked dependencies against advisories
+between pushes. Enable GitHub's CodeQL default setup in the repository settings for code scanning;
+no workflow file is needed.
+
+A failed `CI gate` prevents the draft job. The release job alone gets the repository
+write and attestation permissions it needs; it uses GitHub's scoped workflow token,
 not a long-lived personal token. Version tags trigger this process; branch pushes,
 PRs and manual check runs do not publish or create a draft release.
 
@@ -64,13 +79,11 @@ PRs and manual check runs do not publish or create a draft release.
 
 Review the assets and the changelog-derived notes, then publish the draft through
 GitHub. The changelog in the tagged commit is the notes authority; the workflow
-neither populates it nor generates separate prose from commit history. For the
-initial v0.1.0, use its existing section without adding entries before publication.
-After v0.1.0 is public, prepare each later release's section before tagging it.
-If notes need correction, correct the changelog before tagging instead of maintaining
+neither populates it nor generates separate prose from commit history. Prepare each
+release's section before tagging it. If notes need correction, correct the changelog before tagging instead of maintaining
 a second independently edited copy in GitHub.
 
 No PyPI publication is configured. GitHub release assets can be installed locally,
-for example with `python -m pip install /path/to/odfa11y-0.1.0-py3-none-any.whl` using
+for example with `python -m pip install /path/to/odfa11y-VERSION-py3-none-any.whl` using
 Python 3.14. A package-registry release can be added later with trusted publishing
 when the registry project and publishing policy have been explicitly established.

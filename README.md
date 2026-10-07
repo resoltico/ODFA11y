@@ -1,14 +1,17 @@
 # ODFA11y
 
-Audit and explicitly remediate LibreOffice Writer documents, export them as
-PDF/UA-1, and inspect the resulting PDF.
+Audit and explicitly remediate LibreOffice Writer documents, export them as PDF/UA-1,
+and keep evidence of what changed and what a person must still check.
 
-ODFA11y works on both the editable `.odt` source and the exported PDF. It checks
-ODF package structure, metadata, headings, graphics, tables and links; applies
-operator-selected fixes; and produces text or JSON reports. PDF diagnostics use
-pypdf. Optional veraPDF validation checks machine-verifiable PDF/UA-1 requirements.
-A clean report does not prove that a document is accessible: reading order,
-alternative-text quality and the visual result still need human review.
+ODFA11y works on both the editable `.odt` source and the exported PDF, because an
+accessible source does not guarantee an accessible export. It audits package structure,
+metadata, headings, graphics, tables and links; applies the changes *you* decide in one
+TOML file, refusing anything that alters the text or breaks the ODF schema; exports with
+LibreOffice; inspects the PDF and runs veraPDF; compares the source and candidate renders;
+and publishes a hashed evidence directory. It is conservative by design: it never invents
+alternative text, heading levels or table headers, and a clean report is not an
+accessibility certificate. Reading order, alt-text quality and the visual result still
+need a person.
 
 ## Start here
 
@@ -20,60 +23,70 @@ uv sync --locked
 uv run --no-sync odfa11y audit original.odt
 ```
 
-Python 3.14 is the baseline. uv uses the development interpreter specified in
-[.python-version](.python-version); the supported range and dependencies live in
-[pyproject.toml](pyproject.toml). Commands shown here use a POSIX shell.
+Python 3.14 is the baseline; [.python-version](.python-version) selects the development
+interpreter and [pyproject.toml](pyproject.toml) holds the supported range and
+dependencies. Commands use a POSIX shell. External applications are optional:
+[LibreOffice](https://www.libreoffice.org/) for export and comparison, and
+[veraPDF](https://verapdf.org/) with its Java runtime for PDF/UA validation.
 
-Create `document.toml` using the example in the
-[configuration guide](docs/CONFIGURATION.md#example), replace its sample values,
-then write to a separate output file:
-
-```bash
-uv run --no-sync odfa11y remediate original.odt reviewed.odt --config document.toml
-uv run --no-sync odfa11y audit reviewed.odt --strict
-```
-
-Inspect the remediated document in Writer before exporting. With LibreOffice
-installed and `soffice` or `libreoffice` on `PATH`:
+The shortest complete path:
 
 ```bash
-uv run --no-sync odfa11y export-pdfua reviewed.odt reviewed.pdf
-uv run --no-sync odfa11y verify-pdf reviewed.pdf --strict
+uv run --no-sync odfa11y template original.odt > document.toml   # list open decisions
+# edit document.toml: uncomment and complete only the decisions you have made
+uv run --no-sync odfa11y pipeline original.odt --config document.toml \
+  --output-dir evidence --verapdf --strict
+uv run --no-sync odfa11y check-evidence evidence
 ```
 
-If veraPDF and its Java runtime are installed, add `--verapdf` to `verify-pdf`.
-Both inspection and validation remain necessary; neither replaces human review.
+`evidence/` then holds the remediated ODT and PDF, the veraPDF report, a run record and a
+`REVIEW.md` that separates machine-established facts from the human review still required.
 
-## Choose a command
+## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `audit` | Read-only ODT package, metadata and semantic checks; optional ODF schemas. |
-| `remediate` | Apply explicit metadata and structural choices to an ODT. |
-| `styles` | Inspect paragraph-style usage and effective spacing. |
-| `normalize-spacing` | Copy reference spacing to selected paragraph styles. |
-| `export-pdfua` | Export an ODT through LibreOffice's Writer PDF/UA filter. |
-| `verify-pdf` | Inspect a PDF and optionally invoke veraPDF. |
-| `verify` | Audit an ODT and optionally its PDF counterpart. |
-| `pipeline` | Combine remediation, audit, export and PDF inspection. |
-| `doctor` | Report dependency versions and external-tool availability. |
+| `audit FILE...` | Read-only checks of ODT or PDF files; `--schema` validates ODT against the ODF schema, `--verapdf` validates PDFs. |
+| `template FILE` | Print a commented configuration for the decisions an audit leaves open. |
+| `remediate SRC DEST --config FILE` | Apply the configured operations; `--dry-run` shows outcomes without writing. |
+| `export SRC DEST` | Export an ODT to PDF/UA with LibreOffice. |
+| `compare A B` | Compare two ODTs or PDFs for pages, text, links and rendered ink. |
+| `pipeline SRC --config FILE --output-dir DIR` | Remediate, export, validate, compare and keep evidence. |
+| `styles FILE` | Paragraph-style usage and effective spacing. |
+| `check-evidence DIR` | Verify an evidence directory against its manifest. |
+| `doctor` | Dependency and external-tool versions. |
 
-Use `uv run --no-sync odfa11y COMMAND --help` for the complete option list.
-`pipeline` stops before export when its ODT audit has errors, or warnings with
-`--strict`. Use the staged [workflow](docs/WORKFLOW.md) for human review between steps.
+Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
+[workflow](docs/WORKFLOW.md) is for human review between steps.
+
+## Library use
+
+Each package exposes its API through its `__init__`: for example
+`odfa11y.audit.audit_odt`, `odfa11y.remediation.remediate` with the operation classes,
+`odfa11y.pdf.export_pdfua` and `odfa11y.pipeline.run_pipeline`. See
+[Architecture](docs/ARCHITECTURE.md).
 
 ## Documentation
 
-- [Workflow](docs/WORKFLOW.md): staged commands, reports, exit codes and troubleshooting.
-- [Configuration](docs/CONFIGURATION.md): the maintained TOML example and CLI overrides.
+- [Workflow](docs/WORKFLOW.md): staged commands, reports, exit statuses and troubleshooting.
+- [Configuration](docs/CONFIGURATION.md): the maintained TOML example and every field.
+- [Fidelity](docs/FIDELITY.md): what the render comparison measures and how to set its policy.
+- [Evidence](docs/EVIDENCE.md): the evidence directory, its record and verification.
 - [Accessibility and limits](docs/ACCESSIBILITY.md): scope, known limitations and human checks.
 - [Rule reference](docs/RULES.md): stable finding identifiers and their meanings.
 - [Development](docs/DEVELOPING.md): setup, checks, CI and packaging.
 - [Architecture](docs/ARCHITECTURE.md): implementation responsibilities and invariants.
-- [Releasing](docs/RELEASING.md): initial publication, version tags and draft package assets.
-- [Changelog](CHANGELOG.md): release outcomes after the initial public release.
+- [Releasing](docs/RELEASING.md): version tags, draft assets and the required CI check.
+- [Changelog](CHANGELOG.md): release outcomes.
 
 ## License
 
 Created and maintained by Ervins Strauhmanis. The project is licensed under the [Mozilla Public License 2.0](LICENSE)
 (`MPL-2.0`). Dependencies and external applications retain their own licenses.
+
+The package also bundles unmodified copies of the OASIS OpenDocument Relax NG schemas, which
+are **not** MPL-2.0: they remain © OASIS Open and are distributed under OASIS's own notice,
+reproduced verbatim in [src/odfa11y/odf/schemas/NOTICE.txt](src/odfa11y/odf/schemas/NOTICE.txt)
+and shipped in every wheel and source archive. ODFA11y is not affiliated with or endorsed by OASIS.
+LibreOffice, veraPDF and OpenDocument are names of their respective owners; the project
+only invokes the first two as external applications and does not redistribute them.

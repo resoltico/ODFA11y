@@ -6,27 +6,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import NS, qn, select_elements
-from odfa11y.report import Severity
+from odfa11y.report import rules
 
 if TYPE_CHECKING:
     from lxml import etree
 
-    from odfa11y.report import AuditReport
+    from odfa11y.report import Report
 
 
 def audit_metadata(
-    meta_tree: etree._ElementTree, styles_tree: etree._ElementTree, report: AuditReport
+    meta_tree: etree._ElementTree, styles_tree: etree._ElementTree, report: Report
 ) -> None:
     """Report missing or empty document title and language metadata."""
     title = meta_tree.findtext(".//dc:title", namespaces=NS)
     if not title or not title.strip():
-        report.add(
-            "META001",
-            Severity.ERROR,
-            "Document title metadata is missing.",
-            location="meta.xml",
-            fixable=True,
-        )
+        report.add(rules.META001, "Document title metadata is missing.", location="meta.xml")
     else:
         report.metadata["title"] = title.strip()
 
@@ -34,27 +28,22 @@ def audit_metadata(
     default_language = _default_style_language(styles_tree)
     if not (language and language.strip()) and not default_language:
         report.add(
-            "META002",
-            Severity.ERROR,
+            rules.META002,
             "Document language is not declared in metadata or the default paragraph style.",
             location="meta.xml/styles.xml",
-            fixable=True,
         )
-    else:
-        report.metadata["language"] = (language or default_language or "").strip()
-        if (
-            language
-            and default_language
-            and _normalize_lang(language) != _normalize_lang(default_language)
-        ):
-            report.add(
-                "META003",
-                Severity.WARNING,
-                "Metadata language and default paragraph-style language disagree.",
-                location="meta.xml/styles.xml",
-                details={"metadata": language, "default_style": default_language},
-                fixable=True,
-            )
+        return
+    report.metadata["language"] = (language or default_language or "").strip()
+    if (
+        language
+        and default_language
+        and _normalize_lang(language) != _normalize_lang(default_language)
+    ):
+        report.add(
+            rules.META003,
+            location="meta.xml/styles.xml",
+            details={"metadata": language, "default_style": default_language},
+        )
 
 
 def _default_style_language(styles_tree: etree._ElementTree) -> str | None:

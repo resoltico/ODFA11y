@@ -4,10 +4,20 @@
 from __future__ import annotations
 
 import zipfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+class Features(TypedDict, total=False):
+    """Independent structural features of the synthetic document."""
+
+    with_plain_email: bool
+    with_data_table: bool
+    with_table_header: bool
+    with_image_without_alt: bool
+    add_blank_body_paragraph: bool
 
 
 def make_minimal_odt(
@@ -51,10 +61,11 @@ def make_minimal_odt(
           <table:table-cell><text:p>B</text:p></table:table-cell>
           <table:table-cell><text:p>20</text:p></table:table-cell>
         </table:table-row>"""
+        columns = "<table:table-column/><table:table-column/>"
         if with_table_header:
-            rows = f"<table:table-header-rows>{row1}</table:table-header-rows>{row2}{row3}"
+            rows = f"{columns}<table:table-header-rows>{row1}</table:table-header-rows>{row2}{row3}"
         else:
-            rows = row1 + row2 + row3
+            rows = columns + row1 + row2 + row3
         table = f'<table:table table:name="Data">{rows}</table:table>'
 
     frame = ""

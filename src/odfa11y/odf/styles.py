@@ -3,20 +3,17 @@
 
 from __future__ import annotations
 
+import copy
 from collections import Counter
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from lxml import etree
 
 from .namespaces import NS, qn
-from .style_properties import attr_from_display, display_attr, find_paragraphs_by_style
+from .style_properties import attr_from_display, display_attr
 from .xpath import select_elements
 
-if TYPE_CHECKING:
-    from .package import OdtPackage
-
-__all__ = ["ParagraphStyleUsage", "StyleCatalog", "find_paragraphs_by_style"]
+__all__ = ["ParagraphStyleUsage", "StyleCatalog"]
 
 SPACING_ATTRIBUTES = (
     qn("fo", "margin-top"),
@@ -46,11 +43,10 @@ class ParagraphStyleUsage:
 class StyleCatalog:
     """Resolve ODF style inheritance across ``styles.xml`` and ``content.xml``."""
 
-    def __init__(self, package: OdtPackage) -> None:
-        """Load and index the document resources."""
-        self.package = package
-        self.content_tree = package.parse_xml("content.xml")
-        self.styles_tree = package.parse_xml("styles.xml")
+    def __init__(self, content_tree: etree._ElementTree, styles_tree: etree._ElementTree) -> None:
+        """Index the styles of live content and styles trees."""
+        self.content_tree = content_tree
+        self.styles_tree = styles_tree
         self._styles: dict[tuple[str, str], etree._Element] = {}
         self._defaults: dict[str, etree._Element] = {}
         self._index()
@@ -171,6 +167,25 @@ class StyleCatalog:
         props = self.effective_paragraph_properties(name)
         return {display_attr(key): props[key] for key in SPACING_ATTRIBUTES if key in props}
 
+    def own_spacing(self, name: str | None) -> dict[str, str]:
+        """Return the spacing attributes a style declares itself, ignoring inheritance.
+
+        Returns
+        -------
+        dict[str, str]
+            Readable qualified spacing attributes declared directly on the style.
+
+        """
+        style = self.style("paragraph", name)
+        props = style.find("style:paragraph-properties", NS) if style is not None else None
+        if props is None:
+            return {}
+        return {
+            display_attr(key): props.attrib[key]
+            for key in SPACING_ATTRIBUTES
+            if key in props.attrib
+        }
+
     def has_break_semantics(self, name: str | None) -> bool:
         """Return whether a style carries page or master-page controls.
 
@@ -213,7 +228,7 @@ class StyleCatalog:
 
         base = self.style("paragraph", base_style_name)
         if base is not None:
-            clone = etree.fromstring(etree.tostring(base))
+            clone = copy.deepcopy(base)
             clone.set(qn("style", "name"), new_style_name)
             clone.set(qn("style", "family"), "paragraph")
         else:
@@ -267,7 +282,3 @@ class StyleCatalog:
                 )
             )
         return rows
-
-    def commit_content(self) -> None:
-        """Save the edited content tree back into the in-memory package."""
-        self.package.write_xml("content.xml", self.content_tree)

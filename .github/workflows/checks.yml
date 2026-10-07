@@ -77,6 +77,12 @@ jobs:
         run: uv run --no-sync pytest -m 'not integration'
       - name: Build source distribution and wheel
         run: uv build
+      - name: Verify the distributions rebuild byte for byte
+        if: runner.os == 'Linux'
+        run: |
+          uv build --out-dir "$RUNNER_TEMP/rebuild"
+          (cd dist && sha256sum -- *.whl *.tar.gz) > "$RUNNER_TEMP/first.sha256"
+          (cd "$RUNNER_TEMP/rebuild" && sha256sum -- *.whl *.tar.gz) | diff - "$RUNNER_TEMP/first.sha256"
       - name: Verify installed wheel with locked dependencies
         run: |
           uv venv --python "$(cat .python-version)" "$RUNNER_TEMP/wheel-env"
@@ -90,6 +96,7 @@ jobs:
           import tomllib
           from pathlib import Path
           import odfa11y
+          import odfa11y.odf
 
           project = tomllib.loads(Path("pyproject.toml").read_text())["project"]
           package = importlib.metadata.distribution(project["name"])
@@ -98,6 +105,12 @@ jobs:
           assert package.metadata["Requires-Python"] == project["requires-python"]
           assert package.metadata["License-Expression"] == project["license"]
           assert any(str(p).endswith("odfa11y/py.typed") for p in package.files)
+          notice = "src/odfa11y/odf/schemas/NOTICE.txt"
+          notice_file, = (p for p in package.files if str(p).endswith(f"/licenses/{notice}"))
+          assert package.locate_file(notice_file).read_bytes() == Path(notice).read_bytes()
+          bundled = {Path(str(p)).name for p in package.files if "odf/schemas/" in str(p)}
+          assert {"OpenDocument-v1.4-schema.rng", "PROVENANCE.toml"} <= bundled
+          assert odfa11y.odf.provenance()
           license_file, = (p for p in package.files if str(p).endswith("/licenses/LICENSE"))
           assert package.locate_file(license_file).read_bytes() == Path("LICENSE").read_bytes()
           PYTHON
@@ -159,14 +172,32 @@ jobs:
         run: |
           verapdf --version
           uv run --no-sync pytest -m integration
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [static, test, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every needed job to have succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          if ! echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null; then
+            echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success") | "\(.key): \(.value.result)"'
+            exit 1
+          fi
   draft:
     name: Create draft release from tested distributions
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [static, test, integration]
+    needs: [ci-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write # Create draft releases and attach the tested assets.
+      id-token: write # Sign the build provenance attestation.
+      attestations: write # Store the build provenance attestation.
     steps:
       - name: Check out the tagged source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -189,11 +220,19 @@ jobs:
         run: >-
           uv run --no-sync python tools/check_release.py "$RELEASE_TAG" dist
           --notes-output "$RUNNER_TEMP/release-notes.md"
+      - name: Attest build provenance of the distributions
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
+      - name: Record checksums
+        run: (cd dist && sha256sum -- *.whl *.tar.gz) > "$RUNNER_TEMP/SHA256SUMS"
       - name: Create draft GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: >-
-          gh release create "$RELEASE_TAG" dist/*.whl dist/*.tar.gz
+          gh release create "$RELEASE_TAG" dist/*.whl dist/*.tar.gz "$RUNNER_TEMP/SHA256SUMS"
           --verify-tag --draft --title "$RELEASE_TAG"
           --notes-file "$RUNNER_TEMP/release-notes.md"

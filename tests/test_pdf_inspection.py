@@ -6,75 +6,49 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from pypdf import PdfWriter
-from pypdf.generic import (
-    ArrayObject,
-    BooleanObject,
-    DecodedStreamObject,
-    DictionaryObject,
-    NameObject,
-    NumberObject,
-    TextStringObject,
-)
+from pypdf.generic import ArrayObject, BooleanObject, DictionaryObject, NameObject
 
 from odfa11y.pdf import audit_pdfua
+
+from .pdf_fixtures import tagged_writer
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pypdf import PdfWriter
 
-def _writer(tag: str = "H1", *, role_map: dict[str, str] | None = None) -> PdfWriter:
-    writer = PdfWriter()
-    page = writer.add_blank_page(width=100, height=100)
-    writer.add_metadata({"/Title": "Synthetic PDF"})
-    root = writer.root_object
-    root[NameObject("/Lang")] = TextStringObject("en-GB")
-    root[NameObject("/MarkInfo")] = DictionaryObject({
-        NameObject("/Marked"): BooleanObject(value=True)
-    })
-    writer.create_viewer_preferences()[NameObject("/DisplayDocTitle")] = BooleanObject(value=True)
-    metadata = DecodedStreamObject()
-    metadata.set_data(
-        b'<x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:ua="http://www.aiim.org/pdfua/ns/id/">'
-        b"<ua:part>1</ua:part></x:xmpmeta>"
-    )
-    metadata[NameObject("/Type")] = NameObject("/Metadata")
-    metadata[NameObject("/Subtype")] = NameObject("/XML")
-    root[NameObject("/Metadata")] = writer._add_object(metadata)
-    structure = DictionaryObject({NameObject("/Type"): NameObject("/StructTreeRoot")})
-    reference = writer._add_object(structure)
-    element = DictionaryObject({
-        NameObject("/Type"): NameObject("/StructElem"),
-        NameObject("/S"): NameObject(f"/{tag}"),
-        NameObject("/P"): reference,
-        NameObject("/K"): NumberObject(0),
-    })
-    structure[NameObject("/K")] = ArrayObject([writer._add_object(element)])
-    if role_map:
-        structure[NameObject("/RoleMap")] = DictionaryObject({
-            NameObject(f"/{key}"): NameObject(f"/{value}") for key, value in role_map.items()
-        })
-    root[NameObject("/StructTreeRoot")] = reference
-    font = DictionaryObject({
-        NameObject("/Type"): NameObject("/Font"),
-        NameObject("/Subtype"): NameObject("/Type1"),
-        NameObject("/BaseFont"): NameObject("/Helvetica"),
-    })
-    page[NameObject("/Resources")] = DictionaryObject({
-        NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})
-    })
-    content = DecodedStreamObject()
-    content.set_data(b"BT /F1 12 Tf 10 50 Td (Synthetic text) Tj ET")
-    page[NameObject("/Contents")] = writer._add_object(content)
-    return writer
+    from odfa11y.report import Report
+
+
+def audit(tmp_path: Path, writer: PdfWriter) -> Report:
+    """Write a synthetic PDF and audit it.
+
+    Returns
+    -------
+    Report
+        The audit of the written file.
+
+    """
+    path = tmp_path / "synthetic.pdf"
+    writer.write(path)
+    return audit_pdfua(path)
+
+
+def ids(report: Report) -> set[str]:
+    """Collect rule identifiers.
+
+    Returns
+    -------
+    set[str]
+        The rule identifiers present.
+
+    """
+    return {finding.rule_id for finding in report.findings}
 
 
 def test_valid_markers_and_indirect_preferences_are_detected(tmp_path: Path) -> None:
-    path = tmp_path / "markers.pdf"
-    writer = _writer()
-    writer.write(path)
-    report = audit_pdfua(path)
-    assert report.error_count == 0, [issue.as_dict() for issue in report.issues]
+    report = audit(tmp_path, tagged_writer())
+    assert report.error_count == 0, [f.as_dict() for f in report.findings]
     assert report.warning_count == 0
     assert report.metadata["pdfua_part"] == 1
     assert report.metadata["structure_tags"] == {"H1": 1}
@@ -87,48 +61,93 @@ def test_valid_markers_and_indirect_preferences_are_detected(tmp_path: Path) -> 
 def test_custom_figure_roles_require_alternative_text(
     tmp_path: Path, mapping: dict[str, str]
 ) -> None:
-    path = tmp_path / "figure.pdf"
-    writer = _writer("Illustration", role_map=mapping)
-    writer.write(path)
-    report = audit_pdfua(path)
-    assert "PDF007" in {issue.rule_id for issue in report.issues}
-    assert "PDF011" not in {issue.rule_id for issue in report.issues}
+    report = audit(tmp_path, tagged_writer(["Illustration"], role_map=mapping))
+    assert "PDF007" in ids(report)
+    assert "PDF011" not in ids(report)
+
+
+def test_figures_with_alternative_text_pass(tmp_path: Path) -> None:
+    report = audit(tmp_path, tagged_writer(["H1", "Figure"], figure_alt="A chart"))
+    assert "PDF007" not in ids(report)
 
 
 @pytest.mark.parametrize("mapping", [None, {"Custom": "Other", "Other": "Custom"}])
 def test_unmapped_and_cyclic_roles_are_rejected(
     tmp_path: Path, mapping: dict[str, str] | None
 ) -> None:
-    path = tmp_path / "roles.pdf"
-    _writer("Custom", role_map=mapping).write(path)
-    assert "PDF011" in {issue.rule_id for issue in audit_pdfua(path).issues}
+    assert "PDF011" in ids(audit(tmp_path, tagged_writer(["Custom"], role_map=mapping)))
 
 
 def test_false_marked_flag_is_rejected(tmp_path: Path) -> None:
-    path = tmp_path / "untagged.pdf"
-    writer = _writer()
+    writer = tagged_writer()
     mark_info = writer.root_object["/MarkInfo"]
     assert isinstance(mark_info, DictionaryObject)
     mark_info[NameObject("/Marked")] = BooleanObject(value=False)
-    writer.write(path)
-    assert "PDF003" in {issue.rule_id for issue in audit_pdfua(path).issues}
+    assert "PDF003" in ids(audit(tmp_path, writer))
 
 
 def test_invalid_pdf_returns_error_report(tmp_path: Path) -> None:
     path = tmp_path / "invalid.pdf"
     path.write_bytes(b"not a PDF")
-    assert "PDF000" in {issue.rule_id for issue in audit_pdfua(path).issues}
+    assert ids(audit_pdfua(path)) == {"PDF000"}
 
 
 def test_cyclic_structure_arrays_do_not_repeat_traversal(tmp_path: Path) -> None:
-    path = tmp_path / "cyclic.pdf"
-    writer = _writer()
+    writer = tagged_writer()
     structure = writer.root_object["/StructTreeRoot"]
     assert isinstance(structure, DictionaryObject)
     children = structure["/K"]
     assert isinstance(children, ArrayObject)
-    reference = writer._add_object(children)
-    children.append(reference)
-    writer.write(path)
-    report = audit_pdfua(path)
-    assert report.metadata["structure_tags"] == {"H1": 1}
+    children.append(writer._add_object(children))
+    assert audit(tmp_path, writer).metadata["structure_tags"] == {"H1": 1}
+
+
+def test_skipped_heading_levels_are_reported(tmp_path: Path) -> None:
+    report = audit(tmp_path, tagged_writer(["H1", "H3", "H2"]))
+    finding = next(f for f in report.findings if f.rule_id == "PDF012")
+    assert finding.details["skips"] == ["H1 to H3"]
+    assert "PDF012" not in ids(audit(tmp_path, tagged_writer(["H1", "H2", "H3", "H2"])))
+    first = next(
+        f for f in audit(tmp_path, tagged_writer(["H2", "H3"])).findings if f.rule_id == "PDF012"
+    )
+    assert first.details["skips"] == ["start to H2"]
+
+
+def test_well_formed_lists_and_tables_pass(tmp_path: Path) -> None:
+    structure = [
+        "H1",
+        ("L", [("LI", ["Lbl", "LBody"]), ("LI", ["Lbl", ("LBody", [("L", [("LI", ["LBody"])])])])]),
+        ("Table", [("TR", ["TH", "TH"]), ("TR", ["TD", "TD"]), ("TR", ["TD", "TD"])]),
+        ("Table", [("THead", [("TR", ["TH"])]), ("TBody", [("TR", ["TD"])])]),
+    ]
+    report = audit(tmp_path, tagged_writer(structure))
+    assert not ids(report) & {"PDF013", "PDF014", "PDF015"}, [f.as_dict() for f in report.findings]
+
+
+def test_malformed_lists_are_reported(tmp_path: Path) -> None:
+    report = audit(tmp_path, tagged_writer(["H1", ("L", ["P", ("LI", ["P"])])]))
+    finding = next(f for f in report.findings if f.rule_id == "PDF013")
+    assert finding.details["problems"] == ["L contains P", "LI contains P"]
+
+
+def test_malformed_tables_are_reported(tmp_path: Path) -> None:
+    structure = ["H1", ("Table", [("TH", []), ("TR", [("P", [])])])]
+    finding = next(
+        f for f in audit(tmp_path, tagged_writer(structure)).findings if f.rule_id == "PDF014"
+    )
+    assert finding.details["problems"] == ["TR contains P", "Table contains TH"]
+
+
+def test_tables_without_header_cells_are_warned_about(tmp_path: Path) -> None:
+    structure = ["H1", ("Table", [("TR", ["TD"]), ("TR", ["TD"])])]
+    report = audit(tmp_path, tagged_writer(structure))
+    assert "PDF015" in ids(report)
+    assert "PDF015" not in ids(audit(tmp_path, tagged_writer(["H1", ("Table", [("TR", ["TD"])])])))
+
+
+def test_link_annotations_need_link_structure_elements(tmp_path: Path) -> None:
+    assert "PDF016" in ids(audit(tmp_path, tagged_writer(["H1"], link_annotations=1)))
+    tagged = audit(tmp_path, tagged_writer(["H1", ("P", ["Link"])], link_annotations=1))
+    assert "PDF016" not in ids(tagged)
+    assert tagged.metadata["link_structure_elements"] == 1
+    assert "PDF016" not in ids(audit(tmp_path, tagged_writer(["H1"])))

@@ -1,90 +1,95 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Findings, severities and the report container shared by every audit."""
+"""Findings and the report container shared by every check."""
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
-from enum import StrEnum
-from typing import Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+from .rules import Severity
+
+if TYPE_CHECKING:
+    from .rules import Rule
+
+REPORT_FORMAT = 1
 
 
-class Severity(StrEnum):
-    """Classify audit findings by their effect on acceptance."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    INFO = "info"
-
-
-@dataclass(slots=True, frozen=True)
-class Issue:
-    """Record a stable rule finding and its document location."""
+@dataclass(frozen=True, slots=True)
+class Finding:
+    """One observed condition, resolved from its rule at creation."""
 
     rule_id: str
     severity: Severity
+    category: str
     message: str
     location: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
-    fixable: bool = False
+    remedy: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
-        """Serialize this record into JSON-compatible values.
+        """Serialize this finding into JSON-compatible values.
 
         Returns
         -------
         dict[str, Any]
-            A JSON-compatible record with severity values serialized as strings.
+            The finding with its severity as a string.
 
         """
-        data = asdict(self)
-        data["severity"] = self.severity.value
-        return data
+        return {
+            "rule_id": self.rule_id,
+            "severity": self.severity.value,
+            "category": self.category,
+            "message": self.message,
+            "location": self.location,
+            "details": self.details,
+            "remedy": self.remedy,
+        }
 
 
 @dataclass(slots=True)
-class AuditReport:
-    """Collect findings and metadata for an audited artifact."""
+class Report:
+    """Collect findings and metadata about one artifact or comparison."""
 
+    kind: str
     subject: str
-    issues: list[Issue] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def add(
         self,
-        rule_id: str,
-        severity: Severity,
-        message: str,
+        rule: Rule,
+        message: str | None = None,
         *,
         location: str | None = None,
         details: dict[str, Any] | None = None,
-        fixable: bool = False,
     ) -> None:
-        """Append a finding with its rule identifier and severity."""
-        self.issues.append(
-            Issue(
-                rule_id=rule_id,
-                severity=severity,
-                message=message,
+        """Append a finding for a rule, defaulting the message to the rule title."""
+        self.findings.append(
+            Finding(
+                rule_id=rule.id,
+                severity=rule.severity,
+                category=rule.category.value,
+                message=message or rule.title,
                 location=location,
                 details=details or {},
-                fixable=fixable,
+                remedy=rule.remedy,
             )
         )
 
     @property
     def error_count(self) -> int:
         """The number of error findings."""
-        return sum(i.severity is Severity.ERROR for i in self.issues)
+        return sum(f.severity is Severity.ERROR for f in self.findings)
 
     @property
     def warning_count(self) -> int:
         """The number of warning findings."""
-        return sum(i.severity is Severity.WARNING for i in self.issues)
+        return sum(f.severity is Severity.WARNING for f in self.findings)
 
     @property
     def info_count(self) -> int:
         """The number of informational findings."""
-        return sum(i.severity is Severity.INFO for i in self.issues)
+        return sum(f.severity is Severity.INFO for f in self.findings)
 
     @property
     def passed(self) -> bool:
@@ -92,15 +97,17 @@ class AuditReport:
         return self.error_count == 0
 
     def as_dict(self) -> dict[str, Any]:
-        """Serialize this record into JSON-compatible values.
+        """Serialize this report into JSON-compatible values.
 
         Returns
         -------
         dict[str, Any]
-            A JSON-compatible record with severity values serialized as strings.
+            The versioned report record.
 
         """
         return {
+            "format": REPORT_FORMAT,
+            "kind": self.kind,
             "subject": self.subject,
             "passed": self.passed,
             "summary": {
@@ -109,5 +116,5 @@ class AuditReport:
                 "info": self.info_count,
             },
             "metadata": self.metadata,
-            "issues": [i.as_dict() for i in self.issues],
+            "findings": [f.as_dict() for f in self.findings],
         }

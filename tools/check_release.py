@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 from odfa11y import __version__
 
+NOTICE_PATH = "src/odfa11y/odf/schemas/NOTICE.txt"
+
 if TYPE_CHECKING:
     from email.message import Message
 
@@ -42,9 +44,8 @@ def check_release(tag: str, directory: Path) -> list[str]:
             return ["Wheel must contain exactly one package metadata record"]
         metadata = email.message_from_bytes(wheel.read(names[0]))
         errors.extend(_metadata_errors(metadata, project))
-        licenses = [name for name in wheel.namelist() if name.endswith("/licenses/LICENSE")]
-        if len(licenses) != 1 or wheel.read(licenses[0]) != (root / "LICENSE").read_bytes():
-            errors.append("Wheel license does not match the project license")
+        errors.extend(_wheel_license_errors(wheel, root))
+        errors.extend(_wheel_inventory_errors(wheel, root))
     with tarfile.open(archives[0]) as archive:
         names = [member for member in archive.getmembers() if member.name.endswith("/PKG-INFO")]
         if len(names) != 1:
@@ -53,7 +54,46 @@ def check_release(tag: str, directory: Path) -> list[str]:
         if stream is None:
             return [*errors, "Source archive metadata is not a regular file"]
         errors.extend(_metadata_errors(email.message_from_bytes(stream.read()), project))
+        errors.extend(_sdist_notice_errors(archive, root))
     return errors
+
+
+def _wheel_license_errors(wheel: zipfile.ZipFile, root: Path) -> list[str]:
+    errors = []
+    for relative in ("LICENSE", NOTICE_PATH):
+        found = [name for name in wheel.namelist() if name.endswith(f"/licenses/{relative}")]
+        if len(found) != 1 or wheel.read(found[0]) != (root / relative).read_bytes():
+            errors.append(f"Wheel {relative} does not match the repository file")
+    return errors
+
+
+def _sdist_notice_errors(archive: tarfile.TarFile, root: Path) -> list[str]:
+    found = [m for m in archive.getmembers() if m.name.endswith(f"/{NOTICE_PATH}")]
+    stream = archive.extractfile(found[0]) if len(found) == 1 else None
+    if stream is None or stream.read() != (root / NOTICE_PATH).read_bytes():
+        return ["Source archive is missing the bundled-schema notice or it does not match"]
+    return []
+
+
+def _wheel_inventory_errors(wheel: zipfile.ZipFile, root: Path) -> list[str]:
+    """Require the wheel's package files to be exactly the tracked package tree.
+
+    Returns
+    -------
+    list[str]
+        One entry per file that is missing from or unexpected in the wheel.
+
+    """
+    package = root / "src"
+    expected = {
+        path.relative_to(package).as_posix()
+        for path in (package / "odfa11y").rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    }
+    shipped = {name for name in wheel.namelist() if name.startswith("odfa11y/")}
+    return [
+        f"Wheel file set differs from src/odfa11y: {name}" for name in sorted(expected ^ shipped)
+    ]
 
 
 def extract_release_notes(changelog: str, version: str) -> str:

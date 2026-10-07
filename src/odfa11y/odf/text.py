@@ -8,14 +8,18 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lxml import etree
 
-    from .package import OdtPackage
-
 from .namespaces import qn
 from .xpath import select_elements
 
+INERT_INLINE_TAGS = frozenset({qn("text", "span"), qn("text", "s")})
+
 
 def is_empty_paragraph(p: etree._Element) -> bool:
-    """Whether a paragraph has no visible text or meaningful inline content.
+    """Whether a paragraph has no text and nothing but inert inline elements.
+
+    Anything else (a frame, bookmark, tab, field, change marker, index entry, ...) means the
+    paragraph may carry meaning, so it is not a spacer; only an allow-list of inert elements
+    counts as empty.
 
     Returns
     -------
@@ -25,17 +29,7 @@ def is_empty_paragraph(p: etree._Element) -> bool:
     """
     if element_text(p).strip():
         return False
-    meaningful = select_elements(
-        p,
-        (
-            ".//draw:* | .//text:line-break | .//text:tab | "
-            ".//text:bookmark | .//text:bookmark-start | "
-            ".//text:bookmark-end | .//text:reference-mark | "
-            ".//text:reference-mark-start | .//text:reference-mark-end | "
-            ".//text:soft-page-break"
-        ),
-    )
-    return not meaningful
+    return all(child.tag in INERT_INLINE_TAGS for child in p.iter("*") if child is not p)
 
 
 def element_text(element: etree._Element) -> str:
@@ -50,8 +44,8 @@ def element_text(element: etree._Element) -> str:
     return "".join(element.itertext()).replace("\u00a0", " ").strip()
 
 
-def visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
-    """Collect normalized heading and paragraph text from a package's content.
+def visible_text_snapshot(tree: etree._ElementTree) -> tuple[str, ...]:
+    """Collect normalized heading and paragraph text from a content tree.
 
     Returns
     -------
@@ -59,7 +53,6 @@ def visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
         One entry per visible text block.
 
     """
-    tree = package.parse_xml("content.xml")
     blocks: list[str] = []
     for node in select_elements(tree, "//text:h | //text:p"):
         text = _visible_node_text(node).replace("\u00a0", " ")

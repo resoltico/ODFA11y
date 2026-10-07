@@ -7,12 +7,12 @@ import re
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import NS, element_text, qn, select_elements
-from odfa11y.report import Severity
+from odfa11y.report import rules
 
 if TYPE_CHECKING:
     from lxml import etree
 
-    from odfa11y.report import AuditReport
+    from odfa11y.report import Report
 
 MANUAL_NUMBER_RE = re.compile(r"^\s*(?P<num>\d+(?:\.\d+)*)(?P<punct>[.)])?\s+")
 
@@ -22,7 +22,7 @@ MAX_DATA_HEADER_LENGTH = 80
 MAX_SIMPLE_HEADING_NUMBER = 99
 
 
-def audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
+def audit_headings(tree: etree._ElementTree, report: Report) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
     headings = select_elements(tree, "//text:h")
     report.metadata["heading_count"] = len(headings)
@@ -37,75 +37,69 @@ def audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
         location = f"content.xml heading {index}: {text[:80]}"
         if level < 1:
             report.add(
-                "SEM001",
-                Severity.ERROR,
+                rules.SEM001,
                 "Heading has no valid text:outline-level.",
                 location=location,
             )
             continue
         if previous_level is None and level > 1:
             report.add(
-                "SEM002",
-                Severity.ERROR,
+                rules.SEM002,
                 f"Heading hierarchy starts at level {level}; expected level 1.",
                 location=location,
             )
         elif previous_level is not None and level > previous_level + 1:
             report.add(
-                "SEM002",
-                Severity.ERROR,
+                rules.SEM002,
                 f"Heading hierarchy skips from level {previous_level} to {level}.",
                 location=location,
             )
         previous_level = level
         if _looks_manually_numbered_heading(text):
             report.add(
-                "SEM003",
-                Severity.WARNING,
+                rules.SEM003,
                 (
                     "Heading appears to use manually typed numbering; integrated "
                     "numbering is safer for accessible export."
                 ),
                 location=location,
                 details={"text": text},
-                fixable=False,
             )
     if not headings:
         report.add(
-            "SEM004",
-            Severity.INFO,
+            rules.SEM004,
             "No structural headings were found. This may be legitimate for a very short document.",
             location="content.xml",
         )
 
 
-def audit_images(tree: etree._ElementTree, report: AuditReport) -> None:
+def audit_images(tree: etree._ElementTree, report: Report) -> None:
     """Report graphics and embedded objects that lack alternative text."""
     frames = select_elements(tree, "//draw:frame[draw:image or draw:object or draw:object-ole]")
     report.metadata["graphic_object_count"] = len(frames)
     for index, frame in enumerate(frames, start=1):
         title = frame.findtext("svg:title", namespaces=NS)
         desc = frame.findtext("svg:desc", namespaces=NS)
-        name = frame.get(qn("draw", "name")) or f"frame-{index}"
+        declared_name = frame.get(qn("draw", "name"))
+        name = declared_name or f"frame-{index}"
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.add(
-                "IMG001",
-                Severity.ERROR,
+                rules.IMG001,
                 "Graphic object has neither accessible title nor description.",
                 location=f"content.xml draw:frame {name}",
-                details={"href": href},
-                fixable=True,
+                details={"frame": declared_name, "href": href},
             )
 
 
-def audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
+def audit_tables(tree: etree._ElementTree, report: Report) -> None:
     """Report table structure defects such as missing header rows."""
     tables = select_elements(tree, "//table:table")
     report.metadata["table_count"] = len(tables)
     for index, table in enumerate(tables, start=1):
-        name = table.get(qn("table", "name")) or f"table-{index}"
+        declared_name = table.get(qn("table", "name"))
+        name = declared_name or f"table-{index}"
         location = f"content.xml table {name}"
         merged = select_elements(
             table,
@@ -116,27 +110,23 @@ def audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
         )
         if merged:
             report.add(
-                "TBL001",
-                Severity.ERROR,
+                rules.TBL001,
                 (
                     "Table contains merged/split-cell structures that are "
                     "problematic for PDF/UA export."
                 ),
                 location=location,
                 details={"merged_markers": len(merged)},
-                fixable=False,
             )
 
         direct_rows = select_elements(table, "./table:table-row")
         header_rows = select_elements(table, "./table:table-header-rows/table:table-row")
         if not header_rows and _looks_like_data_table(direct_rows):
             report.add(
-                "TBL002",
-                Severity.WARNING,
+                rules.TBL002,
                 "Table looks data-like but has no semantic table:table-header-rows.",
                 location=location,
-                details={"rows": len(direct_rows)},
-                fixable=True,
+                details={"table": declared_name, "rows": len(direct_rows)},
             )
 
 

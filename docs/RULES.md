@@ -1,87 +1,99 @@
 # Rule reference
 
-Reports use stable rule IDs, severity, a message and optional location/details.
-`fixable` is a hint about mechanical support, not a repair promise or an instruction
-to bypass review. Use [the workflow](WORKFLOW.md) to interpret reports and exit
-statuses; implementation is authoritative if a reference and code disagree.
+Every finding comes from one registered rule with a stable ID, a severity, a category and,
+where a configuration can address it, a **remedy**: the configuration key that holds the
+decision. Severity decides exit statuses (see [the workflow](WORKFLOW.md#exit-statuses));
+the code registry in [rules.py](../src/odfa11y/report/rules.py) is authoritative and a test
+checks that this document lists exactly its rules and severities.
 
 ## Package and XML
 
-These findings are errors.
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `PKG000` | Error | The source cannot be read as an ODT package (corrupt, oversized or not a ZIP). |  |
+| `PKG001` | Error | Required mimetype member is missing. |  |
+| `PKG002` | Error | MIME type is not application/vnd.oasis.opendocument.text. |  |
+| `PKG003` | Error | mimetype is not the first ZIP member. |  |
+| `PKG004` | Error | mimetype is compressed. |  |
+| `PKG005` | Error | A required XML member is missing. |  |
+| `PKG006` | Error | ZIP member names are duplicated. |  |
+| `PKG007` | Error | Names such as `/etc/x` or `../x` are unsafe if the package is ever extracted; the writer refuses them. |  |
+| `XML001` | Error | A required XML member cannot be parsed. |  |
 
-| ID | Finding |
-| --- | --- |
-| `PKG000` | Source is not a readable ODT/ZIP package. |
-| `PKG001` | Required `mimetype` member is missing. |
-| `PKG002` | MIME type is not `application/vnd.oasis.opendocument.text`. |
-| `PKG003` | `mimetype` is not the first ZIP member. |
-| `PKG004` | `mimetype` is compressed. |
-| `PKG005` | A required XML member is missing. |
-| `PKG006` | ZIP member names are duplicated. |
-| `XML001` | A required XML member, or settings XML when present, cannot be parsed. |
+## ODF declarations, schema and metadata
 
-Rewriting valid loaded packages restores the mimetype ordering/compression
-invariant. Missing members, malformed XML and duplicate entries require diagnosis;
-there is no general package reconstruction command. Duplicate members are reported
-but rejected on rewrite; oversize or corrupt packages produce `PKG000`.
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `ODF001` | Error | Package members declare different ODF versions. | `document.odf_version` |
+| `ODF002` | Error | Manifest root file-entry '/' is missing. |  |
+| `ODF003` | Error | Manifest root file-entry version differs from the document version. | `document.odf_version` |
+| `ODF004` | Error | Manifest root media type is not the ODT media type. |  |
+| `ODF900` | Warning | A member does not validate against the ODF schema. |  |
+| `ODF905` | Info | No ODF schema is bundled for the declared version. |  |
+| `META001` | Error | Document title metadata is missing. | `document.title` |
+| `META002` | Error | Document language is not declared. | `document.language` |
+| `META003` | Warning | Metadata and default paragraph-style languages disagree. | `document.language` |
 
-## ODF declarations and metadata
+## Semantics, links and layout
 
-| ID | Severity | Finding |
-| --- | --- | --- |
-| `ODF001` | Error | Core XML or manifest declaration differs from the target ODF version. |
-| `ODF002` | Error | Manifest root file-entry `/` is missing. |
-| `ODF003` | Error | Manifest root file-entry version differs from the target. |
-| `ODF004` | Error | Manifest root media type is not the ODT media type. |
-| `ODF900` | Error | Supplied main schema is missing, cannot load, or rejects an XML member. |
-| `ODF901` | Error | Supplied manifest schema is missing, cannot load, or rejects the manifest. |
-| `META001` | Error | Nonempty title metadata is missing. |
-| `META002` | Error | Language is absent from both metadata and the default paragraph style. |
-| `META003` | Warning | Metadata and default paragraph-style languages disagree. |
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `SEM001` | Error | Heading has no valid outline level. |  |
+| `SEM002` | Error | Heading hierarchy starts too deep or skips a level. |  |
+| `SEM003` | Warning | Heading text resembles manually typed numbering. |  |
+| `SEM004` | Info | No structural headings were found. |  |
+| `SEM005` | Warning | Footnotes or endnotes need reading-order review. |  |
+| `IMG001` | Error | Graphic has neither accessible title nor description. | `alt_text` |
+| `TBL001` | Error | Table has merged or split cells. |  |
+| `TBL002` | Warning | Data-like table has no header rows. | `table_headers` |
+| `LNK001` | Warning | Visible URL or email address is not a hyperlink. | `remediation.linkify_plain_addresses` |
+| `LAY001` | Info | Empty paragraphs may be visual spacers. | `remediation.remove_empty_spacers` |
+| `STYLE001` | Error | Blinking text styling is declared. |  |
 
-Remediation can update declarations and explicitly supplied metadata. It does not
-create a missing manifest root entry or perform a complete ODF-version conversion.
+## PDF inspection and veraPDF
 
-## Semantics and layout
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `PDF000` | Error | PDF cannot be opened or strictly inspected. |  |
+| `PDF001` | Error | Document title is missing. |  |
+| `PDF002` | Error | Catalog language is missing. |  |
+| `PDF003` | Error | PDF is not marked as tagged. |  |
+| `PDF004` | Error | Structure tree root is absent or empty. |  |
+| `PDF005` | Warning | Viewer preferences do not display the title. |  |
+| `PDF006` | Error | XMP metadata does not declare PDF/UA part 1. |  |
+| `PDF007` | Error | A Figure structure element has no alternative text. |  |
+| `PDF008` | Info | No numbered heading structure elements were found. |  |
+| `PDF009` | Error | PDF has no pages. |  |
+| `PDF010` | Error | No extractable text was found. |  |
+| `PDF011` | Error | A custom structure role does not resolve to a standard role. |  |
+| `PDF012` | Error | Heading structure starts too deep or skips a level. |  |
+| `PDF013` | Error | List structure is malformed. |  |
+| `PDF014` | Error | Table structure is malformed. |  |
+| `PDF015` | Warning | Table has no header cells. |  |
+| `PDF016` | Warning | Link annotations have no Link structure elements. |  |
+| `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
+| `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 
-| ID | Severity | Finding |
-| --- | --- | --- |
-| `SEM001` | Error | Heading outline level is absent, nonnumeric or below one. |
-| `SEM002` | Error | First heading starts deeper than level one, or a later level skips hierarchy. |
-| `SEM003` | Warning | Heading text heuristically resembles manually typed numbering. |
-| `SEM004` | Info | No structural headings were found. |
-| `SEM005` | Warning | Footnotes/endnotes need reading-order and export review. |
-| `IMG001` | Error | Graphic frame has neither a nonempty accessible title nor description. |
-| `TBL001` | Error | Table has merged/spanned/covered-cell structures requiring review. |
-| `TBL002` | Warning | Table appears data-like but has no direct semantic header rows. |
-| `LNK001` | Warning | Visible URL/email text appears outside hyperlink representation. |
-| `LAY001` | Info | Empty paragraphs outside cells, text boxes and annotations may be spacers. |
-| `STYLE001` | Error | Blinking text styling is declared. |
+## Fidelity comparison
 
-Heading-numbering, table and link findings use heuristics; inspect the source in
-context. Graphics need supplied descriptions. Header wrapping requires a named
-table and explicit row count. `LAY001` is observational: [spacer removal](ACCESSIBILITY.md#spacer-removal)
-is explicit and preserves protected structures.
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `FID001` | Error | Page count differs. |  |
+| `FID002` | Error | Page dimensions differ. |  |
+| `FID003` | Error | Document text differs. |  |
+| `FID004` | Error | A source link is missing or changed. |  |
+| `FID005` | Error | Rendered page differs beyond the tolerance. |  |
+| `FID006` | Info | Links were added. |  |
+| `FID007` | Error | A page is too large to render for comparison. |  |
 
-## PDF and veraPDF
+## Reading findings
 
-| ID | Severity | Finding |
-| --- | --- | --- |
-| `PDF000` | Error | PDF cannot be opened or strictly inspected. |
-| `PDF001` | Error | Nonempty document title is missing. |
-| `PDF002` | Error | Catalog language is missing or empty. |
-| `PDF003` | Error | `/MarkInfo /Marked true` is absent. |
-| `PDF004` | Error | Structure-root dictionary is absent or empty. |
-| `PDF005` | Warning | `/DisplayDocTitle true` viewer preference is absent. |
-| `PDF006` | Error | XMP does not declare PDF/UA part 1. |
-| `PDF007` | Error | A reachable Figure role has no nonempty `/Alt`, including mapped custom roles. |
-| `PDF008` | Info | No numbered heading structure roles were detected. |
-| `PDF009` | Error | PDF has no pages. |
-| `PDF010` | Error | Pages have no extractable text. |
-| `PDF011` | Error | A custom structure role does not resolve to a standard role. |
-| `VERA000` | Warning | Requested veraPDF executable is unavailable. |
-| `VERA001` | Error | veraPDF reports PDF/UA-1 machine non-conformance. |
-
-PDF inspection records link counts without requiring that every document contain
-links. A clean report is not complete PDF/UA validation. veraPDF process/XML errors
-can be execution failures instead of `VERA001`; check stderr and the exit status.
+`ODF900` is a warning because pristine LibreOffice output often fails the strict ODF
+schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
+which `remediate` enforces: it refuses any result with a violation the source did not
+already have. The `LNK`, `TBL`, `SEM003` and `LAY` findings use heuristics; inspect the
+source in context. Graphics need supplied descriptions, and header rows need a named
+table with an explicit row count. `LAY001` is observational: [spacer
+removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
+`VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
+number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.

@@ -11,10 +11,11 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 
-from odfa11y.report import AuditReport, Severity
+from odfa11y.report import Report, rules
 from odfa11y.safe_xml import secure_xml_parser
 
-from .structure import audit_structure, pdf_dictionary
+from .structure_checks import audit_structure
+from .structure_walk import pdf_dictionary
 
 if TYPE_CHECKING:
     from pypdf import PageObject
@@ -23,17 +24,17 @@ if TYPE_CHECKING:
 PDFUA_PART = "{http://www.aiim.org/pdfua/ns/id/}part"
 
 
-def audit_pdfua(pdf_path: str | Path) -> AuditReport:
+def audit_pdfua(pdf_path: str | Path) -> Report:
     """Inspect PDF accessibility markers without claiming full conformance.
 
     Returns
     -------
-    AuditReport
+    Report
         Structural accessibility findings and PDF metadata.
 
     """
     pdf_path = Path(pdf_path)
-    report = AuditReport(subject=str(pdf_path))
+    report = Report(kind="pdf", subject=str(pdf_path))
     try:
         with pdf_path.open("rb") as stream:
             reader = PdfReader(stream, strict=True)
@@ -41,38 +42,38 @@ def audit_pdfua(pdf_path: str | Path) -> AuditReport:
             audit_structure(structure, report)
             _audit_content(reader, report)
     except (OSError, PyPdfError, ValueError, KeyError) as exc:
-        report.add("PDF000", Severity.ERROR, f"Cannot inspect PDF: {exc}", location=str(pdf_path))
+        report.add(rules.PDF000, f"Cannot inspect PDF: {exc}", location=str(pdf_path))
     return report
 
 
-def _audit_metadata(reader: PdfReader, report: AuditReport) -> DictionaryObject:
+def _audit_metadata(reader: PdfReader, report: Report) -> DictionaryObject:
     report.metadata["pages"] = len(reader.pages)
     report.metadata["pdf_format"] = reader.pdf_header.removeprefix("%")
     title = (reader.metadata.title or "").strip() if reader.metadata else ""
     if title:
         report.metadata["title"] = title
     else:
-        report.add("PDF001", Severity.ERROR, "PDF document title metadata is missing.")
+        report.add(rules.PDF001, "PDF document title metadata is missing.")
     catalog = reader.root_object
     language = catalog.get("/Lang")
     if isinstance(language, str) and language.strip():
         report.metadata["language"] = language
     else:
-        report.add("PDF002", Severity.ERROR, "PDF catalog /Lang is missing.")
+        report.add(rules.PDF002, "PDF catalog /Lang is missing.")
     marked = pdf_dictionary(catalog.get("/MarkInfo")).get("/Marked")
     if not isinstance(marked, BooleanObject) or not marked.value:
-        report.add("PDF003", Severity.ERROR, "PDF is not marked as a tagged document.")
+        report.add(rules.PDF003, "PDF is not marked as a tagged document.")
     structure = pdf_dictionary(catalog.get("/StructTreeRoot"))
     if not structure:
-        report.add("PDF004", Severity.ERROR, "PDF has no /StructTreeRoot.")
+        report.add(rules.PDF004, "PDF has no /StructTreeRoot.")
     display_title = pdf_dictionary(catalog.get("/ViewerPreferences")).get("/DisplayDocTitle")
     if not isinstance(display_title, BooleanObject) or not display_title.value:
-        report.add("PDF005", Severity.WARNING, "PDF viewer preferences do not display the title.")
+        report.add(rules.PDF005, "PDF viewer preferences do not display the title.")
     _audit_xmp(catalog, report)
     return structure
 
 
-def _audit_xmp(catalog: DictionaryObject, report: AuditReport) -> None:
+def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
     metadata = catalog.get("/Metadata")
     if metadata is not None:
         metadata = metadata.get_object()
@@ -93,18 +94,21 @@ def _audit_xmp(catalog: DictionaryObject, report: AuditReport) -> None:
     if part and part.strip() == "1":
         report.metadata["pdfua_part"] = 1
     else:
-        report.add("PDF006", Severity.ERROR, "PDF XMP metadata does not declare PDF/UA-1.")
+        report.add(rules.PDF006, "PDF XMP metadata does not declare PDF/UA-1.")
 
 
-def _audit_content(reader: PdfReader, report: AuditReport) -> None:
-    report.metadata["link_annotations"] = sum(_link_count(page) for page in reader.pages)
+def _audit_content(reader: PdfReader, report: Report) -> None:
+    annotations = sum(_link_count(page) for page in reader.pages)
+    report.metadata["link_annotations"] = annotations
+    if annotations and not report.metadata.get("link_structure_elements"):
+        report.add(rules.PDF016, details={"link_annotations": annotations})
     if not reader.pages:
-        report.add("PDF009", Severity.ERROR, "PDF contains no pages.")
+        report.add(rules.PDF009, "PDF contains no pages.")
         return
     text_chars = sum(len(page.extract_text() or "") for page in reader.pages)
     report.metadata["extractable_text_characters"] = text_chars
     if not text_chars:
-        report.add("PDF010", Severity.ERROR, "No extractable text was found in the PDF.")
+        report.add(rules.PDF010, "No extractable text was found in the PDF.")
 
 
 def _link_count(page: PageObject) -> int:
