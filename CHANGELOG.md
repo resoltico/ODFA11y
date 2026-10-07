@@ -64,10 +64,11 @@ all changed. Review the **Breaking** list before upgrading.
   `mimetype`, `styles.xml` or `meta.xml` is a warning, not a rejection.
 - **Document families.** The text family is the first implementation of the adapter contract;
   other families are served by the generic adapter (common checks, common `[document]`
-  decisions, an honest `ODF009`) until they get their own. A plan for the wrong family is
-  refused.
+  decisions, an honest `ODF009`) until they get their own. A plan for another family's
+  operations is refused, as is remediation of an unrecognised document.
 - **Assurance profiles** for `pipeline`, recorded with their effective gates, and stages that
-  are `not-applicable` rather than skipped when a family has no PDF export.
+  are `not-applicable` rather than skipped when a family has no PDF export; `production`
+  fails such a document because it requires PDF validation.
 - **Plan fingerprints.** `template` prints a fingerprint for each graphic and table it
   suggests; an entry carrying one fails when the object it addresses has drifted.
 - **PDF link correspondence.** Each link annotation must be referenced by a Link element on its

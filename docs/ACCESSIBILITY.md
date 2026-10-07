@@ -28,7 +28,8 @@ and gets the common checks. Semantic audit and remediation exist per family; tod
 text documents (`.odt`, templates, master and web documents) have them. For any other
 family the audit says so with `ODF009`, only the common `[document]` decisions apply, a
 `[text]` plan is refused, and PDF export, PDF checks and fidelity comparison are
-`not-applicable` in the pipeline. A document of a recognised kind therefore never receives
+`not-applicable` in the pipeline (the `production` profile fails instead, because it requires
+PDF validation). A document of a recognised kind therefore never receives
 rules that belong to another family, and silence about a family is never a pass.
 
 ## ODF schema validation

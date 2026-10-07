@@ -101,7 +101,8 @@ effective profile is recorded in `run.json`.
 
 The pipeline runs the stages in order and stops at the first failed gate; later stages are
 recorded as `skipped`. A stage the document's family does not have (PDF export for a family
-LibreOffice export is not defined for) is `not-applicable`, which is not a failure. The
+LibreOffice export is not defined for) is `not-applicable`, which is not a failure, except under `production`, which requires PDF
+validation and therefore fails for such a document. The
 [evidence directory](EVIDENCE.md) is published whether the run passed or failed, even when
 the source cannot be read.
 

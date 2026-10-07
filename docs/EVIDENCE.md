@@ -68,7 +68,7 @@ Nothing semantic is turned into a pass.
 
 ## Privacy
 
-A bundle contains copies of the input document, its remediated ODT, both PDFs and diff
+A bundle contains copies of the input document, its remediated document, both PDFs and diff
 images, and reports quote document text. Treat a bundle with the same confidentiality as the
 document, and do not attach one to a public issue.
 
