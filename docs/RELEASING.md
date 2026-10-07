@@ -16,7 +16,7 @@ advisory review and redacted secret scan from [Audit hygiene](DEVELOPING.md#audi
 
 Once the repository exists, enable GitHub private vulnerability reporting, secret
 scanning/push protection where available, and branch rules requiring the Static analysis, Integration and
-Linux, macOS and Windows Test checks. Restrict creation/modification of release tags to the maintainer.
+Linux, macOS and Windows Quality checks. Restrict creation/modification of release tags to the maintainer.
 These are repository settings, not promises that this source tree can enforce.
 Do not add deployment or package-registry credentials just to enable GitHub releases.
 

@@ -89,7 +89,7 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
 
 - **Static analysis** (Linux): workflow syntax and security, secret scan, dependency
   advisories, policy, Ruff, ty and tach.
-- **Test** (Linux, macOS, Windows): unit tests (with coverage on Linux), a build of
+- **Quality** (Linux, macOS, Windows): unit tests (with coverage on Linux), a build of
   the source archive and wheel, and unit tests against the wheel installed with
   hashed locked dependencies, including metadata, license and `py.typed` checks.
 - **Integration** (Linux): installs LibreOffice and a checksum-pinned veraPDF, then

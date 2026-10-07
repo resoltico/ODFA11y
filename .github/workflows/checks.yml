@@ -53,7 +53,7 @@ jobs:
           uv run --no-sync tach check
           uv run --no-sync tach check-external
   test:
-    name: Test (${{ matrix.os }})
+    name: Quality (${{ matrix.os }})
     timeout-minutes: 20
     strategy:
       fail-fast: false
