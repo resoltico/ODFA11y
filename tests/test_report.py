@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.report import RULES, Report, Severity, exit_status, render_reports, rules
+from odfa11y.report import RULES, Location, Report, Severity, exit_status, render_reports, rules
 
 
 def _report() -> Report:
@@ -17,7 +17,7 @@ def _report() -> Report:
     report.add(
         rules.TXT030,
         "Needs review",
-        location="content.xml",
+        location=Location("content/paragraph[2]"),
         details={"count": 2},
     )
     return report
@@ -32,14 +32,14 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
     ]
     assert "  title: T" in lines
     assert "  styles: 2 record(s)" in lines
-    assert any("TXT030 [content.xml]: Needs review" in line for line in lines)
+    assert any("TXT030 at content/paragraph[2]: Needs review" in line for line in lines)
     assert any(line.strip() == "remedy: text.remediation.linkify_plain_addresses" for line in lines)
     assert any(line.strip() == "count: 2" for line in lines)
 
 
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     single = json.loads(render_reports([_report()], output_format="json"))
-    assert single["format"] == 2
+    assert single["format"] == 3
     assert single["kind"] == "odf"
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]
@@ -49,6 +49,7 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
         "links",
     )
     assert finding["remedy"] == "text.remediation.linkify_plain_addresses"
+    assert finding["location"] == {"path": "content/paragraph[2]", "member": None}
     several = json.loads(render_reports([_report(), _report()], output_format="json"))
     assert isinstance(several, list)
     assert len(several) == 2
