@@ -43,12 +43,13 @@ def targets(document: OdfDocument) -> dict[str, list[etree._Element]]:
 
     """
     result: dict[str, list[etree._Element]] = {}
+    positions: dict[etree._Element, dict[etree._Element, int]] = {}
     roots = select_elements(document.tree(Part.CONTENT), "//office:body/office:database")
     if not roots:
         return result
     for node in roots[0].iter():
         if node.tag in OBJECTS or _form_target(node):
-            result.setdefault(_path(node), []).append(node)
+            result.setdefault(_path(node, positions), []).append(node)
     return result
 
 
@@ -100,26 +101,36 @@ def _form_target(node: etree._Element) -> bool:
     )
 
 
-def _path(node: etree._Element) -> str:
+def _path(node: etree._Element, positions: dict[etree._Element, dict[etree._Element, int]]) -> str:
     parts = []
     for item in reversed([node, *node.iterancestors()]):
         if item.tag not in OBJECTS and not _form_target(item):
             continue
         kind = str(item.tag).rpartition("}")[2]
         name = item.get(qn("db", "name")) or item.get(qn("form", "name"))
-        parent = item.getparent()
-        index = (
-            [sibling for sibling in parent if sibling.tag == item.tag].index(item) + 1
-            if parent is not None
-            else 1
-        )
         segment = (
             Location.named("content", kind, name).path
             if name
-            else Location.indexed("content", kind, index).path
+            else Location.indexed("content", kind, _ordinal(item, positions)).path
         )
         parts.append(segment.removeprefix("content/"))
     return "content/" + "/".join(parts)
+
+
+def _ordinal(
+    node: etree._Element, positions: dict[etree._Element, dict[etree._Element, int]]
+) -> int:
+    parent = node.getparent()
+    if parent is None:
+        return 1
+    if parent not in positions:
+        counts: dict[object, int] = {}
+        siblings = {}
+        for child in parent:
+            counts[child.tag] = counts.get(child.tag, 0) + 1
+            siblings[child] = counts[child.tag]
+        positions[parent] = siblings
+    return positions[parent][node]
 
 
 @dataclass(frozen=True, slots=True)
