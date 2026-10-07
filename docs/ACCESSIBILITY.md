@@ -26,6 +26,12 @@ XObjects are not entered, and references into them (`/Stm`) are not judged. Whet
 content is in a sensible reading order, or is correctly an artifact, stays with veraPDF and
 a person.
 
+Marked-content scanning skips raw inline images using their sample dimensions. Filtered
+inline images or unsupported inline color spaces produce `PDF000` rather than guessing
+where binary samples end. Form XObjects are not scanned. The decoded-page-content limit
+is checked after each stream is decoded; it does not bound the decoder's peak memory.
+
+
 ## Link descriptions depend on the LibreOffice release
 
 PDF/UA requires every link to carry an alternate description. LibreOffice 24.2 derives one

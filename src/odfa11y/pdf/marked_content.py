@@ -124,8 +124,9 @@ def _decoded_content(page: PageObject, budget: int) -> bytes:
     for item in streams:
         stream = item.get_object() if item is not None else None
         if isinstance(stream, StreamObject):
-            parts.append(stream.get_data())
-            budget -= len(parts[-1])
+            data = stream.get_data()
+            budget -= len(data) + bool(parts)
+            parts.append(data)
             if budget < 0:
                 msg = f"Page content is larger than the {MAX_CONTENT_BYTES}-byte limit"
                 raise ToolFailedError(msg)

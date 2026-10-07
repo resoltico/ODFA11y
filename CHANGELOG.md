@@ -24,7 +24,8 @@ Notable changes to this project are documented in this file. The format is based
   scanned and compared with the structure tree. New rules: `PDF020` (error, an MCID that no
   structure element refers to), `PDF021` (warning, a reference to an MCID its page does not
   contain), `PDF022` (warning, an MCID referred to more than once) and `PDF023` (error, text
-  shown outside tagged content and `/Artifact`). Content of form XObjects is not scanned. Decoded page
+  shown outside tagged content and `/Artifact`). Content of form XObjects is not scanned. Filtered inline images and unsupported
+  inline color spaces produce `PDF000`; raw image samples are skipped by their dimensions. Decoded page
   content above 64 MiB per document is refused as `PDF000`, like the other input limits.
   Reports of tagged PDFs may now contain these findings; the audit is still not PDF/UA
   validation.

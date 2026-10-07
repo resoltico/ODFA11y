@@ -163,6 +163,12 @@ veraPDF's XML is parsed into failed rules with clause, test number and sample co
 missing validator, an execution failure and malformed output are distinct errors, while
 non-compliance is a finding. Nothing here is a sandbox.
 
+Marked-content scanning skips raw inline images using their sample dimensions. Filtered
+inline images or unsupported inline color spaces produce `PDF000` rather than guessing
+where binary samples end. Form XObjects are not scanned. The decoded-page-content limit
+is checked after each stream is decoded; it does not bound the decoder's peak memory.
+
+
 ## Pipeline and evidence
 
 [`run_pipeline`](../src/odfa11y/pipeline/run.py) runs the stages an **assurance profile**

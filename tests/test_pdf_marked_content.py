@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, cast
 import pytest
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject
 
+from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
 from odfa11y.pdf.content_scan import scan_content
@@ -218,10 +219,13 @@ def test_every_page_is_reconciled_with_its_own_content(tmp_path: Path) -> None:
     ("data", "mcids", "unmarked"),
     [
         (b"/P <</MCID 2>> BDC (EMC ) Tj EMC", {2}, 0),
+        (b"/P <</MC#49D +2>> BDC (x) Tj EMC", {2}, 0),
+        (b"/Arti#66act BMC (x) Tj EMC", set(), 0),
         (b"/P <</MCID 2>> BDC (a \\) EMC) Tj EMC (b) Tj", {2}, 1),
         (b"/P <</MCID 2>> BDC (nested (EMC) ) Tj EMC (b) Tj", {2}, 1),
         (b"/P <</MCID 4>> BDC <454d43> Tj % EMC (\n EMC (x) Tj", {4}, 1),
-        (b"BI /W 1 /H 1 ID \x00 EMC (x) Tj \x00 EI /P <</MCID 1>> BDC EMC", {1}, 0),
+        (b"BI /W 1 /H 1 /CS /G /BPC 8 ID \x00 EI /P <</MCID 1>> BDC EMC", {1}, 0),
+        (b"BI /W 13 /H 1 /CS /G /BPC 8 ID  EI (fake) Tj  EI", set(), 0),
         (b"/P <</MCID 3 /Lang (en)>> BDC [(a) -20 (b)] TJ EMC", {3}, 0),
         (b"/P <</A <</MCID 8>> /MCID 5>> BDC EMC", {5}, 0),
         (b"/P <</MCID 99999999999999999999>> BDC EMC", {99999999999999999999}, 0),
@@ -246,11 +250,14 @@ def test_hostile_content_is_scanned_in_linear_time() -> None:
     ]
     started = time.perf_counter()
     for data in hostile:
-        scan_content(data, lambda _name: None)
+        try:
+            scan_content(data, lambda _name: None)
+        except ToolFailedError:
+            assert data.startswith(b"BI ")
     assert time.perf_counter() - started < 10
 
 
-def test_page_content_above_the_size_limit_is_refused_not_decoded_further(
+def test_page_content_above_the_size_limit_is_reported_as_uninspectable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     writer = tagged_writer(["H1"])
@@ -274,3 +281,8 @@ def test_the_content_limit_covers_all_pages_together(
     assert [f.rule_id for f in report.findings] == ["PDF000"]
     monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes + 1)
     assert "PDF000" not in {f.rule_id for f in audit(tmp_path, writer).findings}
+
+
+def test_a_filtered_inline_image_is_refused_instead_of_guessing_its_end() -> None:
+    with pytest.raises(ToolFailedError, match="Filtered inline images"):
+        scan_content(b"BI /W 1 /H 1 /F /Fl ID fake EI", lambda _name: None)
