@@ -32,7 +32,8 @@ uv run --no-sync ruff format --check .
 uv run --no-sync ty check
 uv run --no-sync tach check
 uv run --no-sync tach check-external
-uv run --no-sync pytest --cov
+uv run --no-sync pytest -m 'not integration' --cov --durations=10
+ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --cov --cov-append --durations=10
 uv build
 ```
 
@@ -97,9 +98,12 @@ interfaces in [tach.toml](../tach.toml); see [Architecture](ARCHITECTURE.md#pack
 Document families are nested modules (`odfa11y.families.text`, `odfa11y.families.spreadsheet`): tach rejects a family
 importing another, or any package below the registry importing one. When a package needs a
 new dependency, change the design first and `tach.toml` only if the new direction is
-intended. `tools/check_quality.py` adds the check tach cannot make, that no core package
-names a family's XML elements (`qn("text", …)`, `//table:…`); add such code to the family's
-package. [Adding a family](ARCHITECTURE.md#adding-a-family) lists every step.
+intended. `tools/check_quality.py` rejects content-specific XML names in orchestration
+(`qn("text", …)`, `//table:…`, and the other document-content namespaces). Put those
+names in the family responsible for their semantics or in `odfa11y.content` when
+the primitive is shared across families. Storage and schema dispatch may still
+identify a document's namespace URI. [Adding a family](ARCHITECTURE.md#adding-a-family)
+lists every step.
 
 [Hypothesis](https://hypothesis.readthedocs.io/) properties in
 `tests/test_properties.py` state invariants over generated input: lossless address
@@ -112,6 +116,25 @@ rerunning pytest, and a found counterexample belongs in an `@example` beside a f
 Coverage uses branch measurement with the floor in `pyproject.toml`; raise the floor
 when coverage rises, never lower it to pass.
 
+Run the inexpensive policy, lint, type and boundary checks before the complete test
+and packaging gates. Independent static checks can run in separate terminals against
+the same stable inputs; keep edits and formatting fixes out of a running verification
+batch. Use targeted tests while iterating, then run the complete required checks on
+the delivered state. `--durations=10` records the slowest tests so changes to gate
+cost can be investigated without reducing property examples or assertion coverage.
+Unit tests that check native-tool report formatting supply explicit tool identities;
+the integration tests independently check the installed applications and their real
+export results.
+
+The two test invocations select complementary sets: every test runs, and integration
+coverage is appended to the unit coverage. Run them in order, because they share
+the coverage data file. Native integration uses two worker
+processes, with separate document, export and LibreOffice profile directories for
+each test. The worker count is bounded rather than derived from all available CPU
+cores. A worker crash fails the run without a retry. Keep unit coverage sequential:
+the hostile-input timing controls need predictable CPU availability. Targeted tests
+remain sequential by default, without worker startup cost.
+
 ## External integration and CI
 
 Tests marked `integration` run the real LibreOffice export and real veraPDF
@@ -119,7 +142,7 @@ validation. They skip when an executable is absent, so a unit-only run does not 
 integration; set `ODFA11Y_REQUIRE_INTEGRATION=1` to make a missing application fail:
 
 ```bash
-ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
+ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --durations=10
 ```
 
 [Checks](../.github/workflows/checks.yml) runs three kinds of job:
@@ -150,7 +173,13 @@ actionlint .github/workflows/checks.yml
 
 The workflow uses read-only repository permissions, pinned actions, bounded job
 runtimes and PR cancellation; checkout credentials are not persisted. It supports
-manual runs. Runner images and the macOS LibreOffice follows its current stable distribution;
+manual runs. Push checks run on `main` and version tags; every open pull request,
+including a draft or a web edit, runs checks on its merge commit. This avoids running
+the same gates twice for each pull-request update. A branch without a pull request
+can use a manual workflow run. Authoritative checks still run after merge and for
+release tags. The Go build and module cache reuses pinned scanner dependencies;
+the scanners still execute on every run, and manual release checks bypass that cache.
+Runner images and macOS LibreOffice follow their current stable distribution;
 Linux/Windows LibreOffice installers are checksum-pinned. The lockfile does not freeze
 the complete operating system.
 
@@ -188,7 +217,8 @@ run alone does not prove that packaging included the required modules.
 6. Test new checks and meaningful rejection paths; verify external boundaries when claimed.
 7. Distinguish PDF diagnostics, machine validation and human acceptance.
 8. Keep customer/private documents out of source control and test fixtures.
-9. Family-specific names, rules and operations stay inside the family's package.
+9. Family rules and operations stay in their family; shared content primitives may
+   name the XML vocabulary they own, while orchestration stays independent of it.
 
 Read [AGENTS.md](../AGENTS.md) before changing the project and
 [Architecture](ARCHITECTURE.md) for implementation boundaries. Follow
