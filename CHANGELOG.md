@@ -4,6 +4,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-07
+
 This release is a deliberate break from 0.1.0 with no compatibility layer: the Python
 API, command line, configuration file and report format all changed. Review the
 **Breaking** list before upgrading.
