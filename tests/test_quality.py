@@ -116,6 +116,24 @@ def test_family_specific_names_are_rejected_in_the_core(tmp_path: Path, source: 
     assert any("family" in error for error in check_repository(root))
 
 
+@pytest.mark.parametrize(
+    "prefix", ["presentation", "chart", "db", "form", "dr3d", "math", "script"]
+)
+def test_specialized_content_names_are_rejected_in_orchestration(
+    tmp_path: Path, prefix: str
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(
+        root,
+        "pipeline",
+        "run.py",
+        source=f'from x import qn\nqualified = qn("{prefix}", "content")\nxpath = "//{prefix}:content"\n',
+    )
+    errors = check_repository(root)
+    assert len(errors) == 2
+    assert all("family" in error and prefix in error for error in errors)
+
+
 def test_family_specific_names_are_allowed_in_a_family_package(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     _core_file(root, "families", "text", "audit.py", source='value = "//text:p"\n')

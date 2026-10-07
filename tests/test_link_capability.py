@@ -16,6 +16,7 @@ from odfa11y import __version__
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.evidence import check_bundle
+from odfa11y.external_tools import ToolIdentity
 from odfa11y.families.text import write_link_probe
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, PackageStorage, validate
@@ -23,6 +24,7 @@ from odfa11y.pdf import (
     ExportSettings,
     audit_pdfua,
     export_pdfua,
+    identify_soffice,
     link_descriptions_supported,
     validate_pdfua,
 )
@@ -61,6 +63,21 @@ def probe(tmp_path: Path) -> Path:
     path = tmp_path / "probe.odt"
     write_link_probe(path)
     return path
+
+
+@pytest.fixture
+def reported_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Supply explicit identities for doctor output tests without launching native tools."""
+    monkeypatch.setattr("odfa11y.cli.commands.find_soffice", lambda _requested: "test-soffice")
+    monkeypatch.setattr(
+        "odfa11y.cli.commands.identify_soffice",
+        lambda _executable: ToolIdentity("LibreOffice", "26.8.0.3"),
+    )
+    monkeypatch.setattr("odfa11y.cli.commands.find_verapdf", lambda: "test-verapdf")
+    monkeypatch.setattr(
+        "odfa11y.cli.commands.identify",
+        lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.2"),
+    )
 
 
 def test_the_probe_is_a_readable_text_document_with_one_link(probe: Path) -> None:
@@ -102,6 +119,7 @@ def test_a_missing_libreoffice_propagates(probe: Path, tmp_path: Path) -> None:
         link_descriptions_supported(probe, ExportSettings(WRITER, soffice=tmp_path / "absent"))
 
 
+@pytest.mark.usefixtures("reported_tools")
 @pytest.mark.parametrize(("supported", "expected"), [(True, "supported"), (False, "unsupported")])
 def test_doctor_reports_the_capability(
     monkeypatch: pytest.MonkeyPatch,
@@ -129,7 +147,8 @@ def test_doctor_without_libreoffice_still_reports_and_fails(
     assert info["pdfua_link_descriptions"] is None
 
 
-def test_doctor_reports_installed_versions(
+@pytest.mark.usefixtures("reported_tools")
+def test_doctor_reports_selected_tool_versions(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(
@@ -138,11 +157,14 @@ def test_doctor_reports_installed_versions(
     assert main(["doctor", "--format", "json"]) == 0
     info = json.loads(capsys.readouterr().out)
     assert info["odfa11y"] == __version__
+    assert info["LibreOffice"] == "26.8.0.3"
+    assert info["veraPDF"] == "1.30.2"
     assert {"python", "lxml", "pypdf", "pypdfium2", "pillow", "odf_schemas"} <= info.keys()
     assert main(["doctor"]) == 0
     assert "odfa11y:" in capsys.readouterr().out
 
 
+@pytest.mark.usefixtures("reported_tools")
 def test_module_entry_point_runs_the_cli(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -175,13 +197,16 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     assert {(f.clause, f.test_number) for f in result.failures} == link_failures
 
     assert main(["doctor", "--soffice", soffice, "--format", "json"]) == 0
-    reported = json.loads(capsys.readouterr().out)["pdfua_link_descriptions"]
+    doctor = json.loads(capsys.readouterr().out)
+    assert doctor["LibreOffice"] == identify_soffice(soffice).version
+    reported = doctor["pdfua_link_descriptions"]
     assert reported == "supported"
 
     record = run_pipeline(
         linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)
     )
     assert record.toolchain["LibreOffice"]["pdfua_link_descriptions"] == reported
+    assert record.toolchain["LibreOffice"]["version"] == doctor["LibreOffice"]
     evidence = json.loads((tmp_path / "evidence" / "run.json").read_text())
     assert evidence["toolchain"]["LibreOffice"]["pdfua_link_descriptions"] == reported
     assert not any("probe" in name for name in evidence["outputs"])

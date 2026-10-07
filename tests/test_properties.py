@@ -197,8 +197,8 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
         assert validate(OdfDocument.open(root / "first.odt")).violations == {}
         second = remediate(root / "first.odt", root / "second.odt", operations)
         assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
+        first_package = PackageStorage(root / "first.odt")
+        second_package = PackageStorage(root / "second.odt")
         for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
-            assert PackageStorage(root / "first.odt").read(member) == PackageStorage(
-                root / "second.odt"
-            ).read(member)
+            assert first_package.read(member) == second_package.read(member)
         assert first.destination == root / "first.odt"

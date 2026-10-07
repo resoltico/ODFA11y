@@ -24,12 +24,14 @@ FAMILY_PREFIXES = frozenset({
     "style",
     "presentation",
     "chart",
+    "db",
     "form",
     "number",
     "dr3d",
     "anim",
     "smil",
     "math",
+    "script",
 })
 FAMILY_NAME = re.compile(r"(?:^|[/@\[ (|])(?:" + "|".join(sorted(FAMILY_PREFIXES)) + r"):[A-Za-z]")
 CORE_ROOT = ("src", "odfa11y")
