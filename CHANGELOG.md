@@ -32,6 +32,12 @@ Notable changes to this project are documented in this file. The format is based
   idempotently; an integration test runs the pipeline on three of them with real LibreOffice.
   The sdist ships the corpus with the tests.
 
+### Changed
+
+- The package description and README now state the support boundary: every OpenDocument kind
+  is recognised and checked in common, while semantic audit, remediation and PDF/UA export
+  exist only for text documents.
+
 ## [0.3.0] - 2026-10-07
 
 This release makes the ODF core independent of any document family: ODFA11y now recognises
