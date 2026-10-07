@@ -26,8 +26,14 @@ veraPDF's job.
 PDF/UA requires every link to carry an alternate description. LibreOffice 24.2 derives one
 from the link text; newer releases (observed with the macOS package current in 2026) export links without one. ODFA11y reports this as `PDF019` and veraPDF as rules 7.18.1-2
 and 7.18.5-2, so a document with hyperlinks can fail `verify` or `production` under one
-LibreOffice and pass under another. ODFA11y cannot add a description to the exported PDF;
-the evidence records the LibreOffice version so the difference is explainable.
+LibreOffice and pass under another. ODFA11y cannot add a description to the exported PDF, and `PDF019` stays an error: a PDF
+whose links lack one is not accessible. Run `odfa11y doctor` to learn in advance which
+case applies. It exports a synthetic one-hyperlink document with the installed LibreOffice,
+audits the PDF with the built-in audit, and prints `pdfua_link_descriptions: supported`
+(no `PDF019`) or `unsupported`. `doctor` exits `0` whenever the check ran, even when the
+answer is `unsupported`, and `3` when LibreOffice is missing or its export fails (the
+other versions are still printed). The pipeline's evidence records the LibreOffice version
+so the difference is explainable, but not this capability.
 
 ## Document families
 

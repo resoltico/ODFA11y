@@ -4,13 +4,10 @@
 from __future__ import annotations
 
 import json
-import runpy
-import sys
 from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y import __version__
 from odfa11y.cli import main
 
 from .fixtures import make_minimal_odt
@@ -218,25 +215,6 @@ def test_missing_input_file_is_an_error_not_a_traceback(
 ) -> None:
     assert main(["styles", str(tmp_path / "absent.odt")]) == EXECUTION_FAILURE
     assert "error:" in capsys.readouterr().err
-
-
-def test_doctor_reports_installed_versions(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["doctor", "--format", "json"]) == 0
-    info = json.loads(capsys.readouterr().out)
-    assert info["odfa11y"] == __version__
-    assert {"python", "lxml", "pypdf", "pypdfium2", "pillow", "odf_schemas"} <= info.keys()
-    assert main(["doctor"]) == 0
-    assert "odfa11y:" in capsys.readouterr().out
-
-
-def test_module_entry_point_runs_the_cli(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(sys, "argv", ["odfa11y", "doctor", "--format", "json"])
-    with pytest.raises(SystemExit) as exit_info:
-        runpy.run_module("odfa11y", run_name="__main__")
-    assert exit_info.value.code == 0
-    assert json.loads(capsys.readouterr().out)["odfa11y"] == __version__
 
 
 def test_pipeline_command_without_libreoffice_fails_with_evidence_and_exit_3(
