@@ -100,4 +100,4 @@ class OdfStorage(ABC):
         except etree.XMLSyntaxError as exc:
             msg = f"Malformed XML in {name}: {exc}"
             raise XmlParseError(msg) from exc
-        return etree.ElementTree(root)
+        return root.getroottree()

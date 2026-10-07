@@ -230,3 +230,35 @@ def test_a_new_family_needs_only_a_registry_entry(
     report = audit_odf(make_package(tmp_path, "spreadsheet"))
     assert report.metadata["adapter"] == "spreadsheet"
     assert any(f.message == "Spreadsheet adapter ran." for f in report.findings)
+
+
+def test_editing_a_flat_document_keeps_comments_and_processing_instructions(
+    tmp_path: Path,
+) -> None:
+    source = make_flat(tmp_path, "text")
+    text = source.read_text(encoding="utf-8")
+    declaration, rest = text.split("\n", 1)
+    source.write_text(
+        f"  {declaration}\n"
+        '<?xml-stylesheet href="s.css" type="text/css"?>\n'
+        f"<!-- keep me -->\n{rest}\n<!-- and me -->\n",
+        encoding="utf-8",
+    )
+    destination = tmp_path / "out.fodt"
+    remediate(source, destination, [SetMetadata(title="Changed")])
+    saved = destination.read_text(encoding="utf-8")
+    assert '<?xml-stylesheet href="s.css" type="text/css"?>' in saved
+    assert "<!-- keep me -->" in saved
+    assert "<!-- and me -->" in saved
+    assert "Changed" in saved
+
+
+def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path) -> None:
+    source = make_flat(tmp_path, "text")
+    text = source.read_text(encoding="utf-8")
+    start, end = text.index("<office:meta>"), text.index("</office:meta>") + len("</office:meta>")
+    source.write_text(text[:start] + text[end:], encoding="utf-8")
+    destination = tmp_path / "out.fodt"
+    remediate(source, destination, [SetMetadata(title="Added")])
+    assert audit_odf(destination).metadata["title"] == "Added"
+    assert "ODF900" not in ids(audit_odf(destination, schema=True))

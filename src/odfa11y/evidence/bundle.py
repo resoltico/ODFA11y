@@ -12,7 +12,7 @@ from odfa11y.errors import OutputError
 from odfa11y.staging import staging_sibling
 
 from .manifest import write_manifest
-from .paths import unsafe_reason
+from .paths import is_reserved_bundle_file, unsafe_reason
 from .review import render_review
 
 if TYPE_CHECKING:
@@ -59,7 +59,9 @@ def write_bundle(
     require_free_directory(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     for name in artifacts:
-        if reason := unsafe_reason(name):
+        if reason := unsafe_reason(name) or (
+            "belongs to the bundle itself" if is_reserved_bundle_file(name) else None
+        ):
             msg = f"Unsafe bundle file name {name!r}: {reason}"
             raise OutputError(msg)
     staging = staging_sibling(target)

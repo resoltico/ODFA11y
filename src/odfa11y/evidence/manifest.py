@@ -16,6 +16,7 @@ from .paths import MANIFEST_NAME, unsafe_reason
 MANIFEST_FORMAT = 1
 CHUNK_BYTES = 1 << 20
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+MAX_SHOWN_NAME = 120
 
 
 def sha256_file(path: Path) -> str:
@@ -87,7 +88,14 @@ def check_bundle(directory: str | Path) -> list[str]:
     return problems
 
 
+def _shown(name: str) -> str:
+    return name if len(name) <= MAX_SHOWN_NAME else f"{name[:MAX_SHOWN_NAME]}..."
+
+
 def _read_manifest(root: Path) -> dict[str, str]:
+    if problem := _kind_problem(root / MANIFEST_NAME):
+        msg = f"{MANIFEST_NAME} {problem}"
+        raise ValueError(msg)
     text = (root / MANIFEST_NAME).read_text(encoding="utf-8")
     manifest = json.loads(text, object_pairs_hook=_no_duplicates)
     if not isinstance(manifest, dict) or manifest.keys() != {"format", "files"}:
@@ -102,10 +110,10 @@ def _read_manifest(root: Path) -> dict[str, str]:
         raise TypeError(msg)
     for name, digest in files.items():
         if not isinstance(digest, str) or not SHA256_HEX.fullmatch(digest):
-            msg = f"invalid digest for {name!r}"
+            msg = f"invalid digest for {_shown(name)!r}"
             raise TypeError(msg)
         if reason := unsafe_reason(name):
-            msg = f"unsafe name {name!r} {reason}"
+            msg = f"unsafe name {_shown(name)!r} {reason}"
             raise ValueError(msg)
     return dict(files)
 
@@ -137,15 +145,19 @@ def _file_problem(root: Path, name: str, digest: str) -> str | None:
         try:
             mode = current.lstat().st_mode
         except FileNotFoundError:
-            return f"Missing: {name}"
+            return f"Missing: {_shown(name)}"
         except OSError as exc:
-            return f"Unreadable: {name}: {exc.strerror or type(exc).__name__}"
+            return f"Unreadable: {_shown(name)}: {exc.strerror or type(exc).__name__}"
         if stat.S_ISLNK(mode):
-            return f"Unsafe: {name} is or passes through a symbolic link"
+            return f"Unsafe: {_shown(name)} is or passes through a symbolic link"
         wanted = stat.S_ISREG if index == len(parts) - 1 else stat.S_ISDIR
         if not wanted(mode):
-            return f"Unsafe: {name} is not a regular file"
-    return None if sha256_file(current) == digest else f"Modified: {name}"
+            return f"Unsafe: {_shown(name)} is not a regular file"
+    try:
+        matches = sha256_file(current) == digest
+    except OSError as exc:
+        return f"Unreadable: {_shown(name)}: {exc.strerror or type(exc).__name__}"
+    return None if matches else f"Modified: {_shown(name)}"
 
 
 def _unlisted(root: Path, listed: set[str]) -> list[str]:

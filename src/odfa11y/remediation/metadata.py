@@ -81,7 +81,8 @@ def _ensure_meta_node(document: OdfDocument, tag: str) -> etree._Element:
     meta = document.edit(Part.META)
     office_meta = meta.find("office:meta", NS)
     if office_meta is None:
-        office_meta = etree.SubElement(meta.getroot(), qn("office", "meta"))
+        office_meta = etree.Element(qn("office", "meta"))
+        meta.getroot().insert(0, office_meta)  # first child: the schema orders meta before body
     node = office_meta.find(_prefixed(tag), NS)
     if node is None:
         node = etree.SubElement(office_meta, tag)

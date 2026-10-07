@@ -181,7 +181,7 @@ class OdfDocument:
         for name in self._trees:
             if name in self._dirty:
                 payload = etree.tostring(
-                    self._trees[name].getroot(),
+                    self._trees[name],
                     xml_declaration=True,
                     encoding="UTF-8",
                     standalone=None,

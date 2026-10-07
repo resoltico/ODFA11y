@@ -210,3 +210,40 @@ def test_a_manifest_name_that_is_not_valid_text_is_reported_not_fatal(tmp_path: 
     (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     problems = check_bundle(directory)
     assert any("unsafe name" in problem for problem in problems)
+
+
+@pytest.mark.parametrize(
+    "name", ["run.json", "Run.JSON", "review.md", "Manifest.json", "MANIFEST.JSON"]
+)
+def test_an_artifact_cannot_take_the_name_of_a_file_the_bundle_writes(
+    tmp_path: Path, name: str
+) -> None:
+    source = tmp_path / "s.bin"
+    source.write_bytes(b"x")
+    with pytest.raises(OutputError, match="Unsafe bundle file name"):
+        write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
+
+
+@pytest.mark.parametrize("name", ["NUL.txt", "a.", "a ", "a:b", "dir/con", "x" * 256])
+def test_names_other_filesystems_cannot_hold_are_rejected(tmp_path: Path, name: str) -> None:
+    source = tmp_path / "s.bin"
+    source.write_bytes(b"x")
+    with pytest.raises(OutputError, match="Unsafe bundle file name"):
+        write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
+
+
+def test_a_very_long_manifest_name_is_not_echoed_in_full(tmp_path: Path) -> None:
+    directory = bundle(tmp_path)
+    manifest = json.loads((directory / "manifest.json").read_text())
+    manifest["files"]["y" * 5000] = "0" * 64
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert all(len(problem) < 400 for problem in check_bundle(directory))
+
+
+@pytest.mark.skipif(not hasattr(os, "symlink") or sys.platform == "win32", reason="needs links")
+def test_a_manifest_that_is_a_link_is_not_followed(tmp_path: Path) -> None:
+    directory = bundle(tmp_path)
+    real = tmp_path / "elsewhere.json"
+    (directory / "manifest.json").rename(real)
+    (directory / "manifest.json").symlink_to(real)
+    assert any("symbolic link" in problem for problem in check_bundle(directory))
