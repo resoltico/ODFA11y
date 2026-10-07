@@ -11,7 +11,8 @@ on:
 env:
   ODFA11Y_UV_VERSION: "0.12.23"
   ODFA11Y_LIBREOFFICE_VERSION: "26.8.0.3"
-  ODFA11Y_LIBREOFFICE_SHA256: "d0a6031a3837e48f9854e6d2da6489b9fadbd814afa4741fa32a197741663a22"
+  ODFA11Y_LIBREOFFICE_LINUX_SHA256: "d0a6031a3837e48f9854e6d2da6489b9fadbd814afa4741fa32a197741663a22"
+  ODFA11Y_LIBREOFFICE_WINDOWS_SHA256: "4aa6c6e1895f4055104effcb556bd3362d20c6ad707c149543304f395ef9db95"
   ODFA11Y_VERAPDF_VERSION: "1.30.2"
   ODFA11Y_VERAPDF_SHA256: "6cc6341cb1af644044054b81f00a6590a7918abb18f762243de115258bcad838"
 permissions:
@@ -158,7 +159,7 @@ jobs:
           curl --fail --location --retry 3 \
             "https://downloadarchive.documentfoundation.org/libreoffice/old/$ODFA11Y_LIBREOFFICE_VERSION/deb/x86_64/$filename" \
             --output "$archive"
-          echo "$ODFA11Y_LIBREOFFICE_SHA256  $archive" | sha256sum --check -
+          echo "$ODFA11Y_LIBREOFFICE_LINUX_SHA256  $archive" | sha256sum --check -
           mkdir "$directory"
           tar -xzf "$archive" -C "$directory"
           sudo apt-get update
@@ -172,9 +173,20 @@ jobs:
           echo "/Applications/LibreOffice.app/Contents/MacOS" >> "$GITHUB_PATH"
       - name: Install LibreOffice on Windows
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          choco install libreoffice-fresh --no-progress --yes
-          echo "C:\Program Files\LibreOffice\program" >> "$GITHUB_PATH"
+          $installer = Join-Path $env:RUNNER_TEMP 'libreoffice.msi'
+          $filename = "LibreOffice_$($env:ODFA11Y_LIBREOFFICE_VERSION)_Win_x86-64.msi"
+          $url = "https://downloadarchive.documentfoundation.org/libreoffice/old/$($env:ODFA11Y_LIBREOFFICE_VERSION)/win/x86_64/$filename"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:ODFA11Y_LIBREOFFICE_WINDOWS_SHA256) {
+            throw 'LibreOffice installer checksum mismatch'
+          }
+          $installation = Start-Process msiexec.exe -ArgumentList "/i `"$installer`" /qn /norestart" -Wait -PassThru
+          if ($installation.ExitCode -notin @(0, 3010)) {
+            throw "LibreOffice installation failed with exit code $($installation.ExitCode)"
+          }
+          'C:\Program Files\LibreOffice\program' | Out-File -FilePath $env:GITHUB_PATH -Append
       - name: Install pinned veraPDF
         run: |
           java -version

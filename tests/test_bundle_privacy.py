@@ -64,7 +64,8 @@ def stand_in(directory: Path, body: str, name: str = "fake-soffice") -> Path:
 
     """
     path = directory / name
-    path.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
+    version = 'if [ "$1" = "--version" ]; then echo "LibreOffice 26.8.0.3"; exit 0; fi'
+    path.write_text(f"#!/bin/sh\n{version}\n{body}\n", encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
     return path
 

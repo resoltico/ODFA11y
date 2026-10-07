@@ -130,12 +130,12 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
   the source archive and wheel, and unit tests against the wheel installed with
   hashed locked dependencies, including metadata, license and `py.typed` checks.
 - **Integration** (Linux, macOS, Windows): installs LibreOffice (checksum-pinned 26.8.0.3 on
-  Linux, the current release on macOS and Windows) and a checksum-pinned veraPDF with
+  Linux and Windows, the current release on macOS) and a checksum-pinned veraPDF with
   `tools/install_verapdf.py`, then runs the integration tests (real exports, real
   validation, the full pipeline) with `ODFA11Y_REQUIRE_INTEGRATION=1`. PDF tagging and
   pagination are exporter behaviour, so passing on one operating system says little about
-  another. LibreOffice 26.8 is the minimum; Linux installation inputs are pinned in the
-  workflow and macOS/Windows deliberately test the current release. The job logs its version, and
+  another. LibreOffice 26.8 is the minimum; Linux/Windows installation inputs are pinned in the
+  workflow and macOS deliberately tests the current release. The job logs its version, and
   the evidence record of any run carries it.
 - **CI gate**: waits for the three jobs above and fails unless all succeeded. It is the
   only check a branch ruleset should require; see [Releasing](RELEASING.md#repository-settings).
@@ -150,8 +150,8 @@ actionlint .github/workflows/checks.yml
 
 The workflow uses read-only repository permissions, pinned actions, bounded job
 runtimes and PR cancellation; checkout credentials are not persisted. It supports
-manual runs. Runner images and the macOS/Windows LibreOffice packages follow their current
-stable distributions; Linux LibreOffice is checksum-pinned. The lockfile does not freeze
+manual runs. Runner images and the macOS LibreOffice follows its current stable distribution;
+Linux/Windows LibreOffice installers are checksum-pinned. The lockfile does not freeze
 the complete operating system.
 
 veraPDF is a separately installed Java CLI used when an operator explicitly requests
