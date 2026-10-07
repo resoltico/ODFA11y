@@ -60,7 +60,8 @@ all changed. Review the **Breaking** list before upgrading.
   legacy media types. New findings report an unrecognised media type (`ODF005`), a body that
   contradicts it (`ODF006`), a misleading extension (`ODF007`), deprecated or legacy kinds
   (`ODF008`), a family without semantic audit (`ODF009`) and a flat root that is not
-  `office:document` (`ODF010`). Packages need only a manifest and content: a missing
+  `office:document` (`ODF010`) or a package's content root that is not
+  `office:document-content` (`ODF011`). Packages need only a manifest and content: a missing
   `mimetype`, `styles.xml` or `meta.xml` is a warning, not a rejection.
 - **Document families.** The text family is the first implementation of the adapter contract;
   other families are served by the generic adapter (common checks, common `[document]`
@@ -103,7 +104,24 @@ all changed. Review the **Breaking** list before upgrading.
 - `pipeline` could fail before publishing evidence when the source could not be read; it now
   publishes a bundle naming the failed stage.
 - Setting the language created `office:styles` after the body in documents without one,
-  which the schema gate rejected.
+  which the schema gate rejected; setting metadata on a flat document without `office:meta`
+  did the same. A package without `meta.xml` is refused with a clear message.
+- Text rules matched headers and footers of flat documents (which a package keeps in
+  `styles.xml`), so the same document audited and edited differently by layout. Text queries
+  are now scoped to the document body.
+- Flat documents lost their comments, processing instructions and a DOCTYPE when edited.
+- `remediate` rewrote documents the audit refuses: an unrecognised media type, or a manifest
+  or body that contradicts the mimetype. It now refuses them. Blank titles and descriptions
+  are refused instead of written empty; `en_US`-style language tags are normalised to BCP 47
+  and private-use tags are accepted.
+- `check-evidence` crashed on a manifest name that is not valid text and echoed 5,000-character
+  names; names that other filesystems cannot hold (Windows device names, trailing dots, `:`),
+  names that differ from `manifest.json` only in case, and artifacts named `run.json` or
+  `REVIEW.md` are now rejected.
+- A damaged `mimetype` member (stray whitespace, non-ASCII bytes) ended the audit as an
+  unrecognised type; it is now a `PKG001` warning and detection continues from the manifest.
+- On Windows, `soffice --version` never returns; LibreOffice is identified by its file
+  version there.
 
 ### Internal
 
