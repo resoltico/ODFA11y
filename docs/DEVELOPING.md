@@ -64,6 +64,12 @@ and `tests/test_corpus_remediation.py` check all of it, and an integration test 
 pipeline on some of the documents. The files are marked binary in `.gitattributes`; they ship
 in the source archive with the rest of `tests/`.
 
+The Writer corpus hyperlink pipeline test compares the exported PDF with real veraPDF.
+When LibreOffice omits link descriptions, it requires `PDF019`, a failed PDF audit and
+skipped downstream stages; other failures are rejected. Green CI proves that the defect
+is detected, while the other corpus pipeline cases must complete successfully.
+
+
 To add or change a document:
 
 1. Add or edit its source in `tests/corpus/sources/` (HTML for what Writer's HTML import
