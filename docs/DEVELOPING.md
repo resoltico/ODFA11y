@@ -50,7 +50,7 @@ complexity, branch, argument, return and statement limits are also defined in
 `pyproject.toml`; the few API exceptions have explicit reasons there.
 
 pytest enables all strictness options and treats warnings as errors. Tests create
-synthetic ODT/PDF fixtures rather than storing customer documents. The TOML example
+synthetic ODF/PDF fixtures (`tests/documents.py` builds every document kind as a package and as flat XML) rather than storing customer documents. The TOML example
 is extracted directly from [Configuration](CONFIGURATION.md#example) and validated
 through the real loader.
 
@@ -63,8 +63,12 @@ lxml's XPath union result. Fix a type error in the code rather than suppressing 
 
 [Tach](https://github.com/tach-org/tach) enforces the package layering and public
 interfaces in [tach.toml](../tach.toml); see [Architecture](ARCHITECTURE.md#packages-and-dependency-rules).
-When a package needs a new dependency, change the design first and `tach.toml` only
-if the new direction is intended.
+Document families are nested modules (`odfa11y.families.text`): tach rejects a family
+importing another, or any package below the registry importing one. When a package needs a
+new dependency, change the design first and `tach.toml` only if the new direction is
+intended. `tools/check_quality.py` adds the check tach cannot make, that no core package
+names a family's XML elements (`qn("text", …)`, `//table:…`); add such code to the family's
+package. [Adding a family](ARCHITECTURE.md#adding-a-family) lists every step.
 
 [Hypothesis](https://hypothesis.readthedocs.io/) properties in
 `tests/test_properties.py` state invariants over generated input: lossless address
@@ -94,9 +98,13 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
 - **Quality** (Linux, macOS, Windows; the job is `test` in the workflow): unit tests (with coverage on Linux), a build of
   the source archive and wheel, and unit tests against the wheel installed with
   hashed locked dependencies, including metadata, license and `py.typed` checks.
-- **Integration** (Linux): installs LibreOffice and a checksum-pinned veraPDF, then
-  runs the integration tests (real exports, real validation, the full pipeline) with
-  `ODFA11Y_REQUIRE_INTEGRATION=1`.
+- **Integration** (Linux, macOS, Windows): installs LibreOffice (the distribution package on
+  Linux, the current release on macOS and Windows) and a checksum-pinned veraPDF with
+  `tools/install_verapdf.py`, then runs the integration tests (real exports, real
+  validation, the full pipeline) with `ODFA11Y_REQUIRE_INTEGRATION=1`. PDF tagging and
+  pagination are exporter behaviour, so passing on one operating system says little about
+  another. LibreOffice versions are not pinned; the job logs the version it ran with, and
+  the evidence record of any run carries it.
 - **CI gate**: waits for the three jobs above and fails unless all succeeded. It is the
   only check a branch ruleset should require; see [Releasing](RELEASING.md#repository-settings).
 
@@ -142,10 +150,12 @@ run alone does not prove that packaging included the required modules.
 1. Audits remain read-only and findings retain stable rule IDs.
 2. Ambiguous semantic choices require explicit input.
 3. Structural editing preserves normalized document wording before saving.
-4. ODT output retains the first/uncompressed `mimetype` invariant.
-5. Test new checks and meaningful rejection paths; verify external boundaries when claimed.
-6. Distinguish PDF diagnostics, machine validation and human acceptance.
-7. Keep customer/private documents out of source control and test fixtures.
+4. Package output retains the first/uncompressed `mimetype` invariant; untouched members stay byte-identical.
+5. Evidence carries no local path and is never read outside its directory.
+6. Test new checks and meaningful rejection paths; verify external boundaries when claimed.
+7. Distinguish PDF diagnostics, machine validation and human acceptance.
+8. Keep customer/private documents out of source control and test fixtures.
+9. Family-specific names, rules and operations stay inside the family's package.
 
 Read [AGENTS.md](../AGENTS.md) before changing the project and
 [Architecture](ARCHITECTURE.md) for implementation boundaries. Follow

@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from lxml import etree
 
-from odfa11y.odf import URI_RE, prose_slots, qn, select_elements, split_trailing_punctuation
+from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.odf import Family, Part, qn, select_elements
 
-from .outcome import Operation, Outcome, Status
+from .links import URI_RE, split_trailing_punctuation
+from .prose import prose_slots
 
 if TYPE_CHECKING:
-    from odfa11y.odf import OdtDocument
+    from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,13 +23,14 @@ class LinkifyAddresses(Operation):
     """Turn visible URLs and email addresses into hyperlinks that keep their text."""
 
     name: ClassVar[str] = "linkify_addresses"
+    family: ClassVar[Family | None] = Family.TEXT
 
     @override
-    def apply(self, document: OdtDocument) -> tuple[Outcome, ...]:
-        count = linkify_plain_addresses(document.tree("content.xml"))
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+        count = linkify_plain_addresses(document.tree(Part.CONTENT))
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No plain addresses remain."),)
-        document.edit("content.xml")
+        document.edit(Part.CONTENT)
         return (Outcome(self.name, Status.APPLIED, f"Created {count} hyperlink(s).", count=count),)
 
 
@@ -41,7 +44,7 @@ def linkify_plain_addresses(tree: etree._ElementTree) -> int:
 
     """
     count = 0
-    for block in select_elements(tree, "//text:p | //text:h"):
+    for block in select_elements(tree, "//office:body//text:p | //office:body//text:h"):
         # Collect the slots first: inserting links mutates the tree while we walk it.
         for owner, attr in list(prose_slots(block)):
             count += _linkify_slot(owner, attr)

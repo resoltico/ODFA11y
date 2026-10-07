@@ -1,33 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Resolve paragraph style inheritance and clone styles with changed spacing."""
+"""Resolve paragraph style inheritance and derive styles with changed spacing."""
 
 from __future__ import annotations
 
-import copy
 from collections import Counter
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from .namespaces import NS, qn
-from .style_properties import attr_from_display, display_attr
-from .xpath import select_elements
+from odfa11y.odf import NS, Part, qn, select_elements
 
-__all__ = ["ParagraphStyleUsage", "StyleCatalog"]
+from .style_properties import BREAK_ATTRIBUTES, SPACING_ATTRIBUTES, display_attr
 
-SPACING_ATTRIBUTES = (
-    qn("fo", "margin-top"),
-    qn("fo", "margin-bottom"),
-    qn("fo", "line-height"),
-    qn("fo", "line-height-at-least"),
-    qn("style", "contextual-spacing"),
-)
+if TYPE_CHECKING:
+    from odfa11y.odf import OdfDocument
 
-BREAK_ATTRIBUTES = (
-    qn("fo", "break-before"),
-    qn("fo", "break-after"),
-    qn("style", "master-page-name"),
-)
+__all__ = ["ParagraphStyleUsage", "StyleCatalog", "catalog_of"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -41,7 +30,7 @@ class ParagraphStyleUsage:
 
 
 class StyleCatalog:
-    """Resolve ODF style inheritance across ``styles.xml`` and ``content.xml``."""
+    """Resolve ODF style inheritance across the styles and content parts."""
 
     def __init__(self, content_tree: etree._ElementTree, styles_tree: etree._ElementTree) -> None:
         """Index the styles of live content and styles trees."""
@@ -62,6 +51,10 @@ class StyleCatalog:
                 family = style.get(qn("style", "family"))
                 if name and family:
                     self._styles[family, name] = style
+
+    def register(self, family: str, style: etree._Element) -> None:
+        """Index a style that was added to the live tree."""
+        self._styles[family, style.get(qn("style", "name")) or ""] = style
 
     def style(self, family: str, name: str | None) -> etree._Element | None:
         """Look up a style by family and name.
@@ -203,60 +196,6 @@ class StyleCatalog:
             for style in self.inheritance_chain("paragraph", name)
         )
 
-    def clone_paragraph_style_with_spacing(
-        self,
-        *,
-        base_style_name: str | None,
-        new_style_name: str,
-        spacing: dict[str, str],
-    ) -> etree._Element:
-        """Create a distinct style with the requested spacing properties.
-
-        Returns
-        -------
-        etree._Element
-            The inserted style element.
-
-        """
-        auto_styles = self.content_tree.find("office:automatic-styles", NS)
-        if auto_styles is None:
-            root = self.content_tree.getroot()
-            auto_styles = etree.Element(qn("office", "automatic-styles"))
-            body = root.find("office:body", NS)
-            insert_at = root.index(body) if body is not None else len(root)
-            root.insert(insert_at, auto_styles)
-
-        base = self.style("paragraph", base_style_name)
-        if base is not None:
-            clone = copy.deepcopy(base)
-            clone.set(qn("style", "name"), new_style_name)
-            clone.set(qn("style", "family"), "paragraph")
-        else:
-            clone = etree.Element(qn("style", "style"))
-            clone.set(qn("style", "name"), new_style_name)
-            clone.set(qn("style", "family"), "paragraph")
-            if base_style_name:
-                clone.set(qn("style", "parent-style-name"), base_style_name)
-
-        pprops = clone.find(qn("style", "paragraph-properties"))
-        if pprops is None:
-            pprops = etree.SubElement(clone, qn("style", "paragraph-properties"))
-
-        for key in SPACING_ATTRIBUTES:
-            pprops.attrib.pop(key, None)
-        for display_name, value in spacing.items():
-            key = attr_from_display(display_name)
-            if key in SPACING_ATTRIBUTES:
-                pprops.set(key, value)
-
-        # Avoid duplicate style names if called repeatedly in one run.
-        for node in select_elements(auto_styles, "./style:style"):
-            if node.get(qn("style", "name")) == new_style_name:
-                auto_styles.remove(node)
-        auto_styles.append(clone)
-        self._styles["paragraph", new_style_name] = clone
-        return clone
-
     def paragraph_usage(self) -> list[ParagraphStyleUsage]:
         """Summarize style usage and effective paragraph spacing.
 
@@ -267,7 +206,9 @@ class StyleCatalog:
 
         """
         counts: Counter[str] = Counter()
-        for p in select_elements(self.content_tree, "//text:p | //text:h"):
+        for p in select_elements(
+            self.content_tree, "//office:body//text:p | //office:body//text:h"
+        ):
             name = p.get(qn("text", "style-name")) or "(none)"
             counts[name] += 1
         rows: list[ParagraphStyleUsage] = []
@@ -282,3 +223,22 @@ class StyleCatalog:
                 )
             )
         return rows
+
+
+def catalog_of(document: OdfDocument) -> StyleCatalog:
+    """Return the document's style catalog, built once over its live trees.
+
+    Returns
+    -------
+    StyleCatalog
+        The catalog shared by every text operation on this document.
+
+    """
+    return document.derived("text.style_catalog", lambda: StyleCatalog(*_trees(document)))
+
+
+def _trees(document: OdfDocument) -> tuple[etree._ElementTree, etree._ElementTree]:
+    content = document.tree(Part.CONTENT)
+    if document.has(Part.STYLES):
+        return content, document.tree(Part.STYLES)
+    return content, etree.ElementTree(etree.Element(qn("office", "document-styles")))

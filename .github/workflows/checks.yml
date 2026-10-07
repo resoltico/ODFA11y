@@ -131,9 +131,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   integration:
-    name: Integration (LibreOffice and veraPDF)
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
+    name: Integration (${{ matrix.os }})
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -143,39 +147,30 @@ jobs:
           version: ${{ env.ODFA11Y_UV_VERSION }}
       - name: Restore locked Python environment
         run: uv sync --locked
-      - name: Install LibreOffice
+      - name: Install LibreOffice on Linux
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libreoffice-writer
-          soffice --version
+      - name: Install LibreOffice on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install --cask libreoffice
+          echo "/Applications/LibreOffice.app/Contents/MacOS" >> "$GITHUB_PATH"
+      - name: Install LibreOffice on Windows
+        if: runner.os == 'Windows'
+        run: |
+          choco install libreoffice-fresh --no-progress --yes
+          echo "C:\Program Files\LibreOffice\program" >> "$GITHUB_PATH"
       - name: Install pinned veraPDF
         run: |
           java -version
-          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/verapdf.zip" \
-            "https://software.verapdf.org/releases/${ODFA11Y_VERAPDF_VERSION%.*}/verapdf-greenfield-${ODFA11Y_VERAPDF_VERSION}-installer.zip"
-          echo "${ODFA11Y_VERAPDF_SHA256}  $RUNNER_TEMP/verapdf.zip" | sha256sum --check -
-          unzip -q "$RUNNER_TEMP/verapdf.zip" -d "$RUNNER_TEMP/verapdf-installer"
-          cat > "$RUNNER_TEMP/verapdf-install.xml" <<XML
-          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-          <AutomatedInstallation langpack="eng">
-            <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>
-            <com.izforge.izpack.panels.target.TargetPanel id="install_dir">
-              <installpath>$RUNNER_TEMP/verapdf</installpath>
-            </com.izforge.izpack.panels.target.TargetPanel>
-            <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">
-              <pack index="0" name="veraPDF Runtime" selected="true"/>
-            </com.izforge.izpack.panels.packs.PacksPanel>
-            <com.izforge.izpack.panels.install.InstallPanel id="install"/>
-            <com.izforge.izpack.panels.finish.FinishPanel id="finish"/>
-          </AutomatedInstallation>
-          XML
-          java -jar "$RUNNER_TEMP/verapdf-installer/verapdf-greenfield-${ODFA11Y_VERAPDF_VERSION}/verapdf-izpack-installer-${ODFA11Y_VERAPDF_VERSION}.jar" "$RUNNER_TEMP/verapdf-install.xml"
-          echo "$RUNNER_TEMP/verapdf" >> "$GITHUB_PATH"
+          directory="$(uv run --no-sync python tools/install_verapdf.py "$ODFA11Y_VERAPDF_VERSION" "$ODFA11Y_VERAPDF_SHA256" "$RUNNER_TEMP/verapdf")"
+          echo "$directory" >> "$GITHUB_PATH"
       - name: Integration tests against the real applications
         env:
           ODFA11Y_REQUIRE_INTEGRATION: "1"
         run: |
-          verapdf --version
           uv run --no-sync pytest -m integration
   ci-gate:
     name: CI gate

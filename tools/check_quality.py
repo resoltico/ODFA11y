@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import io
 import re
 import sys
@@ -13,6 +14,26 @@ from typing import Any
 
 GENERATED_DIRECTORIES = {".git", ".venv", "build", "dist", "__pycache__", ".ruff_cache"}
 INLINE_DIRECTIVE = re.compile(r"\b(?:noqa\b|ruff\s*:|fmt\s*:|pylint\s*:)", re.IGNORECASE)
+# XML namespace prefixes whose elements belong to a document family, not to the ODF core.
+FAMILY_PREFIXES = frozenset({
+    "text",
+    "table",
+    "draw",
+    "fo",
+    "svg",
+    "style",
+    "presentation",
+    "chart",
+    "form",
+    "number",
+    "dr3d",
+    "anim",
+    "smil",
+    "math",
+})
+FAMILY_NAME = re.compile(r"(?:^|[/@\[ (|])(?:" + "|".join(sorted(FAMILY_PREFIXES)) + r"):[A-Za-z]")
+CORE_ROOT = ("src", "odfa11y")
+FAMILY_ROOT = (*CORE_ROOT, "families")
 
 
 def check_repository(root: Path) -> list[str]:
@@ -44,10 +65,76 @@ def check_repository(root: Path) -> list[str]:
             if path.suffix != ".py":
                 continue
             files_checked += 1
-            errors.extend(_check_source(relative, path.read_text(encoding="utf-8"), limit))
+            source = path.read_text(encoding="utf-8")
+            errors.extend(_check_source(relative, source, limit))
+            if _is_core(relative):
+                errors.extend(_check_core_purity(relative, source))
     if not files_checked:
         errors.append("No Python files were checked")
     return errors
+
+
+def _is_core(path: Path) -> bool:
+    return path.parts[:2] == CORE_ROOT and path.parts[:3] != FAMILY_ROOT
+
+
+def _check_core_purity(path: Path, source: str) -> list[str]:
+    """Reject family-specific XML names in the ODF core.
+
+    The core understands OpenDocument structure; only a family package may name that
+    family's elements. Docstrings are prose and exempt.
+
+    Returns
+    -------
+    list[str]
+        One violation per family-specific qualified name or XPath literal in the core.
+
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []  # reported by the tokenizer check
+    docstrings = {
+        id(node.value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
+    }
+    errors = []
+    for node in ast.walk(tree):
+        line = getattr(node, "lineno", 0)
+        prefix = _family_qn_prefix(node)
+        if prefix is not None:
+            errors.append(
+                f"{path}:{line}: the ODF core must not name {prefix}: elements;"
+                " that belongs in a family package"
+            )
+        elif (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in docstrings
+            and FAMILY_NAME.search(node.value)
+        ):
+            errors.append(
+                f"{path}:{line}: the ODF core must not contain the family-specific name "
+                f"{node.value!r}; that belongs in a family package"
+            )
+    return errors
+
+
+def _family_qn_prefix(node: ast.AST) -> object | None:
+    """Find the family prefix in a ``qn("<prefix>", ...)`` call.
+
+    Returns
+    -------
+    object | None
+        The prefix when the node is such a call, else None.
+
+    """
+    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.args):
+        return None
+    first = node.args[0]
+    named = node.func.id == "qn" and isinstance(first, ast.Constant)
+    return first.value if named and first.value in FAMILY_PREFIXES else None
 
 
 def _stale_ignores(root: Path, config: dict[str, Any]) -> list[str]:

@@ -3,6 +3,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lxml import etree
+
 NS = {
     "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
     "style": "urn:oasis:names:tc:opendocument:xmlns:style:1.0",
@@ -16,6 +21,18 @@ NS = {
     "meta": "urn:oasis:names:tc:opendocument:xmlns:meta:1.0",
     "manifest": "urn:oasis:names:tc:opendocument:xmlns:manifest:1.0",
 }
+
+
+def is_office_element(element: etree._Element) -> bool:
+    """Whether an element is in the ODF ``office`` namespace (a document root, not MathML).
+
+    Returns
+    -------
+    bool
+        True for elements such as ``office:document-content``; False for comments and others.
+
+    """
+    return isinstance(element.tag, str) and element.tag.startswith(f"{{{NS['office']}}}")
 
 
 def qn(prefix: str, local: str) -> str:

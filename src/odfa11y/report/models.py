@@ -11,7 +11,7 @@ from .rules import Severity
 if TYPE_CHECKING:
     from .rules import Rule
 
-REPORT_FORMAT = 1
+REPORT_FORMAT = 2
 
 
 @dataclass(frozen=True, slots=True)

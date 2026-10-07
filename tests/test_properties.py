@@ -13,33 +13,26 @@ from hypothesis import example, given
 from hypothesis import strategies as st
 from lxml import etree
 
+from odfa11y.adapter import Status
 from odfa11y.config import load_config
 from odfa11y.errors import ConfigError, PackageError
-from odfa11y.odf import (
-    ODT_MIMETYPE,
+from odfa11y.families.text import (
     URI_RE,
-    OdtDocument,
-    OdtPackage,
-    is_unsafe_member_name,
-    qn,
-    split_trailing_punctuation,
-    text_is_preserved,
-    validate,
-)
-from odfa11y.remediation import (
     AltText,
+    HeaderRows,
     LinkifyAddresses,
     MarkHeaderRows,
     RemoveEmptySpacers,
     SetAltText,
-    SetMetadata,
-    Status,
     linkify_plain_addresses,
-    remediate,
+    split_trailing_punctuation,
+    text_is_preserved,
 )
+from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
+from odfa11y.remediation import SetMetadata, remediate
 from odfa11y.report import RULES, Report
 
-from .fixtures import make_minimal_odt
+from .fixtures import TEXT_MEDIA_TYPE, make_minimal_odt
 
 if TYPE_CHECKING:
     from .fixtures import Features
@@ -105,16 +98,16 @@ def test_saved_package_round_trips_members_and_keeps_mimetype_first(
 ) -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        package = OdtPackage(make_minimal_odt(root / "source.odt"))
+        package = PackageStorage(make_minimal_odt(root / "source.odt"))
         for name, data in members.items():
             package.write_member(name, data)
         saved = package.save(root / "saved.odt")
-        reloaded = OdtPackage(saved)
+        reloaded = PackageStorage(saved)
         assert {name: reloaded.read(name) for name in members} == members
         with zipfile.ZipFile(saved) as archive:
             first = archive.infolist()[0]
             assert (first.filename, first.compress_type) == ("mimetype", zipfile.ZIP_STORED)
-            assert archive.read("mimetype").decode("ascii") == ODT_MIMETYPE
+            assert archive.read("mimetype").decode("ascii") == TEXT_MEDIA_TYPE
 
 
 @given(st.binary(max_size=256))
@@ -123,7 +116,7 @@ def test_arbitrary_bytes_are_loaded_or_rejected_with_a_package_error(payload: by
         path = Path(directory) / "input.odt"
         path.write_bytes(payload)
         with contextlib.suppress(PackageError):
-            OdtPackage(path)
+            PackageStorage(path)
 
 
 @given(st.integers(min_value=0, max_value=4000), st.integers(min_value=0, max_value=255))
@@ -138,7 +131,7 @@ def test_corrupted_package_bytes_are_loaded_or_rejected_with_a_package_error(
         data[offset % len(data)] = value
         source.write_bytes(bytes(data))
         with contextlib.suppress(PackageError):
-            OdtPackage(source)
+            PackageStorage(source)
 
 
 @given(st.binary(max_size=128))
@@ -190,7 +183,7 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
     if choices["alt"] and features.get("with_image_without_alt"):
         operations.append(SetAltText({"Logo": AltText("Logo", "Description")}))
     if choices["headers"] and features.get("with_data_table"):
-        operations.append(MarkHeaderRows({"Data": 1}))
+        operations.append(MarkHeaderRows({"Data": HeaderRows(1)}))
     if choices["linkify"]:
         operations.append(LinkifyAddresses())
     if choices["spacers"]:
@@ -199,11 +192,11 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
         root = Path(directory)
         source = make_minimal_odt(root / "source.odt", **features)
         first = remediate(source, root / "first.odt", operations)
-        assert validate(OdtDocument.open(root / "first.odt")).violations == {}
+        assert validate(OdfDocument.open(root / "first.odt")).violations == {}
         second = remediate(root / "first.odt", root / "second.odt", operations)
         assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
         for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
-            assert OdtPackage(root / "first.odt").read(member) == OdtPackage(
+            assert PackageStorage(root / "first.odt").read(member) == PackageStorage(
                 root / "second.odt"
             ).read(member)
         assert first.destination == root / "first.odt"

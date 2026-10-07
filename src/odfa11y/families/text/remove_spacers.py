@@ -6,14 +6,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
-from odfa11y.odf import qn, spacer_candidates
+from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.odf import Family, Part, qn
 
-from .outcome import Operation, Outcome, Status
+from .spacers import spacer_candidates
+from .styles import catalog_of
 
 if TYPE_CHECKING:
     from lxml import etree
 
-    from odfa11y.odf import OdtDocument, StyleCatalog
+    from odfa11y.odf import OdfDocument
+
+    from .styles import StyleCatalog
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,15 +25,16 @@ class RemoveEmptySpacers(Operation):
     """Remove empty body paragraphs that carry no content, structure or break semantics."""
 
     name: ClassVar[str] = "remove_empty_spacers"
+    family: ClassVar[Family | None] = Family.TEXT
 
     @override
-    def apply(self, document: OdtDocument) -> tuple[Outcome, ...]:
-        count = remove_empty_spacer_paragraphs(document.tree("content.xml"), document.catalog)
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+        count = remove_empty_spacer_paragraphs(document.tree(Part.CONTENT), catalog_of(document))
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No removable spacer paragraphs."),)
-        document.edit("content.xml")
+        document.edit(Part.CONTENT)
         message = f"Removed {count} empty spacer paragraph(s) without break semantics."
-        return (Outcome(self.name, Status.APPLIED, message, count=count),)
+        return (Outcome(self.name, Status.APPLIED, message, count=count, removed_blocks=count),)
 
 
 def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatalog) -> int:

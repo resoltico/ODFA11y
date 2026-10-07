@@ -36,7 +36,7 @@ def clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return clone
 
 
-def validate_archive(tmp: Path, expected_mimetype: str) -> None:
+def validate_archive(tmp: Path, expected_mimetype: str | None) -> None:
     """Check a written archive's integrity and first-member mimetype invariant.
 
     Raises
@@ -48,18 +48,19 @@ def validate_archive(tmp: Path, expected_mimetype: str) -> None:
     # Validate what we wrote before replacing the destination.
     with zipfile.ZipFile(tmp, "r") as zf:
         infos = zf.infolist()
-        if not infos or infos[0].filename != "mimetype":
-            msg = "Generated ODT does not place mimetype first"
-            raise PackageError(msg)
-        if infos[0].compress_type != zipfile.ZIP_STORED:
-            msg = "Generated ODT compresses the mimetype member"
-            raise PackageError(msg)
-        if zf.read("mimetype").decode("ascii", "strict") != expected_mimetype:
-            msg = "Generated ODT has an invalid mimetype value"
-            raise PackageError(msg)
+        if expected_mimetype is not None:
+            if not infos or infos[0].filename != "mimetype":
+                msg = "Generated package does not place mimetype first"
+                raise PackageError(msg)
+            if infos[0].compress_type != zipfile.ZIP_STORED:
+                msg = "Generated package compresses the mimetype member"
+                raise PackageError(msg)
+            if zf.read("mimetype").decode("ascii", "strict") != expected_mimetype:
+                msg = "Generated package has an invalid mimetype value"
+                raise PackageError(msg)
         bad = zf.testzip()
         if bad is not None:
-            msg = f"Generated ODT failed ZIP CRC validation: {bad}"
+            msg = f"Generated package failed ZIP CRC validation: {bad}"
             raise PackageError(msg)
 
 
@@ -77,10 +78,10 @@ def check_archive_limits(infos: list[zipfile.ZipInfo]) -> None:
 
     """
     if len(infos) > MAX_ARCHIVE_MEMBERS:
-        msg = f"ODT exceeds the {MAX_ARCHIVE_MEMBERS}-member archive limit"
+        msg = f"Package exceeds the {MAX_ARCHIVE_MEMBERS}-member archive limit"
         raise PackageError(msg)
     if sum(info.file_size for info in infos) > MAX_UNCOMPRESSED_BYTES:
-        msg = f"ODT exceeds the {MAX_UNCOMPRESSED_BYTES}-byte unpacked archive limit"
+        msg = f"Package exceeds the {MAX_UNCOMPRESSED_BYTES}-byte unpacked archive limit"
         raise PackageError(msg)
 
 

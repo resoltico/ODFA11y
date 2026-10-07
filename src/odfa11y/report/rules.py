@@ -62,12 +62,12 @@ PKG, XML, ODF = Category.PACKAGE, Category.XML, Category.ODF
 META, SEM, LAY, LNK = Category.METADATA, Category.SEMANTICS, Category.LAYOUT, Category.LINKS
 STYLE, PDF, VAL, FID = Category.STYLE, Category.PDF, Category.VALIDATOR, Category.FIDELITY
 
-PKG000 = _rule("PKG000", ERROR, PKG, "Source is not a readable ODT/ZIP package.")
-PKG001 = _rule("PKG001", ERROR, PKG, "Required mimetype member is missing.")
-PKG002 = _rule("PKG002", ERROR, PKG, "MIME type is not application/vnd.oasis.opendocument.text.")
+PKG000 = _rule("PKG000", ERROR, PKG, "Source is not a readable ODF package or flat XML document.")
+PKG001 = _rule("PKG001", WARNING, PKG, "The document does not declare its media type.")
+PKG002 = _rule("PKG002", WARNING, PKG, "An optional package member is missing.")
 PKG003 = _rule("PKG003", ERROR, PKG, "mimetype is not the first ZIP member.")
 PKG004 = _rule("PKG004", ERROR, PKG, "mimetype is compressed.")
-PKG005 = _rule("PKG005", ERROR, PKG, "A required XML member is missing.")
+PKG005 = _rule("PKG005", ERROR, PKG, "A member the document needs is missing.")
 PKG006 = _rule("PKG006", ERROR, PKG, "ZIP member names are duplicated.")
 PKG007 = _rule("PKG007", ERROR, PKG, "A ZIP member name is absolute or escapes its directory.")
 XML001 = _rule("XML001", ERROR, XML, "A required XML member cannot be parsed.")
@@ -82,7 +82,14 @@ ODF003 = _rule(
     "Manifest root file-entry version differs from the document version.",
     "document.odf_version",
 )
-ODF004 = _rule("ODF004", ERROR, ODF, "Manifest root media type is not the ODT media type.")
+ODF004 = _rule("ODF004", ERROR, ODF, "Manifest root media type differs from the document's.")
+ODF005 = _rule("ODF005", ERROR, ODF, "The media type is not an OpenDocument document type.")
+ODF006 = _rule("ODF006", ERROR, ODF, "The document body does not match its media type.")
+ODF007 = _rule("ODF007", WARNING, ODF, "The file extension does not match the media type.")
+ODF008 = _rule("ODF008", WARNING, ODF, "The document kind is deprecated or legacy.")
+ODF009 = _rule("ODF009", INFO, ODF, "No semantic audit exists for this document family.")
+ODF010 = _rule("ODF010", ERROR, ODF, "A flat XML document's root is not office:document.")
+ODF011 = _rule("ODF011", ERROR, ODF, "A package's content root is not office:document-content.")
 ODF900 = _rule("ODF900", WARNING, ODF, "A member does not validate against the ODF schema.")
 ODF905 = _rule("ODF905", INFO, ODF, "No ODF schema is bundled for the declared version.")
 META001 = _rule("META001", ERROR, META, "Document title metadata is missing.", "document.title")
@@ -91,34 +98,34 @@ META003 = _rule(
     "META003",
     WARNING,
     META,
-    "Metadata and default paragraph-style languages disagree.",
+    "Metadata and default style languages disagree.",
     "document.language",
 )
-SEM001 = _rule("SEM001", ERROR, SEM, "Heading has no valid outline level.")
-SEM002 = _rule("SEM002", ERROR, SEM, "Heading hierarchy starts too deep or skips a level.")
-SEM003 = _rule("SEM003", WARNING, SEM, "Heading text resembles manually typed numbering.")
-SEM004 = _rule("SEM004", INFO, SEM, "No structural headings were found.")
-SEM005 = _rule("SEM005", WARNING, SEM, "Footnotes or endnotes need reading-order review.")
-IMG001 = _rule(
-    "IMG001", ERROR, SEM, "Graphic has neither accessible title nor description.", "alt_text"
+TXT001 = _rule("TXT001", ERROR, SEM, "Heading has no valid outline level.")
+TXT002 = _rule("TXT002", ERROR, SEM, "Heading hierarchy starts too deep or skips a level.")
+TXT003 = _rule("TXT003", WARNING, SEM, "Heading text resembles manually typed numbering.")
+TXT004 = _rule("TXT004", INFO, SEM, "No structural headings were found.")
+TXT005 = _rule("TXT005", WARNING, SEM, "Footnotes or endnotes need reading-order review.")
+TXT010 = _rule(
+    "TXT010", ERROR, SEM, "Graphic has neither accessible title nor description.", "text.alt_text"
 )
-TBL001 = _rule("TBL001", ERROR, SEM, "Table has merged or split cells.")
-TBL002 = _rule("TBL002", WARNING, SEM, "Data-like table has no header rows.", "table_headers")
-LNK001 = _rule(
-    "LNK001",
+TXT020 = _rule("TXT020", ERROR, SEM, "Table has merged or split cells.")
+TXT021 = _rule("TXT021", WARNING, SEM, "Data-like table has no header rows.", "text.table_headers")
+TXT030 = _rule(
+    "TXT030",
     WARNING,
     LNK,
     "Visible URL or email address is not a hyperlink.",
-    "remediation.linkify_plain_addresses",
+    "text.remediation.linkify_plain_addresses",
 )
-LAY001 = _rule(
-    "LAY001",
+TXT040 = _rule(
+    "TXT040",
     INFO,
     LAY,
     "Empty paragraphs may be visual spacers.",
-    "remediation.remove_empty_spacers",
+    "text.remediation.remove_empty_spacers",
 )
-STYLE001 = _rule("STYLE001", ERROR, STYLE, "Blinking text styling is declared.")
+TXT050 = _rule("TXT050", ERROR, STYLE, "Blinking text styling is declared.")
 
 PDF000 = _rule("PDF000", ERROR, PDF, "PDF cannot be opened or strictly inspected.")
 PDF001 = _rule("PDF001", ERROR, PDF, "Document title is missing.")
@@ -136,7 +143,10 @@ PDF012 = _rule("PDF012", ERROR, PDF, "Heading structure starts too deep or skips
 PDF013 = _rule("PDF013", ERROR, PDF, "List structure is malformed.")
 PDF014 = _rule("PDF014", ERROR, PDF, "Table structure is malformed.")
 PDF015 = _rule("PDF015", WARNING, PDF, "Table has no header cells.")
-PDF016 = _rule("PDF016", WARNING, PDF, "Link annotations have no Link structure elements.")
+PDF016 = _rule("PDF016", WARNING, PDF, "A link annotation is not represented by a Link element.")
+PDF017 = _rule("PDF017", WARNING, PDF, "A Link structure element refers to no link annotation.")
+PDF018 = _rule("PDF018", ERROR, PDF, "A link annotation is referenced from another page.")
+PDF019 = _rule("PDF019", ERROR, PDF, "A link has no alternate description.")
 VERA000 = _rule("VERA000", WARNING, VAL, "The requested veraPDF validator is unavailable.")
 VERA001 = _rule("VERA001", ERROR, VAL, "veraPDF reports a failed PDF/UA-1 rule.")
 

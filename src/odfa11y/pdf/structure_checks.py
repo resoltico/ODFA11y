@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.report import rules
 
+from .link_structure import check_link_structure
 from .structure_walk import build_tree, role_map_of
 
 if TYPE_CHECKING:
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 
     from odfa11y.report import Report
 
+    from .link_structure import LinkAnnotation
     from .structure_walk import StructureNode
 
 LIST_CHILDREN = {"LI", "L", "Caption"}
@@ -27,7 +29,9 @@ MIN_ROWS_FOR_HEADERS = 2
 HEADING_ROLE_LENGTH = 2
 
 
-def audit_structure(root: DictionaryObject, report: Report) -> None:
+def audit_structure(
+    root: DictionaryObject, report: Report, annotations: list[LinkAnnotation]
+) -> None:
     """Record structure tags and report role, heading, list, table, figure and link defects."""
     top = build_tree(root)
     nodes = [node for node in top.walk() if node is not top]
@@ -36,7 +40,7 @@ def audit_structure(root: DictionaryObject, report: Report) -> None:
     role_map = role_map_of(root)
     if role_map:
         report.metadata["role_map"] = dict(sorted(role_map.items()))
-    report.metadata["link_structure_elements"] = sum(node.role == "Link" for node in nodes)
+    check_link_structure(annotations, nodes, report)
     _check_roles(nodes, report)
     _check_figures(nodes, report)
     _check_headings(nodes, report)

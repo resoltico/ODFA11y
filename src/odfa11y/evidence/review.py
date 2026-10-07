@@ -5,18 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-HUMAN_REVIEW_ITEMS = (
-    ("headings", "Whether each heading names its section and the hierarchy reflects the document."),
-    ("alt text", "Whether every graphic's description is meaningful in its context."),
-    (
-        "reading order",
-        "Whether the reading order, including footnotes and floating objects, is logical.",
-    ),
-    ("table headers", "Whether table header cells describe the data relationships correctly."),
-    ("link purpose", "Whether each link's purpose is understandable from its text and context."),
-    ("colour", "Whether colour conveys information that is not available any other way."),
-    ("layout", "Whether the pages look right: typography, pagination and visual appearance."),
-)
 NOT_VALIDATION = (
     "veraPDF did not run: the built-in PDF checks are a smoke test, not PDF/UA validation."
 )
@@ -33,7 +21,7 @@ def render_review(record: dict[str, Any]) -> str:
     """
     stages = record["stages"]
     lines = [
-        f"# Review sheet: {record['input']['name']}",
+        f"# Review sheet: {record['document']['name']}",
         "",
         f"Result: **{record['status'].upper()}**"
         + (f" (failed at `{record['failed_stage']}`)" if record["failed_stage"] else ""),
@@ -55,7 +43,7 @@ def render_review(record: dict[str, Any]) -> str:
     if verapdf is None or verapdf["status"] != "passed":
         lines += ["", f"> {NOT_VALIDATION}"]
     lines += ["", "## Human review still required", ""]
-    lines += [f"- [ ] {text}" for _key, text in HUMAN_REVIEW_ITEMS]
+    lines += [f"- [ ] {item['text']}" for item in record["human_review"]]
     return "\n".join(lines) + "\n"
 
 

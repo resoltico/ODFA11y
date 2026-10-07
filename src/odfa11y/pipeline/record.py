@@ -3,9 +3,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import platform
 import sys
 from dataclasses import dataclass, field
+from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
 from odfa11y import __version__
@@ -13,27 +17,27 @@ from odfa11y.odf import provenance
 from odfa11y.pdf import EXPORT_OPTIONS
 from odfa11y.report import exit_status
 
+from .profiles import DEFAULT_PROFILE, profile_named
+
 if TYPE_CHECKING:
     from odfa11y.remediation import RemediationResult
     from odfa11y.report import Report
 
-RECORD_FORMAT = 1
+    from .profiles import Profile
+
+RECORD_FORMAT = 2
 EXECUTION_FAILURE = 3
-STAGE_NAMES = (
-    "audit-source",
-    "remediate",
-    "audit-remediated",
-    "export-source",
-    "export-remediated",
-    "audit-pdf",
-    "verapdf",
-    "fidelity",
-)
+LOCALE_VARIABLES = ("LANG", "LC_ALL", "LC_MESSAGES")
+LIBRARIES = ("lxml", "pillow", "pypdf", "pypdfium2")
 
 
 @dataclass(frozen=True, slots=True)
 class StageResult:
-    """One stage: ``passed``, ``failed`` or ``skipped``, with its report when it has one."""
+    """One stage: ``passed``, ``failed``, ``skipped`` or ``not-applicable``, with its report.
+
+    ``skipped`` means a stage that could have run did not (an earlier failure, or outside
+    the profile); ``not-applicable`` means the kind of document has no such stage.
+    """
 
     name: str
     status: str
@@ -42,6 +46,7 @@ class StageResult:
     remediation: RemediationResult | None = None
     gate: bool = True
     error: bool = False
+    details: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize the stage.
@@ -56,6 +61,7 @@ class StageResult:
             "name": self.name,
             "status": self.status,
             "reason": self.reason,
+            "details": self.details,
             "report": self.report.as_dict() if self.report else None,
             "remediation": self.remediation.as_dict() if self.remediation else None,
         }
@@ -65,14 +71,20 @@ class StageResult:
 class RunRecord:
     """The ordered stage results of a run and the facts that identify it."""
 
-    input_name: str
-    input_sha256: str
+    document: dict[str, Any]
     operations: tuple[dict[str, Any], ...]
     policy: dict[str, Any]
-    strict: bool
+    profile: Profile
     stages: list[StageResult] = field(default_factory=list)
     toolchain: dict[str, Any] = field(default_factory=dict)
+    fonts: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    human_review: list[dict[str, str]] = field(default_factory=list)
     outputs: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def strict(self) -> bool:
+        """Whether warnings fail the gates."""
+        return self.profile.strict
 
     @property
     def failed_stage(self) -> str | None:
@@ -92,8 +104,18 @@ class RunRecord:
         reports = [stage.report for stage in self.stages if stage.gate and stage.report]
         return exit_status(reports, strict=self.strict)
 
+    @property
+    def plan_sha256(self) -> str:
+        """Digest of the operations, fidelity policy and profile, independent of file layout."""
+        plan = {
+            "operations": list(self.operations),
+            "fidelity_policy": self.policy,
+            "profile": self.profile.as_dict(),
+        }
+        return hashlib.sha256(json.dumps(plan, sort_keys=True).encode("utf-8")).hexdigest()
+
     def as_dict(self) -> dict[str, Any]:
-        """Serialize the record without timestamps or absolute paths.
+        """Serialize the record without timestamps; paths are redacted when it is written.
 
         Returns
         -------
@@ -106,35 +128,45 @@ class RunRecord:
             "odfa11y": __version__,
             "python": sys.version.split()[0],
             "platform": platform.platform(),
+            "environment": {name: os.environ.get(name) for name in LOCALE_VARIABLES},
+            "libraries": _library_versions(),
             "toolchain": self.toolchain,
             "schemas": {name: entry["sha256"] for name, entry in provenance().items()},
             "export_options": EXPORT_OPTIONS,
-            "input": {"name": self.input_name, "sha256": self.input_sha256},
+            "document": self.document,
+            "plan_sha256": self.plan_sha256,
+            "profile": self.profile.as_dict(),
             "operations": list(self.operations),
             "fidelity_policy": self.policy,
-            "strict": self.strict,
             "stages": [stage.as_dict() for stage in self.stages],
+            "fonts": self.fonts,
+            "human_review": self.human_review,
             "outputs": dict(sorted(self.outputs.items())),
             "status": "passed" if self.passed else "failed",
             "failed_stage": self.failed_stage,
         }
 
 
+def _library_versions() -> dict[str, str]:
+    versions = {}
+    for name in LIBRARIES:
+        try:
+            versions[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            versions[name] = "unknown"
+    return versions
+
+
 @dataclass(frozen=True, slots=True)
 class PipelineOptions:
-    """Tool selection and gating.
+    """Tool locations, the time limit and the assurance profile."""
 
-    veraPDF runs when ``verapdf`` is true or ``verapdf_path`` is given; without a path it is
-    searched for on PATH.
-    """
-
+    profile: str = DEFAULT_PROFILE
     soffice: str | None = None
-    verapdf: bool = False
     verapdf_path: str | None = None
     timeout: int = 120
-    strict: bool = False
 
     @property
-    def wants_verapdf(self) -> bool:
-        """Whether PDF/UA validation with veraPDF was requested."""
-        return self.verapdf or self.verapdf_path is not None
+    def assurance(self) -> Profile:
+        """The selected assurance profile."""
+        return profile_named(self.profile)

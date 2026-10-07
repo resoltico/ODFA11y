@@ -1,11 +1,18 @@
 # Configuration
 
-One TOML file holds every decision: document metadata, remediation choices, graphic
-descriptions, table headers, spacing and the fidelity policy. It is never loaded
-automatically; pass `--config document.toml` to `remediate`, `pipeline` or `compare`.
-There are no command-line flags that duplicate these settings, so the file is the
-complete, reviewable statement of what will change. Run `odfa11y template original.odt`
-to print a commented starter file for the decisions an audit leaves open.
+One TOML file holds every decision: document metadata, the choices that belong to a
+document family, and the fidelity policy. It is never loaded automatically; pass
+`--config document.toml` to `remediate`, `pipeline` or `compare`. There are no command-line
+flags that duplicate these settings, so the file is the complete, reviewable statement of
+what will change. Run `odfa11y template original.odt` to print a commented starter file for
+the decisions an audit leaves open.
+
+The file has two common tables, `[document]` and `[fidelity]`, and one table per document
+family, named after the family (`[text]`). A family table is read by that family's adapter
+and applies only to documents of that family: configuring `[text]` for a spreadsheet is an
+error that stops the run before anything is written, never a silently ignored section.
+Other families add their own tables when they are supported (see
+[Architecture](ARCHITECTURE.md#document-families)).
 
 ## Example
 
@@ -14,26 +21,29 @@ to the actual document and delete what you do not need.
 
 ```toml
 [document]
-# odf_version = "1.4"   # relabel the package; omit to keep the declared version
+# odf_version = "1.4"   # relabel the document; omit to keep the declared version
 title = "Example report"
 description = "Summary of the reporting period"
 language = "en-GB"
 
-[remediation]
+[text.remediation]
 linkify_plain_addresses = true
 # Opt in only after reviewing layout and intentional page-break semantics.
 remove_empty_spacers = false
 
-[table_headers]
-# Uncomment only for a real data table named Data with one header row.
-# Data = 1
+[text.table_headers]
+# Uncomment only for a real data table named Data with one header row. The fingerprint
+# (printed by `odfa11y template`) makes the run fail if the table is no longer the one
+# you reviewed.
+# Data = { rows = 1, fingerprint = "0123456789ab" }
 
 # Uncomment only after identifying the graphic and writing meaningful alt text.
-# [alt_text.Logo]
+# [text.alt_text.Logo]
 # title = "Organisation name"
 # description = "Description of the information conveyed by the graphic"
+# fingerprint = "0123456789ab"
 
-# [spacing]
+# [text.spacing]
 # reference_text = "Text of the paragraph whose spacing is the reference"
 # target_styles = ["BodyTight"]
 
@@ -49,14 +59,15 @@ A test extracts this block and loads it through the real reader.
 | --- | --- | --- |
 | `document.odf_version` | `"1.3"` or `"1.4"` (versions with a bundled schema). | The declared version is kept. |
 | `document.title`, `document.description` | String; stripped before use. An empty string clears the field. | Existing value kept. |
-| `document.language` | Language tag such as `"en-GB"`; sets metadata and the default paragraph style. | Existing languages kept. |
-| `remediation.linkify_plain_addresses` | Boolean. | `false`. |
-| `remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
-| `table_headers.TABLE_NAME` | Positive integer: leading direct rows to mark as headers. | No change. |
-| `alt_text.KEY.title`, `.description` | String. | Existing text kept. |
-| `spacing.reference_text` | Text contained in the reference paragraph (required with `[spacing]`). | — |
-| `spacing.target_styles` | Non-empty list of paragraph style names (required with `[spacing]`). | — |
-| `spacing.exact_reference`, `spacing.include_headings` | Boolean. | `false`. |
+| `document.language` | Language tag such as `"en-GB"`; sets metadata and, for families that keep a default language in their styles, that default too. | Existing languages kept. |
+| `text.remediation.linkify_plain_addresses` | Boolean. | `false`. |
+| `text.remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
+| `text.table_headers.TABLE_NAME` | Positive integer (leading direct rows to mark as headers) or `{ rows = N, fingerprint = "…" }`. | No change. |
+| `text.alt_text.KEY.title`, `.description` | String. | Existing text kept. |
+| `text.alt_text.KEY.fingerprint` | The fingerprint of the addressed graphic(s). | Not checked. |
+| `text.spacing.reference_text` | Text contained in the reference paragraph (required with `[text.spacing]`). | — |
+| `text.spacing.target_styles` | Non-empty list of paragraph style names (required with `[text.spacing]`). | — |
+| `text.spacing.exact_reference`, `text.spacing.include_headings` | Boolean. | `false`. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
 | `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
@@ -64,18 +75,29 @@ A test extracts this block and loads it through the real reader.
 
 Unknown keys, wrong types, non-table sections and non-positive counts are rejected with
 the offending key named. TOML booleans are `true`/`false`, not strings. An empty file is
-valid and requests no change. Operations run in a fixed order (version, metadata,
-linkify, spacer removal, graphics, header rows, spacing), so a configuration always means
-the same thing.
+valid and requests no change. Operations run in a fixed order (version, metadata, then the
+family's operations: linkify, spacer removal, graphics, header rows, spacing), so a
+configuration always means the same thing.
 
-## Every selector must match
+## Every selector must match, and mean what you reviewed
 
 A table name, graphic key or spacing reference that matches nothing fails the whole run
 and nothing is written; the message lists every miss. Use a table's actual `table:name`
 (not its position or caption). Graphic keys match the `draw:frame` name, the complete
 image `href`, then the image file name, exactly; quote TOML keys containing dots or
-slashes, for example `[alt_text."Pictures/logo.svg"]`. A table that already has header
+slashes, for example `[text.alt_text."Pictures/logo.svg"]`. A table that already has header
 rows is *unchanged* when the count agrees and a conflict when it does not.
+
+Selectors are resolved before anything is edited. Two entries that address the same graphic
+and set the *same field to different values* both fail; entries that set different fields,
+or the same value, combine.
+
+A **fingerprint** binds an entry to the object you reviewed. It is a short digest of the
+object's identity and of facts no operation changes (a graphic's name, image file, size and
+anchor; a table's name, shape and first-row text), so it stays the same after the plan has
+been applied. If the document has drifted so that the key now addresses something else, the
+entry fails with "no longer the object this plan was reviewed against". `odfa11y template`
+prints the fingerprint of every object it suggests; leaving it out turns the check off.
 
 Describing a graphic is a judgement about this document's meaning. The presence of a
 title or description is only a structural check; do not give every image an arbitrary
@@ -83,10 +105,14 @@ description just to make a finding disappear.
 
 ## Spacing
 
-`[spacing]` copies the effective spacing of the paragraph containing `reference_text`
+`[text.spacing]` copies the effective spacing of the paragraph containing `reference_text`
 onto the paragraphs using each target style. It creates a derived style named
-`A11ySpacing_<style>` instead of rewriting shared styles, and recognises its own result,
-so applying it again changes nothing. Use `odfa11y styles` to choose the styles.
+`A11ySpacing_<style>_<digest>` instead of rewriting shared styles, and recognises its own
+result, so applying it again changes nothing. A style of that name is reused only when it is
+provably ODFA11y's own earlier output (an unmodified derivation of the base style that
+differs from it only in spacing); anything else of that name is left untouched and the
+operation fails, so an author's style is never overwritten or reinterpreted. Use
+`odfa11y styles` to choose the styles.
 
 ## Re-applying a configuration
 

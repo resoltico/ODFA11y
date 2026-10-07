@@ -9,6 +9,9 @@ from typing import TYPE_CHECKING
 from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject, NameObject
 
+from odfa11y.errors import ToolFailedError
+from odfa11y.pdf_limits import MAX_STRUCTURE_NODES
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -84,15 +87,24 @@ def pdf_dictionary(value: object) -> DictionaryObject:
     return value
 
 
+@dataclass(frozen=True, slots=True)
+class ObjectReference:
+    """An ``/OBJR`` kid: the referenced object and the page it is declared on."""
+
+    object_xref: int | None
+    page_xref: int | None
+
+
 @dataclass(slots=True)
 class StructureNode:
-    """A structure element with its declared tag, resolved standard role and children."""
+    """A structure element with its tag, resolved role, effective page and children."""
 
     tag: str
     role: str | None
     element: DictionaryObject
+    page_xref: int | None = None
     children: list[StructureNode] = field(default_factory=list)
-    object_references: int = 0
+    object_references: list[ObjectReference] = field(default_factory=list)
 
     def walk(self) -> Iterator[StructureNode]:
         """Yield this node and its descendants in document order.
@@ -133,10 +145,16 @@ def build_tree(root: DictionaryObject) -> StructureNode:
     StructureNode
         A synthetic root whose children are the top-level structure elements.
 
+    Raises
+    ------
+    ToolFailedError
+        The tree has more elements than the size limit allows.
+
     """
     role_map = role_map_of(root)
     top = StructureNode("StructTreeRoot", "StructTreeRoot", root)
     seen: set[int] = set()
+    nodes = 0
     pending: list[tuple[object, StructureNode]] = [(root.get("/K"), top)]
     while pending:
         kids, parent = pending.pop()
@@ -144,12 +162,31 @@ def build_tree(root: DictionaryObject) -> StructureNode:
             tag = value.get("/S")
             if isinstance(tag, NameObject):
                 name = str(tag).removeprefix("/")
-                node = StructureNode(name, resolve_role(name, role_map), value)
+                nodes += 1
+                if nodes > MAX_STRUCTURE_NODES:
+                    msg = f"Structure tree has more than {MAX_STRUCTURE_NODES} elements"
+                    raise ToolFailedError(msg)
+                page = _xref(value.get("/Pg"))
+                node = StructureNode(
+                    name,
+                    resolve_role(name, role_map),
+                    value,
+                    page if page is not None else parent.page_xref,
+                )
                 parent.children.append(node)
                 pending.append((value.get("/K"), node))
             elif value.get("/Type") == "/OBJR":
-                parent.object_references += 1
+                page = _xref(value.get("/Pg"))
+                parent.object_references.append(
+                    ObjectReference(
+                        _xref(value.get("/Obj")), page if page is not None else parent.page_xref
+                    )
+                )
     return top
+
+
+def _xref(value: object) -> int | None:
+    return value.idnum if isinstance(value, IndirectObject) else None
 
 
 def _children(kids: object, seen: set[int]) -> Iterator[DictionaryObject]:

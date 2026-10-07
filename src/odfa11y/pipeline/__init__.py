@@ -1,7 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
-"""The audit → remediate → export → validate → compare workflow with evidence."""
+"""The assurance workflow: audit, remediate, export, validate, compare, keep evidence."""
 
-from .record import STAGE_NAMES, PipelineOptions, RunRecord, StageResult
+from .profiles import DEFAULT_PROFILE, PROFILES, STAGE_NAMES, Profile, profile_named
+from .record import PipelineOptions, RunRecord, StageResult
 from .run import run_pipeline
 
-__all__ = ["STAGE_NAMES", "PipelineOptions", "RunRecord", "StageResult", "run_pipeline"]
+__all__ = [
+    "DEFAULT_PROFILE",
+    "PROFILES",
+    "STAGE_NAMES",
+    "PipelineOptions",
+    "Profile",
+    "RunRecord",
+    "StageResult",
+    "profile_named",
+    "run_pipeline",
+]

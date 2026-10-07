@@ -1,11 +1,14 @@
 # ODFA11y
 
-Audit and explicitly remediate LibreOffice Writer documents, export them as PDF/UA-1,
-and keep evidence of what changed and what a person must still check.
+Audit and explicitly remediate OpenDocument files, export them as PDF/UA-1, and keep
+evidence of what changed and what a person must still check.
 
-ODFA11y works on both the editable `.odt` source and the exported PDF, because an
-accessible source does not guarantee an accessible export. It audits package structure,
-metadata, headings, graphics, tables and links; applies the changes *you* decide in one
+ODFA11y works on both the editable ODF source and the exported PDF, because an
+accessible source does not guarantee an accessible export. It recognises every kind of
+OpenDocument file, packaged or flat XML, and audits package structure, document kind,
+version, metadata and schema validity. For text documents (`.odt`) it also audits headings,
+graphics, tables and links, and runs the whole workflow; other families are recognised and
+checked in common, and each is added as its own plug-in without touching the core. It applies the changes *you* decide in one
 TOML file, refusing anything that alters the text or breaks the ODF schema; exports with
 LibreOffice; inspects the PDF and runs veraPDF; compares the source and candidate renders;
 and publishes a hashed evidence directory. It is conservative by design: it never invents
@@ -35,23 +38,25 @@ The shortest complete path:
 uv run --no-sync odfa11y template original.odt > document.toml   # list open decisions
 # edit document.toml: uncomment and complete only the decisions you have made
 uv run --no-sync odfa11y pipeline original.odt --config document.toml \
-  --output-dir evidence --verapdf --strict
+  --output-dir evidence --profile production
 uv run --no-sync odfa11y check-evidence evidence
 ```
 
-`evidence/` then holds the remediated ODT and PDF, the veraPDF report, a run record and a
+`evidence/` then holds the remediated document and PDF, the veraPDF report, a run record and a
 `REVIEW.md` that separates machine-established facts from the human review still required.
+`--profile` selects how much assurance a run requires: `inspect`, `verify` (the default) or
+`production` (veraPDF required, warnings fail).
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `audit FILE...` | Read-only checks of ODT or PDF files; `--schema` validates ODT against the ODF schema, `--verapdf` validates PDFs. |
+| `audit FILE...` | Read-only checks of ODF or PDF files; `--schema` validates ODF against the ODF schema, `--verapdf` validates PDFs. |
 | `template FILE` | Print a commented configuration for the decisions an audit leaves open. |
 | `remediate SRC DEST --config FILE` | Apply the configured operations; `--dry-run` shows outcomes without writing. |
-| `export SRC DEST` | Export an ODT to PDF/UA with LibreOffice. |
-| `compare A B` | Compare two ODTs or PDFs for pages, text, links and rendered ink. |
-| `pipeline SRC --config FILE --output-dir DIR` | Remediate, export, validate, compare and keep evidence. |
+| `export SRC DEST` | Export an ODF document to PDF/UA with LibreOffice. |
+| `compare A B` | Compare two ODF documents or PDFs for pages, text, links and rendered ink. |
+| `pipeline SRC --config FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
 | `styles FILE` | Paragraph-style usage and effective spacing. |
 | `check-evidence DIR` | Verify an evidence directory against its manifest. |
 | `doctor` | Dependency and external-tool versions. |
@@ -62,7 +67,7 @@ Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
 ## Library use
 
 Each package exposes its API through its `__init__`: for example
-`odfa11y.audit.audit_odt`, `odfa11y.remediation.remediate` with the operation classes,
+`odfa11y.audit.audit_odf`, `odfa11y.remediation.remediate` with the operation classes,
 `odfa11y.pdf.export_pdfua` and `odfa11y.pipeline.run_pipeline`. See
 [Architecture](docs/ARCHITECTURE.md).
 

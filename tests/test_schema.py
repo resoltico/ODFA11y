@@ -9,15 +9,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from lxml import etree
 
 import odfa11y.odf.schema as module
 from odfa11y.odf import (
     SUPPORTED_VERSIONS,
-    OdtDocument,
-    OdtPackage,
+    OdfDocument,
+    PackageStorage,
+    Part,
     SchemaResult,
+    Violation,
     provenance,
+    qn,
     regressions,
+    select_elements,
     validate,
 )
 
@@ -69,7 +74,7 @@ def test_every_synthetic_feature_combination_is_schema_valid(tmp_path: Path, ver
         features = cast("Features", dict(zip(FEATURES, combination, strict=True)))
         if features["with_table_header"] and not features["with_data_table"]:
             continue
-        document = OdtDocument.open(
+        document = OdfDocument.open(
             make_minimal_odt(tmp_path / "x.odt", version=version, **features)
         )
         assert validate(document).violations == {}, features
@@ -77,27 +82,87 @@ def test_every_synthetic_feature_combination_is_schema_valid(tmp_path: Path, ver
 
 def test_markup_that_libreoffice_tolerates_is_rejected(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "x.odt", with_data_table=True)
-    package = OdtPackage(source)
+    package = PackageStorage(source)
     package.write_member(
         "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")
     )
     package.save(tmp_path / "bad.odt")
-    result = validate(OdtDocument.open(tmp_path / "bad.odt"))
+    result = validate(OdfDocument.open(tmp_path / "bad.odt"))
     assert result.available
     assert "content.xml" in result.violations
     assert result.count > 0
 
 
 def test_unsupported_versions_report_no_schema(tmp_path: Path) -> None:
-    result = validate(OdtDocument.open(make_minimal_odt(tmp_path / "x.odt", version="1.2")))
+    result = validate(OdfDocument.open(make_minimal_odt(tmp_path / "x.odt", version="1.2")))
     assert (result.available, result.version) == (False, "1.2")
 
 
-def test_regressions_compare_message_multisets_per_member() -> None:
-    before = SchemaResult("1.4", available=True, violations={"styles.xml": ("a", "a", "b")})
-    same = SchemaResult("1.4", available=True, violations={"styles.xml": ("b", "a")})
+def located(message: str, fingerprint: str) -> Violation:
+    """Build a violation with a location fingerprint.
+
+    Returns
+    -------
+    Violation
+        The violation.
+
+    """
+    return Violation(message, fingerprint)
+
+
+def test_regressions_compare_violations_per_member() -> None:
+    first, second = located("a", "1"), located("b", "2")
+    before = SchemaResult("1.4", available=True, violations={"styles.xml": (first, first, second)})
+    same = SchemaResult("1.4", available=True, violations={"styles.xml": (second, first, first)})
     worse = SchemaResult(
-        "1.4", available=True, violations={"styles.xml": ("a", "a", "a"), "content.xml": ("c",)}
+        "1.4",
+        available=True,
+        violations={"styles.xml": (first, first, first), "content.xml": (located("c", "3"),)},
     )
     assert regressions(before, same) == {}
     assert regressions(before, worse) == {"styles.xml": ("a",), "content.xml": ("c",)}
+
+
+def test_a_fixed_violation_cannot_hide_the_same_message_introduced_elsewhere() -> None:
+    before = SchemaResult(
+        "1.4", available=True, violations={"content.xml": (located("Did not expect x", "AAAA"),)}
+    )
+    after = SchemaResult(
+        "1.4", available=True, violations={"content.xml": (located("Did not expect x", "BBBB"),)}
+    )
+    assert regressions(before, after) == {"content.xml": ("Did not expect x",)}
+
+
+def test_violations_without_a_location_fall_back_to_counts() -> None:
+    one = SchemaResult("1.4", available=True, violations={"content.xml": (Violation("m"),)})
+    two = SchemaResult("1.4", available=True, violations={"content.xml": (Violation("m"),) * 2})
+    assert regressions(one, one) == {}
+    assert regressions(one, two) == {"content.xml": ("m",)}
+    assert two.unlocated == 2
+
+
+def _bogus(document: OdfDocument, *, at_start: bool) -> etree._Element:
+    body = select_elements(document.edit(Part.CONTENT), "//office:text")[0]
+    element = etree.Element(qn("text", "bogus"))
+    body.insert(0, element) if at_start else body.append(element)
+    return element
+
+
+def test_the_real_validator_locates_a_violation_that_moved(tmp_path: Path) -> None:
+    before = OdfDocument.open(make_minimal_odt(tmp_path / "before.odt"))
+    _bogus(before, at_start=False)
+    after = OdfDocument.open(make_minimal_odt(tmp_path / "after.odt"))
+    _bogus(after, at_start=True)
+    found = validate(before)
+    assert found.unlocated == 0
+    assert regressions(found, validate(after)) != {}
+
+
+def test_an_unrelated_edit_does_not_turn_an_old_violation_into_a_new_one(tmp_path: Path) -> None:
+    before = OdfDocument.open(make_minimal_odt(tmp_path / "before.odt"))
+    _bogus(before, at_start=False)
+    after = OdfDocument.open(make_minimal_odt(tmp_path / "after.odt"))
+    _bogus(after, at_start=False)
+    body = select_elements(after.edit(Part.CONTENT), "//office:text")[0]
+    body.insert(0, etree.Element(qn("text", "p")))  # far from the violation
+    assert regressions(validate(before), validate(after)) == {}

@@ -1,17 +1,23 @@
 # Architecture
 
-> **A run is: parse once, check or operate on one shared document, emit typed findings
-> from one rule registry, and record everything in one run record.**
+> **The ODF core understands OpenDocument structure; a document family understands what its
+> documents mean. No family-specific element name, rule or operation exists outside that
+> family's package.**
+
+A run parses a document once, checks or edits that one shared document, emits typed
+findings from one rule registry, and records everything in one run record.
 
 ```mermaid
 flowchart LR
-    ODT[Original ODT] --> Audit[Read-only audit]
+    Doc[ODF document: package or flat XML] --> Core[ODF core: storage, parts, kind, schema]
+    Core --> Adapter[Family adapter]
+    Adapter --> Audit[Read-only audit]
     Config[odfa11y.toml] --> Ops[Typed operations]
-    ODT --> Ops
+    Adapter --> Ops
     Ops --> Gate{Executor postconditions}
-    Gate -->|text kept, no new schema violations| Reviewed[Remediated ODT]
-    Reviewed --> Export[LibreOffice export]
-    ODT --> ExportSrc[LibreOffice export]
+    Gate -->|content kept, no new schema violations| Reviewed[Remediated document]
+    Reviewed --> Export[LibreOffice export, if the family has one]
+    Doc --> ExportSrc[LibreOffice export]
     Export --> Inspect[PDF audit]
     Export --> Vera[veraPDF]
     Export --> Compare[Fidelity comparison]
@@ -28,80 +34,141 @@ flowchart LR
 | --- | --- |
 | `errors` | The domain exceptions; the CLI reports exactly these. |
 | `safe_xml` | The one XML parser for untrusted input: no entity expansion, no network. |
-| `external_tools` | Locate and identify LibreOffice and veraPDF. |
+| `staging`, `pdf_limits` | Sibling temporary names for atomic writes; size limits for hostile PDFs. |
+| `external_tools` | Locate, identify and run LibreOffice and veraPDF with bounded output. |
 | `report` | The rule registry, findings, reports, rendering and exit statuses. |
-| `odf` | ODT packages, the parsed `OdtDocument`, XML selection, styles, text, bundled schemas. |
-| `audit` | Read-only ODT checks and configuration templates. |
-| `remediation` | Typed operations and the executor. |
-| `pdf` | LibreOffice export, structural PDF audit, veraPDF. |
+| `odf` | Storage layouts, logical parts, document kinds, detection, schema validation. |
+| `adapter` | The contract between the core and families: `FamilyAdapter`, `Operation`, `Outcome`. |
+| `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
+| `families` | The registry: which adapter serves which kind; the generic adapter for the rest. |
+| `audit` | The read-only audit engine: common checks, then the family's. |
+| `remediation` | The executor and the operations common to every family. |
+| `pdf` | LibreOffice export, structural PDF audit, link correlation, veraPDF. |
 | `fidelity` | PDF text, link and rendered-ink comparison. |
-| `evidence` | Manifests, the review sheet and atomic bundle publication. |
+| `evidence` | Manifests, redaction, the review sheet and atomic bundle publication. |
 | `config` | The TOML file → operations and fidelity policy. |
-| `pipeline` | The ordered stages and the run record. |
+| `pipeline` | Assurance profiles, the ordered stages and the run record. |
 | `cli` | Argument parsing and command output. |
 
-Dependencies point one way: `cli` → `pipeline` → `audit`, `remediation`, `pdf`,
-`fidelity`, `evidence` → `odf` → the leaves. Those five never import each other, and
-`pdf` does not depend on `odf`. [tach.toml](../tach.toml) is the authority: `tach check`
-rejects an undeclared dependency, a cycle, or an import that bypasses a package's public
-interface, and a package's public API is exactly what its `__init__.py` re-exports.
+Dependencies point one way: `cli` → `pipeline`, `config` → `audit`, `remediation`, `pdf`,
+`fidelity`, `evidence` → `families` → `families.<family>` → `adapter` → `odf` → the leaves.
+The five engines never import each other, and **families never import each other**, nor
+does anything below the registry import a family. [tach.toml](../tach.toml) is the
+authority: `tach check` rejects an undeclared dependency, a cycle, or an import that
+bypasses a package's public interface (a package's public API is exactly what its
+`__init__.py` re-exports). A quality gate adds the part tach cannot see: it fails when a
+core package names a family's XML elements (`qn("text", …)`, `//table:…`).
 
 ## The document model
 
-[OdtDocument](../src/odfa11y/odf/document.py) wraps a loaded package and parses each XML
-member once. `tree()` reads; `edit()` returns the same tree and marks the member edited.
-`save()` re-serializes only edited members, so untouched members stay byte-identical, and
-the [package writer](../src/odfa11y/odf/package.py) validates the archive (first,
-uncompressed `mimetype`) and replaces the destination atomically. The
-[style catalog](../src/odfa11y/odf/styles.py) works on the live trees, and the
-[text snapshot](../src/odfa11y/odf/text.py) is read from them, so nothing is re-parsed.
+An ODF document is stored as a **package** (a ZIP with a manifest) or as one **flat XML**
+file. Both load into an [OdfStorage](../src/odfa11y/odf/storage.py), and everything above
+the storage talks to **parts** (`content`, `styles`, `meta`, `settings`, `manifest`), never
+to member names: in a package each part is a member, in a flat document every part but the
+manifest is the same tree.
 
-Audit checks use `tree()` only, which is why an audit cannot modify a document.
+[OdfDocument](../src/odfa11y/odf/document.py) parses each XML member once. `tree(part)`
+reads; `edit(part)` returns the same tree and marks its member edited. `save()` re-serializes
+only edited members, so untouched members stay byte-identical, and the storage validates and
+replaces the destination atomically (a package keeps `mimetype` first and stored). Audit
+checks use `tree()` only, which is why an audit cannot modify a document.
+
+### Kinds
+
+[kinds.py](../src/odfa11y/odf/kinds.py) lists every OpenDocument media type with its family
+(`text`, `spreadsheet`, `presentation`, `graphics`, `formula`, `chart`, `image`,
+`database`), template flag and body element, including the deprecated and legacy ones.
+[Detection](../src/odfa11y/odf/detect.py) reads the declared media type (the `mimetype` file,
+or `office:mimetype` of a flat document, falling back to the manifest), the manifest's
+media type, the body element and the file extension. The file extension never selects the
+kind; a mismatch is a finding. An unrecognised media type ends the audit with `ODF005`.
+
+## Document families
+
+A family implements a [FamilyAdapter](../src/odfa11y/adapter/family.py): its audit, its
+default language (a family's styles decide where one lives), the content snapshot the
+executor compares, the plan table it reads, its template lines, its review checklist and,
+if LibreOffice can export it to PDF, the export filter. Kinds without an implementation get
+the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
+audit exists, and the body text must not change.
+
+Today `text` is the only implementation (text, templates, master and web documents). It
+owns the `TXT` rules, five operations and the `[text]` configuration table.
+
+### Adding a family
+
+1. Create `families/<family>/` with an `ADAPTER`, its audit, operations and plan table;
+   declare each operation's `family`.
+2. Add one line to the registry and one `[[modules]]` entry to `tach.toml`.
+3. Add `<PREFIX>` rules to the registry and `docs/RULES.md` (a test keeps them equal).
+4. Add synthetic fixtures for both layouts to `tests/documents.py` and the family's tests.
+
+Nothing else changes: not `odf`, `audit`, `remediation`, `pipeline`, `evidence`, `config`
+or `cli`. A test registers a stand-in adapter through the registry alone to keep that true.
+A family's operations are rejected for documents of any other family, so a plan can never
+act on a document it was not written for.
 
 ## Findings and rules
 
 Every finding references a [registered rule](../src/odfa11y/report/rules.py) with its id,
-severity, category and *remedy*, the configuration key that holds the decision. Reports
-serialize as `{"format": 1, "kind", "subject", "passed", "summary", "metadata", "findings"}`.
+severity, category and *remedy*, the configuration key that holds the decision. The id's
+prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `PDF`,
+`VERA`, `FID` (outputs). Reports serialize as
+`{"format": 2, "kind", "subject", "passed", "summary", "metadata", "findings"}`.
 
 ## Operations and the executor
 
-An [operation](../src/odfa11y/remediation/outcome.py) is a frozen dataclass: its fields
-are its parameters, `apply(document)` returns one `Outcome` per target (`applied`,
-`unchanged` or `failed`), and `as_dict()` records it. Applying twice never accumulates
-changes. The TOML configuration *is* the plan: declarative, strict and reviewed by a
-person; there is no second plan format.
+An [operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass: its fields are its
+parameters, `apply(document)` returns one `Outcome` per target (`applied`, `unchanged` or
+`failed`), and `as_dict()` records it. Applying twice never accumulates changes. Operations
+that need resolving first (alt text, header rows, spacing) resolve and validate every
+selector before the first edit. The TOML configuration *is* the plan: declarative, strict
+and reviewed by a person; there is no second plan format.
 
 The [executor](../src/odfa11y/remediation/apply.py) applies operations in order and
-publishes only if: no outcome failed; every `applied` outcome made at least one `edit()`
-(and `unchanged` made none), which catches a lost edit; visible text is preserved apart
-from counted spacer removals; and the ODF schema shows no violation the source did not
-already have. Failure writes nothing. It also refuses to write over its source.
+publishes only if: every operation belongs to the document's family; no outcome failed;
+every `applied` outcome made at least one `edit()` (and `unchanged` made none), which
+catches a lost edit; the family's snapshot of visible content is preserved apart from
+counted spacer removals; and the ODF schema shows no violation the source did not already
+have. Failure writes nothing. It also refuses to write over its source.
 
 ## Schema validation
 
 The [bundled schemas](../src/odfa11y/odf/schema.py) are unmodified OASIS files with
-recorded digests. Violation messages carry no line numbers, so a multiset comparison
-before and after an edit identifies violations the edit introduced.
+recorded digests. libxml2 reports one error per failing content model and gives each an
+element path but no stable position, so a violation is identified by its message and a
+*fingerprint* of the failing element (tag, attributes, parent and neighbouring tags). The
+comparison before and after an edit is a multiset of those identities: a violation fixed in
+one place cannot hide an equal one introduced elsewhere, and edits elsewhere do not turn an
+old violation into a new one. What it cannot see is a second error inside a content model
+that already failed; violations without a resolvable location are compared by count and
+reported as unlocated.
 
 ## PDF boundary
 
 [Export](../src/odfa11y/pdf/export.py) and [veraPDF](../src/odfa11y/pdf/verapdf.py) use
-argument lists, timeouts and a temporary LibreOffice profile, and publish files
-atomically. The [structure walker](../src/odfa11y/pdf/structure_walk.py) builds the
-reachable structure tree once; the [checks](../src/odfa11y/pdf/structure_checks.py) read
-roles, headings, lists, tables, figures and links from it. veraPDF's XML is parsed into
-failed rules with clause, test number and sample contexts; a missing validator, an
-execution failure and malformed output are distinct errors, while non-compliance is a
-finding.
+argument lists, timeouts, a bounded output capture that kills the process tree on timeout,
+and a temporary LibreOffice profile, and publish files atomically. PDF input has size, page
+and structure-node limits. The [structure walker](../src/odfa11y/pdf/structure_walk.py)
+builds the reachable structure tree once, resolving `/OBJR` references to annotation and
+page; the [checks](../src/odfa11y/pdf/structure_checks.py) and the
+[link correlation](../src/odfa11y/pdf/link_structure.py) read roles, headings, lists,
+tables, figures and the correspondence of link annotations to Link elements from it.
+veraPDF's XML is parsed into failed rules with clause, test number and sample contexts; a
+missing validator, an execution failure and malformed output are distinct errors, while
+non-compliance is a finding. Nothing here is a sandbox.
 
 ## Pipeline and evidence
 
-[`run_pipeline`](../src/odfa11y/pipeline/run.py) runs the stages in a fixed order, stops
-at the first failed gate and records the rest as skipped. Its
-[run record](../src/odfa11y/pipeline/record.py) is serialized without timestamps or
-absolute paths and published, with artifacts, review sheet and manifest, as one
-[evidence bundle](EVIDENCE.md).
+[`run_pipeline`](../src/odfa11y/pipeline/run.py) runs the stages an **assurance profile**
+(`inspect`, `verify`, `production`) names, in a fixed order, and stops at the first failed
+gate. A stage is `passed`, `failed`, `skipped` (could have run: earlier failure, or outside
+the profile) or `not-applicable` (the document's family has no such stage, for example PDF
+export). Once the output directory is acceptable, a bundle is published whether the run
+passed or failed, even for an unreadable source. The
+[run record](../src/odfa11y/pipeline/record.py) is serialized without timestamps and
+published, with artifacts, review sheet and manifest, as one [evidence bundle](EVIDENCE.md);
+every textual file passes through a redactor first, so no local path reaches it.
 
 ## Packaging
 

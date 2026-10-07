@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .namespaces import qn
+from odfa11y.odf import qn
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

@@ -9,17 +9,17 @@ import pytest
 
 from odfa11y.config import load_config
 from odfa11y.errors import ConfigError
-from odfa11y.fidelity import FidelityPolicy
-from odfa11y.remediation import (
+from odfa11y.families.text import (
     AltText,
+    HeaderRows,
     LinkifyAddresses,
     MarkHeaderRows,
     NormalizeSpacing,
     RemoveEmptySpacers,
     SetAltText,
-    SetMetadata,
-    SetOdfVersion,
 )
+from odfa11y.fidelity import FidelityPolicy
+from odfa11y.remediation import SetMetadata, SetOdfVersion
 
 FULL = """
 [document]
@@ -28,18 +28,20 @@ title = "Decision"
 description = "Decision letter"
 language = "en-GB"
 
-[remediation]
+[text.remediation]
 linkify_plain_addresses = true
 remove_empty_spacers = true
 
-[table_headers]
+[text.table_headers]
 Data = 1
+Other = { rows = 2, fingerprint = "abc" }
 
-[alt_text.Logo]
+[text.alt_text.Logo]
 title = "Organisation"
 description = "Organisation logo."
+fingerprint = "def"
 
-[spacing]
+[text.spacing]
 reference_text = "Reference"
 target_styles = ["BodyTight"]
 exact_reference = true
@@ -73,8 +75,8 @@ def test_full_configuration_yields_operations_in_canonical_order(tmp_path: Path)
         SetMetadata("Decision", "Decision letter", "en-GB"),
         LinkifyAddresses(),
         RemoveEmptySpacers(),
-        SetAltText({"Logo": AltText("Organisation", "Organisation logo.")}),
-        MarkHeaderRows({"Data": 1}),
+        SetAltText({"Logo": AltText("Organisation", "Organisation logo.", "def")}),
+        MarkHeaderRows({"Data": HeaderRows(1), "Other": HeaderRows(2, "abc")}),
         NormalizeSpacing("Reference", ("BodyTight",), exact_reference=True),
     )
     assert config.fidelity == FidelityPolicy("may-change", 0.3, 180, 100)
@@ -87,7 +89,7 @@ def test_empty_configuration_requests_nothing(tmp_path: Path) -> None:
 
 
 def test_false_flags_request_nothing(tmp_path: Path) -> None:
-    text = "[remediation]\nlinkify_plain_addresses = false\nremove_empty_spacers = false\n"
+    text = "[text.remediation]\nlinkify_plain_addresses = false\nremove_empty_spacers = false\n"
     assert load_config(write(tmp_path, text)).operations == ()
 
 
@@ -97,18 +99,28 @@ def test_false_flags_request_nothing(tmp_path: Path) -> None:
         ('[document]\ntitel = "Typo"', "Unknown document keys"),
         ("[document]\nlanguage = 7", "document.language must be str"),
         ('[document]\nodf_version = "1.2"', "document.odf_version must be one of"),
-        ('[remediation]\nlinkify_plain_addresses = "false"', "must be bool"),
-        ("[table_headers]\nData = true", "must be int"),
-        ("[table_headers]\nData = 0", "must be a positive integer"),
-        ("[alt_text.Logo]\ndescription = 7", "must be str"),
-        ('[alt_text.Logo]\ndescripton = "Typo"', "Unknown alt_text.Logo keys"),
+        ('[text.remediation]\nlinkify_plain_addresses = "false"', "must be bool"),
+        ("[text.table_headers]\nData = true", "must be int"),
+        ("[text.table_headers]\nData = 0", "must be a positive integer"),
+        (
+            "[text.table_headers]\nData = { rows = 1, extra = 1 }",
+            "Unknown text.table_headers.Data keys",
+        ),
+        ('[text.table_headers.Data]\nfingerprint = "x"', "must be a positive integer"),
+        ("[text]\nspacing = 1", "must be a table"),
+        ("[text]\nheadings = 1", "Unknown text keys"),
+        ("[text.alt_text.Logo]\ndescription = 7", "must be str"),
+        ('[text.alt_text.Logo]\ndescripton = "Typo"', "Unknown text.alt_text.Logo keys"),
         ('document = "invalid"', "must be a table"),
         ("[unknown]", "Unknown configuration keys"),
-        ('[spacing]\nreference_text = "x"', "spacing.target_styles must be"),
-        ('[spacing]\ntarget_styles = ["A"]', "spacing.reference_text must be"),
+        ("[spreadsheet]", "Unknown configuration keys"),
+        ("[remediation]", "Unknown configuration keys"),
+        ("[alt_text]", "Unknown configuration keys"),
+        ('[text.spacing]\nreference_text = "x"', "text.spacing.target_styles must be"),
+        ('[text.spacing]\ntarget_styles = ["A"]', "text.spacing.reference_text must be"),
         (
-            '[spacing]\nreference_text = "x"\ntarget_styles = ["A"]\nexact = true',
-            "Unknown spacing keys",
+            '[text.spacing]\nreference_text = "x"\ntarget_styles = ["A"]\nexact = true',
+            "Unknown text.spacing keys",
         ),
         ('[fidelity]\npagination = "never"', "fidelity.pagination must be one of"),
         ("[fidelity]\nraster_tolerance = -1", "non-negative number"),

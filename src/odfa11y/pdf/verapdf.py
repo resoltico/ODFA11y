@@ -10,11 +10,13 @@ from pathlib import Path
 from lxml import etree
 
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
-from odfa11y.external_tools import ToolIdentity, find_executable
+from odfa11y.external_tools import ToolIdentity, find_executable, run_bounded
 from odfa11y.report import Report, rules
-from odfa11y.safe_xml import secure_xml_parser
+from odfa11y.safe_xml import parse_secure
 
 MAX_REPORTED_CHECKS = 3
+MAX_REPORT_BYTES = 32 * 1024 * 1024
+DETAIL_CHARS = 4096
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,15 +90,16 @@ def validate_pdfua(
         str(Path(pdf).resolve()),
     ]
     try:
-        completed = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, check=False
-        )
+        completed = run_bounded(command, timeout=timeout, max_output=MAX_REPORT_BYTES)
     except subprocess.TimeoutExpired as exc:
         msg = f"veraPDF timed out after {timeout} s"
         raise ToolFailedError(msg) from exc
-    if completed.returncode != 0 and not completed.stdout.strip():
-        msg = f"veraPDF failed: {completed.stderr.strip()}"
+    if completed.stdout_truncated:
+        msg = f"veraPDF output exceeded {MAX_REPORT_BYTES} bytes"
         raise ToolFailedError(msg)
+    if completed.returncode != 0 and not completed.stdout.strip():
+        msg = f"veraPDF failed (exit status {completed.returncode})."
+        raise ToolFailedError(msg, details=completed.stderr.strip())
     return _parse(completed.stdout, completed.stderr)
 
 
@@ -149,10 +152,12 @@ def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:
 
 def _parse(stdout: str, stderr: str) -> VeraPdfResult:
     try:
-        root = etree.fromstring(stdout.encode("utf-8"), parser=secure_xml_parser())
+        root = parse_secure(stdout.encode("utf-8"))
     except etree.XMLSyntaxError as exc:
-        msg = f"Could not parse veraPDF report as XML. stdout={stdout!r} stderr={stderr!r}"
-        raise ToolFailedError(msg) from exc
+        msg = "Could not parse the veraPDF report as XML."
+        raise ToolFailedError(
+            msg, details=f"stdout={stdout[:DETAIL_CHARS]!r}\nstderr={stderr[:DETAIL_CHARS]!r}"
+        ) from exc
     reports = [node for node in root.iter("*") if etree.QName(node).localname == "validationReport"]
     if not reports:
         msg = "veraPDF report contains no validationReport element."
