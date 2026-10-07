@@ -29,6 +29,13 @@ Notable changes to this project are documented in this file. The format is based
   content above 64 MiB per document is refused as `PDF000`, like the other input limits.
   Reports of tagged PDFs may now contain these findings; the audit is still not PDF/UA
   validation.
+- `odfa11y doctor` now exports a synthetic one-hyperlink document with the installed
+  LibreOffice and reports `pdfua_link_descriptions: supported` or `unsupported` (also in
+  `--format json`). It answers in advance whether hyperlinks will be reported as `PDF019`,
+  which newer LibreOffice releases cause by exporting links without a PDF/UA description.
+  `PDF019` remains an error. `doctor` accepts `--soffice` and `--timeout`, and now exits `3`
+  when LibreOffice is missing or its export fails, after printing the versions it found.
+  The capability is not recorded in `run.json`.
 
 ### Changed
 
