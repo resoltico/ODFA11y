@@ -105,3 +105,10 @@ def test_tag_and_manual_release_runs_cannot_restore_go_analysis_caches() -> None
     block = cache.group(1)
     assert "if: github.event_name != 'workflow_dispatch' || !inputs.release" in block
     assert "lookup-only: ${{ startsWith(github.ref, 'refs/tags/') }}" in block
+
+
+def test_parallel_native_tests_still_require_tools_and_reject_worker_crashes() -> None:
+    integration = job_block("integration")
+    assert 'ODFA11Y_REQUIRE_INTEGRATION: "1"' in integration
+    assert "pytest -m integration -n 2 --max-worker-restart=0" in integration
+    assert "os: [ubuntu-latest, macos-latest, windows-latest]" in integration

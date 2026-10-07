@@ -213,7 +213,7 @@ jobs:
           ODFA11Y_REQUIRE_INTEGRATION: "1"
         run: |
           uv run --no-sync odfa11y doctor --format json
-          uv run --no-sync pytest -m integration --durations=10
+          uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --durations=10
   ci-gate:
     name: CI gate
     if: always()
