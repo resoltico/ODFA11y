@@ -19,7 +19,7 @@ uv run --no-sync odfa11y audit original.odt --schema --format json > before.json
 uv run --no-sync odfa11y styles original.odt
 ```
 
-An audit is read-only. Findings name a rule, a location and, where a configuration can
+An audit is read-only. Findings name a rule, a [location](RULES.md#locations) and, where a configuration can
 address them, a `remedy`: the key that holds the decision. `--schema` also validates
 every member against the bundled official ODF schema for the declared version
 (1.3 or 1.4); see [Accessibility and limits](ACCESSIBILITY.md#odf-schema-validation).

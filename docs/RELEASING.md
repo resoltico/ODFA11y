@@ -21,6 +21,9 @@ These are GitHub settings, not promises this source tree can enforce:
   ruleset* (or `gh api repos/OWNER/REPO/rulesets --input .github/rulesets/default-branch.json`),
   then remove any older protection that requires individual job checks. A test keeps the
   ruleset and the workflow's gate name in agreement.
+- Set the repository description to: `Recognise and check every OpenDocument kind; audit,
+  remediate and export text documents as PDF/UA with evidence.` Keep it in agreement with
+  `description` in `pyproject.toml`.
 - Do not add deployment or package-registry credentials just to enable GitHub releases.
 
 Review the intended release, including hidden files: keep private documents, reports,

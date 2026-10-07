@@ -1,22 +1,31 @@
 # ODFA11y
 
-Audit and explicitly remediate OpenDocument files, export them as PDF/UA-1, and keep
-evidence of what changed and what a person must still check.
+Recognise and check every kind of OpenDocument file, and audit, explicitly remediate and
+export text documents and spreadsheets as PDF/UA-1 with evidence of what changed and what a person must still
+check.
 
-ODFA11y works on both the editable ODF source and the exported PDF, because an
-accessible source does not guarantee an accessible export. It recognises every kind of
-OpenDocument file, packaged or flat XML, and audits package structure, document kind,
-version, metadata and schema validity. For text documents (`.odt`) it also audits headings,
-graphics, tables and links, and for spreadsheets (`.ods`, `.fods`) sheet names, header rows,
-merged cells, graphics, links, empty sheets and hidden content, and runs the whole workflow
-for both; other families are recognised and checked in common, and each is added as its own
-plug-in without touching the core. It applies the changes *you* decide in one
-TOML file, refusing anything that alters the text or breaks the ODF schema; exports with
-LibreOffice; inspects the PDF and runs veraPDF; compares the source and candidate renders;
-and publishes a hashed evidence directory. It is conservative by design: it never invents
-alternative text, heading levels or table headers, and a clean report is not an
-accessibility certificate. Reading order, alt-text quality and the visual result still
-need a person.
+ODFA11y works on both the editable ODF source and the exported PDF, because an accessible
+source does not guarantee an accessible export.
+
+- **Every OpenDocument kind, packaged or flat XML:** recognised from its declared media type
+  and given the common checks of package structure, document kind, version, metadata and
+  schema validity.
+- **Text documents (`.odt`, templates, master and web documents):** semantic audit of
+  headings, graphics, tables and links; remediation of the changes *you* decide in one TOML
+  file, refusing anything that alters the text or breaks the ODF schema; LibreOffice export;
+  PDF inspection and veraPDF; comparison of source and candidate renders; and a hashed
+  evidence directory.
+- **Spreadsheets (`.ods`, `.ots`, `.fods`):** semantic audit of sheet names, header rows,
+  merged cells, graphics, links and hidden content; explicit sheet renaming and object alt
+  text; Calc export and evidence. Exporter limitations can prevent PDF/UA conformance;
+  see [spreadsheet exports](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports).
+- **Other families (presentations, drawings and the rest):** recognised and
+  checked in common only. The audit reports `ODF009` rather than implying semantic coverage;
+  see [Accessibility and limits](docs/ACCESSIBILITY.md#document-families).
+
+It is conservative by design: it never invents alternative text, heading levels or table
+headers, and a clean report is not an accessibility certificate. Reading order, alt-text
+quality and the visual result still need a person.
 
 ## Start here
 
@@ -85,6 +94,11 @@ Each package exposes its API through its `__init__`: for example
 - [Architecture](docs/ARCHITECTURE.md): implementation responsibilities and invariants.
 - [Releasing](docs/RELEASING.md): starting a release, draft assets and the required CI check.
 - [Changelog](CHANGELOG.md): release outcomes.
+
+## Status and roadmap
+
+Current work and planned features are tracked in [GitHub issues](https://github.com/resoltico/ODFA11y/issues)
+and [pull requests](https://github.com/resoltico/ODFA11y/pulls).
 
 ## License
 

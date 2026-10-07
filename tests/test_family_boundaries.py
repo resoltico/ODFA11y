@@ -18,7 +18,7 @@ from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
-from odfa11y.report import Severity, rules
+from odfa11y.report import Location, Severity, rules
 
 from .documents import OASIS, Variant, make_flat, make_package
 
@@ -196,8 +196,8 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
 def test_a_new_family_needs_only_a_registry_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def audit(document: OdfDocument, report: Report) -> None:
-        report.add(rules.ODF009, "Presentation adapter ran.", location=document.storage.source.name)
+    def audit(_document: OdfDocument, report: Report) -> None:
+        report.add(rules.ODF009, "Presentation adapter ran.", location=Location("document"))
 
     presentation = dataclasses.replace(
         adapter_for(None), name="presentation", family=Family.PRESENTATION, audit=audit
