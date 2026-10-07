@@ -86,6 +86,7 @@ include = [
 addopts = "-ra -p no:tach"
 strict = true
 filterwarnings = ["error"]
+faulthandler_timeout = 300
 testpaths = ["tests"]
 markers = [
   "integration: tests that invoke an external application such as LibreOffice",
