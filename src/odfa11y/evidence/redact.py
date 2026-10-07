@@ -37,6 +37,18 @@ def _collapse(match: re.Match[str]) -> str:
     return f"<path>/{segment}"
 
 
+def _separator_blind(spelling: str) -> str:
+    """Escape a location so a slash and a backslash match each other.
+
+    Returns
+    -------
+    str
+        A pattern that finds the location however its separators are written.
+
+    """
+    return r"[\\/]".join(re.escape(part) for part in re.split(r"[\\/]", spelling))
+
+
 def _spellings(path: Path) -> set[str]:
     """List every absolute way a path may be written, resolved and not.
 
@@ -84,7 +96,7 @@ class Redactor:
         )
         return cls(
             tuple(
-                (re.compile(NAME_BOUNDARY.format(re.escape(spelling))), placeholder)
+                (re.compile(NAME_BOUNDARY.format(_separator_blind(spelling))), placeholder)
                 for spelling, placeholder in pairs
             )
         )

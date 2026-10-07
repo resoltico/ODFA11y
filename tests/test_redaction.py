@@ -149,3 +149,11 @@ def test_text_artifacts_are_redacted_and_binary_ones_are_not(tmp_path: Path) -> 
     assert (target / "report.xml").read_text() == "<name><work>/remediated.pdf</name>"
     assert (target / "data.bin").read_bytes() == str(work).encode()
     assert check_bundle(target) == []
+
+
+def test_a_location_matches_whatever_separators_the_text_uses(tmp_path: Path) -> None:
+    redactor = Redactor.for_locations({"run": tmp_path / "run1"})
+    posix = (tmp_path / "run1").as_posix()
+    backslashed = posix.replace("/", "\\")
+    for spelling in (posix, backslashed):
+        assert redactor.record({"k": f"{spelling}/x.pdf"})["k"] == "<run>/x.pdf"
