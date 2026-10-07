@@ -27,6 +27,10 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
     else:
         report.metadata["title"] = title.strip()
 
+    description = meta.findtext(".//dc:description", namespaces=NS) if meta is not None else None
+    if description and description.strip():
+        report.metadata["description"] = description.strip()
+
     language = meta.findtext(".//dc:language", namespaces=NS) if meta is not None else None
     default_language = adapter.default_language(document)
     if not (language and language.strip()) and not default_language:

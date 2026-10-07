@@ -46,17 +46,51 @@ path = "odfa11y.adapter"
 depends_on = ["odfa11y.errors"]
 
 [[modules]]
+path = "odfa11y.content"
+depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf"]
+
+[[modules]]
 path = "odfa11y.families.text"
-depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.families.spreadsheet"
-depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.families.presentation"
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.families.drawing"
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.families.formula"
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.families.chart"
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.families.image"
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.safe_xml"]
+
+[[modules]]
+path = "odfa11y.families.database"
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.families"
 depends_on = [
   "odfa11y.adapter",
+  "odfa11y.families.chart",
+  "odfa11y.families.database",
+  "odfa11y.families.drawing",
+  "odfa11y.families.formula",
+  "odfa11y.families.image",
+  "odfa11y.families.presentation",
   "odfa11y.families.spreadsheet",
   "odfa11y.families.text",
   "odfa11y.odf",
@@ -74,7 +108,7 @@ depends_on = [
 
 [[modules]]
 path = "odfa11y.remediation"
-depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.families", "odfa11y.odf"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.families", "odfa11y.odf"]
 
 [[modules]]
 path = "odfa11y.pdf"
@@ -121,8 +155,13 @@ depends_on = [
 ]
 
 [[modules]]
+path = "odfa11y.batch"
+depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.pipeline", "odfa11y.staging"]
+
+[[modules]]
 path = "odfa11y.cli"
 depends_on = [
+  "odfa11y.batch",
   "odfa11y.audit",
   "odfa11y.config",
   "odfa11y.errors",
@@ -141,12 +180,20 @@ depends_on = [
 # A package's public API is exactly what its __init__ re-exports.
 [[interfaces]]
 from = [
+  "odfa11y.batch",
+  "odfa11y.content",
   "odfa11y.adapter",
   "odfa11y.audit",
   "odfa11y.cli",
   "odfa11y.config",
   "odfa11y.evidence",
   "odfa11y.families",
+  "odfa11y.families.chart",
+  "odfa11y.families.database",
+  "odfa11y.families.drawing",
+  "odfa11y.families.formula",
+  "odfa11y.families.image",
+  "odfa11y.families.presentation",
   "odfa11y.families.spreadsheet",
   "odfa11y.families.text",
   "odfa11y.fidelity",

@@ -29,11 +29,7 @@ def make_minimal_odt(
     version: str = "1.4",
     title: str = "Synthetic accessible document",
     language: str = "en-GB",
-    with_plain_email: bool = False,
-    with_data_table: bool = False,
-    with_table_header: bool = False,
-    with_image_without_alt: bool = False,
-    add_blank_body_paragraph: bool = False,
+    features: Features | None = None,
 ) -> Path:
     """Create a synthetic Writer document with selected structural features.
 
@@ -43,38 +39,23 @@ def make_minimal_odt(
         The created fixture path.
 
     """
+    features = features or {}
     plain_email = (
-        "Contact test@example.com for information." if with_plain_email else "Body paragraph."
+        "Contact test@example.com for information."
+        if features.get("with_plain_email", False)
+        else "Body paragraph."
     )
-    blank = '<text:p text:style-name="Body"/>' if add_blank_body_paragraph else ""
-    table = ""
-    if with_data_table:
-        row1 = """
-        <table:table-row>
-          <table:table-cell><text:p>Item</text:p></table:table-cell>
-          <table:table-cell><text:p>Amount</text:p></table:table-cell>
-        </table:table-row>"""
-        row2 = """
-        <table:table-row>
-          <table:table-cell><text:p>A</text:p></table:table-cell>
-          <table:table-cell><text:p>10</text:p></table:table-cell>
-        </table:table-row>"""
-        row3 = """
-        <table:table-row>
-          <table:table-cell><text:p>B</text:p></table:table-cell>
-          <table:table-cell><text:p>20</text:p></table:table-cell>
-        </table:table-row>"""
-        columns = "<table:table-column/><table:table-column/>"
-        if with_table_header:
-            rows = f"{columns}<table:table-header-rows>{row1}</table:table-header-rows>{row2}{row3}"
-        else:
-            rows = columns + row1 + row2 + row3
-        table = f'<table:table table:name="Data">{rows}</table:table>'
+    blank = (
+        '<text:p text:style-name="Body"/>'
+        if features.get("add_blank_body_paragraph", False)
+        else ""
+    )
+    table = _data_table(features)
 
     frame = ""
     manifest_picture = ""
     picture_member: tuple[str, bytes] | None = None
-    if with_image_without_alt:
+    if features.get("with_image_without_alt", False):
         frame = """
         <draw:frame draw:name="Logo" text:anchor-type="paragraph" svg:width="1cm" svg:height="1cm">
           <draw:image xlink:href="Pictures/logo.svg" xlink:type="simple"
@@ -173,3 +154,38 @@ xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:ver
         if picture_member:
             zf.writestr(picture_member[0], picture_member[1], compress_type=zipfile.ZIP_DEFLATED)
     return path
+
+
+def _data_table(features: Features) -> str:
+    """Build the optional data table and its explicit header-row variant.
+
+    Returns
+    -------
+    str
+        Unchanged synthetic table markup, or an empty string when not requested.
+
+    """
+    table = ""
+    if features.get("with_data_table", False):
+        row1 = """
+        <table:table-row>
+          <table:table-cell><text:p>Item</text:p></table:table-cell>
+          <table:table-cell><text:p>Amount</text:p></table:table-cell>
+        </table:table-row>"""
+        row2 = """
+        <table:table-row>
+          <table:table-cell><text:p>A</text:p></table:table-cell>
+          <table:table-cell><text:p>10</text:p></table:table-cell>
+        </table:table-row>"""
+        row3 = """
+        <table:table-row>
+          <table:table-cell><text:p>B</text:p></table:table-cell>
+          <table:table-cell><text:p>20</text:p></table:table-cell>
+        </table:table-row>"""
+        columns = "<table:table-column/><table:table-column/>"
+        if features.get("with_table_header", False):
+            rows = f"{columns}<table:table-header-rows>{row1}</table:table-header-rows>{row2}{row3}"
+        else:
+            rows = columns + row1 + row2 + row3
+        table = f'<table:table table:name="Data">{rows}</table:table>'
+    return table

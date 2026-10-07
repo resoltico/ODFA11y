@@ -1,0 +1,41 @@
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native application services, standard ODF save mode"
+
+[[documents]]
+file = "fruit-presentation.odp"
+family = "presentation"
+sha256 = "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308"
+schema_violations = 0
+
+[[documents]]
+file = "fruit-drawing.odg"
+family = "drawing"
+sha256 = "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4"
+schema_violations = 0
+
+[[documents]]
+file = "sum-formula.odf"
+family = "formula"
+sha256 = "eafceebc92348aa8ed7193b8634a5e5364bbf20fb5d5808b1befabed672b3cd2"
+schema_violations = 0
+
+[[documents]]
+file = "fruit-chart.odc"
+authoring = "native Calc internal-data-provider chart parts assembled into standard Chart package"
+family = "chart"
+sha256 = "3d2a9662675a4e3751a1e15a30726be6424365559ad17791fca50ca2a779133b"
+schema_violations = 0
+
+[[documents]]
+file = "fruit-image.odi"
+authoring = "native Draw frame and SVG assembled into standard Image body and package"
+family = "image"
+sha256 = "e1d9cc787e083d49ab25924691028d08fdf13b039ae7ae3fb26d007753573298"
+schema_violations = 0
+
+[[documents]]
+file = "fruit-database.odb"
+family = "database"
+sha256 = "dd01697b58faa3d686c5c4106742ebe9bbe7db97d66a7ab02cfd251bb5e78871"
+schema_violations = 0

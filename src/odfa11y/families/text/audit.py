@@ -25,7 +25,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     """Report the accessibility findings that belong to text documents."""
     content = document.tree(Part.CONTENT)
     audit_headings(content, report)
-    audit_images(content, report)
+    audit_images(document, report)
     audit_tables(content, report)
     _audit_links(content, report)
     _audit_empty_spacers(document, report)

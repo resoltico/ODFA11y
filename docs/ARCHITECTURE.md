@@ -1,8 +1,8 @@
 # Architecture
 
 > **The ODF core understands OpenDocument structure; a document family understands what its
-> documents mean. No family-specific element name, rule or operation exists outside that
-> family's package.**
+> documents mean. Families own semantic decisions. Shared ODF vocabulary lives in `content`; orchestration
+> does not select family XML or contain family rules.**
 
 A run parses a document once, checks or edits that one shared document, emits typed
 findings from one rule registry, and records everything in one run record.
@@ -38,10 +38,12 @@ flowchart LR
 | `external_tools` | Locate, identify and run LibreOffice and veraPDF with bounded output. |
 | `report` | The rule registry, findings, reports, rendering and exit statuses. |
 | `odf` | Storage layouts, logical parts, document kinds, detection, schema validation. |
+| `content` | Shared ODF primitives for language, graphics, table grids and protected payloads; no family decisions. |
 | `adapter` | The contract between the core and families: `FamilyAdapter`, `Operation`, `Outcome`. |
 | `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
 | `families.spreadsheet` | Everything specific to spreadsheets: audit rules, operations, snapshot, plan table. |
 | `families` | The registry: which adapter serves which kind; the generic adapter for the rest. |
+| `batch` | Strict manifests and independent pipelines with atomic aggregate evidence. |
 | `audit` | The read-only audit engine: common checks, then the family's. |
 | `remediation` | The executor and the operations common to every family. |
 | `pdf` | LibreOffice export, structural PDF audit, link correlation, veraPDF. |
@@ -52,13 +54,29 @@ flowchart LR
 | `cli` | Argument parsing and command output. |
 
 Dependencies point one way: `cli` → `pipeline`, `config` → `audit`, `remediation`, `pdf`,
-`fidelity`, `evidence` → `families` → `families.<family>` → `adapter` → `odf` → the leaves.
+`fidelity`, `evidence` → `families` → `families.<family>` → `content`, `adapter` → `odf` → the leaves.
 The five engines never import each other, and **families never import each other**, nor
 does anything below the registry import a family. [tach.toml](../tach.toml) is the
 authority: `tach check` rejects an undeclared dependency, a cycle, or an import that
 bypasses a package's public interface (a package's public API is exactly what its
 `__init__.py` re-exports). A quality gate adds the part tach cannot see: it fails when a
-core package names a family's XML elements (`qn("text", …)`, `//table:…`).
+core package directly names family content through qualified-name calls (including ordinary
+import aliases, qualified calls and keyword prefixes) or XPath literals. Shared `content`
+primitives may use that vocabulary; structural namespace declarations and normative schema
+validation remain core responsibilities.
+
+The file-size policy scans authored Python, including hidden and Git-ignored files.
+Environment/cache directories and repository-root build/distribution outputs are generated;
+a nested domain directory named `build` or `dist` remains authored code. Ruff's explicit
+exclusions use the same scope, rather than defaults that hide such nested directories.
+Function complexity, branch, argument, return and statement limits are declared in
+[pyproject.toml](../pyproject.toml); exceptions require a central, specific reason.
+
+These are enforceable limits, not a numerical architecture score. A small class can still
+combine unrelated responsibilities, and dynamic imports or computed XML names can hide
+coupling from static checks. Design review and a separate challenge pass must assess
+responsibility, state ownership and downstream effects; passing size/lint/boundary checks
+alone does not prove that a design is cohesive or free of a god object.
 
 ## The document model
 
@@ -78,7 +96,7 @@ checks use `tree()` only, which is why an audit cannot modify a document.
 
 [kinds.py](../src/odfa11y/odf/kinds.py) lists every OpenDocument media type with its family
 (`text`, `spreadsheet`, `presentation`, `graphics`, `formula`, `chart`, `image`,
-`database`), template flag and body element, including the deprecated and legacy ones.
+`database`), template flag and body element, including the standard's deprecated image family. Retired database producer aliases are rejected.
 [Detection](../src/odfa11y/odf/detect.py) reads the declared media type (the `mimetype` file,
 or `office:mimetype` of a flat document, falling back to the manifest), the manifest's
 media type, the body element and the file extension. The file extension never selects the
@@ -93,19 +111,34 @@ if LibreOffice can export it to PDF, the export filter. Kinds without an impleme
 the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
 audit exists, and the body text must not change.
 
-Two families are implemented, and neither imports the other:
+Eight families are implemented, and none imports another:
 
-- `text` (text, templates, master and web documents) owns the `TXT` rules, five operations
+- `text` (text, templates, master and web documents) owns the `TXT` rules, explicit semantic operations
   and the `[text]` configuration table.
 - `spreadsheet` (`.ods`, `.ots`, flat `.fods`) owns the `SHEET` rules, two operations
-  (`SetSheetNames`, `SetObjectAltText`), the `[spreadsheet]` table, the `calc_pdf_Export`
-  filter and a snapshot of sheet names and cell text whose `preserved` rule lets only
-  sheet names change. It shows that the contract needs nothing from the core about
+  (`SetSheetNames`, `SetGraphicDescriptions`), the `[spreadsheet]` table, the `calc_pdf_Export`
+  filter and a snapshot of protected sheet XML whose `preserved` rule lets only
+  sheet names and graphic descriptions change. It shows that the contract needs nothing from the core about
   spreadsheets: the default language lives on a different style, the snapshot is not
   paragraphs, and the operations resolve sheets and frames instead of paragraphs and
-  tables. Its alt-text operation resembles the text family's on purpose; a shared helper
-  would have to name `draw:` elements, which only a family package may.
+  tables. Both families bind the shared graphic editor to their own operation contract. The common
+  helper understands `draw:` vocabulary without selecting family rules.
 
+- `presentation` (`.odp`, `.otp`, flat `.fodp`) and `drawing` (`.odg`, `.otg`, flat `.fodg`)
+  bind shared page/shape mechanics to separate `PRES`/`DRAW` rules and explicit configuration.
+  The drawing adapter serves the standard's `graphics` family. Both preserve complete body
+  structure, geometry, references and resource bytes while allowing reviewed descriptions
+  and complete navigation lists. Their native Impress/Draw filters are independently tested
+  through production assurance with real standard-ODF 1.4 fixtures.
+
+
+- `formula` owns native MathML alternative/language decisions and `MATH` rules. Formal
+  expressions use the bundled normative W3C grammar. `math_pdf_Export` is measured and
+  currently fails PDF tagging; no success is inferred from a valid source.
+- `chart`, `image` and `database` own `CHART`, `IMAGE` and `BASE` source audits. Their
+  snapshots protect data, geometry, SQL, bindings and settings; opaque resources are
+  protected by the executor. They expose no PDF filter. Chart uses common document
+  metadata; Image binds the shared graphic editor; Base describes declarations offline.
 
 ### Adding a family
 
@@ -127,7 +160,7 @@ Every finding references a [registered rule](../src/odfa11y/report/rules.py) wit
 severity, category and *remedy*, the configuration key that holds the decision. The id's
 prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `SHEET` (spreadsheet family), `PDF`,
 `VERA`, `FID` (outputs). Reports serialize as
-`{"format": 3, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
+`{"format": 4, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
 `location` is `{"path", "member"}` or null: a storage-neutral logical path, and the package
 member only where it helps ([locations](RULES.md#locations)).
 
@@ -136,7 +169,7 @@ member only where it helps ([locations](RULES.md#locations)).
 An [operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass: its fields are its
 parameters, `apply(document)` returns one `Outcome` per target (`applied`, `unchanged` or
 `failed`), and `as_dict()` records it. Applying twice never accumulates changes. Operations
-that need resolving first (alt text, header rows, spacing) resolve and validate every
+that need resolving first (graphics, heading levels, table headers, spacing) resolve and validate every
 selector before the first edit. The TOML configuration *is* the plan: declarative, strict
 and reviewed by a person; there is no second plan format.
 
@@ -144,7 +177,7 @@ The [executor](../src/odfa11y/remediation/apply.py) applies operations in order 
 publishes only if: every operation belongs to the document's family; no outcome failed;
 every `applied` outcome made at least one `edit()` (and `unchanged` made none), which
 catches a lost edit; the family's snapshot of visible content is preserved apart from
-counted spacer removals; and the ODF schema shows no violation the source did not already
+counted spacer removals; opaque package and embedded payloads are unchanged; and the ODF schema shows no violation the source did not already
 have. Failure writes nothing. It also refuses to write over its source.
 
 ## Schema validation
@@ -178,7 +211,13 @@ non-compliance is a finding. Nothing here is a sandbox.
 
 Marked-content scanning skips raw inline images using their sample dimensions. Filtered
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
-where binary samples end. Form XObjects are not scanned. The decoded-page-content limit
+where binary samples end. Form XObjects are not scanned. A text-free PDF can satisfy content-presence checks through
+reachable described Figures whose own/descendant MCIDs match constructed-and-painted
+paths, valid raw inline images, or invoked image resources on the actual page with positive
+integer dimensions and nonempty stored stream bytes. Image-resource payloads are not decoded. Empty,
+artifact-only, wrong-page and orphan Figure declarations cannot satisfy that check.
+This establishes structural graphical-content presence; it does not establish decoded pixel
+integrity or visibility under clipping, transparency or hidden content. The decoded-page-content limit
 is checked after each stream is decoded; it does not bound the decoder's peak memory.
 
 
@@ -198,6 +237,6 @@ every textual file passes through a redactor first, so no local path reaches it.
 
 [pyproject.toml](../pyproject.toml) is the authority for metadata, dependencies,
 development tool groups and the lint, type and coverage settings, and for Hatchling build
-selection. The version is read from [the package initializer](../src/odfa11y/__init__.py),
-which holds only the version. The wheel ships `py.typed` and the ODF schemas. See
+selection. `[project].version` declares the package version; runtime reporting derives
+it from installed distribution metadata. The wheel ships `py.typed` and the ODF schemas. See
 [Development](DEVELOPING.md#packaging).

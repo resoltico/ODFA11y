@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.adapter import Status
+from odfa11y.content import opaque_payloads
 from odfa11y.errors import OutputError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, regressions, validate
@@ -56,6 +57,7 @@ def remediate(
     adapter = adapter_for(document.kind)
     _require_matching_family(document, adapter, operations)
     snapshot_before = adapter.snapshot(document)
+    payloads_before = opaque_payloads(document)
     schema_before = validate(document)
 
     outcomes: list[Outcome] = []
@@ -73,6 +75,9 @@ def remediate(
     removed = sum(o.removed_blocks for o in outcomes)
     if not adapter.preserved(snapshot_before, adapter.snapshot(document), removed):
         msg = "Visible document content changed during remediation; nothing was written."
+        raise RemediationError(msg)
+    if opaque_payloads(document) != payloads_before:
+        msg = "Opaque document resources changed during remediation; nothing was written."
         raise RemediationError(msg)
     schema_check = _schema_check(schema_before, validate(document))
 

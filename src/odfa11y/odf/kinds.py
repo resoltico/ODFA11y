@@ -36,11 +36,10 @@ class DocumentKind:
     body_element: str | None
     template: bool = False
     deprecated: bool = False
-    legacy: bool = False
 
     @property
     def name(self) -> str:
-        """A short unique name, for example ``text-template`` or ``sun-xml-base``."""
+        """A short unique name, for example ``text-template`` or ``base``."""
         short = self.media_type.removeprefix(OASIS_PREFIX).removeprefix("application/vnd.")
         return short.replace(".", "-")
 
@@ -89,11 +88,6 @@ def _kinds() -> tuple[DocumentKind, ...]:
             deprecated=True,
         ),
         DocumentKind(oasis + "base", Family.DATABASE, ".odb", "office:database"),
-        # Media types that older producers wrote for the database front end.
-        DocumentKind(oasis + "database", Family.DATABASE, ".odb", "office:database", legacy=True),
-        DocumentKind(
-            "application/vnd.sun.xml.base", Family.DATABASE, ".odb", "office:database", legacy=True
-        ),
     )
 
 

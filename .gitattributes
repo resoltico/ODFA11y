@@ -4,3 +4,6 @@
 # may change their bytes.
 tests/corpus/*.odt binary
 tests/corpus/*.fodt -text
+
+# Preserve the independently pinned upstream SARIF schema byte-for-byte.
+tests/data/sarif/*.json -text linguist-vendored

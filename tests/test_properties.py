@@ -15,15 +15,15 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.config import load_config
+from odfa11y.content import GraphicDescription
 from odfa11y.errors import ConfigError, PackageError
 from odfa11y.families.text import (
     URI_RE,
-    AltText,
-    HeaderRows,
     LinkifyAddresses,
-    MarkHeaderRows,
+    MarkTableHeaders,
     RemoveEmptySpacers,
-    SetAltText,
+    SetGraphicDescriptions,
+    TableHeaders,
     linkify_plain_addresses,
     split_trailing_punctuation,
     text_is_preserved,
@@ -181,22 +181,24 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
     if choices["language"]:
         operations.append(SetMetadata(language="de-AT"))
     if choices["alt"] and features.get("with_image_without_alt"):
-        operations.append(SetAltText({"Logo": AltText("Logo", "Description")}))
+        operations.append(
+            SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "Description")})
+        )
     if choices["headers"] and features.get("with_data_table"):
-        operations.append(MarkHeaderRows({"Data": HeaderRows(1)}))
+        operations.append(MarkTableHeaders({"Data": TableHeaders(1)}))
     if choices["linkify"]:
         operations.append(LinkifyAddresses())
     if choices["spacers"]:
         operations.append(RemoveEmptySpacers())
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        source = make_minimal_odt(root / "source.odt", **features)
+        source = make_minimal_odt(root / "source.odt", features=features)
         first = remediate(source, root / "first.odt", operations)
         assert validate(OdfDocument.open(root / "first.odt")).violations == {}
         second = remediate(root / "first.odt", root / "second.odt", operations)
         assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
+        first_package = PackageStorage(root / "first.odt")
+        second_package = PackageStorage(root / "second.odt")
         for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
-            assert PackageStorage(root / "first.odt").read(member) == PackageStorage(
-                root / "second.odt"
-            ).read(member)
+            assert first_package.read(member) == second_package.read(member)
         assert first.destination == root / "first.odt"

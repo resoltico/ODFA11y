@@ -1,96 +1,109 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Mark leading table rows as semantic header rows."""
+"""Set reviewed leading row and column header boundaries in text tables."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
-from lxml import etree
-
 from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.content import axis_count, header_count, require_safe_boundary, table_fingerprint
+from odfa11y.errors import RemediationError
 from odfa11y.odf import Family, Part, qn, select_elements
 
-from .fingerprint import table_fingerprint
+from .table_edit import mark_axis
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from lxml import etree
 
     from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)
-class HeaderRows:
-    """How many leading rows are headers; ``fingerprint`` guards against document drift."""
+class TableHeaders:
+    """Explicit leading counts; absent axes keep their existing semantics."""
 
-    count: int
+    rows: int | None = None
+    columns: int | None = None
     fingerprint: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
-class MarkHeaderRows(Operation):
-    """Wrap the first N direct rows of each named table in ``table:table-header-rows``."""
+class MarkTableHeaders(Operation):
+    """Preflight all tables and mark the explicitly selected header axes."""
 
-    entries: Mapping[str, HeaderRows]
-    name: ClassVar[str] = "mark_header_rows"
+    entries: Mapping[str, TableHeaders]
+    name: ClassVar[str] = "mark_table_headers"
     family: ClassVar[Family | None] = Family.TEXT
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         tables = select_elements(document.tree(Part.CONTENT), "//office:body//table:table")
-        return tuple(
-            self._mark(
-                document,
-                name,
-                [table for table in tables if table.get(qn("table", "name")) == name],
-                entry,
-            )
-            for name, entry in self.entries.items()
-        )
-
-    @override
-    def as_dict(self) -> dict[str, object]:
-        return {
-            "operation": self.name,
-            "entries": {
-                name: {"rows": entry.count, "fingerprint": entry.fingerprint}
-                for name, entry in self.entries.items()
-            },
-        }
-
-    def _mark(
-        self, document: OdfDocument, name: str, matches: list[etree._Element], entry: HeaderRows
-    ) -> Outcome:
-        count = entry.count
-        if not matches:
-            return Outcome(self.name, Status.FAILED, f"No table is named {name!r}.", key=name)
-        if len(matches) > 1:
-            message = f"{len(matches)} tables are named {name!r}; the name must be unique."
-            return Outcome(self.name, Status.FAILED, message, key=name)
-        table = matches[0]
-        if entry.fingerprint is not None and entry.fingerprint != table_fingerprint(table):
-            message = "The table is no longer the object this plan was reviewed against."
-            return Outcome(self.name, Status.FAILED, message, key=name)
-        return self._wrap(document, name, table, count)
-
-    def _wrap(self, document: OdfDocument, name: str, table: etree._Element, count: int) -> Outcome:
-        existing = select_elements(table, "./table:table-header-rows/table:table-row")
-        if existing:
-            if len(existing) == count:
-                return Outcome(
-                    self.name, Status.UNCHANGED, f"Already has {count} header row(s).", key=name
+        plans = []
+        failures = []
+        for name, entry in self.entries.items():
+            matches = [table for table in tables if table.get(qn("table", "name")) == name]
+            try:
+                changes = _preflight(matches, entry)
+                plans.append((name, matches[0], changes))
+            except RemediationError as exc:
+                failures.append(Outcome(self.name, Status.FAILED, str(exc), key=name))
+        if failures:
+            return tuple(failures)
+        outcomes = []
+        for name, table, changes in plans:
+            for axis, count in changes.items():
+                mark_axis(table, axis, count)
+            if changes:
+                document.edit(Part.CONTENT)
+            outcomes.append(
+                Outcome(
+                    self.name,
+                    Status.APPLIED if changes else Status.UNCHANGED,
+                    "Applied reviewed table headers."
+                    if changes
+                    else "Table headers already match.",
+                    key=name,
+                    count=len(changes),
                 )
-            message = f"Already has {len(existing)} header row(s), not {count}."
-            return Outcome(self.name, Status.FAILED, message, key=name)
-        rows = select_elements(table, "./table:table-row")
-        if len(rows) < count:
-            message = f"Has only {len(rows)} direct row(s), not {count}."
-            return Outcome(self.name, Status.FAILED, message, key=name)
-        document.edit(Part.CONTENT)
-        wrapper = etree.Element(qn("table", "table-header-rows"))
-        table.insert(table.index(rows[0]), wrapper)
-        for row in rows[:count]:
-            wrapper.append(row)
-        return Outcome(
-            self.name, Status.APPLIED, f"Marked {count} header row(s).", key=name, count=count
-        )
+            )
+        return tuple(outcomes)
+
+
+def _preflight(matches: list[etree._Element], entry: TableHeaders) -> dict[str, int]:
+    """Resolve a unique target and prove both requested boundaries are safe.
+
+    Returns
+    -------
+    dict[str, int]
+        Only the axes that need a change.
+
+    Raises
+    ------
+    RemediationError
+        A target/count/boundary is ambiguous, stale, invalid or unavailable.
+
+    """
+    if len(matches) != 1:
+        msg = "The table name must resolve to exactly one table."
+        raise RemediationError(msg)
+    table = matches[0]
+    if entry.fingerprint is not None and entry.fingerprint != table_fingerprint(table):
+        msg = "The table is no longer the object this plan was reviewed against."
+        raise RemediationError(msg)
+    if entry.rows is None and entry.columns is None:
+        msg = "A table-header decision needs rows or columns."
+        raise RemediationError(msg)
+    changes = {}
+    for axis, count in [("rows", entry.rows), ("columns", entry.columns)]:
+        if count is None:
+            continue
+        if type(count) is not int or count < 1 or count > axis_count(table, axis):
+            msg = f"Header {axis} must be a positive count within the table."
+            raise RemediationError(msg)
+        if header_count(table, axis) != count:
+            changes[axis] = count
+    require_safe_boundary(table, entry.rows, entry.columns)
+    return changes

@@ -24,7 +24,7 @@ These apply to every ODF document, whatever its family.
 
 ## ODF declarations, kind, schema and metadata
 
-Also common to every family. `ODF009` says that a document's family has no semantic audit yet (text and spreadsheet documents have one): the common checks ran and nothing is implied about the rest.
+Also common to every family. `ODF009` says that a document's family has no semantic audit yet (all eight document families have one): the common checks ran and nothing is implied about the rest.
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ Also common to every family. `ODF009` says that a document's family has no seman
 | `ODF005` | Error | The media type is not an OpenDocument document type. |  |
 | `ODF006` | Error | The document body does not match its media type. |  |
 | `ODF007` | Warning | The file extension does not match the media type. |  |
-| `ODF008` | Warning | The document kind is deprecated or legacy. |  |
+| `ODF008` | Warning | The document kind is deprecated. |  |
 | `ODF009` | Info | No semantic audit exists for this document family. |  |
 | `ODF010` | Error | A flat XML document's root is not office:document. |  |
 | `ODF011` | Error | A package's content root is not office:document-content. |  |
@@ -56,9 +56,10 @@ Owned by the text family (`TXT`). A document of another family never produces th
 | `TXT003` | Warning | Heading text resembles manually typed numbering. |  |
 | `TXT004` | Info | No structural headings were found. |  |
 | `TXT005` | Warning | Footnotes or endnotes need reading-order review. |  |
-| `TXT010` | Error | Graphic has neither accessible title nor description. | `text.alt_text` |
+| `TXT010` | Error | Graphic has neither accessible title nor description. | `text.graphics` |
 | `TXT020` | Error | Table has merged or split cells. |  |
-| `TXT021` | Warning | Data-like table has no header rows. | `text.table_headers` |
+| `TXT022` | Error | Table grid or header bands cannot be resolved safely. |  |
+| `TXT021` | Warning | Data-like table has no semantic headers. | `text.table_headers` |
 | `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.remediation.linkify_plain_addresses` |
 | `TXT040` | Info | Empty paragraphs may be visual spacers. | `text.remediation.remove_empty_spacers` |
 | `TXT050` | Error | Blinking text styling is declared. |  |
@@ -73,10 +74,78 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `SHEET002` | Warning | Sheet keeps its default name. | `spreadsheet.sheet_names` |
 | `SHEET003` | Warning | Data sheet marks no header rows. |  |
 | `SHEET004` | Warning | Data sheet merges cells. |  |
-| `SHEET005` | Error | Picture, chart or object has neither accessible title nor description. | `spreadsheet.alt_text` |
+| `SHEET005` | Error | Picture, chart or object has neither accessible title nor description. | `spreadsheet.graphics` |
 | `SHEET006` | Warning | Hyperlink text is a raw address. |  |
 | `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
 | `SHEET008` | Warning | Hidden sheets, rows or columns are present. |  |
+
+## Presentations
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `PRES001` | Error | Pages are missing, unnamed or ambiguously named. |  |
+| `PRES002` | Warning | Page has no accessible title. | `presentation.pages` |
+| `PRES003` | Error | Graphic payload has no accessible description. | `presentation.graphics` |
+| `PRES004` | Warning | Nontext shape needs a meaning/decorative-content decision. | `presentation.graphics` |
+| `PRES005` | Error | Navigation order is incomplete or ambiguous. | `presentation.pages` |
+| `PRES006` | Warning | Page has no explicit navigation order. | `presentation.pages` |
+| `PRES007` | Warning | Hidden content needs review. |  |
+| `PRES008` | Info | Notes or annotations need relationship and reading-order review. |  |
+| `PRES009` | Error | Hyperlink has no readable purpose. |  |
+
+## Drawings
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `DRAW001` | Error | Pages are missing, unnamed or ambiguously named. |  |
+| `DRAW002` | Warning | Page has no accessible title. | `drawing.pages` |
+| `DRAW003` | Error | Graphic payload has no accessible description. | `drawing.graphics` |
+| `DRAW004` | Warning | Nontext shape needs a meaning/decorative-content decision. | `drawing.graphics` |
+| `DRAW005` | Error | Navigation order is incomplete or ambiguous. | `drawing.pages` |
+| `DRAW006` | Warning | Page has no explicit navigation order. | `drawing.pages` |
+| `DRAW007` | Warning | Hidden content needs review. |  |
+| `DRAW008` | Info | Notes or annotations need relationship and reading-order review. |  |
+| `DRAW009` | Error | Hyperlink has no readable purpose. |  |
+
+## Formula
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `MATH001` | Error | Native mathematical expression is missing or unsupported. |  |
+| `MATH002` | Error | Formula has no spoken alternative. | `formula.alternative` |
+| `MATH003` | Warning | Formula references external content requiring review. |  |
+
+## Charts
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `CHART001` | Error | Chart body or data series is missing or ambiguous. |  |
+| `CHART002` | Warning | Chart has no identifying title. | `document.title` |
+| `CHART003` | Error | Chart has no supplied document description. | `document.description` |
+| `CHART004` | Error | Local chart range does not match its declared data grid. |  |
+| `CHART005` | Warning | Chart data provider or range cannot be verified locally. |  |
+| `CHART006` | Warning | Chart labels or data ordering need review. |  |
+
+## Images
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
+| `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
+| `IMAGE001` | Error | Image body does not contain one supported graphic frame. |  |
+| `IMAGE002` | Error | Image has no accessible description. | `image.graphics` |
+| `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
+
+## Databases
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `BASE001` | Error | Database body, connection or embedded storage is missing. |  |
+| `BASE002` | Warning | Database has external connection declarations. |  |
+| `BASE003` | Warning | Database stores authentication information requiring privacy review. |  |
+| `BASE004` | Warning | Database object description is missing or ambiguous. | `database.descriptions` |
+| `BASE005` | Warning | Database has executable scripts requiring offline review. |  |
+| `BASE006` | Info | Queries, forms or reports require native semantic review. |  |
 
 ## PDF inspection and veraPDF
 
@@ -92,7 +161,7 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `PDF007` | Error | A Figure structure element has no alternative text. |  |
 | `PDF008` | Info | No numbered heading structure elements were found. |  |
 | `PDF009` | Error | PDF has no pages. |  |
-| `PDF010` | Error | No extractable text was found. |  |
+| `PDF010` | Error | No extractable text or inspected described graphical content was found. |  |
 | `PDF011` | Error | A custom structure role does not resolve to a standard role. |  |
 | `PDF012` | Error | Heading structure starts too deep or skips a level. |  |
 | `PDF013` | Error | List structure is malformed. |  |
@@ -127,8 +196,8 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
 which `remediate` enforces: it refuses any result with a violation the source did not
 already have. The `TXT` link, table, numbering and spacer findings use heuristics; inspect the
-source in context. Graphics need supplied descriptions, and header rows need a named
-table with an explicit row count. `TXT040` is observational: [spacer
+source in context. Graphics need supplied descriptions, and table headers need a named
+table with explicit leading row or column counts. `TXT040` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
 The `SHEET` findings are structural: a *default name* is a name of the form `Sheet` and
 digits (other languages' defaults are not recognised); a *data sheet* is one whose first row
@@ -152,17 +221,23 @@ defects such as `ODF004` or `PKG004`). A finding with no location applies to the
 file; an audit reports no location at all for a source it cannot open.
 
 ```text
-path     = part [ "/" segment ]
-part     = "content" | "styles" | "meta" | "manifest" | "package" | "document"
-segment  = "heading[" N "]" | "paragraph[" N "]" | "table[" ref "]" | "frame[" ref "]"
-         | "title" | "language" | "mimetype"
-ref      = name | "#" N
+path     = part ( "/" segment )*
+part     = "content" | "styles" | "meta" | "settings" | "manifest" | "package" | "document"
+segment  = domain_name [ "[" ref "]" ]
+ref      = "name=" percent_encoded_name | "id=" percent_encoded_identity | N
 ```
 
-`N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
+
+`domain_name` identifies the audited domain object or field: for example `heading`,
+`paragraph`, `table`, `frame`, `page`, `shape`, `formula`, `chart`, `chart-range`, `query`,
+`query-collection`, `column`, `title`, `description`, `language` or `mimetype`. Nested Base
+objects retain parent segments, such as
+`content/query-collection[name=Fruit]/query[name=Totals]/column[name=Count]`.
+Named and XML-identity values percent-encode reserved delimiters; consumers must not
+split decoded names as path syntax. `N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
 `text:h`, `paragraph[3]` the third `text:p` (headings are not paragraphs here). `ref` is the
-element's declared name (`table[Data]`, `frame[Logo]`) or, when it has none, `#` and its
-index among tables or graphics (`table[#2]`). `meta/title` and `meta/language` name the
+element's percent-encoded declared name (`table[name=Data]`, `frame[name=Logo]`) or, when it has none, its
+index among tables or graphics (`table[2]`). `meta/title` and `meta/language` name the
 missing or conflicting metadata field. `styles` covers style definitions wherever they are
 stored, `package/mimetype` is the ZIP `mimetype` member, and `document` is a flat file or
 a schema or parse defect in one. The text report prints `path` followed by the member in

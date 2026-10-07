@@ -9,14 +9,14 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
+from odfa11y.content import GraphicDescription
 from odfa11y.families.text import (
-    AltText,
-    HeaderRows,
     LinkifyAddresses,
-    MarkHeaderRows,
+    MarkTableHeaders,
     NormalizeSpacing,
     RemoveEmptySpacers,
-    SetAltText,
+    SetGraphicDescriptions,
+    TableHeaders,
     derived_style_name,
 )
 from odfa11y.families.text.styles import catalog_of
@@ -54,7 +54,9 @@ def document(tmp_path: Path, *, version: str = "1.4", **features: Unpack[Feature
         A fresh document.
 
     """
-    return OdfDocument.open(make_minimal_odt(tmp_path / "doc.odt", version=version, **features))
+    return OdfDocument.open(
+        make_minimal_odt(tmp_path / "doc.odt", version=version, features=features)
+    )
 
 
 def assert_valid(doc: OdfDocument) -> None:
@@ -100,31 +102,36 @@ def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail
     tmp_path: Path,
 ) -> None:
     doc = document(tmp_path, with_image_without_alt=True)
-    entries = {"Logo": AltText("Title", "Description"), "Missing": AltText("x")}
-    assert run(SetAltText(entries), doc) == (Status.FAILED,)
+    entries = {
+        "Logo": GraphicDescription("Title", "Description"),
+        "Missing": GraphicDescription("x"),
+    }
+    assert run(SetGraphicDescriptions(entries), doc) == (Status.FAILED,)
     assert doc.edit_count == 0  # selectors are resolved before anything is edited
-    entries = {"Logo": AltText("Title", "Description")}
-    assert run(SetAltText(entries), doc) == (Status.APPLIED,)
+    entries = {"Logo": GraphicDescription("Title", "Description")}
+    assert run(SetGraphicDescriptions(entries), doc) == (Status.APPLIED,)
     assert_valid(doc)
-    assert run(SetAltText({"Logo": AltText("Title", "Description")}), doc) == (Status.UNCHANGED,)
-    assert run(SetAltText({"logo.svg": AltText(description="By file name")}), doc) == (
-        Status.APPLIED,
-    )
+    assert run(
+        SetGraphicDescriptions({"Logo": GraphicDescription("Title", "Description")}), doc
+    ) == (Status.UNCHANGED,)
+    assert run(
+        SetGraphicDescriptions({"logo.svg": GraphicDescription(description="By file name")}), doc
+    ) == (Status.APPLIED,)
     assert_valid(doc)
 
 
-def test_header_rows_apply_once_and_conflicts_fail(tmp_path: Path) -> None:
+def test_header_rows_apply_once_and_can_be_explicitly_revised(tmp_path: Path) -> None:
     doc = document(tmp_path, with_data_table=True)
-    assert run(MarkHeaderRows({"Data": HeaderRows(1)}), doc) == (Status.APPLIED,)
-    assert run(MarkHeaderRows({"Data": HeaderRows(1)}), doc) == (Status.UNCHANGED,)
-    assert run(MarkHeaderRows({"Data": HeaderRows(2)}), doc) == (Status.FAILED,)
+    assert run(MarkTableHeaders({"Data": TableHeaders(1)}), doc) == (Status.APPLIED,)
+    assert run(MarkTableHeaders({"Data": TableHeaders(1)}), doc) == (Status.UNCHANGED,)
+    assert run(MarkTableHeaders({"Data": TableHeaders(2)}), doc) == (Status.APPLIED,)
     assert_valid(doc)
 
 
 def test_header_rows_fail_for_unknown_tables_and_too_many_rows(tmp_path: Path) -> None:
     doc = document(tmp_path, with_data_table=True)
-    assert run(MarkHeaderRows({"Nope": HeaderRows(1)}), doc) == (Status.FAILED,)
-    assert run(MarkHeaderRows({"Data": HeaderRows(9)}), doc) == (Status.FAILED,)
+    assert run(MarkTableHeaders({"Nope": TableHeaders(1)}), doc) == (Status.FAILED,)
+    assert run(MarkTableHeaders({"Data": TableHeaders(9)}), doc) == (Status.FAILED,)
 
 
 def test_linkify_applies_once_and_keeps_the_document_valid(tmp_path: Path) -> None:
@@ -230,14 +237,14 @@ def test_spacing_failures_are_explicit(tmp_path: Path, operation: NormalizeSpaci
 
 
 def test_operations_describe_themselves_in_json_compatible_values() -> None:
-    described = SetAltText({"Logo": AltText("T", "D")}).as_dict()
+    described = SetGraphicDescriptions({"Logo": GraphicDescription("T", "D")}).as_dict()
     assert described == {
-        "operation": "set_alt_text",
+        "operation": "set_graphic_descriptions",
         "entries": {"Logo": {"title": "T", "description": "D", "fingerprint": None}},
     }
-    assert MarkHeaderRows({"Data": HeaderRows(1)}).as_dict() == {
-        "operation": "mark_header_rows",
-        "entries": {"Data": {"rows": 1, "fingerprint": None}},
+    assert MarkTableHeaders({"Data": TableHeaders(1)}).as_dict() == {
+        "operation": "mark_table_headers",
+        "entries": {"Data": {"rows": 1, "columns": None, "fingerprint": None}},
     }
     assert NormalizeSpacing("x", ("A",)).as_dict()["target_styles"] == ("A",)
 

@@ -8,11 +8,12 @@ what will change. Run `odfa11y template original.odt` to print a commented start
 the decisions an audit leaves open.
 
 The file has two common tables, `[document]` and `[fidelity]`, and one table per document
-family, named after the family (`[text]`, `[spreadsheet]`). A family table is read by that
+family (`[text]`, `[spreadsheet]`, `[presentation]`, `[drawing]`, `[formula]`, `[image]`, `[database]`); Chart uses only the common `[document]` table. The drawing adapter
+serves the standard's graphics family. A family table is read by that
 family's adapter and applies only to documents of that family: configuring `[text]` for a
 spreadsheet, or `[spreadsheet]` for a text document, is an error that stops the run before
-anything is written, never a silently ignored section. Other families add their own tables
-when they are supported (see [Architecture](ARCHITECTURE.md#document-families)).
+anything is written, never a silently ignored section. Other families expose decisions appropriate to their contracts
+when supported (see [Architecture](ARCHITECTURE.md#document-families)).
 
 ## Example
 
@@ -35,13 +36,13 @@ remove_empty_spacers = false
 # Uncomment only for a real data table named Data with one header row. The fingerprint
 # (printed by `odfa11y template`) makes the run fail if the table is no longer the one
 # you reviewed.
-# Data = { rows = 1, fingerprint = "0123456789ab" }
+# Data = { rows = 1, fingerprint = "0123456789abcdef" }
 
 # Uncomment only after identifying the graphic and writing meaningful alt text.
-# [text.alt_text.Logo]
+# [text.graphics.Logo]
 # title = "Organisation name"
 # description = "Description of the information conveyed by the graphic"
-# fingerprint = "0123456789ab"
+# fingerprint = "0123456789abcdef"
 
 # [text.spacing]
 # reference_text = "Text of the paragraph whose spacing is the reference"
@@ -52,10 +53,10 @@ remove_empty_spacers = false
 # [spreadsheet.sheet_names]
 # "Sheet1" = "Budget 2026"
 #
-# [spreadsheet.alt_text."Company logo"]
+# [spreadsheet.graphics."Company logo"]
 # title = "Organisation name"
 # description = "Description of the information conveyed by the picture"
-# fingerprint = "0123456789ab"
+# fingerprint = "0123456789abcdef"
 
 [fidelity]
 pagination = "same"
@@ -68,18 +69,25 @@ A test extracts this block and loads it through the real reader.
 | Table/key | Accepted value | When omitted |
 | --- | --- | --- |
 | `document.odf_version` | `"1.3"` or `"1.4"` (versions with a bundled schema). | The declared version is kept. |
-| `document.title`, `document.description` | String; stripped before use. An empty string clears the field. | Existing value kept. |
+| `document.title` | Nonblank string; stripped before use. | Existing title kept. |
+| `document.description` | Nonblank string; stripped before use. | Existing description kept. |
 | `document.language` | Language tag such as `"en-GB"`; sets metadata and, for families that keep a default language in their styles, that default too. | Existing languages kept. |
 | `text.remediation.linkify_plain_addresses` | Boolean. | `false`. |
 | `text.remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
-| `text.table_headers.TABLE_NAME` | Positive integer (leading direct rows to mark as headers) or `{ rows = N, fingerprint = "…" }`. | No change. |
-| `text.alt_text.KEY.title`, `.description` | String. | Existing text kept. |
-| `text.alt_text.KEY.fingerprint` | The fingerprint of the addressed graphic(s). | Not checked. |
+| `text.table_headers.TABLE_NAME` | Structured decision `{ rows = N, columns = M, fingerprint = "…" }`; at least one positive leading logical count. Repeats are counted; an omitted axis stays unchanged. | No change. |
+| `text.heading_levels."TARGET"` | `{ level = N, fingerprint = "…" }`, level 1–10. Use the exact logical target from the report. Ordinal targets require a reviewed fingerprint. | No change. |
+| `text.graphics.KEY.title`, `.description` | String. | Existing text kept. |
+| `text.graphics.KEY.fingerprint` | The fingerprint of the addressed graphic(s). | Not checked. |
 | `text.spacing.reference_text` | Text contained in the reference paragraph (required with `[text.spacing]`). | — |
 | `text.spacing.target_styles` | Non-empty list of paragraph style names (required with `[text.spacing]`). | — |
 | `text.spacing.exact_reference`, `text.spacing.include_headings` | Boolean. | `false`. |
 | `spreadsheet.sheet_names."CURRENT"` | The new name of the sheet currently named `CURRENT`: not blank, without `[ ] * ? : / \`, no apostrophe at either end. | Sheet keeps its name. |
-| `spreadsheet.alt_text.KEY.title`, `.description`, `.fingerprint` | As for `text.alt_text`, addressing frames in sheets. | See `text.alt_text`. |
+| `spreadsheet.graphics.KEY.title`, `.description`, `.fingerprint` | As for `text.graphics`, addressing frames in sheets. | See `text.graphics`. |
+| `presentation.pages."PAGE"`, `drawing.pages."PAGE"` | Structured entry with optional string `title`, `description`, `fingerprint`, and `navigation = ["shape-id", …]`. | Existing metadata/order kept. |
+| `presentation.graphics.KEY`, `drawing.graphics.KEY` | As for `text.graphics`, including vector shapes. | Existing descriptions kept. |
+| `formula.alternative`, `formula.fingerprint` | Nonblank spoken alternative and optional reviewed expression digest. | Native MathML `alttext` kept. |
+| `image.graphics.KEY` | As for `text.graphics`, addressing the standalone image frame. | Existing descriptions kept. |
+| `database.descriptions."TARGET"` | `{ text = "…", fingerprint = "…" }`, addressing the exact report target. Ordinal targets require the fingerprint. | Existing object descriptions kept. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
 | `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
@@ -88,8 +96,8 @@ A test extracts this block and loads it through the real reader.
 Unknown keys, wrong types, non-table sections and non-positive counts are rejected with
 the offending key named. TOML booleans are `true`/`false`, not strings. An empty file is
 valid and requests no change. Operations run in a fixed order (version, metadata, then the
-family's operations: for text, linkify, spacer removal, graphics, header rows, spacing; for
-spreadsheets, sheet names, then alt text), so a configuration always means the same thing.
+family's operations: for text, linkify, spacer removal, graphics, heading levels, table headers, spacing; for
+spreadsheets, sheet names, then graphics), so a configuration always means the same thing.
 
 ## Every selector must match, and mean what you reviewed
 
@@ -97,23 +105,31 @@ A table name, graphic key or spacing reference that matches nothing fails the wh
 and nothing is written; the message lists every miss. Use a table's actual `table:name`
 (not its position or caption). Graphic keys match the `draw:frame` name, the complete
 image `href`, then the image file name, exactly; quote TOML keys containing dots or
-slashes, for example `[text.alt_text."Pictures/logo.svg"]`. A table that already has header
-rows is *unchanged* when the count agrees and a conflict when it does not.
+slashes, for example `[text.graphics."Pictures/logo.svg"]`. A table that already has header
+rows or columns is *unchanged* when the count agrees; an explicit different count revises the boundary. Spans crossing a chosen boundary and non-leading header bands are rejected.
 
 Selectors are resolved before anything is edited. Two entries that address the same graphic
 and set the *same field to different values* both fail; entries that set different fields,
 or the same value, combine.
 
 A **fingerprint** binds an entry to the object you reviewed. It is a short digest of the
-object's identity and of facts no operation changes (a graphic's name, image file, size and
-anchor; a table's name, shape and first-row text), so it stays the same after the plan has
-been applied. If the document has drifted so that the key now addresses something else, the
+object's identity and protected facts (a graphic's structural position, dimensions, references
+and payload bytes; a table's complete logical data, attributes and grid), excluding the
+accessibility metadata the operation edits. If the document has drifted so that the key now addresses something else, the
 entry fails with "no longer the object this plan was reviewed against". `odfa11y template`
 prints the fingerprint of every object it suggests; leaving it out turns the check off.
 
 Describing a graphic is a judgement about this document's meaning. The presence of a
 title or description is only a structural check; do not give every image an arbitrary
 description just to make a finding disappear.
+
+## Heading levels
+
+Use the report target, such as `content/heading[2]` or `content/heading[id=section]`,
+quoted as the TOML table key. Choose the level; the template never enables a guessed
+choice. Every target is resolved before editing. Only `text:outline-level` changes.
+The fingerprint ignores that attribute, so repeated application is unchanged, and rejects
+changed heading content or an ordinal that now selects a different heading.
 
 ## Renaming sheets
 
@@ -141,6 +157,26 @@ the active-sheet selection, in
 `settings.xml` or flat XML. A test reloads a renamed document in LibreOffice and exports it. Renaming also changes what Calc's default page header prints, see
 [spreadsheet PDF exports](ACCESSIBILITY.md#spreadsheet-pdf-exports).
 
+## Presentation and drawing pages
+
+`[presentation.pages]` and `[drawing.pages]` address exact unique `draw:name` values.
+Each page decision sets supplied standard title/description metadata and optionally a
+complete navigation list. Navigation uses existing XML/drawing shape identities, includes
+every top-level shape exactly once (a group is one entry), and rejects identities duplicated
+anywhere in the content document. No identity or reading order is guessed. If identities
+are missing, set explicit navigation in the native application first and save the document.
+Templates leave every choice commented out.
+
+`[presentation.graphics]` and `[drawing.graphics]` describe frames and vector shapes.
+Descriptions are inserted in the standard order appropriate to their element. An empty
+native notes placeholder or a generated page thumbnail does not need an invented graphic
+alternative. Notes, annotations, hidden slides/layers, group relationships and visual
+meaning still need the adapter's human review.
+
+Page metadata is a source semantic decision; it does not create visible heading text or
+claim a PDF heading role. Complete native integration independently checks figure
+alternatives, PDF/UA validation, fidelity and evidence.
+
 ## Spacing
 
 `[text.spacing]` copies the effective spacing of the paragraph containing `reference_text`
@@ -157,3 +193,25 @@ operation fails, so an author's style is never overwritten or reinterpreted. Use
 Every operation reports `applied`, `unchanged` or `failed`. A second run over the result
 reports everything `unchanged` and writes identical members. `remediate --dry-run` shows
 the outcomes without writing.
+
+## Formula, Chart, Image and Base
+
+Formula decisions edit native MathML `alttext` and language, preserving the expression and
+StarMath annotation. The bundled normative MathML 3 grammar validates native expressions;
+an invented flat `office:formula` wrapper is rejected. Math's native PDF export currently
+lacks required tags, so source success does not establish PDF/UA conformance.
+
+Chart alternatives use `[document].description`, and identifying titles use
+`[document].title`. There is no separate chart plan or visible title rewrite. Data, series,
+ranges, formulas and labels remain protected. External data providers are reported and
+never fetched. Image descriptions use `[image.graphics]`; malformed payloads fail and
+active/external SVG declarations need review. Standard image media types remain deprecated.
+
+Base plans use `[database.descriptions."content/query[name=Example]"]` with nonblank
+`text` and a reviewed `fingerprint`. Declared objects use standard `db:description` or
+form control `form:title`. SQL, bindings, settings and opaque database/form/report bytes
+remain protected. Connections, queries and macros are never executed. Chart, Image and
+Base have no native PDF export contract; `production` fails at that assurance boundary.
+
+When native packages omit optional `meta.xml`, explicit document metadata creates the
+standard part and its manifest entry, using the declared supported ODF version.

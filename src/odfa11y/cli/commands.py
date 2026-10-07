@@ -40,6 +40,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import remediate
 from odfa11y.report import Report, exit_status, render_reports
 
+from .batch import batch_command
 from .parser import build_parser
 
 if TYPE_CHECKING:
@@ -62,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": _audit,
+        "batch": batch_command,
         "template": _template,
         "remediate": _remediate,
         "export": _export,
@@ -71,14 +73,28 @@ def main(argv: list[str] | None = None) -> int:
         "check-evidence": _check_evidence,
         "doctor": _doctor,
     }
+    sarif = getattr(args, "format", None) == "sarif"
     try:
+        if sarif:
+            _preflight_sarif(args)
         return handlers[args.command](args)
-    except (OdfA11yError, OSError) as exc:
+    except (OdfA11yError, OSError, ValueError) as exc:
+        if sarif:
+            print(
+                "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
+            )
+            return EXECUTION_FAILURE
         print(f"error: {exc}", file=sys.stderr)
         details = getattr(exc, "details", "")
         if details:
             print(details, file=sys.stderr)
         return EXECUTION_FAILURE
+
+
+def _preflight_sarif(args: argparse.Namespace) -> None:
+    sources = tuple(args.sources) if args.command == "audit" else (args.candidate, args.source)
+    report = Report(kind="source", subject="", sources=sources)
+    render_reports([report], output_format="sarif", source_root=args.source_root)
 
 
 def _is_pdf(path: Path) -> bool:
@@ -98,7 +114,7 @@ def _audit(args: argparse.Namespace) -> int:
                 reports.append(report)
         else:
             reports.append(audit_odf(source, schema=args.schema))
-    print(render_reports(reports, output_format=args.format))
+    print(render_reports(reports, output_format=args.format, source_root=args.source_root))
     return exit_status(reports, strict=args.strict)
 
 
@@ -155,7 +171,8 @@ def _compare(args: argparse.Namespace) -> int:
         right = _as_pdf(args.candidate, work / "candidate.pdf", args, work / "profile")
         report = compare_pdfs(left, right, policy, diff_dir=args.diff_dir)
     report.subject = f"{args.candidate.name} vs {args.source.name}"
-    print(render_reports([report], output_format=args.format))
+    report.sources = (args.candidate, args.source)
+    print(render_reports([report], output_format=args.format, source_root=args.source_root))
     return exit_status([report], strict=args.strict)
 
 

@@ -23,7 +23,7 @@ def spreadsheet_template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str
     """
     return [
         *_sheet_names(by_remedy.get("spreadsheet.sheet_names", ())),
-        *_alt_text(by_remedy.get("spreadsheet.alt_text", ())),
+        *_alt_text(by_remedy.get("spreadsheet.graphics", ())),
     ]
 
 
@@ -50,7 +50,7 @@ def _alt_text(findings: Sequence[Finding]) -> list[str]:
             continue
         seen.add(str(key))
         lines += [
-            f"# [spreadsheet.alt_text.{json.dumps(str(key))}]",
+            f"# [spreadsheet.graphics.{json.dumps(str(key))}]",
             '# title = ""',
             f'# description = ""  # {finding.rule_id}: describe what the object conveys',
             (

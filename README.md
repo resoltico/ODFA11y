@@ -1,7 +1,7 @@
 # ODFA11y
 
 Recognise and check every kind of OpenDocument file, and audit, explicitly remediate and
-export text documents and spreadsheets as PDF/UA-1 with evidence of what changed and what a person must still
+export supported document families as PDF/UA-1 with evidence of what changed and what a person must still
 check.
 
 ODFA11y works on both the editable ODF source and the exported PDF, because an accessible
@@ -19,9 +19,13 @@ source does not guarantee an accessible export.
   merged cells, graphics, links and hidden content; explicit sheet renaming and object alt
   text; Calc export and evidence. Exporter limitations can prevent PDF/UA conformance;
   see [spreadsheet exports](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports).
-- **Other families (presentations, drawings and the rest):** recognised and
-  checked in common only. The audit reports `ODF009` rather than implying semantic coverage;
-  see [Accessibility and limits](docs/ACCESSIBILITY.md#document-families).
+- **Presentations and drawings:** native Impress/Draw page and shape audits, supplied
+  descriptions, complete navigation decisions, export, validation, fidelity and evidence.
+- **Formula, Chart, Image and Base:** source audits with reviewed mathematical alternatives,
+  chart metadata, graphic descriptions and database object descriptions. Native Math export
+  currently fails PDF tagging. Chart, Image and Base have source assurance only; production
+  fails when required PDF stages cannot run. No database connections or SQL are executed.
+
 
 It is conservative by design: it never invents alternative text, heading levels or table
 headers, and a clean report is not an accessibility certificate. Reading order, alt-text
@@ -68,6 +72,7 @@ uv run --no-sync odfa11y check-evidence evidence
 | `export SRC DEST` | Export an ODF document to PDF/UA with LibreOffice. |
 | `compare A B` | Compare two ODF documents or PDFs for pages, text, links and rendered ink. |
 | `pipeline SRC --config FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
+| `batch MANIFEST --output-dir DIR` | Independent manifest runs, atomic per-item evidence and aggregate status; see [Batch](docs/BATCH.md). |
 | `styles FILE` | Paragraph-style usage and effective spacing. |
 | `check-evidence DIR` | Verify an evidence directory against its manifest. |
 | `doctor` | Dependency and external-tool versions, and its named-link PDF/UA self-test (`pdfua_link_descriptions`). |
@@ -85,6 +90,8 @@ Each package exposes its API through its `__init__`: for example
 ## Documentation
 
 - [Workflow](docs/WORKFLOW.md): staged commands, reports, exit statuses and troubleshooting.
+- [Batch](docs/BATCH.md): strict manifests, failure continuation and interruption evidence.
+- [SARIF](docs/SARIF.md): confined source identities and logical findings for tooling.
 - [Configuration](docs/CONFIGURATION.md): the maintained TOML example and every field.
 - [Fidelity](docs/FIDELITY.md): what the render comparison measures and how to set its policy.
 - [Evidence](docs/EVIDENCE.md): the evidence directory, its record and verification.
@@ -111,3 +118,5 @@ reproduced verbatim in [src/odfa11y/odf/schemas/NOTICE.txt](src/odfa11y/odf/sche
 and shipped in every wheel and source archive. ODFA11y is not affiliated with or endorsed by OASIS.
 LibreOffice, veraPDF and OpenDocument are names of their respective owners; the project
 only invokes the first two as external applications and does not redistribute them.
+
+The normative MathML 3.0 grammar is bundled unmodified under the [W3C software notice](src/odfa11y/odf/schemas/mathml/NOTICE.txt); schema source URLs and digests share [the provenance record](src/odfa11y/odf/schemas/PROVENANCE.toml).

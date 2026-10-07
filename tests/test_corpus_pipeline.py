@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from odfa11y.content import GraphicDescription
 from odfa11y.evidence import check_bundle
-from odfa11y.families.text import AltText, LinkifyAddresses, SetAltText
+from odfa11y.families.text import LinkifyAddresses, SetGraphicDescriptions
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.pdf import validate_pdfua
 from odfa11y.pipeline import STAGE_NAMES, PipelineOptions, run_pipeline
@@ -25,7 +26,9 @@ if TYPE_CHECKING:
 # Each plan resolves the document's findings that would otherwise fail the audit gate.
 PIPELINE_RUNS: dict[str, list[Operation]] = {
     "links.odt": [LinkifyAddresses()],
-    "images-undescribed.fodt": [SetAltText({"Image1": AltText("Red square")})],
+    "images-undescribed.fodt": [
+        SetGraphicDescriptions({"Image1": GraphicDescription("Red square")})
+    ],
     "header-footer.fodt": [],
 }
 

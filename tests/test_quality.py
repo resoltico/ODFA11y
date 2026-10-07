@@ -12,7 +12,8 @@ from tools.check_quality import check_repository
 
 def _repository(tmp_path: Path) -> Path:
     (tmp_path / "pyproject.toml").write_text(
-        "[tool.odfa11y.quality]\nmax-file-lines = 300\n", encoding="utf-8"
+        '[tool.odfa11y.quality]\nmax-file-lines = 300\n[tool.ruff.lint]\nselect = ["ALL"]\n',
+        encoding="utf-8",
     )
     return tmp_path
 
@@ -77,7 +78,7 @@ def test_project_satisfies_policy() -> None:
 def test_lint_exception_requires_a_reason(tmp_path: Path, settings: str) -> None:
     root = _repository(tmp_path)
     with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
-        stream.write(settings)
+        stream.write(settings.replace("[tool.ruff.lint]\n", ""))
     (root / "example.py").write_text("value = 1\n", encoding="utf-8")
     assert any("reason comment" in error for error in check_repository(root))
 
@@ -116,6 +117,27 @@ def test_family_specific_names_are_rejected_in_the_core(tmp_path: Path, source: 
     assert any("family" in error for error in check_repository(root))
 
 
+@pytest.mark.parametrize(
+    "prefix", ["presentation", "chart", "db", "form", "dr3d", "math", "script"]
+)
+def test_specialized_content_names_are_rejected_in_orchestration(
+    tmp_path: Path, prefix: str
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(
+        root,
+        "pipeline",
+        "run.py",
+        source=f"""from x import qn
+qualified = qn("{prefix}", "content")
+xpath = "//{prefix}:content"
+""",
+    )
+    errors = check_repository(root)
+    assert len(errors) == 2
+    assert all("family" in error and prefix in error for error in errors)
+
+
 def test_family_specific_names_are_allowed_in_a_family_package(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     _core_file(root, "families", "text", "audit.py", source='value = "//text:p"\n')
@@ -132,4 +154,85 @@ def test_core_prose_and_common_prefixes_are_allowed(tmp_path: Path) -> None:
         'body = "office:text"\n'
     )
     _core_file(root, "odf", "kinds.py", source=source)
+    assert check_repository(root) == []
+
+
+def test_shared_content_vocabulary_is_allowed_but_does_not_exempt_orchestration(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, "content", "tables.py", source='value = "//table:table-row"\n')
+    assert check_repository(root) == []
+    _core_file(root, "pipeline", "run.py", source='value = "//table:table-row"\n')
+    assert any("family" in error for error in check_repository(root))
+
+
+@pytest.mark.parametrize("directory", ["build", "dist"])
+def test_authored_nested_build_names_do_not_bypass_file_size_gate(
+    tmp_path: Path, directory: str
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, directory, "authored.py", source="\n" * 301)
+    assert any("301 lines" in error for error in check_repository(root))
+
+
+def test_generated_root_build_outputs_are_excluded_but_ignored_authored_files_are_checked(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    for directory in ("build", "dist"):
+        target = root / directory
+        target.mkdir()
+        (target / "generated.py").write_text("\n" * 301)
+    (root / "authored.py").write_text("value = 1\n")
+    assert check_repository(root) == []
+    (root / ".gitignore").write_text(".authored/\n")
+    ignored = root / ".authored"
+    ignored.mkdir()
+    (ignored / "source.py").write_text("\n" * 301)
+    assert any(str(Path(".authored") / "source.py") in error for error in check_repository(root))
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'from odfa11y.odf import qn as tag\nvalue = tag("text", "p")\n',
+        'import odfa11y.odf as odf\nvalue = odf.qn("text", "p")\n',
+        'from odfa11y.odf import qn\nvalue = qn(prefix="text", local="p")\n',
+        'from odfa11y.odf import qn as tag\nvalue = tag(prefix="text", local="p")\n',
+        'import odfa11y.odf as odf\nvalue = odf.qn(prefix="text", local="p")\n',
+    ],
+)
+def test_ordinary_qualified_name_forms_cannot_bypass_family_boundaries(
+    tmp_path: Path, source: str
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, "audit", "engine.py", source=source)
+    assert any("text: elements" in error for error in check_repository(root))
+
+
+def test_alias_detection_keeps_common_core_and_shared_content_vocabulary_valid(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(
+        root,
+        "audit",
+        "engine.py",
+        source='from x import qn as tag\nvalue = tag(prefix="office", local="body")\n',
+    )
+    _core_file(
+        root, "content", "text.py", source='from x import qn as tag\nvalue = tag("text", "p")\n'
+    )
+    assert check_repository(root) == []
+
+
+def test_normative_foreign_schema_namespace_is_structural_core_vocabulary(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    _core_file(
+        root,
+        "odf",
+        "schema.py",
+        source='from x import NS\nnamespace = NS["math"]\nschema = "mathml/mathml3.rng"\n',
+    )
     assert check_repository(root) == []

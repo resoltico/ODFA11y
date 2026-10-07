@@ -11,6 +11,7 @@ import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 DOWNLOAD = (
     "https://software.verapdf.org/releases/{series}/verapdf-greenfield-{version}-installer.zip"
@@ -68,7 +69,7 @@ def configuration(install_dir: Path) -> str:
         The IzPack automated-installation XML for the given directory.
 
     """
-    return CONFIGURATION.format(install_dir=install_dir)
+    return CONFIGURATION.format(install_dir=escape(str(install_dir)))
 
 
 def install(version: str, sha256: str, destination: Path) -> Path:

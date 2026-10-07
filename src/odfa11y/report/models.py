@@ -5,13 +5,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote
 
 from .rules import Severity
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .rules import Rule
 
-REPORT_FORMAT = 3
+REPORT_FORMAT = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +28,30 @@ class Location:
 
     path: str
     member: str | None = None
+
+    @classmethod
+    def named(cls, part: str, element: str, name: str) -> Location:
+        """Create an unambiguous named logical location.
+
+        Returns
+        -------
+        Location
+            A URI-escaped name within the given document part.
+
+        """
+        return cls(f"{part}/{element}[name={quote(name, safe='')}]")
+
+    @classmethod
+    def indexed(cls, part: str, element: str, index: int) -> Location:
+        """Create an ordinal logical location.
+
+        Returns
+        -------
+        Location
+            A one-based element ordinal in its part.
+
+        """
+        return cls(f"{part}/{element}[{index}]")
 
     @property
     def label(self) -> str:
@@ -83,6 +110,7 @@ class Report:
     subject: str
     findings: list[Finding] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    sources: tuple[Path, ...] = ()  # physical identity is internal and never serialized
 
     def add(
         self,

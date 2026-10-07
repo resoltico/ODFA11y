@@ -6,10 +6,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from odfa11y.content import GraphicIdentity
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import Location, rules
 
-from .objects import frame_keys, frames_fingerprint
 from .sheets import cell_text, is_data_sheet, is_empty, sheet_name, sheets
 
 if TYPE_CHECKING:
@@ -38,14 +38,19 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     report.metadata["sheet_count"] = len(all_sheets)
     _audit_names(all_sheets, report)
     _audit_data_sheets(all_sheets, report)
-    _audit_graphics(content, report)
+    _audit_graphics(document, report)
     _audit_links(all_sheets, report)
     _audit_trailing_empty_sheets(all_sheets, report)
     _audit_hidden(content, all_sheets, report)
 
 
 def _location(index: int, sheet: etree._Element) -> Location:
-    return Location(f"{Part.CONTENT}/sheet[{sheet_name(sheet) or f'#{index}'}]")
+    name = sheet_name(sheet)
+    return (
+        Location.named(Part.CONTENT, "sheet", name)
+        if name
+        else Location.indexed(Part.CONTENT, "sheet", index)
+    )
 
 
 def _audit_names(all_sheets: list[etree._Element], report: Report) -> None:
@@ -87,12 +92,13 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
             )
 
 
-def _audit_graphics(content: etree._ElementTree, report: Report) -> None:
+def _audit_graphics(document: OdfDocument, report: Report) -> None:
+    content = document.tree(Part.CONTENT)
     frames = select_elements(
         content, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
     )
     report.metadata["graphic_object_count"] = len(frames)
-    everything = select_elements(content, "//office:body//draw:frame")
+    identity = GraphicIdentity(document, select_elements(content, "//office:body//draw:frame"))
     for index, frame in enumerate(frames, start=1):
         title = frame.findtext("svg:title", namespaces=NS)
         desc = frame.findtext("svg:desc", namespaces=NS)
@@ -102,15 +108,19 @@ def _audit_graphics(content: etree._ElementTree, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         selector = declared_name or href
-        addressed = [f for f in everything if selector in frame_keys(f)] if selector else [frame]
+        addressed = identity.matching(selector) if selector else [frame]
         report.add(
             rules.SHEET005,
             "Picture, chart or object has neither accessible title nor description.",
-            location=Location(f"{Part.CONTENT}/frame[{declared_name or f'#{index}'}]"),
+            location=(
+                Location.named(Part.CONTENT, "frame", declared_name)
+                if declared_name
+                else Location.indexed(Part.CONTENT, "frame", index)
+            ),
             details={
                 "frame": declared_name,
                 "href": href,
-                "fingerprint": frames_fingerprint(addressed),
+                "fingerprint": identity.fingerprint(addressed),
             },
         )
 

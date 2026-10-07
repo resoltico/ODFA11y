@@ -39,7 +39,7 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
 
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     single = json.loads(render_reports([_report()], output_format="json"))
-    assert single["format"] == 3
+    assert single["format"] == 4
     assert single["kind"] == "odf"
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]

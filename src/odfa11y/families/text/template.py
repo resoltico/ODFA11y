@@ -28,7 +28,15 @@ def text_template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
     ):
         if body:
             lines += [f"# {title}", *body, ""]
-    lines += _alt_text(by_remedy.get("text.alt_text", ()))
+    for finding in by_remedy.get("text.heading_levels", ()):
+        if finding.location is not None:
+            lines += [
+                f"# [text.heading_levels.{json.dumps(finding.location.path)}]",
+                "# level = 1  # choose the intended level",
+                f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}",
+                "",
+            ]
+    lines += _alt_text(by_remedy.get("text.graphics", ()))
     return lines
 
 
@@ -70,7 +78,7 @@ def _alt_text(findings: Sequence[Finding]) -> list[str]:
             continue
         seen.add(str(key))
         lines += [
-            f"# [text.alt_text.{json.dumps(str(key))}]",
+            f"# [text.graphics.{json.dumps(str(key))}]",
             '# title = ""',
             f'# description = ""  # {finding.rule_id}: describe what the graphic conveys',
             (

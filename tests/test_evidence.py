@@ -123,7 +123,7 @@ def test_review_items_appear_in_the_accessibility_guide() -> None:
 
 def test_review_table_cells_stay_on_one_line_and_escape_pipes() -> None:
     failed = record(status="failed", failed_stage="remediate")
-    failed["stages"][0]["reason"] = "Remediation failed:\n- set_alt_text [Logo]: a | b"
+    failed["stages"][0]["reason"] = "Remediation failed:\n- set_graphic_descriptions [Logo]: a | b"
     table = [
         line for line in render_review(failed).splitlines() if line.startswith("| `audit-pdf`")
     ]

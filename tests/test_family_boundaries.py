@@ -11,9 +11,10 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
+from odfa11y.content import GraphicDescription
 from odfa11y.errors import RemediationError
 from odfa11y.families import REGISTRY, adapter_for
-from odfa11y.families.text import AltText, SetAltText
+from odfa11y.families.text import SetGraphicDescriptions
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
@@ -69,11 +70,14 @@ def test_a_package_without_mimetype_falls_back_to_the_manifest(tmp_path: Path) -
     assert report.error_count == 0
 
 
-def test_the_legacy_database_media_type_is_recognised_and_flagged(tmp_path: Path) -> None:
-    path = make_package(tmp_path, "database", Variant(media_type="application/vnd.sun.xml.base"))
+@pytest.mark.parametrize(
+    "media", ["application/vnd.sun.xml.base", "application/vnd.oasis.opendocument.database"]
+)
+def test_retired_database_media_types_are_rejected(tmp_path: Path, media: str) -> None:
+    path = make_package(tmp_path, "database", Variant(media_type=media))
     report = audit_odf(path)
-    assert report.metadata["family"] == "database"
-    assert "ODF008" in ids(report)
+    assert "ODF005" in ids(report)
+    assert OdfDocument.open(path).kind is None
 
 
 def test_deprecated_image_documents_are_flagged(tmp_path: Path) -> None:
@@ -99,7 +103,7 @@ def test_a_text_plan_is_refused_for_every_other_family(
 ) -> None:
     source = make(tmp_path, "presentation")
     destination = tmp_path / "out"
-    plan = [SetAltText({"Logo": AltText("x")})]
+    plan = [SetGraphicDescriptions({"Logo": GraphicDescription("x")})]
     with pytest.raises(RemediationError, match="do not apply to a presentation document"):
         remediate(source, destination, plan)
     assert not destination.exists()
@@ -160,7 +164,13 @@ def test_the_template_refuses_a_source_it_cannot_read(
 
 def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(
+        REGISTRY,
+        Family.PRESENTATION,
+        dataclasses.replace(adapter_for(None), family=Family.PRESENTATION),
+    )
     source = make_package(tmp_path, "presentation")
     record = run_pipeline(
         source, [SetMetadata(title="T")], FidelityPolicy(), tmp_path / "out", PipelineOptions()
@@ -179,7 +189,13 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
 
 def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(
+        REGISTRY,
+        Family.PRESENTATION,
+        dataclasses.replace(adapter_for(None), family=Family.PRESENTATION),
+    )
     record = run_pipeline(
         make_package(tmp_path, "presentation"),
         [],

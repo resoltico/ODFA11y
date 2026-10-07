@@ -115,7 +115,7 @@ def check_pdfua(
         parsed result, which is None when the validator was unavailable.
 
     """
-    report = Report(kind="verapdf", subject=subject)
+    report = Report(kind="verapdf", subject=subject, sources=(Path(pdf),))
     try:
         located = find_verapdf(executable)
     except ToolNotFoundError as exc:

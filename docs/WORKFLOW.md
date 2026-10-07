@@ -6,11 +6,11 @@ writes to a path you choose.
 
 The commands work on any OpenDocument file, a ZIP package (`.odt`, `.ods`, `.odp`, `.odg`,
 templates, …) or a flat XML file (`.fodt`, `.fods`, …); the file's declared media type, not
-its extension, decides what it is. Text documents and spreadsheets get the full workflow
-below. Other kinds get the common checks (package, kind, version, metadata, schema), `audit`
-notes with `ODF009` that no semantic audit exists for their family yet, and the common
-`[document]` decisions can still be applied; see
-[Architecture](ARCHITECTURE.md#document-families).
+its extension, decides what it is. Text, spreadsheet, presentation and drawing families have native PDF workflows. Formula
+has native source semantics and an exporter whose current tagging failures remain gates.
+Chart, Image and Base have source assurance only; production fails when required PDF
+stages cannot run. See [family contracts](ARCHITECTURE.md#document-families),
+[batch runs](BATCH.md) and [SARIF output](SARIF.md).
 
 ## 1. Establish the baseline
 

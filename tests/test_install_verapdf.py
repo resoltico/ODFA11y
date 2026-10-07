@@ -7,6 +7,7 @@ import hashlib
 from pathlib import Path
 
 import pytest
+from lxml import etree
 
 from tools.install_verapdf import configuration, release_url, verify_sha256
 
@@ -35,3 +36,9 @@ def test_the_unattended_configuration_names_the_install_directory(tmp_path: Path
 def test_the_workflow_pins_the_release_this_tool_installs() -> None:
     workflow = (Path(__file__).parents[1] / ".github/workflows/checks.yml").read_text("utf-8")
     assert "tools/install_verapdf.py" in workflow
+
+
+def test_the_installer_preserves_paths_with_xml_metacharacters(tmp_path: Path) -> None:
+    destination = tmp_path / "a&b<c>"
+    root = etree.fromstring(configuration(destination).encode())
+    assert root.findtext(".//installpath") == str(destination)

@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from odfa11y.errors import ToolFailedError
+from .inline_image import inline_image_end
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -25,12 +25,15 @@ _TOKEN = re.compile(
 )
 _NAME_ESCAPE = re.compile(rb"#([0-9a-fA-F]{2})")
 _STRING_EDGE = re.compile(rb"[()\\]")
-_INLINE_DATA = re.compile(rb"(?<!/)\bID(?:\r\n|[" + _SPACE + rb"])")
-_INLINE_IMAGE_END = re.compile(rb"[" + _SPACE + rb"]+EI(?=[" + _SPACE + rb"]|$)")
 _TEXT_SHOWING = {b"Tj", b"TJ", b"'", b'"'}
 _ARTIFACT = ("name", "/Artifact")
 _NO_OPERAND = ("", None)
 _NUMBER_START = b"+-.0123456789"
+_NUMBER = re.compile(rb"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)")
+_PATH_ARGUMENTS = {b"m": 2, b"re": 4, b"l": 2, b"c": 6, b"v": 4, b"y": 4}
+MAX_OPERANDS = 6
+ARTIFACT_FLAG = 1
+GRAPHICS_FLAG = 2
 PROPERTY_LIST = 2  # BDC takes a tag and its properties
 
 Operand = tuple[str, int | str | None]
@@ -42,22 +45,29 @@ class ContentScan:
 
     mcids: set[int] = field(default_factory=set)
     unmarked_text_operations: int = 0
+    graphical_mcids: set[int] = field(default_factory=set)
 
 
 @dataclass(slots=True)
 class _Scanner:
     properties: Callable[[str], int | None]
+    image: Callable[[str], bool] | None = None
     scan: ContentScan = field(default_factory=ContentScan)
-    sequences: list[bool] = field(default_factory=list)  # True: tags real content or is artifact
+    sequences: list[int | None] = field(default_factory=list)
+    flags: bytearray = field(default_factory=bytearray)
+    artifacts: int = 0
+    path_started: bool = False
+    path_drawable: bool = False
     covered: int = 0
     operands: list[Operand] = field(default_factory=list)
     dict_depth: int = 0
+    array_depth: int = 0
     dict_key: str = ""
     dict_mcid: int | None = None
 
     def operand(self, kind: str, value: int | str | None = None) -> None:
         self.operands.append((kind, value))
-        del self.operands[:-2]  # an operator reads at most its last two operands
+        del self.operands[:-MAX_OPERANDS]
 
     def inside_dictionary(self, kind: str, text: str) -> None:
         if kind == "name":
@@ -67,6 +77,8 @@ class _Scanner:
             self.dict_key = ""
 
     def token(self, kind: str, text: bytes) -> None:
+        if (self.array_depth or kind == "delimiter") and self._array(kind, text):
+            return
         if kind == "dict_open":
             if not self.dict_depth:
                 self.dict_mcid, self.dict_key = None, ""
@@ -76,13 +88,32 @@ class _Scanner:
             if not self.dict_depth:
                 self.operand("dict", self.dict_mcid)
         elif self.dict_depth:
-            decoded = _NAME_ESCAPE.sub(lambda match: bytes([int(match[1], 16)]), text)
-            self.inside_dictionary(kind, decoded.decode("latin-1"))
+            self.inside_dictionary(
+                kind, _decode_name(text) if kind == "name" else text.decode("latin-1")
+            )
         elif kind == "name":
-            decoded = _NAME_ESCAPE.sub(lambda match: bytes([int(match[1], 16)]), text)
-            self.operand("name", decoded.decode("latin-1"))
-        elif kind == "word" and text[0] not in _NUMBER_START:
+            self.operand("name", _decode_name(text))
+        elif kind == "word":
+            self._word(text)
+
+    def _word(self, text: bytes) -> None:
+        if text[0] not in _NUMBER_START:
             self.operator(text)
+        else:
+            self.operand("number" if _NUMBER.fullmatch(text) else "invalid")
+
+    def _array(self, kind: str, text: bytes) -> bool:
+        if kind == "delimiter" and text == b"[":
+            if not self.dict_depth and not self.array_depth:
+                self.operand("array")
+            self.array_depth += 1
+            self.dict_key = ""
+            return True
+        if self.array_depth:
+            if kind == "delimiter" and text == b"]":
+                self.array_depth -= 1
+            return True
+        return False
 
     def operator(self, word: bytes) -> None:
         if word == b"BDC":
@@ -90,10 +121,15 @@ class _Scanner:
         elif word == b"BMC":
             self._begin(self.operands[-1:])
         elif word == b"EMC":
-            if self.sequences:
-                self.covered -= self.sequences.pop()
+            self._end()
         elif word in _TEXT_SHOWING and not self.covered:
             self.scan.unmarked_text_operations += 1
+        elif word == b"Do":
+            kind, name = self.operands[-1] if self.operands else _NO_OPERAND
+            if kind == "name" and self.image is not None and self.image(str(name)):
+                self.paint()
+        else:
+            self._path(word)
         self.operands.clear()
 
     def _begin(self, operands: list[Operand]) -> None:
@@ -105,14 +141,54 @@ class _Scanner:
                 mcid = value
             elif kind == "name":
                 mcid = self.properties(str(value))
-        if isinstance(mcid, int):
-            self.scan.mcids.add(mcid)
-        marks = isinstance(mcid, int) or tag == _ARTIFACT
-        self.sequences.append(marks)
-        self.covered += marks
+        identity = mcid if type(mcid) is int and mcid >= 0 else None
+        if identity is not None:
+            self.scan.mcids.add(identity)
+        artifact = tag == _ARTIFACT
+        self.sequences.append(identity)
+        self.flags.append(ARTIFACT_FLAG if artifact else 0)
+        self.covered += identity is not None or artifact
+        self.artifacts += artifact
+
+    def paint(self) -> None:
+        if self.sequences and not self.artifacts:
+            self.flags[-1] |= GRAPHICS_FLAG
+
+    def _end(self) -> None:
+        if not self.sequences:
+            return
+        identity = self.sequences.pop()
+        flags = self.flags.pop()
+        artifact = bool(flags & ARTIFACT_FLAG)
+        self.covered -= identity is not None or artifact
+        self.artifacts -= artifact
+        if flags & GRAPHICS_FLAG:
+            if identity is not None:
+                self.scan.graphical_mcids.add(identity)
+            if self.sequences and not self.artifacts:
+                self.flags[-1] |= GRAPHICS_FLAG
+
+    def _path(self, word: bytes) -> None:
+        expected = _PATH_ARGUMENTS.get(word)
+        if expected is not None and (
+            len(self.operands) != expected or any(kind != "number" for kind, _ in self.operands)
+        ):
+            return
+        if word == b"m":
+            self.path_started = True
+        elif word == b"re":
+            self.path_started = self.path_drawable = True
+        elif word in {b"l", b"c", b"v", b"y"} and self.path_started:
+            self.path_drawable = True
+        elif word in {b"f", b"F", b"f*", b"S", b"s", b"B", b"B*", b"b", b"b*", b"n"}:
+            if word != b"n" and self.path_drawable:
+                self.paint()
+            self.path_started = self.path_drawable = False
 
 
-def scan_content(data: bytes, properties: Callable[[str], int | None]) -> ContentScan:
+def scan_content(
+    data: bytes, properties: Callable[[str], int | None], image: Callable[[str], bool] | None = None
+) -> ContentScan:
     """Find the MCIDs of a content stream and count text shown outside tagged content.
 
     A text-showing operator is unmarked when no enclosing marked-content sequence carries an
@@ -125,6 +201,8 @@ def scan_content(data: bytes, properties: Callable[[str], int | None]) -> Conten
         The decoded content stream.
     properties
         Resolves a ``/Properties`` resource name to the MCID of its property list, if any.
+    image
+        Resolves an invoked resource name to a validated image resource. Forms are excluded.
 
     Returns
     -------
@@ -132,15 +210,18 @@ def scan_content(data: bytes, properties: Callable[[str], int | None]) -> Conten
         The MCIDs found and the count of unmarked text-showing operations.
 
     """
-    scanner = _Scanner(properties)
+    scanner = _Scanner(properties, image)
     position = 0
     while match := _TOKEN.match(data, position):
         position = match.end()
         kind = match.lastgroup
         if kind == "string":
             position = _end_of_string(data, position)
+            if not scanner.dict_depth and not scanner.array_depth:
+                scanner.operand("string")
         elif match.group() == b"BI":
-            position = _inline_image_end(data, position)
+            position = inline_image_end(data, position)
+            scanner.paint()
             scanner.operands.clear()
         elif kind is not None:
             scanner.token(kind, match.group())
@@ -162,51 +243,7 @@ def _end_of_string(data: bytes, position: int) -> int:
     return position
 
 
-def _inline_image_end(data: bytes, position: int) -> int:
-    """Skip raw image samples by their dimensions, never by an EI-looking sample.
-
-    Returns
-    -------
-    int
-        The byte position after the inline image.
-
-    Raises
-    ------
-    ToolFailedError
-        The image is filtered or its sample extent cannot be determined safely.
-
-    """
-    start = _INLINE_DATA.search(data, position)
-    if start is None:
-        msg = "Inline image has no data delimiter"
-        raise ToolFailedError(msg)
-    header = _NAME_ESCAPE.sub(
-        lambda match: bytes([int(match[1], 16)]), data[position : start.start()]
-    )
-    if re.search(rb"/(?:F|Filter)\b", header):
-        msg = "Filtered inline images are outside the marked-content scanner's scope"
-        raise ToolFailedError(msg)
-    fields = dict(re.findall(rb"/([A-Za-z]+)\s+([+-]?\d+|/[A-Za-z]+)", header))
-    width = int(fields.get(b"W", fields.get(b"Width", b"0")))
-    height = int(fields.get(b"H", fields.get(b"Height", b"0")))
-    bits = int(fields.get(b"BPC", fields.get(b"BitsPerComponent", b"0")))
-    space = fields.get(b"CS", fields.get(b"ColorSpace", b""))
-    components = {
-        b"/G": 1,
-        b"/DeviceGray": 1,
-        b"/RGB": 3,
-        b"/DeviceRGB": 3,
-        b"/CMYK": 4,
-        b"/DeviceCMYK": 4,
-    }.get(space, 0)
-    if re.search(rb"/(?:IM|ImageMask)\s+true\b", header):
-        bits, components = 1, 1
-    if width <= 0 or height <= 0 or bits not in {1, 2, 4, 8, 16} or not components:
-        msg = "Inline image dimensions or color space cannot be inspected"
-        raise ToolFailedError(msg)
-    end = start.end() + ((width * components * bits + 7) // 8) * height
-    marker = _INLINE_IMAGE_END.match(data, end)
-    if marker is None:
-        msg = "Inline image sample length does not match its end delimiter"
-        raise ToolFailedError(msg)
-    return marker.end()
+def _decode_name(text: bytes) -> str:
+    if b"#" in text:
+        text = _NAME_ESCAPE.sub(lambda match: bytes([int(match[1], 16)]), text)
+    return text.decode("latin-1")

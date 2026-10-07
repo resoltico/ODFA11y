@@ -4,6 +4,79 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-07
+
+### Breaking
+
+- **Plans and Python operations.** Graphic descriptions use `[text.graphics]` and
+  `[spreadsheet.graphics]`, the shared `GraphicDescription`, and each family's
+  `SetGraphicDescriptions`. Table decisions use `MarkTableHeaders` with structured
+  `TableHeaders(rows, columns, fingerprint)` entries; integer TOML shorthand is rejected.
+  Update imports and configuration to these contracts; no aliases or migration shims exist.
+- **Finding locations.** Reports are format 4. Named targets use percent-encoded
+  `[name=…]`, heading XML identities use `[id=…]`, and unnamed targets use plain ordinals
+  such as `table[2]`. Update consumers to the grammar in [Rules](docs/RULES.md#locations).
+- **Document metadata.** Supplied titles and descriptions must be nonblank. Omit fields
+  to preserve existing metadata; clear metadata in the native application when intended.
+- **Base media types.** Retired `application/vnd.oasis.opendocument.database` and
+  `application/vnd.sun.xml.base` aliases are rejected. The standard Base media type is
+  `application/vnd.oasis.opendocument.base`.
+
+### Added
+
+- **Presentation and drawing families.** Native Impress and Draw documents have separate
+  page/shape audits, reviewed descriptions and complete navigation decisions in
+  `[presentation]` and `[drawing]`. Standard ODF 1.4 native fixtures exercise schema,
+  PDF/UA validation, fidelity and evidence with independent missing-alternative controls.
+- **Explicit text semantics.** Reviewed heading levels and leading table header columns
+  are configurable. Targets are preflighted before editing; repeated table declarations
+  are split only when that preserves data and identities. Crossing spans and unsafe repeat
+  splits fail without publication. Writer exports corrected heading roles. Its current
+  header-column export omits PDF `TH`; strict PDF gates continue to reject that omission,
+  even when veraPDF reports compliance.
+
+- **Formula, Chart, Image and Base source semantics.** Supplied alternatives and object
+  descriptions preserve mathematical expressions, chart data, images, SQL, bindings and
+  opaque storage. Normative MathML 3 schemas are bundled under the W3C license. Optional
+  native metadata parts can be created explicitly. Math tagging failures remain visible;
+  Chart, Image and Base have no PDF export contract, and required production stages fail.
+- **Batch workflows.** Strict manifests run independent items with atomic evidence and
+  aggregate status. Failures continue; graceful interruption retains completed bundles
+  and marks pending work. Forced termination leaves an incomplete running summary.
+- **SARIF 2.1.0.** Audit and comparison reports expose registered rules and logical
+  locations through explicit, confined source identities. Arbitrary source diagnostics
+  and metadata are excluded to protect privacy; see [SARIF](docs/SARIF.md).
+
+### Fixed
+
+- **Installer paths.** The pinned veraPDF installer handles XML-significant characters in
+  its destination path.
+- **PDF graphical content.** Described illustration-only PDFs no longer fail solely for
+  having no extracted text. The content gate reconciles Figure references with executed
+  graphical operations on their actual pages; empty, orphan and artifact-only declarations
+  remain failures. This is structural content evidence, not proof of pixel visibility.
+- **Namespace integrity.** XML fingerprints preserve inherited bindings used by formula
+  and other attribute values while ignoring harmless metadata namespace additions.
+- **Preservation and reviewed targets.** Table fingerprints cover complete logical data;
+  graphic fingerprints include position and payload bytes while remaining stable across
+  header-wrapper edits. Spreadsheet postconditions protect formulas, values, references,
+  repeats and geometry. Opaque package resources and flat binary data cannot change during
+  source remediation. Malformed or non-leading table header bands produce `TXT022`.
+
+### Internal
+
+- **Uniform authored-code gates.** Nested and hidden source files reach lint and type
+  checks. Size, complexity and argument limits have no historical exemptions. Central
+  lint exceptions must select exact current rules, carry reasons, match authored scopes
+  and suppress real diagnostics; unused and overlapping masks, inline suppressions and
+  hidden analyzer configuration are rejected. See [Development](docs/DEVELOPING.md).
+- **Version authority.** `pyproject.toml` declares the app version. Installed reporting and
+  release validation derive from it, with isolated wheel checks.
+- **Gate efficiency.** PR checks no longer duplicate branch-push checks; main, version-tag
+  and manual runs remain authoritative. Integration uses two isolated workers with crash
+  restarts disabled; unit coverage remains sequential. Coverage append and all generated
+  property cases are retained. Cached Go tools are isolated from release builds.
+
 ## [0.4.0] - 2026-10-07
 
 ### Breaking

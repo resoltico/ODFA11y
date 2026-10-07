@@ -240,20 +240,19 @@ def test_content_scanning_follows_pdf_syntax(data: bytes, mcids: set[int], unmar
     assert (scan.mcids, scan.unmarked_text_operations) == (mcids, unmarked)
 
 
-def test_hostile_content_is_scanned_in_linear_time() -> None:
+def test_hostile_content_scanning_keeps_results_and_meets_the_time_budget() -> None:
     hostile = [
-        b"/P <</MCID 1>> BDC " * 200_000,
-        b"(" * 2_000_000,
-        b"<<" * 1_000_000 + b">>",
-        b"BI " * 500_000,
-        b"/A " * 1_000_000,
+        (b"/P <</MCID 1>> BDC " * 200_000, {1}),
+        (b"(" * 2_000_000, set()),
+        (b"<<" * 1_000_000 + b">>", set()),
+        (b"/A " * 1_000_000, set()),
     ]
     started = time.perf_counter()
-    for data in hostile:
-        try:
-            scan_content(data, lambda _name: None)
-        except ToolFailedError:
-            assert data.startswith(b"BI ")
+    for data, expected in hostile:
+        scan = scan_content(data, lambda _name: None)
+        assert (scan.mcids, scan.unmarked_text_operations) == (expected, 0)
+    with pytest.raises(ToolFailedError, match="Inline image has no data delimiter"):
+        scan_content(b"BI " * 500_000, lambda _name: None)
     assert time.perf_counter() - started < 10
 
 

@@ -48,9 +48,9 @@ EXPECTED = {
     ("TXT002", "content/heading[1]"),
     ("TXT002", "content/heading[2]"),
     ("TXT003", "content/heading[1]"),
-    ("TXT010", "content/frame[Logo]"),
-    ("TXT021", "content/table[Data]"),
-    ("TXT021", "content/table[#2]"),
+    ("TXT010", "content/frame[name=Logo]"),
+    ("TXT021", "content/table[name=Data]"),
+    ("TXT021", "content/table[2]"),
     ("TXT030", "content/paragraph[1]"),
     ("TXT030", "content/paragraph[3]"),
 }
@@ -127,6 +127,6 @@ def test_json_report_serializes_the_path_and_the_member(
     main(["audit", str(source), "--format", "json"])
     report = json.loads(capsys.readouterr().out)
     locations = {f["rule_id"]: f["location"] for f in reversed(report["findings"])}
-    assert report["format"] == 3
+    assert report["format"] == 4
     assert locations["TXT030"] == {"path": "content/paragraph[1]", "member": None}
     assert locations["ODF004"] == {"path": "manifest", "member": "META-INF/manifest.xml"}
