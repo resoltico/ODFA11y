@@ -1,6 +1,6 @@
 # Rule reference
 
-Every finding comes from one registered rule (the identifier prefix names its owner: `PKG`, `XML`, `ODF` and `META` belong to the ODF core, `TXT` to the text family, `PDF`, `VERA` and `FID` to the output checks) with a stable ID, a severity, a category and,
+Every finding comes from one registered rule (the identifier prefix names its owner: `PKG`, `XML`, `ODF` and `META` belong to the ODF core, `TXT` to the text family, `SHEET` to the spreadsheet family, `PDF`, `VERA` and `FID` to the output checks) with a stable ID, a severity, a category and,
 where a configuration can address it, a **remedy**: the configuration key that holds the
 decision. Severity decides exit statuses (see [the workflow](WORKFLOW.md#exit-statuses));
 the code registry in [rules.py](../src/odfa11y/report/rules.py) is authoritative and a test
@@ -24,7 +24,7 @@ These apply to every ODF document, whatever its family.
 
 ## ODF declarations, kind, schema and metadata
 
-Also common to every family. `ODF009` says that a document's family has no semantic audit yet: the common checks ran and nothing is implied about the rest.
+Also common to every family. `ODF009` says that a document's family has no semantic audit yet (text and spreadsheet documents have one): the common checks ran and nothing is implied about the rest.
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
@@ -62,6 +62,21 @@ Owned by the text family (`TXT`). A document of another family never produces th
 | `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.remediation.linkify_plain_addresses` |
 | `TXT040` | Info | Empty paragraphs may be visual spacers. | `text.remediation.remove_empty_spacers` |
 | `TXT050` | Error | Blinking text styling is declared. |  |
+
+## Spreadsheets
+
+Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat `.fods`. A document of another family never produces them. Remedies are keys of the `[spreadsheet]` configuration table.
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `SHEET001` | Error | Sheet has no name. |  |
+| `SHEET002` | Warning | Sheet keeps its default name. | `spreadsheet.sheet_names` |
+| `SHEET003` | Warning | Data sheet marks no header rows. |  |
+| `SHEET004` | Warning | Data sheet merges cells. |  |
+| `SHEET005` | Error | Picture, chart or object has neither accessible title nor description. | `spreadsheet.alt_text` |
+| `SHEET006` | Warning | Hyperlink text is a raw address. |  |
+| `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
+| `SHEET008` | Warning | Hidden sheets, rows or columns are present. |  |
 
 ## PDF inspection and veraPDF
 
@@ -111,5 +126,15 @@ already have. The `TXT` link, table, numbering and spacer findings use heuristic
 source in context. Graphics need supplied descriptions, and header rows need a named
 table with an explicit row count. `TXT040` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
+The `SHEET` findings are structural: a *default name* is a name of the form `Sheet` and
+digits (other languages' defaults are not recognised); a *data sheet* is one whose first row
+with text holds at least two short labels and which has another row with text, and only such
+sheets are checked for header rows (`table:table-header-rows`, which Calc writes for rows
+repeated on every printed page) and merged cells; `SHEET005` covers pictures, charts and
+embedded objects, not drawn shapes; `SHEET006` flags link text that is itself an address;
+`SHEET007` flags empty sheets after the last one with text or graphics (the first sheet is
+always kept); `SHEET008` reports counts, as hidden content is sometimes intended. Header
+rows, merged cells, link text and hidden content need a person's decision in Calc: only
+`SHEET002` and `SHEET005` have a configuration remedy.
 `VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
 number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.

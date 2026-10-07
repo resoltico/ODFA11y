@@ -127,6 +127,27 @@ TXT040 = _rule(
 )
 TXT050 = _rule("TXT050", ERROR, STYLE, "Blinking text styling is declared.")
 
+SHEET001 = _rule("SHEET001", ERROR, SEM, "Sheet has no name.")
+SHEET002 = _rule(
+    "SHEET002",
+    WARNING,
+    SEM,
+    "Sheet keeps its default name.",
+    "spreadsheet.sheet_names",
+)
+SHEET003 = _rule("SHEET003", WARNING, SEM, "Data sheet marks no header rows.")
+SHEET004 = _rule("SHEET004", WARNING, SEM, "Data sheet merges cells.")
+SHEET005 = _rule(
+    "SHEET005",
+    ERROR,
+    SEM,
+    "Picture, chart or object has neither accessible title nor description.",
+    "spreadsheet.alt_text",
+)
+SHEET006 = _rule("SHEET006", WARNING, LNK, "Hyperlink text is a raw address.")
+SHEET007 = _rule("SHEET007", WARNING, SEM, "Empty sheet follows the last sheet with content.")
+SHEET008 = _rule("SHEET008", WARNING, SEM, "Hidden sheets, rows or columns are present.")
+
 PDF000 = _rule("PDF000", ERROR, PDF, "PDF cannot be opened or strictly inspected.")
 PDF001 = _rule("PDF001", ERROR, PDF, "Document title is missing.")
 PDF002 = _rule("PDF002", ERROR, PDF, "Catalog language is missing.")

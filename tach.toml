@@ -50,8 +50,18 @@ path = "odfa11y.families.text"
 depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
 
 [[modules]]
+path = "odfa11y.families.spreadsheet"
+depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
 path = "odfa11y.families"
-depends_on = ["odfa11y.adapter", "odfa11y.families.text", "odfa11y.odf", "odfa11y.report"]
+depends_on = [
+  "odfa11y.adapter",
+  "odfa11y.families.spreadsheet",
+  "odfa11y.families.text",
+  "odfa11y.odf",
+  "odfa11y.report",
+]
 
 [[modules]]
 path = "odfa11y.audit"
@@ -136,6 +146,7 @@ from = [
   "odfa11y.config",
   "odfa11y.evidence",
   "odfa11y.families",
+  "odfa11y.families.spreadsheet",
   "odfa11y.families.text",
   "odfa11y.fidelity",
   "odfa11y.odf",

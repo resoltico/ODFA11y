@@ -97,10 +97,10 @@ def test_a_flat_document_without_a_declared_media_type_is_unrecognised(tmp_path:
 def test_a_text_plan_is_refused_for_every_other_family(
     tmp_path: Path, make: Callable[..., Path]
 ) -> None:
-    source = make(tmp_path, "spreadsheet")
+    source = make(tmp_path, "presentation")
     destination = tmp_path / "out"
     plan = [SetAltText({"Logo": AltText("x")})]
-    with pytest.raises(RemediationError, match="do not apply to a spreadsheet document"):
+    with pytest.raises(RemediationError, match="do not apply to a presentation document"):
         remediate(source, destination, plan)
     assert not destination.exists()
 
@@ -109,7 +109,7 @@ def test_a_text_plan_is_refused_for_every_other_family(
 def test_common_operations_apply_to_any_family_and_keep_the_body(
     tmp_path: Path, make: Callable[..., Path]
 ) -> None:
-    source = make(tmp_path, "spreadsheet")
+    source = make(tmp_path, "presentation")
     destination = tmp_path / f"out{source.suffix}"
     result = remediate(
         source, destination, [SetMetadata(title="New", language="de-DE"), SetOdfVersion("1.3")]
@@ -117,7 +117,7 @@ def test_common_operations_apply_to_any_family_and_keep_the_body(
     assert result.changed
     after = OdfDocument.open(destination)
     assert after.kind is not None
-    assert after.kind.family is Family.SPREADSHEET
+    assert after.kind.family is Family.PRESENTATION
     meta = select_elements(after.tree(Part.META), "//dc:title | //dc:language")
     assert {m.text for m in meta} == {"New", "de-DE"}
     assert after.tree(Part.CONTENT).getroot().get(qn("office", "version")) == "1.3"
@@ -161,7 +161,7 @@ def test_the_template_refuses_a_source_it_cannot_read(
 def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     tmp_path: Path,
 ) -> None:
-    source = make_package(tmp_path, "spreadsheet")
+    source = make_package(tmp_path, "presentation")
     record = run_pipeline(
         source, [SetMetadata(title="T")], FidelityPolicy(), tmp_path / "out", PipelineOptions()
     )
@@ -172,16 +172,16 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     assert statuses["verapdf"] == "skipped"  # not part of the verify profile
     assert record.passed
     run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert run["document"]["kind"] == "spreadsheet"
+    assert run["document"]["kind"] == "presentation"
     assert run["document"]["adapter"] == "generic"
-    assert (tmp_path / "out" / "remediated.ods").is_file()
+    assert (tmp_path / "out" / "remediated.odp").is_file()
 
 
 def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     tmp_path: Path,
 ) -> None:
     record = run_pipeline(
-        make_package(tmp_path, "spreadsheet"),
+        make_package(tmp_path, "presentation"),
         [],
         FidelityPolicy(),
         tmp_path / "out",
@@ -197,15 +197,15 @@ def test_a_new_family_needs_only_a_registry_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def audit(document: OdfDocument, report: Report) -> None:
-        report.add(rules.ODF009, "Spreadsheet adapter ran.", location=document.storage.source.name)
+        report.add(rules.ODF009, "Presentation adapter ran.", location=document.storage.source.name)
 
-    spreadsheet = dataclasses.replace(
-        adapter_for(None), name="spreadsheet", family=Family.SPREADSHEET, audit=audit
+    presentation = dataclasses.replace(
+        adapter_for(None), name="presentation", family=Family.PRESENTATION, audit=audit
     )
-    monkeypatch.setitem(REGISTRY, Family.SPREADSHEET, spreadsheet)
-    report = audit_odf(make_package(tmp_path, "spreadsheet"))
-    assert report.metadata["adapter"] == "spreadsheet"
-    assert any(f.message == "Spreadsheet adapter ran." for f in report.findings)
+    monkeypatch.setitem(REGISTRY, Family.PRESENTATION, presentation)
+    report = audit_odf(make_package(tmp_path, "presentation"))
+    assert report.metadata["adapter"] == "presentation"
+    assert any(f.message == "Presentation adapter ran." for f in report.findings)
 
 
 def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -> None:

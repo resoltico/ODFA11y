@@ -38,19 +38,23 @@ def test_every_kind_is_detected_in_both_layouts(tmp_path: Path, name: str, layou
     assert document.detection.body_element == document.kind.body_element
 
 
+SEMANTIC_PREFIXES = {"text": "TXT", "spreadsheet": "SHEET"}
+
+
 @pytest.mark.parametrize(("name", "layout"), CASES)
-def test_every_kind_audits_without_errors_and_only_text_has_semantic_rules(
+def test_every_kind_audits_without_errors_and_only_its_own_family_has_semantic_rules(
     tmp_path: Path, name: str, layout: str
 ) -> None:
     report = audit_odf(LAYOUTS[layout](tmp_path, name), schema=True)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
     assert report.metadata["layout"] == layout
-    assert report.metadata["family"] == KIND_SPECS[name].family
-    is_text = KIND_SPECS[name].family == "text"
-    assert report.metadata["adapter"] == ("text" if is_text else "generic")
-    assert ("ODF009" in ids(report)) is (not is_text)
-    if not is_text:
-        assert not {i for i in ids(report) if i.startswith("TXT")}
+    family = KIND_SPECS[name].family
+    assert report.metadata["family"] == family
+    has_adapter = family in SEMANTIC_PREFIXES
+    assert report.metadata["adapter"] == (family if has_adapter else "generic")
+    assert ("ODF009" in ids(report)) is (not has_adapter)
+    foreign = set(SEMANTIC_PREFIXES.values()) - {SEMANTIC_PREFIXES.get(family)}
+    assert not {i for i in ids(report) if i.startswith(tuple(foreign))}
 
 
 @pytest.mark.parametrize(("name", "layout"), [c for c in CASES if KIND_SPECS[c[0]].schema_valid])
@@ -62,12 +66,13 @@ def test_synthetic_documents_validate_against_the_bundled_schema(
     assert result.violations == {}, result.messages()
 
 
-def test_the_registry_serves_text_with_its_adapter_and_everything_else_generically() -> None:
+def test_the_registry_serves_each_implemented_family_and_everything_else_generically() -> None:
     for kind in KINDS.values():
         adapter = adapter_for(kind)
         assert adapter is (adapter_for(kind))
-        if kind.family is Family.TEXT:
-            assert adapter.name == "text"
+        if kind.family in {Family.TEXT, Family.SPREADSHEET}:
+            assert adapter.name == kind.family.value
+            assert adapter.family is kind.family
         else:
             assert adapter is GENERIC
     assert adapter_for(None) is GENERIC

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from odfa11y.odf import Family
 
 from .generic import GENERIC
+from .spreadsheet import ADAPTER as SPREADSHEET_ADAPTER
 from .text import ADAPTER as TEXT_ADAPTER
 
 if TYPE_CHECKING:
@@ -16,7 +17,10 @@ if TYPE_CHECKING:
     from odfa11y.adapter import FamilyAdapter, Operation
     from odfa11y.odf import DocumentKind
 
-REGISTRY: dict[Family, FamilyAdapter] = {Family.TEXT: TEXT_ADAPTER}
+REGISTRY: dict[Family, FamilyAdapter] = {
+    Family.TEXT: TEXT_ADAPTER,
+    Family.SPREADSHEET: SPREADSHEET_ADAPTER,
+}
 
 
 def adapter_for(kind: DocumentKind | None) -> FamilyAdapter:
