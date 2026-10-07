@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Hostile PDFs are refused by size, page count and structure size, not by exhausting memory."""
+"""PDF size, page-count and structure limits are enforced at their inspection boundaries."""
 
 from __future__ import annotations
 
@@ -24,6 +24,11 @@ def test_an_oversized_pdf_is_a_finding_not_a_crash(
 ) -> None:
     path = text_pdf(tmp_path / "a.pdf", [["x"]])
     monkeypatch.setattr(pdf_limits, "MAX_PDF_BYTES", 10)
+
+    def parse(_stream: object, *, strict: bool) -> None:
+        pytest.fail(f"PDF parser invoked for an oversized file (strict={strict})")
+
+    monkeypatch.setattr("odfa11y.pdf.audit.PdfReader", parse)
     report = audit_pdfua(path)
     assert [f.rule_id for f in report.findings] == ["PDF000"]
     assert "exceeds" in report.findings[0].message

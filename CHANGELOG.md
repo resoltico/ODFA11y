@@ -4,8 +4,13 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-07
+
 ### Breaking
 
+- **LibreOffice runtime.** PDF export and exporter self-tests require LibreOffice 26.8 or
+  newer. Older or unidentifiable installations are rejected. Install a supported runtime;
+  no compatibility mode or migration shim is provided.
 - **Finding locations.** JSON reports are format 3. A finding's `location` is no longer a
   string naming storage (`content.xml paragraph 3`, `document paragraph 3`) but an object
   `{"path", "member"}` or `null`. `path` is logical and identical for equivalent `.odt` and
@@ -17,20 +22,6 @@ Notable changes to this project are documented in this file. The format is based
   instead of a list of members, and `ODF900` messages name the part, not the member. The
   Python API takes `Location` in `Report.add`. The grammar is in
   [Rules](docs/RULES.md#locations).
-
-### Fixed
-
-- The text-preservation check no longer counts the image bytes that a flat XML document embeds
-  (`office:binary-data`) as visible text, so a flat and a packaged copy of one document
-  compare equal.
-
-### Internal
-
-- A regression corpus of fourteen small documents authored by LibreOffice Writer 24.2
-  (`tests/corpus`, nineteen files including flat-XML twins) is audited for its exact rule
-  ids, hashed, checked for package/flat equivalence and schema validity, and remediated
-  idempotently; an integration test runs the pipeline on three of them with real LibreOffice.
-  The sdist ships the corpus with the tests.
 
 ### Added
 
@@ -49,28 +40,27 @@ Notable changes to this project are documented in this file. The format is based
   unknown sheet, an invalid or colliding new name, a chained or swapped rename, any sheet that
   a formula, range or link refers to by name, and every sheet of a document that embeds
   charts or scripts, or uses dynamic reference functions (`INDIRECT`, `ADDRESS`, `HYPERLINK`).
-  References are not rewritten; table view settings and the active-sheet selection follow
-  the renamed sheet.
+  Reference matching includes case variants and URL-escaped names. References are not rewritten; table view
+  settings and the active-sheet selection follow the renamed sheet.
 - **Spreadsheet PDF export.** The pipeline exports spreadsheets with LibreOffice's
   `calc_pdf_Export` filter and runs the PDF audit, veraPDF and the fidelity comparison on
-  them. With LibreOffice 24.2 a Calc export tags only its page header, footer and pictures
-  (not the cells) and fails veraPDF's PDF/UA-1 rule 7.1-3, so the `production` profile cannot
-  pass for these fixtures. LibreOffice 26.8 table exports can instead fail `PDF015` and
-  veraPDF 7.2-43. Earlier failed gates skip downstream validation; [Accessibility](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports)
-  lists which PDF checks are meaningful for a Calc export.
+  them. LibreOffice 26.8 table exports can fail `PDF015` and veraPDF 7.2-43. Earlier
+  failed gates skip downstream validation;
+  [Accessibility](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports) records the tested limits.
 - **Marked-content reconciliation in the built-in PDF audit.** Each page's content stream is
   scanned and compared with the structure tree. New rules: `PDF020` (error, an MCID that no
   structure element refers to), `PDF021` (warning, a reference to an MCID its page does not
   contain), `PDF022` (warning, an MCID referred to more than once) and `PDF023` (error, text
-  shown outside tagged content and `/Artifact`). Content of form XObjects is not scanned. Filtered inline images and unsupported
-  inline color spaces produce `PDF000`; raw image samples are skipped by their dimensions. Decoded page
-  content above 64 MiB per document is refused as `PDF000`, like the other input limits.
+  shown outside tagged content and `/Artifact`). Content of form XObjects is not scanned.
+  Filtered inline images and unsupported inline color spaces produce `PDF000`; raw image
+  samples are skipped by their dimensions. Decoded page content above 64 MiB per document is refused as `PDF000`, like the other input limits.
   Reports of tagged PDFs may now contain these findings; the audit is still not PDF/UA
   validation.
 - `odfa11y doctor` now exports a synthetic one-hyperlink document with the installed
   LibreOffice and reports `pdfua_link_descriptions: supported` or `unsupported` (also in
-  `--format json`). It answers in advance whether hyperlinks will be reported as `PDF019`,
-  which newer LibreOffice releases cause by exporting links without a PDF/UA description.
+  `--format json`). The self-test requires an explicitly named link to retain its PDF/UA-1
+  description. Writer links require a meaningful Name (`office:name`); see
+  [link descriptions](docs/ACCESSIBILITY.md#link-descriptions).
   `PDF019` remains an error. `doctor` accepts `--soffice` and `--timeout`, and now exits `3`
   when LibreOffice is missing or its export fails, after printing the versions it found.
   Text pipeline exports record the same capability under `toolchain.LibreOffice` in
@@ -83,6 +73,22 @@ Notable changes to this project are documented in this file. The format is based
   now fail an audit or `--strict` run, and the pipeline's PDF stages run instead of being
   `not-applicable`. Renaming a sheet changes the name Calc's default page
   header prints, which the fidelity stage reports as `FID003`.
+
+### Fixed
+
+- PDF audit enforces the file-size limit before constructing the PDF parser, so an
+  oversized input is rejected before parsing starts. The size threshold is unchanged.
+- The text-preservation check no longer counts the image bytes that a flat XML document embeds
+  (`office:binary-data`) as visible text, so a flat and a packaged copy of one document
+  compare equal.
+
+### Internal
+
+- A regression corpus of fourteen small documents authored by LibreOffice Writer 24.2
+  (`tests/corpus`, nineteen files including flat-XML twins) is audited for its exact rule
+  ids, hashed, checked for package/flat equivalence and schema validity, and remediated
+  idempotently; an integration test runs the pipeline on three of them with real LibreOffice.
+  The sdist ships the corpus with the tests.
 
 ## [0.3.0] - 2026-10-07
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""The link-description probe: stub exports for each outcome, and the real export."""
+"""Named-link self-test, current-runtime behavior and real pipeline evidence."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import json
 import runpy
 import sys
 import zipfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -17,7 +18,7 @@ from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import write_link_probe
 from odfa11y.fidelity import FidelityPolicy
-from odfa11y.odf import Family, OdfDocument, PackageStorage
+from odfa11y.odf import Family, OdfDocument, PackageStorage, validate
 from odfa11y.pdf import (
     ExportSettings,
     audit_pdfua,
@@ -32,7 +33,6 @@ from .pdf_fixtures import annotation_references, dictionary, link_elements, map_
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
 WRITER = "writer_pdf_Export"
 SETTINGS = ExportSettings(WRITER)
@@ -169,14 +169,14 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     linked = tmp_path / "linked.odt"
     package.save(linked)
     pdf = export_pdfua(linked, tmp_path / "linked.pdf", ExportSettings(WRITER, soffice=soffice))
-    undescribed = "PDF019" in {f.rule_id for f in audit_pdfua(pdf).findings}
+    assert "PDF019" in {f.rule_id for f in audit_pdfua(pdf).findings}
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))
     link_failures = {("7.18.1", "2"), ("7.18.5", "2")}
-    assert bool({(f.clause, f.test_number) for f in result.failures} & link_failures) == undescribed
+    assert {(f.clause, f.test_number) for f in result.failures} == link_failures
 
     assert main(["doctor", "--soffice", soffice, "--format", "json"]) == 0
     reported = json.loads(capsys.readouterr().out)["pdfua_link_descriptions"]
-    assert reported == ("unsupported" if undescribed else "supported")
+    assert reported == "supported"
 
     record = run_pipeline(
         linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)
@@ -186,3 +186,45 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     assert evidence["toolchain"]["LibreOffice"]["pdfua_link_descriptions"] == reported
     assert not any("probe" in name for name in evidence["outputs"])
     assert check_bundle(tmp_path / "evidence") == []
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("named", [False, True], ids=["unnamed", "explicit-name"])
+def test_the_one_link_reproduction_and_explicit_name_control(
+    tmp_path: Path, external_tool: Callable[..., str], *, named: bool
+) -> None:
+    source = Path(__file__).parent / "reproductions" / "unnamed-link.odt"
+    assert validate(OdfDocument.open(source)).count == 0
+    package = PackageStorage(source)
+    assert package.read("content.xml").count(b"<text:a ") == 1
+    if named:
+        package.write_member(
+            "content.xml",
+            package.read("content.xml").replace(
+                b"<text:a ", b'<text:a office:name="Example site" '
+            ),
+        )
+        source = package.save(tmp_path / "named-link.odt")
+        assert validate(OdfDocument.open(source)).count == 0
+    pdf = export_pdfua(
+        source,
+        tmp_path / "link.pdf",
+        ExportSettings(WRITER, soffice=external_tool("soffice", "libreoffice")),
+    )
+    report = audit_pdfua(pdf)
+    result = validate_pdfua(pdf, executable=external_tool("verapdf"))
+    failures = {(f.clause, f.test_number) for f in result.failures}
+    assert failures == (set() if named else {("7.18.1", "2"), ("7.18.5", "2")}), failures
+    assert ("PDF019" in {f.rule_id for f in report.findings}) == (not named)
+    if named:
+        assert report.passed
+        assert result.compliant
+        record = run_pipeline(
+            source,
+            [],
+            FidelityPolicy(),
+            tmp_path / "named-evidence",
+            PipelineOptions(soffice=external_tool("soffice", "libreoffice")),
+        )
+        assert record.passed, record.as_dict()
+        assert check_bundle(tmp_path / "named-evidence") == []

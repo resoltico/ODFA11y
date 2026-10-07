@@ -9,7 +9,8 @@ the source directory:
 uv sync --locked
 ```
 
-Python 3.14 is the baseline. [.python-version](../.python-version) selects the
+Python 3.14 is the baseline. Export and integration require LibreOffice 26.8 or newer;
+`find_soffice` in `src/odfa11y/pdf/export.py` enforces the minimum and rejects unknown versions. [.python-version](../.python-version) selects the
 development interpreter, which uv installs when needed.
 [pyproject.toml](../pyproject.toml) defines the supported Python range, dependency
 ranges and pinned build, lint, type-check and boundary tools. [uv.lock](../uv.lock) records the resolved
@@ -65,7 +66,7 @@ pipeline on some of the documents. The files are marked binary in `.gitattribute
 in the source archive with the rest of `tests/`.
 
 The Writer corpus hyperlink pipeline test compares the exported PDF with real veraPDF.
-When LibreOffice omits link descriptions, it requires `PDF019`, a failed PDF audit and
+The unnamed-link fixture requires `PDF019`, a failed PDF audit and
 skipped downstream stages; other failures are rejected. Green CI proves that the defect
 is detected, while the other corpus pipeline cases must complete successfully.
 
@@ -128,12 +129,13 @@ ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration
 - **Quality** (Linux, macOS, Windows; the job is `test` in the workflow): unit tests (with coverage on Linux), a build of
   the source archive and wheel, and unit tests against the wheel installed with
   hashed locked dependencies, including metadata, license and `py.typed` checks.
-- **Integration** (Linux, macOS, Windows): installs LibreOffice (the distribution package on
-  Linux, the current release on macOS and Windows) and a checksum-pinned veraPDF with
+- **Integration** (Linux, macOS, Windows): installs LibreOffice (checksum-pinned 26.8.0.3 on
+  Linux and Windows, the current release on macOS) and a checksum-pinned veraPDF with
   `tools/install_verapdf.py`, then runs the integration tests (real exports, real
   validation, the full pipeline) with `ODFA11Y_REQUIRE_INTEGRATION=1`. PDF tagging and
   pagination are exporter behaviour, so passing on one operating system says little about
-  another. LibreOffice versions are not pinned; the job logs the version it ran with, and
+  another. LibreOffice 26.8 is the minimum; Linux/Windows installation inputs are pinned in the
+  workflow and macOS deliberately tests the current release. The job logs its version, and
   the evidence record of any run carries it.
 - **CI gate**: waits for the three jobs above and fails unless all succeeded. It is the
   only check a branch ruleset should require; see [Releasing](RELEASING.md#repository-settings).
@@ -148,8 +150,9 @@ actionlint .github/workflows/checks.yml
 
 The workflow uses read-only repository permissions, pinned actions, bounded job
 runtimes and PR cancellation; checkout credentials are not persisted. It supports
-manual runs. Runner images and LibreOffice packages follow their upstream stable
-distributions, so the lockfile does not freeze the complete operating system.
+manual runs. Runner images and the macOS LibreOffice follows its current stable distribution;
+Linux/Windows LibreOffice installers are checksum-pinned. The lockfile does not freeze
+the complete operating system.
 
 veraPDF is a separately installed Java CLI used when an operator explicitly requests
 `--verapdf`. CI validates a LibreOffice export with a pinned veraPDF release; update

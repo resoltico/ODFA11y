@@ -32,23 +32,25 @@ where binary samples end. Form XObjects are not scanned. The decoded-page-conten
 is checked after each stream is decoded; it does not bound the decoder's peak memory.
 
 
-## Link descriptions depend on the LibreOffice release
+## Link descriptions
 
-PDF/UA requires every link to carry an alternate description. LibreOffice 24.2 derives one
-from the link text; newer releases (observed with the macOS package current in 2026) export links without one. ODFA11y reports this as `PDF019` and veraPDF as rules 7.18.1-2
-and 7.18.5-2, so a document with hyperlinks can fail `verify` or `production` under one
-LibreOffice and pass under another. ODFA11y cannot add a description to the exported PDF, and `PDF019` stays an error: a PDF
-whose links lack one is not accessible. Run `odfa11y doctor` to learn in advance which
-case applies. It exports a synthetic one-hyperlink document with the installed LibreOffice,
-audits the PDF with the built-in audit, and prints `pdfua_link_descriptions: supported`
-(no `PDF019`) or `unsupported`. `doctor` exits `0` whenever the check ran, even when the
-answer is `unsupported`, and `3` when LibreOffice is missing or its export fails (the
-other versions are still printed). The pipeline's evidence records the LibreOffice version
-so the difference is explainable. Text pipeline exports also record the same self-tested
-`pdfua_link_descriptions` capability under `toolchain.LibreOffice` in `run.json`. The
-probe runs once at the first export and adds an export to the run; an unsupported
-capability does not itself fail a document with no hyperlinks. A probe execution failure
-fails the export stage and is recorded with the other execution failures.
+LibreOffice **26.8 or newer** is required. Older installations and versions that cannot
+be identified are rejected before conversion. There is one supported export contract:
+Writer hyperlinks need a meaningful **Name**, stored in ODF as `text:a/@office:name`.
+`office:title` alone does not supply the description in the tested 26.8 exporter. Check
+references before changing an existing name; ODFA11y does not invent names or descriptions.
+
+`odfa11y doctor` exports an explicitly named synthetic link and checks that its PDF/UA-1
+description survives. Text pipeline exports run the same self-test once and record
+`pdfua_link_descriptions: supported | unsupported` under `toolchain.LibreOffice` in
+`run.json`. Probe files are excluded. An execution failure fails the export stage.
+
+The [unnamed-link reproduction](../tests/reproductions/unnamed-link.odt) must produce
+`PDF019` and veraPDF 7.18.1-2 and 7.18.5-2 failures; an explicitly named control must pass
+both tools and the pipeline. `PDF019` remains an error. Upstream
+[bug 161583](https://bugs.documentfoundation.org/show_bug.cgi?id=161583#c17) explains the
+Name-based description contract. Integration tests enforce this contract on supported
+runtimes, rather than accepting older exporter behavior.
 
 ## Document families
 
@@ -80,27 +82,16 @@ Spreadsheets use LibreOffice's `calc_pdf_Export` filter and the same PDF audit, 
 and fidelity gates as text documents. Checks describe the actual exporter output; source
 header rows or alt text alone do not establish PDF/UA conformance.
 
-- **LibreOffice 24.2.7:** the sampled exports tag page headers, footers and pictures but
-  leave cell text untagged. `PDF023` rejects that text, independently confirmed by
-  veraPDF PDF/UA-1 clause 7.1, test 3. Links also lacked `Link` elements (`PDF016`, and
-  veraPDF clause 7.18.5, test 1). Heading, list and table rules (`PDF008`, `PDF012`–`PDF015`)
-  had no cell structure to inspect; `PDF004` passing did not mean cells were tagged.
-- **LibreOffice 26.8.0.3:** the sampled table export has tagged cells but no `TH` cells
-  (`PDF015`), and veraPDF reports inconsistent table-column counts (clause 7.2, test 43).
-  The `production` profile rejects the table-header warning before reaching veraPDF.
-- Metadata, pictures and extractable text remain meaningful diagnostics (`PDF000`–`PDF003`,
-  `PDF006`, `PDF007`, `PDF009`, `PDF010`). A person must check the language: the 24.2 sample
-  exported `en-US` even when the source declared `de-DE`.
-- Fidelity comparisons check pages, text, links and ink. Calc's default header prints the
-  sheet name, so a rename changes rendered text (`FID003`). The pipeline may stop earlier
-  on an invalid PDF; the standalone `compare` command can still assess the exported pair.
-  Change or remove the header in Calc first, or use `remediate` and review the printed result.
+With LibreOffice 26.8.0.3 and veraPDF 1.30.2, the sampled table export has tagged cells but
+no `TH` cells (`PDF015`), and veraPDF reports inconsistent table-column counts (7.2-43).
+The `production` profile rejects the table-header warning before reaching veraPDF.
+Integration tests require that failure and reject unrelated validator failures.
 
-These observations use small invented Calc-authored fixtures and veraPDF 1.30.2. They do
-not establish that every spreadsheet or LibreOffice release behaves identically. Integration
-tests require the observed gate failures and reject unrelated validator failures. No warning
-or error is whitelisted in the application. An earlier failed gate leaves downstream stages
-`skipped`; a green integration test can prove correct rejection of an invalid export.
+Fidelity comparisons check pages, text, links and ink. Calc's default header prints the
+sheet name, so a rename changes rendered text (`FID003`). Change or remove the header in
+Calc first, or use `remediate` and review the printed result. No warning or error is
+whitelisted. An earlier failed gate leaves downstream stages `skipped`; a green integration
+test can prove correct rejection of an invalid export.
 
 ## ODF schema validation
 

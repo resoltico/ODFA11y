@@ -133,7 +133,7 @@ changes. Every entry is checked before the first edit and any problem fails the 
   document embeds charts or other objects, whose own references to sheets are not inspected.
   Dynamic `INDIRECT`, `ADDRESS` and `HYPERLINK` formulas and embedded scripts also block
   every rename because their sheet references cannot be resolved safely.
-  The test errs towards refusing (a sheet named `Data` is also blocked by a reference to
+  Reference matching includes case variants and URL-escaped names. The test errs towards refusing (a sheet named `Data` is also blocked by a reference to
   `MyData.A1`). Update the references in Calc first, or rename in Calc.
 
 Renaming updates the sheet keys in table view and script-configuration settings, and

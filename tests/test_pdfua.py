@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING
 import pytest
 from pypdf import PdfWriter
 
-from odfa11y.errors import OutputError, ToolNotFoundError
+from odfa11y.errors import OutputError, ToolFailedError, ToolNotFoundError
+from odfa11y.external_tools import ToolIdentity
 from odfa11y.odf import PackageStorage
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, find_soffice, validate_pdfua
 
 from .fixtures import make_minimal_odt
 
@@ -122,12 +123,8 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
     assert report.metadata["link_structure_elements"] >= 1
     result = validate_pdfua(pdf, executable=verapdf)
     failed = {(f.clause, f.test_number) for f in result.failures}
-    # Whether the exporter describes its links depends on the LibreOffice release; the audit
-    # and veraPDF must agree about it, and nothing else may fail.
-    assert bool(failed & LINK_DESCRIPTION_RULES) == (
-        "PDF019" in {f.rule_id for f in report.findings}
-    )
-    assert failed <= LINK_DESCRIPTION_RULES, failed
+    assert "PDF019" in {f.rule_id for f in report.findings}
+    assert failed == LINK_DESCRIPTION_RULES, failed
 
 
 @pytest.mark.integration
@@ -166,3 +163,28 @@ def test_real_verapdf_reports_the_failed_rules_of_an_untagged_pdf(
     assert {(f.clause, f.test_number) for f in result.failures} >= {("6.2", "1"), ("7.1", "11")}
     assert all(f.specification.startswith("ISO 14289-1") for f in result.failures)
     assert all(f.description for f in result.failures)
+
+
+@pytest.mark.parametrize("version", ["24.2.7.2", "26.7.9", "unknown"])
+def test_unsupported_runtime_versions_are_refused(
+    version: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("odfa11y.pdf.export.find_executable", lambda *_args: "soffice")
+    monkeypatch.setattr(
+        "odfa11y.pdf.export.identify_soffice",
+        lambda _executable: ToolIdentity("LibreOffice", version),
+    )
+    with pytest.raises(ToolFailedError, match=r"install LibreOffice 26\.8 or newer"):
+        find_soffice()
+
+
+@pytest.mark.parametrize("version", ["26.8", "26.8.0.3", "27.0.0"])
+def test_current_runtime_versions_are_accepted(
+    version: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("odfa11y.pdf.export.find_executable", lambda *_args: "soffice")
+    monkeypatch.setattr(
+        "odfa11y.pdf.export.identify_soffice",
+        lambda _executable: ToolIdentity("LibreOffice", version),
+    )
+    assert find_soffice() == "soffice"

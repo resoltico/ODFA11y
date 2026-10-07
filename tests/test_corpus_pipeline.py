@@ -52,16 +52,11 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
             tmp_path / "out" / "remediated.pdf", executable=external_tool("verapdf")
         )
         failures = {(failure.clause, failure.test_number) for failure in result.failures}
-        assert failures <= {("7.18.1", "2"), ("7.18.5", "2")}, failures
-        assert bool(failures) == ("PDF019" in pdf_rules), diagnostics
-        if failures:
-            assert pdf_rules == {"PDF019"}, diagnostics
-            assert record.failed_stage == "audit-pdf", diagnostics
-            assert record.exit_status == 2
-            assert stages["fidelity"] == "skipped", diagnostics
-        else:
-            assert record.passed, diagnostics
-            assert stages["fidelity"] == "passed", diagnostics
+        assert failures == {("7.18.1", "2"), ("7.18.5", "2")}, failures
+        assert pdf_rules == {"PDF019"}, diagnostics
+        assert record.failed_stage == "audit-pdf", diagnostics
+        assert record.exit_status == 2
+        assert stages["fidelity"] == "skipped", diagnostics
     else:
         assert record.passed, diagnostics
         assert stages["fidelity"] == "passed", diagnostics

@@ -139,6 +139,7 @@ def test_two_sheets_with_one_name_cannot_be_addressed(tmp_path: Path) -> None:
     [
         "of:=SUM([$Notes.A1:.A3])",
         "of:=[Notes.A1]",
+        "of:=[notes.A1]",
         "of:=SUM([$Notes.A1:$Other.B2])",
         "of:=INDIRECT(&quot;Notes.A1&quot;)",
     ],
@@ -175,7 +176,7 @@ def test_references_outside_formulas_block_the_rename_too(tmp_path: Path, attrib
     assert outcome.status is Status.FAILED
 
 
-@pytest.mark.parametrize("target", ["#Notes.A1", "#Notes"])
+@pytest.mark.parametrize("target", ["#Notes.A1", "#Notes", "#%4Eotes.A1"])
 def test_a_link_to_a_sheet_blocks_its_rename(tmp_path: Path, target: str) -> None:
     link = f'<text:a xlink:href="{target}" xlink:type="simple">Notes</text:a>'
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Calc", row(text_cell(link))))

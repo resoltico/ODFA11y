@@ -199,14 +199,11 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
     assert pdf_stage.report is not None
     pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
-    assert pdf_rules <= {"PDF008", "PDF015", "PDF023"}, record.as_dict()
-    failures = validation_failures(tmp_path / "out" / "remediated.pdf", external_tool("verapdf"))
-    assert ("PDF023" in pdf_rules) == (("7.1", "3") in failures)
-    if "PDF023" in pdf_rules:
-        assert record.failed_stage == "audit-pdf"
-        assert reached["fidelity"] == "skipped"
-    else:
-        assert reached["audit-pdf"] == reached["fidelity"] == "passed"
+    assert pdf_rules == {"PDF008", "PDF015"}, record.as_dict()
+    assert validation_failures(tmp_path / "out" / "remediated.pdf", external_tool("verapdf")) == {
+        ("7.2", "43")
+    }
+    assert reached["audit-pdf"] == reached["fidelity"] == "passed"
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["document"]["adapter"] == "spreadsheet"
     assert {"source.pdf", "remediated.pdf", "remediated.ods"} <= set(run["outputs"])
@@ -228,14 +225,7 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
         tmp_path / "out" / "source.pdf", tmp_path / "out" / "remediated.pdf", FidelityPolicy()
     )
     assert "FID003" in {f.rule_id for f in report.findings}
-    if record.failed_stage == "audit-pdf":
-        assert stages(record)["fidelity"] == "skipped"
-        failures = validation_failures(
-            tmp_path / "out" / "remediated.pdf", external_tool("verapdf")
-        )
-        assert ("7.1", "3") in failures
-    else:
-        assert record.failed_stage == "fidelity", record.as_dict()
+    assert record.failed_stage == "fidelity", record.as_dict()
 
 
 def test_the_production_profile_rejects_known_invalid_calc_exports(
@@ -254,15 +244,10 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
     assert pdf_stage.report is not None
     pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
-    assert pdf_rules <= {"PDF008", "PDF015", "PDF023"}, record.as_dict()
-    assert ("PDF023" in pdf_rules) == (("7.1", "3") in failures)
-    if pdf_rules & {"PDF015", "PDF023"}:
-        assert record.failed_stage == "audit-pdf", record.as_dict()
-        assert reached["verapdf"] == reached["fidelity"] == "skipped"
-    else:
-        assert reached["audit-pdf"] == "passed"
-        assert (reached["verapdf"] == "failed") == bool(failures)
-        assert (tmp_path / "out" / "verapdf.xml").is_file()
+    assert pdf_rules == {"PDF008", "PDF015"}, record.as_dict()
+    assert failures == {("7.2", "43")}
+    assert record.failed_stage == "audit-pdf", record.as_dict()
+    assert reached["verapdf"] == reached["fidelity"] == "skipped"
 
 
 def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(
@@ -285,5 +270,5 @@ def validation_failures(pdf: Path, verapdf: str) -> set[tuple[str, str]]:
     """
     result = validate_pdfua(pdf, executable=verapdf)
     failures = {(f.clause, f.test_number) for f in result.failures}
-    assert failures <= {("7.1", "3"), ("7.2", "43")}, result.failures
+    assert failures == {("7.2", "43")}, result.failures
     return failures
