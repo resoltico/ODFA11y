@@ -93,7 +93,7 @@ def _declared_media_type(document: OdfDocument) -> tuple[str | None, str]:
         return value, "office:mimetype"
     if storage.has(MIMETYPE_MEMBER):
         try:
-            return storage.read(MIMETYPE_MEMBER).decode("ascii"), MIMETYPE_MEMBER
+            return storage.read(MIMETYPE_MEMBER).decode("ascii").strip() or None, MIMETYPE_MEMBER
         except UnicodeDecodeError:
             return None, MIMETYPE_MEMBER
     return None, "none"

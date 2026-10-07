@@ -89,6 +89,7 @@ ODF007 = _rule("ODF007", WARNING, ODF, "The file extension does not match the me
 ODF008 = _rule("ODF008", WARNING, ODF, "The document kind is deprecated or legacy.")
 ODF009 = _rule("ODF009", INFO, ODF, "No semantic audit exists for this document family.")
 ODF010 = _rule("ODF010", ERROR, ODF, "A flat XML document's root is not office:document.")
+ODF011 = _rule("ODF011", ERROR, ODF, "A package's content root is not office:document-content.")
 ODF900 = _rule("ODF900", WARNING, ODF, "A member does not validate against the ODF schema.")
 ODF905 = _rule("ODF905", INFO, ODF, "No ODF schema is bundled for the declared version.")
 META001 = _rule("META001", ERROR, META, "Document title metadata is missing.", "document.title")

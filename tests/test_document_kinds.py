@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
@@ -76,3 +77,30 @@ def test_every_kind_has_its_own_short_name() -> None:
     names = [kind.name for kind in KINDS.values()]
     assert len(names) == len(set(names))
     assert "application" not in " ".join(names)
+
+
+@pytest.mark.parametrize("damage", [b"\n", b" ", "é".encode()])
+def test_a_damaged_mimetype_member_is_reported_and_the_audit_continues(
+    tmp_path: Path, damage: bytes
+) -> None:
+    source = make_package(tmp_path, "text")
+    damaged = tmp_path / "damaged.odt"
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(damaged, "w") as copy:
+        for member in original.infolist():
+            data = original.read(member.filename)
+            copy.writestr(member, data + damage if member.filename == "mimetype" else data)
+    report = audit_odf(damaged)
+    assert "PKG001" in {f.rule_id for f in report.findings}
+    assert "ODF005" not in {f.rule_id for f in report.findings}
+    assert report.metadata["document_kind"] == "text"
+
+
+def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "text")
+    wrong = tmp_path / "wrong.odt"
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(wrong, "w") as copy:
+        for member in original.infolist():
+            data = original.read(member.filename)
+            copy.writestr(member, b"<foo/>" if member.filename == "content.xml" else data)
+    assert "ODF011" in {f.rule_id for f in audit_odf(wrong).findings}
+    assert "ODF011" not in {f.rule_id for f in audit_odf(source).findings}

@@ -241,3 +241,14 @@ def test_malformed_annotation_entries_are_skipped_not_fatal(tmp_path: Path) -> N
     report = audit(tmp_path, writer)
     assert "PDF000" not in ids(report)
     assert report.metadata["link_annotations"] == 0
+
+
+def test_malformed_annotation_entries_do_not_abort_the_audit(tmp_path: Path) -> None:
+    writer = tagged_writer(["H1"], link_annotations=1)
+    writer.pages[0][NameObject("/Annots")] = NumberObject(5)
+    assert "PDF000" not in ids(audit(tmp_path, writer))
+    writer = tagged_writer(["H1"], link_annotations=1)
+    annotations = writer.pages[0]["/Annots"]
+    assert isinstance(annotations, ArrayObject)
+    annotations.insert(0, NumberObject(7))
+    assert "PDF000" not in ids(audit(tmp_path, writer))
