@@ -64,6 +64,18 @@ def test_the_release_job_depends_on_the_gate_alone() -> None:
     assert re.search(r"needs: \[ci-gate\]", job_block("draft"))
 
 
+def test_a_draft_release_is_created_only_by_a_manual_run_on_main() -> None:
+    block = job_block("draft")
+    assert (
+        "if: github.event_name == 'workflow_dispatch' && inputs.release"
+        " && github.ref == 'refs/heads/main'" in block
+    )
+    assert "environment: release" in block
+    assert "--target" in block
+    assert "--verify-tag" not in block
+    assert "refs/tags" not in WORKFLOW
+
+
 def test_the_gate_demands_success_not_merely_absence_of_failure() -> None:
     assert '.result == "success"' in job_block("ci-gate")
 

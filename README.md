@@ -76,7 +76,7 @@ Each package exposes its API through its `__init__`: for example
 - [Rule reference](docs/RULES.md): stable finding identifiers and their meanings.
 - [Development](docs/DEVELOPING.md): setup, checks, CI and packaging.
 - [Architecture](docs/ARCHITECTURE.md): implementation responsibilities and invariants.
-- [Releasing](docs/RELEASING.md): version tags, draft assets and the required CI check.
+- [Releasing](docs/RELEASING.md): starting a release, draft assets and the required CI check.
 - [Changelog](CHANGELOG.md): release outcomes.
 
 ## License

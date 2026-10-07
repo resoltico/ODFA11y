@@ -68,6 +68,7 @@ API, command line, configuration file and report format all changed. Review the
   and under `dist-info/licenses`) and the source archive. Release verification now rejects a
   wheel or source archive whose notice or `LICENSE` differs from the repository, or a wheel
   whose package files differ from `src/odfa11y`.
+- Releases are started by a manual run of the Checks workflow on `main` (`gh workflow run checks.yml --ref main -f release=true`) instead of by pushing a tag: after the gate passes it creates a draft release targeting the tested commit, and publishing the draft creates the tag.
 - Release assets include `SHA256SUMS` and a build-provenance attestation; CI rebuilds the
   distributions and requires identical bytes. A weekly dependency-advisory workflow, issue
   and pull-request templates (warning against uploading real documents).
