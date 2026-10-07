@@ -75,7 +75,7 @@ def _render_text(report: Report) -> str:
     if report.findings:
         lines.append("Findings:")
         for finding in report.findings:
-            where = f" [{finding.location}]" if finding.location else ""
+            where = f" at {finding.location.label}" if finding.location else ""
             lines.append(
                 f"  {finding.severity.value.upper():7} {finding.rule_id}{where}: {finding.message}"
             )

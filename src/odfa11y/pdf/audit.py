@@ -40,7 +40,7 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
     try:
         _inspect(pdf_path, report)
     except (OSError, PyPdfError, ValueError, KeyError, ToolFailedError) as exc:
-        report.add(rules.PDF000, f"Cannot inspect PDF: {exc}", location=pdf_path.name)
+        report.add(rules.PDF000, f"Cannot inspect PDF: {exc}")
     return report
 
 

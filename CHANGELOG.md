@@ -4,6 +4,20 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Breaking
+
+- **Finding locations.** JSON reports are format 3. A finding's `location` is no longer a
+  string naming storage (`content.xml paragraph 3`, `document paragraph 3`) but an object
+  `{"path", "member"}` or `null`. `path` is logical and identical for equivalent `.odt` and
+  `.fodt` sources (`content/paragraph[3]`, `content/heading[2]`, `content/table[Data]`,
+  `meta/title`); `member` carries the package member only for package-level findings such as
+  `ODF004` (`manifest`, `META-INF/manifest.xml`). Paragraph indexes no longer count headings,
+  heading text moved into the finding's `details.text`, and a finding about a source that
+  cannot be opened (`PKG000`, `PDF000`) has no location. `TXT050` is one finding at `styles`
+  instead of a list of members, and `ODF900` messages name the part, not the member. The
+  Python API takes `Location` in `Report.add`. The grammar is in
+  [Rules](docs/RULES.md#locations).
+
 ### Added
 
 - **Marked-content reconciliation in the built-in PDF audit.** Each page's content stream is

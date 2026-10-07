@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import NS, Part
-from odfa11y.report import rules
+from odfa11y.report import Location, rules
 
 if TYPE_CHECKING:
     from odfa11y.adapter import FamilyAdapter
@@ -17,10 +17,13 @@ if TYPE_CHECKING:
 def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report) -> None:
     """Report missing or empty title and language, with the family's default language."""
     meta = document.tree(Part.META) if document.has(Part.META) else None
-    meta_name = document.member_name(Part.META) or Part.META.value
     title = meta.findtext(".//dc:title", namespaces=NS) if meta is not None else None
     if not title or not title.strip():
-        report.add(rules.META001, "Document title metadata is missing.", location=meta_name)
+        report.add(
+            rules.META001,
+            "Document title metadata is missing.",
+            location=Location("meta/title"),
+        )
     else:
         report.metadata["title"] = title.strip()
 
@@ -30,7 +33,7 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
         report.add(
             rules.META002,
             "Document language is not declared in metadata or the default style.",
-            location=meta_name,
+            location=Location("meta/language"),
         )
         return
     report.metadata["language"] = (language or default_language or "").strip()
@@ -41,7 +44,7 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
     ):
         report.add(
             rules.META003,
-            location=meta_name,
+            location=Location("meta/language"),
             details={"metadata": language, "default_style": default_language},
         )
 

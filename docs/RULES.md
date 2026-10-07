@@ -117,3 +117,28 @@ table with an explicit row count. `TXT040` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
 `VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
 number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.
+
+## Locations
+
+A finding's `location` is logical, so the same document audits to the same locations as a
+package (`.odt`) and as flat XML (`.fodt`). It has a `path` and an optional `member`, the
+stored package member, which is set only where that physical detail helps (package-level
+defects such as `ODF004` or `PKG004`). A finding with no location applies to the whole
+file; an audit reports no location at all for a source it cannot open.
+
+```text
+path     = part [ "/" segment ]
+part     = "content" | "styles" | "meta" | "manifest" | "package" | "document"
+segment  = "heading[" N "]" | "paragraph[" N "]" | "table[" ref "]" | "frame[" ref "]"
+         | "title" | "language" | "mimetype"
+ref      = name | "#" N
+```
+
+`N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
+`text:h`, `paragraph[3]` the third `text:p` (headings are not paragraphs here). `ref` is the
+element's declared name (`table[Data]`, `frame[Logo]`) or, when it has none, `#` and its
+index among tables or graphics (`table[#2]`). `meta/title` and `meta/language` name the
+missing or conflicting metadata field. `styles` covers style definitions wherever they are
+stored, `package/mimetype` is the ZIP `mimetype` member, and `document` is a flat file or
+a schema or parse defect in one. The text report prints `path` followed by the member in
+parentheses, for example `manifest (META-INF/manifest.xml)`.
