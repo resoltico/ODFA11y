@@ -179,7 +179,7 @@ def test_svg_self_contained_references_are_not_external_dependencies(tmp_path: P
     document.storage.write_member(
         _payload(document),
         b'<svg xmlns="http://www.w3.org/2000/svg"><defs><path id="shape" d="M0,0 L1,1"/>'
-        b'</defs><use href="#shape"/></svg>',
+        b'</defs><use href="#shape" fill="url(#paint)" style="stroke:url(\'#stroke\')"/></svg>',
     )
     report = audit_odf(document.save(tmp_path / "self-contained.odi"))
     assert not {"IMAGE004", "IMAGE005"} & {f.rule_id for f in report.findings}

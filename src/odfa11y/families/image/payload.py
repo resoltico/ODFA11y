@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import binascii
 import io
+import re
 import warnings
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
+CSS_URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.IGNORECASE | re.DOTALL)
 
 
 def inspect_payload(document: OdfDocument, image: etree._Element) -> tuple[str | None, bool]:
@@ -89,10 +91,17 @@ def _requires_review(root: etree._Element) -> bool:
                 local in {"href", "src"} and value and not value.startswith("#")
             ):
                 return True
-            if "url(" in value.lower():
+            if _external_css(value):
                 return True
         if node.tag == f"{{{SVG_NAMESPACE}}}style":
             css = "".join(node.itertext()).lower()
-            if "url(" in css or "@import" in css:
+            if _external_css(css) or "@import" in css:
                 return True
     return False
+
+
+def _external_css(value: str) -> bool:
+    matches = list(CSS_URL.finditer(value))
+    return any(not match[2].strip().startswith("#") for match in matches) or (
+        "url(" in value.lower() and not matches
+    )
