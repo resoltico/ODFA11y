@@ -93,12 +93,8 @@ Each package exposes its API through its `__init__`: for example
 
 ## Status and roadmap
 
-Planned and open work is tracked in GitHub issues: [#6](https://github.com/resoltico/ODFA11y/issues/6)
-(document families), [#7](https://github.com/resoltico/ODFA11y/issues/7) (marked-content
-reconciliation), [#10](https://github.com/resoltico/ODFA11y/issues/10) (LibreOffice hyperlink
-compatibility), [#11](https://github.com/resoltico/ODFA11y/issues/11) (storage-neutral
-locations) and [#12](https://github.com/resoltico/ODFA11y/issues/12) (batch, SARIF and corpus
-work).
+Current work and planned features are tracked in [GitHub issues](https://github.com/resoltico/ODFA11y/issues)
+and [pull requests](https://github.com/resoltico/ODFA11y/pulls).
 
 ## License
 
