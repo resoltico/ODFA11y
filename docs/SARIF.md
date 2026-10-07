@@ -1,6 +1,6 @@
 # SARIF reports
 
-Use `--format sarif --source-root ROOT` on commands that render audit reports. ROOT is
+Use `--format sarif --source-root ROOT` with `audit` or `compare`. ROOT is
 an existing directory containing every source artifact in the report. For example:
 
 ```sh
@@ -26,6 +26,9 @@ database credentials or absolute paths from external-tool diagnostics. Use local
 or text reports when those detailed diagnostics are needed. Logical labels containing
 absolute host paths or URI credentials are rejected. Source-root violations and missing
 physical source identities are errors; display labels are never guessed as filenames.
+The CLI checks these prerequisites before auditing or exporting any input. SARIF execution
+errors use a generic stderr message to avoid leaking exception paths or tool diagnostics;
+rerun with text or JSON output to investigate the detailed local failure.
 
 Generated logs are checked against the unmodified official OASIS draft-07 schema in the
 test suite, with negative controls and additional rule-index/artifact-index assertions.
