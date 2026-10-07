@@ -37,7 +37,7 @@ Notable changes to this project are documented in this file. The format is based
   unknown sheet, an invalid or colliding new name, a chained or swapped rename, any sheet that
   a formula, range or link refers to by name, and every sheet of a document that embeds
   charts or scripts, or uses dynamic reference functions (`INDIRECT`, `ADDRESS`, `HYPERLINK`).
-  Reference matching includes case variants. References are not rewritten; table view
+  Reference matching includes case variants and URL-escaped names. References are not rewritten; table view
   settings and the active-sheet selection follow the renamed sheet.
 - **Spreadsheet PDF export.** The pipeline exports spreadsheets with LibreOffice's
   `calc_pdf_Export` filter and runs the PDF audit, veraPDF and the fidelity comparison on

@@ -7,6 +7,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
+from urllib.parse import unquote
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.odf import Family, PackageStorage, Part, qn, select_elements
@@ -169,7 +170,7 @@ def _is_referenced(document: OdfDocument, name: str) -> bool:
                     continue
                 if attribute == qn("table", "formula") and DYNAMIC_REFERENCE.search(value):
                     return True
-                reference = value.casefold()
+                reference = unquote(value).casefold()
                 if reference in links or any(token in reference for token in dotted):
                     return True
     return False
