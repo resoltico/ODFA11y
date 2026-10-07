@@ -9,8 +9,8 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING
 
-import lxml
 import pypdf
+from lxml import etree
 
 from odfa11y import __version__
 from odfa11y.odf import OdtPackage, StyleCatalog
@@ -114,7 +114,7 @@ def doctor(output_format: str) -> int:
     info = {
         "odfa11y": __version__,
         "python": sys.version.split()[0],
-        "lxml": lxml.__version__,
+        "lxml": etree.__version__,
         "pypdf": pypdf.__version__,
         "soffice": shutil.which("soffice") or shutil.which("libreoffice"),
         "veraPDF": shutil.which("verapdf"),

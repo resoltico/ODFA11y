@@ -11,6 +11,7 @@ from lxml import etree
 
 from .namespaces import NS, qn
 from .style_properties import attr_from_display, display_attr, find_paragraphs_by_style
+from .xpath import select_elements
 
 if TYPE_CHECKING:
     from .package import OdtPackage
@@ -56,11 +57,11 @@ class StyleCatalog:
 
     def _index(self) -> None:
         for tree in (self.styles_tree, self.content_tree):
-            for default in tree.xpath("//style:default-style", namespaces=NS):
+            for default in select_elements(tree, "//style:default-style"):
                 family = default.get(qn("style", "family"))
                 if family:
                     self._defaults[family] = default
-            for style in tree.xpath("//style:style", namespaces=NS):
+            for style in select_elements(tree, "//style:style"):
                 name = style.get(qn("style", "name"))
                 family = style.get(qn("style", "family"))
                 if name and family:
@@ -234,13 +235,9 @@ class StyleCatalog:
                 pprops.set(key, value)
 
         # Avoid duplicate style names if called repeatedly in one run.
-        old = auto_styles.xpath(
-            "./style:style[@style:name=$name]",
-            namespaces=NS,
-            name=new_style_name,
-        )
-        for node in old:
-            auto_styles.remove(node)
+        for node in select_elements(auto_styles, "./style:style"):
+            if node.get(qn("style", "name")) == new_style_name:
+                auto_styles.remove(node)
         auto_styles.append(clone)
         self._styles["paragraph", new_style_name] = clone
         return clone
@@ -255,7 +252,7 @@ class StyleCatalog:
 
         """
         counts: Counter[str] = Counter()
-        for p in self.content_tree.xpath("//text:p | //text:h", namespaces=NS):
+        for p in select_elements(self.content_tree, "//text:p | //text:h"):
             name = p.get(qn("text", "style-name")) or "(none)"
             counts[name] += 1
         rows: list[ParagraphStyleUsage] = []

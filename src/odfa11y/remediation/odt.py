@@ -14,6 +14,7 @@ from odfa11y.odf import (
     StyleCatalog,
     is_empty_paragraph,
     qn,
+    select_elements,
     text_is_preserved,
     visible_text_snapshot,
 )
@@ -121,7 +122,7 @@ def apply_alt_text(tree: etree._ElementTree, mapping: dict[str, AltText]) -> int
 
     """
     changed = 0
-    for frame in tree.xpath("//draw:frame", namespaces=NS):
+    for frame in select_elements(tree, "//draw:frame"):
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         name = frame.get(qn("draw", "name"))
@@ -152,7 +153,7 @@ def apply_table_headers(tree: etree._ElementTree, mapping: dict[str, int]) -> in
 
     """
     changed = 0
-    for table in tree.xpath("//table:table", namespaces=NS):
+    for table in select_elements(tree, "//table:table"):
         name = table.get(qn("table", "name"))
         if not name or name not in mapping:
             continue
@@ -163,7 +164,7 @@ def apply_table_headers(tree: etree._ElementTree, mapping: dict[str, int]) -> in
         existing = table.find("table:table-header-rows", NS)
         if existing is not None:
             continue
-        rows = table.xpath("./table:table-row", namespaces=NS)
+        rows = select_elements(table, "./table:table-row")
         if len(rows) < count:
             msg = f"Table {name!r} has only {len(rows)} direct row(s), not {count}."
             raise ValueError(msg)
@@ -186,15 +187,15 @@ def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatal
 
     """
     removed = 0
-    for p in list(tree.xpath("//text:p", namespaces=NS)):
+    for p in list(select_elements(tree, "//text:p")):
         if not is_empty_paragraph(p):
             continue
-        if p.xpath(
+        if select_elements(
+            p,
             (
                 "ancestor::table:table-cell | ancestor::draw:text-box | "
                 "ancestor::office:annotation | ancestor::text:list-item"
             ),
-            namespaces=NS,
         ):
             continue
         style_name = p.get(qn("text", "style-name"))
@@ -235,7 +236,7 @@ def _set_version_declarations(
     if mroot.get(qn("manifest", "version")) != target_version:
         mroot.set(qn("manifest", "version"), target_version)
         changed = True
-    root_entries = mroot.xpath("./manifest:file-entry[@manifest:full-path='/']", namespaces=NS)
+    root_entries = select_elements(mroot, "./manifest:file-entry[@manifest:full-path='/']")
     if root_entries:
         root_entry = root_entries[0]
         if root_entry.get(qn("manifest", "version")) != target_version:

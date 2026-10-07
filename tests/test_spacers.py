@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.odf import NS, OdtPackage, qn, text_is_preserved
+from odfa11y.odf import NS, OdtPackage, qn, select_elements, text_is_preserved
 from odfa11y.remediation import RemediationOptions, remediate_odt
 
 from .fixtures import make_minimal_odt
@@ -42,8 +42,7 @@ def test_spacer_removal_preserves_nonempty_paragraphs(tmp_path: Path) -> None:
         source, destination, options=RemediationOptions(remove_empty_spacers=True)
     )
     tree = OdtPackage(destination).parse_xml("content.xml")
-    assert tree.xpath("//text:p/text()", namespaces=NS) == ["Body paragraph."]
-    assert len(tree.xpath("//text:p", namespaces=NS)) == 1
+    assert [p.text for p in select_elements(tree, "//text:p")] == ["Body paragraph."]
     assert any("Removed 2 empty" in change for change in result.changes)
 
 
@@ -54,19 +53,22 @@ def test_spacer_removal_retains_semantically_protected_paragraphs(
     source = make_minimal_odt(tmp_path / "source.odt", add_blank_body_paragraph=True)
     package = OdtPackage(source)
     tree = package.parse_xml("content.xml")
-    paragraph = tree.xpath("//text:p[not(text())]", namespaces=NS)[0]
+    paragraph = select_elements(tree, "//text:p[not(text())]")[0]
     paragraph.set("{http://www.w3.org/XML/1998/namespace}id", "protected")
     if marker in {"table", "list"}:
         namespace, tag = ("table", "table-cell") if marker == "table" else ("text", "list-item")
         parent = paragraph.getparent()
+        assert parent is not None
         wrapper = etree.Element(qn(namespace, tag))
         parent.replace(paragraph, wrapper)
         wrapper.append(paragraph)
     elif marker in {"break", "master"}:
         styles = package.parse_xml("styles.xml")
-        style = styles.xpath("//style:style[@style:name='Body']", namespaces=NS)[0]
+        style = select_elements(styles, "//style:style[@style:name='Body']")[0]
         if marker == "break":
-            style.find("style:paragraph-properties", NS).set(qn("fo", "break-before"), "page")
+            properties = style.find("style:paragraph-properties", NS)
+            assert properties is not None
+            properties.set(qn("fo", "break-before"), "page")
         else:
             style.set(qn("style", "master-page-name"), "Standard")
         package.write_xml("styles.xml", styles)
@@ -82,4 +84,4 @@ def test_spacer_removal_retains_semantically_protected_paragraphs(
     destination = tmp_path / "out.odt"
     remediate_odt(source, destination, options=RemediationOptions(remove_empty_spacers=True))
     output = OdtPackage(destination).parse_xml("content.xml")
-    assert len(output.xpath("//*[@xml:id='protected']", namespaces=NS)) == 1
+    assert len(select_elements(output, "//*[@xml:id='protected']")) == 1

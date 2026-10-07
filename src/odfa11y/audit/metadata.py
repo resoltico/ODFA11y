@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.odf import NS, qn
+from odfa11y.odf import NS, qn, select_elements
 from odfa11y.report import Severity
 
 if TYPE_CHECKING:
@@ -58,9 +58,8 @@ def audit_metadata(
 
 
 def _default_style_language(styles_tree: etree._ElementTree) -> str | None:
-    nodes = styles_tree.xpath(
-        "//style:default-style[@style:family='paragraph']/style:text-properties",
-        namespaces=NS,
+    nodes = select_elements(
+        styles_tree, "//style:default-style[@style:family='paragraph']/style:text-properties"
     )
     if not nodes:
         return None

@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import io
+import lzma
 import os
 import tempfile
 import zipfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,6 +23,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 ODT_MIMETYPE = "application/vnd.oasis.opendocument.text"
+# Errors raised while reading malformed ZIP structure or decompressing damaged member data.
+UNREADABLE_ARCHIVE_ERRORS = (
+    zipfile.BadZipFile,
+    zlib.error,
+    EOFError,
+    lzma.LZMAError,
+    NotImplementedError,
+)
 REQUIRED_XML = ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml")
 
 
@@ -59,7 +69,7 @@ class OdtPackage:
     def _load(self) -> None:
         try:
             self._read_archive()
-        except zipfile.BadZipFile as exc:
+        except UNREADABLE_ARCHIVE_ERRORS as exc:
             msg = f"Not a valid ZIP/ODT package: {self.source}: {exc}"
             raise ValueError(msg) from exc
 

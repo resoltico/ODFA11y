@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from lxml import etree
 
-from odfa11y.odf import NS, URI_RE, qn, split_trailing_punctuation
+from odfa11y.odf import URI_RE, qn, select_elements, split_trailing_punctuation
 
 
 def linkify_plain_addresses(tree: etree._ElementTree) -> int:
@@ -18,7 +18,7 @@ def linkify_plain_addresses(tree: etree._ElementTree) -> int:
 
     """
     count = 0
-    blocks = tree.xpath("//text:p | //text:h", namespaces=NS)
+    blocks = select_elements(tree, "//text:p | //text:h")
     for block in blocks:
         # Traverse a stable list because link insertion mutates the tree.
         for element in list(block.iter()):
@@ -34,7 +34,7 @@ def linkify_plain_addresses(tree: etree._ElementTree) -> int:
 
 
 def _has_ancestor_link(element: etree._Element) -> bool:
-    return bool(element.xpath("ancestor::text:a", namespaces=NS))
+    return bool(select_elements(element, "ancestor::text:a"))
 
 
 def _linkify_slot(owner: etree._Element, attr: str) -> int:

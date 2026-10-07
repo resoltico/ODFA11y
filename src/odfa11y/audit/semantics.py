@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from odfa11y.odf import NS, element_text, qn
+from odfa11y.odf import NS, element_text, qn, select_elements
 from odfa11y.report import Severity
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ MAX_SIMPLE_HEADING_NUMBER = 99
 
 def audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
-    headings = tree.xpath("//text:h", namespaces=NS)
+    headings = select_elements(tree, "//text:h")
     report.metadata["heading_count"] = len(headings)
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
@@ -81,7 +81,7 @@ def audit_headings(tree: etree._ElementTree, report: AuditReport) -> None:
 
 def audit_images(tree: etree._ElementTree, report: AuditReport) -> None:
     """Report graphics and embedded objects that lack alternative text."""
-    frames = tree.xpath("//draw:frame[draw:image or draw:object or draw:object-ole]", namespaces=NS)
+    frames = select_elements(tree, "//draw:frame[draw:image or draw:object or draw:object-ole]")
     report.metadata["graphic_object_count"] = len(frames)
     for index, frame in enumerate(frames, start=1):
         title = frame.findtext("svg:title", namespaces=NS)
@@ -102,17 +102,17 @@ def audit_images(tree: etree._ElementTree, report: AuditReport) -> None:
 
 def audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
     """Report table structure defects such as missing header rows."""
-    tables = tree.xpath("//table:table", namespaces=NS)
+    tables = select_elements(tree, "//table:table")
     report.metadata["table_count"] = len(tables)
     for index, table in enumerate(tables, start=1):
         name = table.get(qn("table", "name")) or f"table-{index}"
         location = f"content.xml table {name}"
-        merged = table.xpath(
+        merged = select_elements(
+            table,
             (
                 ".//*[@table:number-columns-spanned or "
                 "@table:number-rows-spanned] | .//table:covered-table-cell"
             ),
-            namespaces=NS,
         )
         if merged:
             report.add(
@@ -127,8 +127,8 @@ def audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
                 fixable=False,
             )
 
-        direct_rows = table.xpath("./table:table-row", namespaces=NS)
-        header_rows = table.xpath("./table:table-header-rows/table:table-row", namespaces=NS)
+        direct_rows = select_elements(table, "./table:table-row")
+        header_rows = select_elements(table, "./table:table-header-rows/table:table-row")
         if not header_rows and _looks_like_data_table(direct_rows):
             report.add(
                 "TBL002",
@@ -143,8 +143,8 @@ def audit_tables(tree: etree._ElementTree, report: AuditReport) -> None:
 def _looks_like_data_table(rows: list[etree._Element]) -> bool:
     if len(rows) < MIN_DATA_TABLE_DIMENSION:
         return False
-    first = rows[0].xpath("./table:table-cell", namespaces=NS)
-    second = rows[1].xpath("./table:table-cell", namespaces=NS)
+    first = select_elements(rows[0], "./table:table-cell")
+    second = select_elements(rows[1], "./table:table-cell")
     if len(first) < MIN_DATA_TABLE_DIMENSION or len(second) < MIN_DATA_TABLE_DIMENSION:
         return False
     first_text = [element_text(cell) for cell in first]

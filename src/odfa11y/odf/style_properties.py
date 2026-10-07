@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .namespaces import NS, qn
+from .xpath import select_elements
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -31,7 +32,7 @@ def find_paragraphs_by_style(
     xpath = "//text:p" + (" | //text:h" if include_headings else "")
     return [
         p
-        for p in tree.xpath(xpath, namespaces=NS)
+        for p in select_elements(tree, xpath)
         if (p.get(qn("text", "style-name")) or "(none)") in wanted
     ]
 

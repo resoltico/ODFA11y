@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
+from typing import cast
 
 from .models import AltText, RemediationOptions
 
@@ -28,12 +29,11 @@ def load_remediation_config(path: str | Path) -> RemediationOptions:
     _known_keys(data, {"document", "remediation", "table_headers", "alt_text"}, "configuration")
     document = _config_table(data, "document")
     _known_keys(document, {"target_version", "title", "description", "language"}, "document")
-    _field_types(document, str, "document")
+    texts = _typed_values(document, str, "document")
     fixes = _config_table(data, "remediation")
     _known_keys(fixes, {"linkify_plain_addresses", "remove_empty_spacers"}, "remediation")
-    _field_types(fixes, bool, "remediation")
-    headers = _config_table(data, "table_headers")
-    _field_types(headers, int, "table_headers")
+    flags = _typed_values(fixes, bool, "remediation")
+    headers = _typed_values(_config_table(data, "table_headers"), int, "table_headers")
     for name, count in headers.items():
         if count < 1:
             msg = f"table_headers.{name} must be a positive integer"
@@ -43,12 +43,12 @@ def load_remediation_config(path: str | Path) -> RemediationOptions:
         key: validate_alt_text(_config_table(graphics, key), f"alt_text.{key}") for key in graphics
     }
     return RemediationOptions(
-        target_version=document.get("target_version", "1.4"),
-        title=document.get("title"),
-        description=document.get("description"),
-        language=document.get("language"),
-        linkify_plain_addresses=fixes.get("linkify_plain_addresses", False),
-        remove_empty_spacers=fixes.get("remove_empty_spacers", False),
+        target_version=texts.get("target_version", "1.4"),
+        title=texts.get("title"),
+        description=texts.get("description"),
+        language=texts.get("language"),
+        linkify_plain_addresses=flags.get("linkify_plain_addresses", False),
+        remove_empty_spacers=flags.get("remove_empty_spacers", False),
         table_header_rows=headers or None,
         alt_text=alt_text or None,
     )
@@ -69,11 +69,14 @@ def _known_keys(data: dict[str, object], allowed: set[str], label: str) -> None:
         raise ValueError(msg)
 
 
-def _field_types(data: dict[str, object], expected: type, label: str) -> None:
+def _typed_values[T](data: dict[str, object], expected: type[T], label: str) -> dict[str, T]:
+    values: dict[str, T] = {}
     for key, value in data.items():
         if type(value) is not expected:
             msg = f"{label}.{key} must be {expected.__name__}"
             raise ValueError(msg)
+        values[key] = cast("T", value)
+    return values
 
 
 def validate_alt_text(data: dict[str, object], label: str) -> AltText:
@@ -86,5 +89,5 @@ def validate_alt_text(data: dict[str, object], label: str) -> AltText:
 
     """
     _known_keys(data, {"title", "description"}, label)
-    _field_types(data, str, label)
-    return AltText(title=data.get("title"), description=data.get("description"))
+    texts = _typed_values(data, str, label)
+    return AltText(title=texts.get("title"), description=texts.get("description"))

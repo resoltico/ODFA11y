@@ -7,7 +7,7 @@ import re
 
 from lxml import etree
 
-from odfa11y.odf import NS, qn
+from odfa11y.odf import NS, qn, select_elements
 
 
 def set_metadata_text(tree: etree._ElementTree, tag: str, value: str) -> bool:
@@ -44,10 +44,7 @@ def set_default_style_language(tree: etree._ElementTree, language_tag: str) -> b
     styles = tree.find("office:styles", NS)
     if styles is None:
         styles = etree.SubElement(tree.getroot(), qn("office", "styles"))
-    defaults = styles.xpath(
-        "./style:default-style[@style:family='paragraph']",
-        namespaces=NS,
-    )
+    defaults = select_elements(styles, "./style:default-style[@style:family='paragraph']")
     if defaults:
         default = defaults[0]
     else:

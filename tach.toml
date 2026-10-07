@@ -1,0 +1,47 @@
+source_roots = ["src"]
+exclude = ["tests", "tools", "**/__pycache__"]
+root_module = "ignore"
+forbid_circular_dependencies = true
+exact = true
+
+# Dependencies point downward only: cli -> audit/remediation/pdf -> odf -> safe_xml.
+# audit, remediation and pdf are independent of each other; report and safe_xml are leaves.
+
+[[modules]]
+path = "odfa11y.safe_xml"
+depends_on = []
+
+[[modules]]
+path = "odfa11y.report"
+depends_on = []
+
+[[modules]]
+path = "odfa11y.odf"
+depends_on = ["odfa11y.safe_xml"]
+
+[[modules]]
+path = "odfa11y.audit"
+depends_on = ["odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.remediation"
+depends_on = ["odfa11y.odf"]
+
+[[modules]]
+path = "odfa11y.pdf"
+depends_on = ["odfa11y.report", "odfa11y.safe_xml"]
+
+[[modules]]
+path = "odfa11y.cli"
+depends_on = [
+  "odfa11y.audit",
+  "odfa11y.odf",
+  "odfa11y.pdf",
+  "odfa11y.remediation",
+  "odfa11y.report",
+]
+
+# A package's public API is exactly what its __init__ re-exports.
+[[interfaces]]
+from = ["odfa11y.audit", "odfa11y.cli", "odfa11y.odf", "odfa11y.pdf", "odfa11y.remediation", "odfa11y.report"]
+expose = ["[^.]+"]

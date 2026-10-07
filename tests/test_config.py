@@ -40,6 +40,7 @@ description = "Organisation logo."
     assert options.language == "en-GB"
     assert options.linkify_plain_addresses is True
     assert options.table_header_rows == {"Data": 1}
+    assert options.alt_text is not None
     assert options.alt_text["Logo"].description == "Organisation logo."
 
 

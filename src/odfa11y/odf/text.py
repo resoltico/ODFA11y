@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
     from .package import OdtPackage
 
-from .namespaces import NS, qn
+from .namespaces import qn
+from .xpath import select_elements
 
 
 def is_empty_paragraph(p: etree._Element) -> bool:
@@ -24,7 +25,8 @@ def is_empty_paragraph(p: etree._Element) -> bool:
     """
     if element_text(p).strip():
         return False
-    meaningful = p.xpath(
+    meaningful = select_elements(
+        p,
         (
             ".//draw:* | .//text:line-break | .//text:tab | "
             ".//text:bookmark | .//text:bookmark-start | "
@@ -32,7 +34,6 @@ def is_empty_paragraph(p: etree._Element) -> bool:
             ".//text:reference-mark-start | .//text:reference-mark-end | "
             ".//text:soft-page-break"
         ),
-        namespaces=NS,
     )
     return not meaningful
 
@@ -60,7 +61,7 @@ def visible_text_snapshot(package: OdtPackage) -> tuple[str, ...]:
     """
     tree = package.parse_xml("content.xml")
     blocks: list[str] = []
-    for node in tree.xpath("//text:h | //text:p", namespaces=NS):
+    for node in select_elements(tree, "//text:h | //text:p"):
         text = _visible_node_text(node).replace("\u00a0", " ")
         blocks.append(" ".join(text.split()))
     return tuple(blocks)

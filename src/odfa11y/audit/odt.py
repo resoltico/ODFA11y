@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import (
-    NS,
     REQUIRED_XML,
     URI_RE,
     OdtPackage,
@@ -15,6 +14,7 @@ from odfa11y.odf import (
     element_text,
     is_empty_paragraph,
     qn,
+    select_elements,
     split_trailing_punctuation,
 )
 from odfa11y.report import AuditReport, Severity
@@ -107,13 +107,13 @@ def audit_odt(
 
 
 def _audit_links(tree: etree._ElementTree, report: AuditReport) -> None:
-    blocks = tree.xpath("//text:p | //text:h", namespaces=NS)
+    blocks = select_elements(tree, "//text:p | //text:h")
     for index, block in enumerate(blocks, start=1):
         text = element_text(block)
         matches = list(URI_RE.finditer(text))
         if not matches:
             continue
-        linked_texts = [element_text(a) for a in block.xpath(".//text:a", namespaces=NS)]
+        linked_texts = [element_text(a) for a in select_elements(block, ".//text:a")]
         for match in matches:
             token, _suffix = split_trailing_punctuation(match.group(0))
             if not any(token in linked for linked in linked_texts):
@@ -132,12 +132,11 @@ def _audit_empty_spacers(
 ) -> None:
     catalog = StyleCatalog(package)
     empty = []
-    for p in tree.xpath("//text:p", namespaces=NS):
+    for p in select_elements(tree, "//text:p"):
         if not is_empty_paragraph(p):
             continue
-        if p.xpath(
-            "ancestor::table:table-cell | ancestor::draw:text-box | ancestor::office:annotation",
-            namespaces=NS,
+        if select_elements(
+            p, "ancestor::table:table-cell | ancestor::draw:text-box | ancestor::office:annotation"
         ):
             continue
         style_name = p.get(qn("text", "style-name"))
@@ -161,7 +160,7 @@ def _audit_empty_spacers(
 
 
 def _audit_notes(tree: etree._ElementTree, report: AuditReport) -> None:
-    notes = tree.xpath("//text:note", namespaces=NS)
+    notes = select_elements(tree, "//text:note")
     if notes:
         classes: dict[str, int] = {}
         for note in notes:
@@ -182,9 +181,7 @@ def _audit_notes(tree: etree._ElementTree, report: AuditReport) -> None:
 def _audit_blinking(trees: dict[str, etree._ElementTree], report: AuditReport) -> None:
     found: list[str] = []
     for name in ("content.xml", "styles.xml"):
-        found.extend(
-            name for _ in trees[name].xpath("//*[@style:text-blinking='true']", namespaces=NS)
-        )
+        found.extend(name for _ in select_elements(trees[name], "//*[@style:text-blinking='true']"))
     if found:
         report.add(
             "STYLE001",

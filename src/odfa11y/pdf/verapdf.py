@@ -50,7 +50,7 @@ def run_verapdf(
             f"Could not parse veraPDF report as XML. stdout={proc.stdout!r} stderr={proc.stderr!r}"
         )
         raise RuntimeError(msg) from exc
-    nodes = root.xpath("//*[local-name()='validationReport']")
+    nodes = [node for node in root.iter("*") if etree.QName(node).localname == "validationReport"]
     if not nodes:
         msg = "veraPDF report contains no validationReport element."
         raise RuntimeError(msg)

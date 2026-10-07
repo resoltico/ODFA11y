@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.odf import NS, OdtPackage, StyleCatalog, qn, visible_text_snapshot
+from odfa11y.odf import OdtPackage, StyleCatalog, qn, select_elements, visible_text_snapshot
 
 from .models import RemediationResult
 
@@ -63,7 +63,7 @@ def normalize_paragraph_spacing(
     xpath = "//text:p" + (" | //text:h" if include_headings else "")
     targets = [
         node
-        for node in tree.xpath(xpath, namespaces=NS)
+        for node in select_elements(tree, xpath)
         if (node.get(qn("text", "style-name")) or "(none)") in target_styles_set
     ]
     if not targets:
@@ -93,7 +93,7 @@ def normalize_paragraph_spacing(
 def _find_reference_block(
     tree: etree._ElementTree, text: str, *, contains: bool
 ) -> etree._Element | None:
-    for node in tree.xpath("//text:p | //text:h", namespaces=NS):
+    for node in select_elements(tree, "//text:p | //text:h"):
         current = "".join(node.itertext()).strip()
         if (contains and text in current) or (not contains and text == current):
             return node

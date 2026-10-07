@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from odfa11y.odf import NS, ODT_MIMETYPE, REQUIRED_XML, qn
+from odfa11y.odf import ODT_MIMETYPE, REQUIRED_XML, qn, select_elements
 from odfa11y.report import Severity
 
 if TYPE_CHECKING:
@@ -98,7 +98,7 @@ def audit_versions(
             fixable=True,
         )
 
-    root_entries = root.xpath("./manifest:file-entry[@manifest:full-path='/']", namespaces=NS)
+    root_entries = select_elements(root, "./manifest:file-entry[@manifest:full-path='/']")
     if not root_entries:
         report.add(
             "ODF002",
