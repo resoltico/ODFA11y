@@ -80,6 +80,7 @@ def test_type_gate_uses_explicit_authored_inputs(tmp_path: Path, directory: str)
 def test_type_gate_rejects_empty_discovery_and_unavailable_execution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ty]\n")
     assert check_quality.check_types(tmp_path) == 1
     (tmp_path / "valid.py").write_text("value: int = 1\n")
     monkeypatch.setattr(check_quality.sys, "executable", str(tmp_path / "missing-python"))
@@ -89,8 +90,17 @@ def test_type_gate_rejects_empty_discovery_and_unavailable_execution(
 def test_type_gate_preserves_analyzer_failure_status(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ty]\n")
     (tmp_path / "valid.py").write_text("value: int = 1\n")
     monkeypatch.setattr(
         check_quality.subprocess, "run", lambda *_args, **_kwargs: SimpleNamespace(returncode=7)
     )
     assert check_quality.check_types(tmp_path) == 7
+
+
+def test_type_gate_rejects_missing_authoritative_configuration(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "valid.py").write_text("value: int = 1\n")
+    assert check_quality.check_types(tmp_path) == 1
+    assert "Cannot read authoritative analyzer configuration" in capsys.readouterr().err

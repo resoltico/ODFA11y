@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 SUPPRESSION_KEYS = ("ignore", "extend-ignore", "per-file-ignores", "extend-per-file-ignores")
 INLINE_DIRECTIVE = re.compile(
-    r"\b(?:noqa\b|ruff\s*:|fmt\s*:|pylint\s*:|type\s*:\s*ignore\b|"
+    r"\b(?:noqa\b|ruff\s*:|fmt\s*:|pylint\s*:|isort\s*:|type\s*:\s*ignore\b|"
     r"ty\s*:|pyright\s*:|mypy\s*:|nosec\b|pyre-ignore\b|pyre-fixme\b)",
     re.IGNORECASE,
 )

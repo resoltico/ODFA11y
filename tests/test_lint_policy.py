@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
 
 import pytest
 
+from odfa11y.external_tools import run_bounded
 from tools.check_quality import check_repository, check_types
 
 BASE = """[tool.odfa11y.quality]
@@ -245,3 +248,40 @@ def test_unmasked_probe_preserves_project_import_classification(tmp_path: Path) 
     assert any(
         "unused lint exception: unsorted-imports" in error for error in check_repository(tmp_path)
     )
+
+
+@pytest.mark.parametrize(
+    "masked",
+    [
+        "# isort: skip_file\nimport sys\nimport os\n",
+        "# isort: off\nimport sys\nimport os\n",
+        "import sys  # isort: skip\nimport os\n",
+    ],
+)
+def test_isort_action_comments_hide_real_ruff_findings_but_policy_rejects_them(
+    tmp_path: Path, masked: str
+) -> None:
+    _repository(tmp_path, "", "import sys\nimport os\n")
+    path = tmp_path / "example.py"
+    command = [
+        sys.executable,
+        "-m",
+        "ruff",
+        "check",
+        "--isolated",
+        "--select",
+        "I001",
+        "--ignore-noqa",
+        "--output-format",
+        "json",
+        "--",
+        str(path),
+    ]
+    control = run_bounded(command, timeout=20)
+    assert control.returncode == 1
+    assert {finding["code"] for finding in json.loads(control.stdout)} == {"I001"}
+    path.write_text(masked)
+    bypass = run_bounded(command, timeout=20)
+    assert bypass.returncode == 0
+    assert json.loads(bypass.stdout) == []
+    assert any("inline lint/format" in error for error in check_repository(tmp_path))

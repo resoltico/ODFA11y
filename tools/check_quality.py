@@ -101,10 +101,14 @@ def check_types(root: Path) -> int:
     Returns
     -------
     int
-        The analyzer's exit status; one when discovery is empty or execution is unavailable.
+        The analyzer's exit status; one for invalid config, empty discovery or unavailable execution.
 
     """
-    config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    try:
+        config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    except OSError, tomllib.TOMLDecodeError:
+        sys.stderr.write("Cannot read authoritative analyzer configuration\n")
+        return 1
     errors = analyzer_errors(config)
     if errors:
         sys.stderr.write("\n".join(errors) + "\n")
