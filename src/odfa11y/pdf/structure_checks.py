@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Check the logical structure of a PDF: roles, headings, lists, tables, figures and links."""
+"""Check a PDF's logical structure: roles, headings, lists, tables, figures, links, content."""
 
 from __future__ import annotations
 
@@ -9,9 +9,13 @@ from typing import TYPE_CHECKING
 from odfa11y.report import rules
 
 from .link_structure import check_link_structure
+from .marked_content import check_marked_content
 from .structure_walk import build_tree, role_map_of
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from pypdf import PageObject
     from pypdf.generic import DictionaryObject
 
     from odfa11y.report import Report
@@ -30,9 +34,16 @@ HEADING_ROLE_LENGTH = 2
 
 
 def audit_structure(
-    root: DictionaryObject, report: Report, annotations: list[LinkAnnotation]
+    root: DictionaryObject,
+    report: Report,
+    annotations: list[LinkAnnotation],
+    pages: Iterable[PageObject],
 ) -> None:
-    """Record structure tags and report role, heading, list, table, figure and link defects."""
+    """Record structure tags and report structure, link and marked-content defects.
+
+    Content is reconciled with the structure only when there is a structure tree; its absence
+    is already reported.
+    """
     top = build_tree(root)
     nodes = [node for node in top.walk() if node is not top]
     counts = Counter(node.tag for node in nodes)
@@ -41,6 +52,8 @@ def audit_structure(
     if role_map:
         report.metadata["role_map"] = dict(sorted(role_map.items()))
     check_link_structure(annotations, nodes, report)
+    if root:
+        check_marked_content(pages, nodes, report)
     _check_roles(nodes, report)
     _check_figures(nodes, report)
     _check_headings(nodes, report)
