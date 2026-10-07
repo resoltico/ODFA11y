@@ -1,8 +1,10 @@
 # Publication and releases
 
-The package version is read from `src/odfa11y/__init__.py`. Record notable net outcomes
-in the Unreleased section of `CHANGELOG.md` as work lands; at release, rename that section
-to the new version and date and set the same version in the package.
+The package version is declared once in `[project].version` in `pyproject.toml`. Record
+notable net outcomes in the Unreleased section of `CHANGELOG.md` as work lands; at release,
+rename that section to the new version and date and update the project version. Runtime
+reporting reads installed distribution metadata. After changing the version in a checkout,
+run `uv lock` and `uv sync --locked` to refresh the lockfile and editable installation.
 
 ## Repository settings
 
@@ -38,7 +40,7 @@ veraPDF are checksum-pinned, while macOS LibreOffice and runner images may vary.
 ## Start a release
 
 Releases are started by hand and never by pushing a tag. Commit the version in
-`src/odfa11y/__init__.py` and the dated changelog section to the default branch, wait for its
+`pyproject.toml` and the dated changelog section to the default branch, wait for its
 checks, then start the workflow on that branch:
 
 ```bash

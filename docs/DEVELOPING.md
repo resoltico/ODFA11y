@@ -202,9 +202,10 @@ Build selection is centralized under `[tool.hatch.build.targets]`:
 - The wheel (`.whl`) contains the importable `odfa11y` packages, `py.typed`, CLI entry
   point, metadata and license. Repository docs and tests are not runtime package files.
 
-The backend reads the version from `src/odfa11y/__init__.py`; keep it as the single
-version source. Build after moving files or changing inclusion rules, inspect both
-archives, and verify an isolated wheel installation. A successful source-tree test
+The backend reads `[project].version` from `pyproject.toml`, the single version source.
+Runtime reporting uses installed distribution metadata. Run `uv lock` and `uv sync --locked`
+after a version change to refresh the lockfile and editable installation. Build after
+moving files or changing inclusion rules, inspect both archives, and verify an isolated wheel installation. A successful source-tree test
 run alone does not prove that packaging included the required modules.
 
 ## Contribution invariants

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "odfa11y"
-dynamic = ["version"]
+version = "0.4.0"
 description = "Recognise and check every OpenDocument kind; audit, remediate and export text documents and spreadsheets as PDF/UA with evidence"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -61,9 +61,6 @@ odfa11y = "odfa11y.cli:main"
 "ODF 1.4 specification" = "https://docs.oasis-open.org/office/OpenDocument/v1.4/"
 "LibreOffice PDF/UA reference" = "https://help.libreoffice.org/latest/en-US/text/shared/01/ref_pdf_export_universal_accessibility.html"
 "veraPDF" = "https://verapdf.org/"
-
-[tool.hatch.version]
-path = "src/odfa11y/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/odfa11y"]

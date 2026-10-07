@@ -211,6 +211,6 @@ every textual file passes through a redactor first, so no local path reaches it.
 
 [pyproject.toml](../pyproject.toml) is the authority for metadata, dependencies,
 development tool groups and the lint, type and coverage settings, and for Hatchling build
-selection. The version is read from [the package initializer](../src/odfa11y/__init__.py),
-which holds only the version. The wheel ships `py.typed` and the ODF schemas. See
+selection. `[project].version` declares the package version; runtime reporting derives
+it from installed distribution metadata. The wheel ships `py.typed` and the ODF schemas. See
 [Development](DEVELOPING.md#packaging).

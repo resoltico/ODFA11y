@@ -126,7 +126,7 @@ jobs:
           project = tomllib.loads(Path("pyproject.toml").read_text())["project"]
           package = importlib.metadata.distribution(project["name"])
           assert Path(odfa11y.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
-          assert package.version == odfa11y.__version__
+          assert package.version == project["version"] == odfa11y.__version__
           assert package.metadata["Requires-Python"] == project["requires-python"]
           assert package.metadata["License-Expression"] == project["license"]
           assert any(str(p).endswith("odfa11y/py.typed") for p in package.files)

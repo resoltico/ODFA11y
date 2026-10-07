@@ -13,8 +13,6 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y import __version__
-
 if TYPE_CHECKING:
     from email.message import Message
 
@@ -30,8 +28,9 @@ def check_release(tag: str, directory: Path) -> list[str]:
     """
     root = Path(__file__).resolve().parents[1]
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    if tag != f"v{__version__}":
-        return [f"Tag {tag!r} must match package version v{__version__}"]
+    version = project["version"]
+    if tag != f"v{version}":
+        return [f"Tag {tag!r} must match package version v{version}"]
     wheels = list(directory.glob("*.whl"))
     archives = list(directory.glob("*.tar.gz"))
     if len(wheels) != 1 or len(archives) != 1:
@@ -172,7 +171,7 @@ def extract_release_notes(changelog: str, version: str) -> str:
 def _metadata_errors(metadata: Message, project: dict[str, object]) -> list[str]:
     expected = {
         "Name": project["name"],
-        "Version": __version__,
+        "Version": project["version"],
         "Requires-Python": project["requires-python"],
         "License-Expression": project["license"],
     }
@@ -186,7 +185,8 @@ def _metadata_errors(metadata: Message, project: dict[str, object]) -> list[str]
 def _write_release_notes(output: Path) -> None:
     root = Path(__file__).resolve().parents[1]
     changelog = (root / "CHANGELOG.md").read_bytes().decode("utf-8")
-    notes = extract_release_notes(changelog, __version__)
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    notes = extract_release_notes(changelog, project["version"])
     output.write_bytes((notes + "\n").encode("utf-8"))
 
 

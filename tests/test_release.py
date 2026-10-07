@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib
 import io
 import tarfile
 import tomllib
@@ -12,7 +13,9 @@ from pathlib import Path
 
 import pytest
 
+import odfa11y
 from odfa11y import __version__
+from tools import check_release as release_checks
 from tools.check_release import check_release
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -143,3 +146,15 @@ def test_altered_mathml_modules_fail_the_normative_digest(tmp_path: Path, artifa
     }
     _distributions(tmp_path, variants[artifact])
     assert any("normative digest" in error for error in check_release(f"v{__version__}", tmp_path))
+
+
+def test_release_version_uses_project_even_with_stale_runtime_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _distributions(tmp_path)
+    with monkeypatch.context() as context:
+        context.setattr(odfa11y, "__version__", "9.9.9")
+        importlib.reload(release_checks)
+        assert release_checks.check_release(f"v{PROJECT['version']}", tmp_path) == []
+        assert release_checks.check_release("v9.9.9", tmp_path)
+    importlib.reload(release_checks)
