@@ -115,6 +115,8 @@ target-version = "py314"
 preview = true
 line-length = 100
 respect-gitignore = false
+# Check authored hidden/ignored Python; generated distribution trees exist only at the root.
+exclude = [".git", ".venv", "__pycache__", ".ruff_cache", "build/**", "dist/**"]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -148,8 +150,6 @@ max-file-lines = 300
 # pytest assertions provide failure introspection; test names describe behavior; expected
 # values are literals, and identical renders must differ by exactly zero.
 "tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
-# The fixture exposes independent document features as named keyword arguments.
-"tests/fixtures.py" = ["too-many-arguments"]
 # CLI output is its stdout/stderr interface.
 "src/odfa11y/cli/commands.py" = ["print"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
@@ -157,6 +157,8 @@ max-file-lines = 300
 # Version probes run an explicitly selected local tool with an argument list; stopping a
 # timed-out process tree on Windows needs the system taskkill, found through PATH.
 "src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import", "start-process-with-partial-path"]
+# The type gate runs the locked analyzer under the current Python with explicit file arguments.
+"tools/check_quality.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
 # CI tooling: downloads one pinned HTTPS release, verifies its SHA-256 and runs the installer
 # with the runner's java through an argument list.
 "tools/install_verapdf.py" = ["suspicious-subprocess-import", "suspicious-url-open-usage", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]

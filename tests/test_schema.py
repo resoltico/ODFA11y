@@ -81,13 +81,13 @@ def test_every_synthetic_feature_combination_is_schema_valid(tmp_path: Path, ver
         if features["with_table_header"] and not features["with_data_table"]:
             continue
         document = OdfDocument.open(
-            make_minimal_odt(tmp_path / "x.odt", version=version, **features)
+            make_minimal_odt(tmp_path / "x.odt", version=version, features=features)
         )
         assert validate(document).violations == {}, features
 
 
 def test_markup_that_libreoffice_tolerates_is_rejected(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "x.odt", with_data_table=True)
+    source = make_minimal_odt(tmp_path / "x.odt", features={"with_data_table": True})
     package = PackageStorage(source)
     package.write_member(
         "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")

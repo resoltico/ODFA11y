@@ -54,7 +54,9 @@ def document(tmp_path: Path, *, version: str = "1.4", **features: Unpack[Feature
         A fresh document.
 
     """
-    return OdfDocument.open(make_minimal_odt(tmp_path / "doc.odt", version=version, **features))
+    return OdfDocument.open(
+        make_minimal_odt(tmp_path / "doc.odt", version=version, features=features)
+    )
 
 
 def assert_valid(doc: OdfDocument) -> None:

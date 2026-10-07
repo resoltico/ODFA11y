@@ -48,7 +48,7 @@ def with_body(tmp_path: Path, body: bytes, **features: Unpack[Features]) -> Path
         The rewritten document.
 
     """
-    package = PackageStorage(make_minimal_odt(tmp_path / "base.odt", **features))
+    package = PackageStorage(make_minimal_odt(tmp_path / "base.odt", features=features))
     package.write_member(
         "content.xml",
         package.read("content.xml").replace(b"<office:text>", b"<office:text>" + body, 1),
@@ -150,7 +150,9 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
 def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     tmp_path: Path,
 ) -> None:
-    valid = make_minimal_odt(tmp_path / "v12.odt", version="1.2", with_data_table=True)
+    valid = make_minimal_odt(
+        tmp_path / "v12.odt", version="1.2", features={"with_data_table": True}
+    )
     result = remediate(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
     assert result.schema_check.startswith("valid against ODF 1.4")
     package = PackageStorage(valid)
@@ -165,7 +167,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
 
 
 def test_duplicate_table_names_are_ambiguous_and_fail(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "base.odt", with_data_table=True)
+    source = make_minimal_odt(tmp_path / "base.odt", features={"with_data_table": True})
     package = PackageStorage(source)
     content = package.read("content.xml")
     start, end = (

@@ -60,7 +60,23 @@ does anything below the registry import a family. [tach.toml](../tach.toml) is t
 authority: `tach check` rejects an undeclared dependency, a cycle, or an import that
 bypasses a package's public interface (a package's public API is exactly what its
 `__init__.py` re-exports). A quality gate adds the part tach cannot see: it fails when a
-core package names a family's XML elements (`qn("text", …)`, `//table:…`).
+core package directly names family content through qualified-name calls (including ordinary
+import aliases, qualified calls and keyword prefixes) or XPath literals. Shared `content`
+primitives may use that vocabulary; structural namespace declarations and normative schema
+validation remain core responsibilities.
+
+The file-size policy scans authored Python, including hidden and Git-ignored files.
+Environment/cache directories and repository-root build/distribution outputs are generated;
+a nested domain directory named `build` or `dist` remains authored code. Ruff's explicit
+exclusions use the same scope, rather than defaults that hide such nested directories.
+Function complexity, branch, argument, return and statement limits are declared in
+[pyproject.toml](../pyproject.toml); exceptions require a central, specific reason.
+
+These are enforceable limits, not a numerical architecture score. A small class can still
+combine unrelated responsibilities, and dynamic imports or computed XML names can hide
+coupling from static checks. Design review and a separate challenge pass must assess
+responsibility, state ownership and downstream effects; passing size/lint/boundary checks
+alone does not prove that a design is cohesive or free of a god object.
 
 ## The document model
 

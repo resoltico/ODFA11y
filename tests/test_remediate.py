@@ -63,9 +63,11 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
 ) -> None:
     source = make_minimal_odt(
         tmp_path / "source.odt",
-        with_plain_email=True,
-        with_data_table=True,
-        with_image_without_alt=True,
+        features={
+            "with_plain_email": True,
+            "with_data_table": True,
+            "with_image_without_alt": True,
+        },
     )
     operations = [
         SetMetadata(title="New title", language="en-GB"),
@@ -149,7 +151,7 @@ def test_new_schema_violations_are_rejected_before_publication(tmp_path: Path) -
 
 
 def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "source.odt", with_data_table=True)
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
     package = PackageStorage(source)
     package.write_member(
         "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")
@@ -164,7 +166,7 @@ def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path)
 def test_a_content_edit_beside_an_old_violation_does_not_count_as_a_regression(
     tmp_path: Path,
 ) -> None:
-    source = make_minimal_odt(tmp_path / "source.odt", add_blank_body_paragraph=True)
+    source = make_minimal_odt(tmp_path / "source.odt", features={"add_blank_body_paragraph": True})
     package = PackageStorage(source)
     package.write_member(
         "content.xml",
@@ -184,7 +186,7 @@ def test_an_operation_that_misreports_its_edits_is_an_internal_error(tmp_path: P
 
 
 def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
     package = PackageStorage(source)
     content = package.read("content.xml").replace(
         b"<office:text>",

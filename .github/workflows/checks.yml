@@ -53,7 +53,7 @@ jobs:
       - name: Check Python formatting
         run: uv run --no-sync ruff format --check .
       - name: Type-check source, tests and tools
-        run: uv run --no-sync ty check
+        run: uv run --no-sync python tools/check_quality.py --types
       - name: Enforce package boundaries
         run: |
           uv run --no-sync tach check

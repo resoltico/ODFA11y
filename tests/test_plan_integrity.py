@@ -39,7 +39,7 @@ def open_document(tmp_path: Path, **features: Unpack[Features]) -> OdfDocument:
         The document.
 
     """
-    return OdfDocument.open(make_minimal_odt(tmp_path / "doc.odt", **features))
+    return OdfDocument.open(make_minimal_odt(tmp_path / "doc.odt", features=features))
 
 
 def statuses(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:

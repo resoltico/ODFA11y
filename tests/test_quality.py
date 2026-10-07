@@ -164,3 +164,74 @@ def test_shared_content_vocabulary_is_allowed_but_does_not_exempt_orchestration(
     assert check_repository(root) == []
     _core_file(root, "pipeline", "run.py", source='value = "//table:table-row"\n')
     assert any("family" in error for error in check_repository(root))
+
+
+@pytest.mark.parametrize("directory", ["build", "dist"])
+def test_authored_nested_build_names_do_not_bypass_file_size_gate(
+    tmp_path: Path, directory: str
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, directory, "authored.py", source="\n" * 301)
+    assert any("301 lines" in error for error in check_repository(root))
+
+
+def test_generated_root_build_outputs_are_excluded_but_ignored_authored_files_are_checked(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    for directory in ("build", "dist"):
+        target = root / directory
+        target.mkdir()
+        (target / "generated.py").write_text("\n" * 301)
+    (root / "authored.py").write_text("value = 1\n")
+    assert check_repository(root) == []
+    (root / ".gitignore").write_text(".authored/\n")
+    ignored = root / ".authored"
+    ignored.mkdir()
+    (ignored / "source.py").write_text("\n" * 301)
+    assert any(".authored/source.py" in error for error in check_repository(root))
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'from odfa11y.odf import qn as tag\nvalue = tag("text", "p")\n',
+        'import odfa11y.odf as odf\nvalue = odf.qn("text", "p")\n',
+        'from odfa11y.odf import qn\nvalue = qn(prefix="text", local="p")\n',
+        'from odfa11y.odf import qn as tag\nvalue = tag(prefix="text", local="p")\n',
+        'import odfa11y.odf as odf\nvalue = odf.qn(prefix="text", local="p")\n',
+    ],
+)
+def test_ordinary_qualified_name_forms_cannot_bypass_family_boundaries(
+    tmp_path: Path, source: str
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(root, "audit", "engine.py", source=source)
+    assert any("text: elements" in error for error in check_repository(root))
+
+
+def test_alias_detection_keeps_common_core_and_shared_content_vocabulary_valid(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    _core_file(
+        root,
+        "audit",
+        "engine.py",
+        source='from x import qn as tag\nvalue = tag(prefix="office", local="body")\n',
+    )
+    _core_file(
+        root, "content", "text.py", source='from x import qn as tag\nvalue = tag("text", "p")\n'
+    )
+    assert check_repository(root) == []
+
+
+def test_normative_foreign_schema_namespace_is_structural_core_vocabulary(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    _core_file(
+        root,
+        "odf",
+        "schema.py",
+        source='from x import NS\nnamespace = NS["math"]\nschema = "mathml/mathml3.rng"\n',
+    )
+    assert check_repository(root) == []

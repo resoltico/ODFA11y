@@ -75,7 +75,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     assert "PDF015" in {f.rule_id for f in report.findings}
     # The independent validator does not detect this missing header semantics property.
     assert validate_pdfua(pdf, executable=verapdf).compliant
-    clean = make_minimal_odt(tmp_path / "clean.odt", with_data_table=True)
+    clean = make_minimal_odt(tmp_path / "clean.odt", features={"with_data_table": True})
     clean_columns = tmp_path / "clean-columns.odt"
     remediate(clean, clean_columns, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
     assert validate(OdfDocument.open(clean_columns)).count == 0

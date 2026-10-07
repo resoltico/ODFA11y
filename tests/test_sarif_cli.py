@@ -33,7 +33,7 @@ def _run_log(output: str) -> dict:
 def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    odf = make_minimal_odt(tmp_path / "document.odt", with_image_without_alt=True)
+    odf = make_minimal_odt(tmp_path / "document.odt", features={"with_image_without_alt": True})
     pdf = tmp_path / "tagged.pdf"
     tagged_writer().write(pdf)
     arguments = [
@@ -210,7 +210,7 @@ def test_nonreport_commands_reject_sarif_instead_of_printing_other_format(
 def test_sarif_preserves_strict_warning_exit_status(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    source = make_minimal_odt(tmp_path / "warnings.odt", with_plain_email=True)
+    source = make_minimal_odt(tmp_path / "warnings.odt", features={"with_plain_email": True})
     arguments = ["audit", str(source), "--format", "sarif", "--source-root", str(tmp_path)]
     assert main(arguments) == 0
     baseline = _run_log(capsys.readouterr().out)

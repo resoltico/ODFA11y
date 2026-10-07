@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 def _graphic(tmp_path: Path) -> tuple[OdfDocument, etree._Element]:
     document = OdfDocument.open(
-        make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
+        make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
     )
     return document, select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
 
@@ -185,7 +185,10 @@ def test_logical_row_positions_are_indexed_once_and_ignore_header_wrappers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     document = OdfDocument.open(
-        make_minimal_odt(tmp_path / "rows.odt", with_data_table=True, with_image_without_alt=True)
+        make_minimal_odt(
+            tmp_path / "rows.odt",
+            features={"with_data_table": True, "with_image_without_alt": True},
+        )
     )
     frame = select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
     table = select_elements(document.tree(Part.CONTENT), "//table:table")[0]

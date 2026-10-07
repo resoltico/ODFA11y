@@ -67,7 +67,9 @@ def test_libreoffice_export_content_is_fully_tagged(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
-    source = make_minimal_odt(tmp_path / "rich.odt", with_data_table=True, with_table_header=True)
+    source = make_minimal_odt(
+        tmp_path / "rich.odt", features={"with_data_table": True, "with_table_header": True}
+    )
     package = PackageStorage(source)
     package.write_member(
         "content.xml",
@@ -102,7 +104,9 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
-    source = make_minimal_odt(tmp_path / "rich.odt", with_data_table=True, with_table_header=True)
+    source = make_minimal_odt(
+        tmp_path / "rich.odt", features={"with_data_table": True, "with_table_header": True}
+    )
     package = PackageStorage(source)
     package.write_member(
         "content.xml",

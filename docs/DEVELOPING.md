@@ -29,7 +29,7 @@ they are not part of the published package metadata.
 uv run --no-sync python tools/check_quality.py
 uv run --no-sync ruff check . --ignore-noqa
 uv run --no-sync ruff format --check .
-uv run --no-sync ty check
+uv run --no-sync python tools/check_quality.py --types
 uv run --no-sync tach check
 uv run --no-sync tach check-external
 uv run --no-sync pytest -m 'not integration' --cov --durations=10
@@ -40,7 +40,13 @@ uv build
 Ruff enables all rules, including preview rules, at its pinned version. Exceptions
 belong only in the root `pyproject.toml`, with a preceding reason comment for each
 entry. The policy checker rejects inline lint/formatter directives and separate
-Ruff configuration files. Apply routine changes with `ruff check . --fix` and
+Ruff configuration files. The type gate passes the shared authored-file inventory as explicit
+paths, so analyzer discovery defaults cannot hide a domain directory named `dist` or an
+ignored Python file. Lint and formatting likewise use explicit project exclusions: only
+repository-root build/distribution outputs and generated environments/caches are excluded.
+No existing file is grandfathered out of size or complexity requirements.
+
+Apply routine changes with `ruff check . --fix` and
 `ruff format .`; review unsafe fixes before accepting them.
 
 Every authored Python file must fit within the configured physical-line limit,
@@ -49,7 +55,7 @@ historical baselines. Split oversized modules by responsibility. The policy
 checker includes tests, tools and hidden directories; generated environments,
 build outputs, Git metadata and Python/Ruff caches are excluded. Function
 complexity, branch, argument, return and statement limits are also defined in
-`pyproject.toml`; the few API exceptions have explicit reasons there.
+`pyproject.toml` and apply to current source, tests and tools uniformly.
 
 pytest enables all strictness options and treats warnings as errors. Tests create
 synthetic ODF/PDF fixtures (`tests/documents.py` builds every document kind as a package and as flat XML) rather than storing customer documents. The TOML example

@@ -113,8 +113,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     verapdf = external_tool("verapdf")
     source = make_minimal_odt(
         tmp_path / "doc.odt",
-        with_data_table=True,
-        with_image_without_alt=True,
+        features={"with_data_table": True, "with_image_without_alt": True},
     )
     operations = [
         SetMetadata(title="Evidence run", language="en-GB"),
@@ -188,7 +187,7 @@ def test_repeated_runs_have_equal_logical_results_and_identical_documents(
 
 
 def _document_with_spacers(tmp_path: Path) -> Path:
-    source = make_minimal_odt(tmp_path / "spacers.odt", add_blank_body_paragraph=True)
+    source = make_minimal_odt(tmp_path / "spacers.odt", features={"add_blank_body_paragraph": True})
     package = PackageStorage(source)
     package.write_member(
         "content.xml",

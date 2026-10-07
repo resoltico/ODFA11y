@@ -65,12 +65,12 @@ def test_audit_dispatches_on_file_content_and_mixes_kinds(
 def test_audit_text_exit_status_and_strict_mode(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    failing = make_minimal_odt(tmp_path / "bad.odt", with_image_without_alt=True)
+    failing = make_minimal_odt(tmp_path / "bad.odt", features={"with_image_without_alt": True})
     assert main(["audit", str(failing)]) == FINDINGS
     output = capsys.readouterr().out
     assert "Result: FAIL" in output
     assert "remedy: text.graphics" in output
-    warned = make_minimal_odt(tmp_path / "warn.odt", with_plain_email=True)
+    warned = make_minimal_odt(tmp_path / "warn.odt", features={"with_plain_email": True})
     assert main(["audit", str(warned)]) == 0
     assert main(["audit", str(warned), "--strict"]) == 1
 
@@ -99,7 +99,7 @@ def test_missing_verapdf_is_a_warning_not_a_crash(
 def test_template_prints_a_loadable_commented_configuration(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    source = make_minimal_odt(tmp_path / "a.odt", with_image_without_alt=True)
+    source = make_minimal_odt(tmp_path / "a.odt", features={"with_image_without_alt": True})
     assert main(["template", str(source)]) == 0
     output = capsys.readouterr().out
     assert '# [text.graphics."Logo"]' in output
@@ -108,7 +108,7 @@ def test_template_prints_a_loadable_commented_configuration(
 def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    source = make_minimal_odt(tmp_path / "a.odt", with_plain_email=True)
+    source = make_minimal_odt(tmp_path / "a.odt", features={"with_plain_email": True})
     destination = tmp_path / "out.odt"
     arguments = ["remediate", str(source), str(destination), "--config", str(config(tmp_path))]
     assert main([*arguments, "--dry-run"]) == 0

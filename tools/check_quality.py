@@ -3,16 +3,22 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import io
 import re
+import subprocess
 import sys
 import tokenize
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-GENERATED_DIRECTORIES = {".git", ".venv", "build", "dist", "__pycache__", ".ruff_cache"}
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+GENERATED_DIRECTORIES = {".git", ".venv", "__pycache__", ".ruff_cache"}
+ROOT_BUILD_DIRECTORIES = {"build", "dist"}
 INLINE_DIRECTIVE = re.compile(r"\b(?:noqa\b|ruff\s*:|fmt\s*:|pylint\s*:)", re.IGNORECASE)
 # XML namespace prefixes whose elements belong to a document family, not to the ODF core.
 FAMILY_PREFIXES = frozenset({
@@ -53,27 +59,63 @@ def check_repository(root: Path) -> list[str]:
     errors = _exception_reasons(config_text)
     errors.extend(_stale_ignores(root, config))
     files_checked = 0
-    for directory, dirs, files in root.walk():
-        dirs[:] = [name for name in dirs if name not in GENERATED_DIRECTORIES]
-        for name in files:
-            path = directory / name
-            relative = path.relative_to(root)
-            if name in {"ruff.toml", ".ruff.toml"}:
-                errors.append(f"{relative}: Ruff configuration belongs in the root pyproject.toml")
-            if name == "pyproject.toml" and path != root / name:
-                nested = tomllib.loads(path.read_text(encoding="utf-8"))
-                if "ruff" in nested.get("tool", {}):
-                    errors.append(f"{relative}: nested Ruff configuration is forbidden")
-            if path.suffix != ".py":
-                continue
-            files_checked += 1
-            source = path.read_text(encoding="utf-8")
-            errors.extend(_check_source(relative, source, limit))
-            if _is_core(relative):
-                errors.extend(_check_core_purity(relative, source))
+    for path in authored_paths(root):
+        relative = path.relative_to(root)
+        if path.name in {"ruff.toml", ".ruff.toml"}:
+            errors.append(f"{relative}: Ruff configuration belongs in the root pyproject.toml")
+        if path.name == "pyproject.toml" and path != root / "pyproject.toml":
+            nested = tomllib.loads(path.read_text(encoding="utf-8"))
+            if "ruff" in nested.get("tool", {}):
+                errors.append(f"{relative}: nested Ruff configuration is forbidden")
+        if path.suffix != ".py":
+            continue
+        files_checked += 1
+        source = path.read_text(encoding="utf-8")
+        errors.extend(_check_source(relative, source, limit))
+        if _is_core(relative):
+            errors.extend(_check_core_purity(relative, source))
     if not files_checked:
         errors.append("No Python files were checked")
     return errors
+
+
+def authored_paths(root: Path) -> Iterator[Path]:
+    """Yield authored files, including hidden/ignored paths, outside generated resources.
+
+    Yields
+    ------
+    Path
+        Files in the shared policy and analyzer discovery scope.
+
+    """
+    for directory, dirs, files in root.walk():
+        excluded = GENERATED_DIRECTORIES | (ROOT_BUILD_DIRECTORIES if directory == root else set())
+        dirs[:] = [name for name in dirs if name not in excluded]
+        yield from (directory / name for name in files)
+
+
+def check_types(root: Path) -> int:
+    """Run the locked type checker on explicit authored Python paths.
+
+    Returns
+    -------
+    int
+        The analyzer's exit status; one when discovery is empty or execution is unavailable.
+
+    """
+    files = sorted(
+        path.relative_to(root).as_posix() for path in authored_paths(root) if path.suffix == ".py"
+    )
+    if not files:
+        sys.stderr.write("No Python files were checked\n")
+        return 1
+    try:
+        return subprocess.run(
+            [sys.executable, "-m", "ty", "check", *files], cwd=root, shell=False, check=False
+        ).returncode
+    except OSError:
+        sys.stderr.write("Cannot execute the type checker\n")
+        return 1
 
 
 def _is_core(path: Path) -> bool:
@@ -101,10 +143,17 @@ def _check_core_purity(path: Path, source: str) -> list[str]:
         for node in ast.walk(tree)
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
     }
+    qn_names = {"qn"} | {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+        if alias.name == "qn"
+    }
     errors = []
     for node in ast.walk(tree):
         line = getattr(node, "lineno", 0)
-        prefix = _family_qn_prefix(node)
+        prefix = _family_qn_prefix(node, qn_names)
         if prefix is not None:
             errors.append(
                 f"{path}:{line}: the ODF core must not name {prefix}: elements;"
@@ -123,20 +172,30 @@ def _check_core_purity(path: Path, source: str) -> list[str]:
     return errors
 
 
-def _family_qn_prefix(node: ast.AST) -> object | None:
-    """Find the family prefix in a ``qn("<prefix>", ...)`` call.
+def _family_qn_prefix(node: ast.AST, qn_names: set[str]) -> object | None:
+    """Find a literal family prefix in ordinary qualified-name calls and import aliases.
 
     Returns
     -------
     object | None
-        The prefix when the node is such a call, else None.
+        The family prefix when directly declared in the call, else None.
 
     """
-    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.args):
+    if not isinstance(node, ast.Call):
         return None
-    first = node.args[0]
-    named = node.func.id == "qn" and isinstance(first, ast.Constant)
-    return first.value if named and first.value in FAMILY_PREFIXES else None
+    named = (isinstance(node.func, ast.Name) and node.func.id in qn_names) or (
+        isinstance(node.func, ast.Attribute) and node.func.attr == "qn"
+    )
+    if not named:
+        return None
+    first = (
+        node.args[0]
+        if node.args
+        else next((keyword.value for keyword in node.keywords if keyword.arg == "prefix"), None)
+    )
+    return (
+        first.value if isinstance(first, ast.Constant) and first.value in FAMILY_PREFIXES else None
+    )
 
 
 def _stale_ignores(root: Path, config: dict[str, Any]) -> list[str]:
@@ -213,7 +272,14 @@ def main() -> int:
         Zero on policy compliance, or one when any violation is found.
 
     """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--types", action="store_true", help="Type-check every authored Python file."
+    )
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
+    if args.types:
+        return check_types(root)
     errors = check_repository(root)
     if errors:
         sys.stderr.write("\n".join(errors) + "\n")

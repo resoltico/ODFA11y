@@ -56,7 +56,7 @@ class DamageCellValue(Operation):
 
 @pytest.mark.parametrize("member", ["Pictures/logo.svg", "metadata.rdf", "database/firebird.fbk"])
 def test_opaque_package_resource_damage_is_rejected(tmp_path: Path, member: str) -> None:
-    source = make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
     storage = PackageStorage(source)
     storage.write_member(member, b"original")
     storage.save(source)
@@ -82,7 +82,7 @@ def test_flat_embedded_binary_damage_is_rejected(tmp_path: Path) -> None:
 
 
 def test_protected_cell_value_change_is_rejected_even_without_changed_words(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "source.odt", with_data_table=True)
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
     destination = tmp_path / "out.odt"
     with pytest.raises(RemediationError, match="content changed"):
         remediate(source, destination, [DamageCellValue()])
@@ -93,7 +93,7 @@ def test_protected_cell_value_change_is_rejected_even_without_changed_words(tmp_
 def test_direct_graphic_api_rejects_nonstring_metadata_before_any_edit(
     tmp_path: Path, value: object
 ) -> None:
-    source = make_minimal_odt(tmp_path / "source.odt", with_image_without_alt=True)
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
 
     doc = OdfDocument.open(source)
     operation = SetGraphicDescriptions({"Logo": GraphicDescription(description=cast("str", value))})

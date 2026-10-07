@@ -192,7 +192,7 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
         operations.append(RemoveEmptySpacers())
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        source = make_minimal_odt(root / "source.odt", **features)
+        source = make_minimal_odt(root / "source.odt", features=features)
         first = remediate(source, root / "first.odt", operations)
         assert validate(OdfDocument.open(root / "first.odt")).violations == {}
         second = remediate(root / "first.odt", root / "second.odt", operations)
