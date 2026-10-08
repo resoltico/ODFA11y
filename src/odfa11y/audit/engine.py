@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from odfa11y.content import native_export_limitations
 from odfa11y.errors import PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Part
@@ -57,6 +58,7 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
     audit_versions(document, report)
     audit_metadata(document, adapter, report)
     adapter.audit(document, report)
+    _audit_export_context(document, report)
     if schema:
         audit_schema(document, report)
     return report
@@ -90,3 +92,12 @@ def _describe(exc: PackageError | OSError, source: Path) -> str:
     if isinstance(exc, OSError) and not isinstance(exc, PackageError):
         return f"Cannot read {source.name}: {exc.strerror or type(exc).__name__}"
     return str(exc)
+
+
+def _audit_export_context(document: OdfDocument, report: Report) -> None:
+    limits = native_export_limitations(document)
+    report.metadata["native_export_limitations"] = limits
+    if limits["rendering_dependencies"]:
+        report.add(rules.ODF012, details={"count": limits["rendering_dependencies"]})
+    if limits["location_fields"]:
+        report.add(rules.ODF013, details={"count": limits["location_fields"]})

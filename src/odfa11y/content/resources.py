@@ -107,14 +107,34 @@ class ResourceIdentity:
         if path is None:
             return ()
         if path not in self._references:
-            names = [path] if self._storage.has(path) else []
-            prefix = "" if path == "." else path + "/"
-            index = bisect_left(self._members, prefix)
-            while index < len(self._members) and self._members[index].startswith(prefix):
-                names.append(self._members[index])
-                index += 1
+            names = self._member_names(path)
             for name in names:
                 if name not in self._digests:
                     self._digests[name] = hashlib.sha256(self._storage.read(name)).hexdigest()
             self._references[path] = tuple((name, self._digests[name]) for name in names)
         return self._references[path]
+
+    def available(self, href: str) -> bool:
+        """Check a package resource reference without loading or hashing its payload.
+
+        Returns
+        -------
+        bool
+            Whether an internal package file/object exists; flat external references are false.
+
+        """
+        path = local_resource_path(href)
+        return (
+            isinstance(self._storage, PackageStorage)
+            and path is not None
+            and bool(self._member_names(path))
+        )
+
+    def _member_names(self, path: str) -> list[str]:
+        names = [path] if self._storage.has(path) else []
+        prefix = "" if path == "." else path + "/"
+        index = bisect_left(self._members, prefix)
+        while index < len(self._members) and self._members[index].startswith(prefix):
+            names.append(self._members[index])
+            index += 1
+        return names

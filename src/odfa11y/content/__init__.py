@@ -2,6 +2,7 @@
 """Shared ODF content vocabulary, without document-family decisions."""
 
 from .configuration import graphic_descriptions, page_decisions
+from .export_context import native_export_limitations, require_native_context
 from .graphic_identity import GraphicIdentity, graphic_keys, graphics_fingerprint
 from .graphics import GraphicDescription, GraphicEditor, set_description
 from .language import set_style_language, style_language
@@ -48,6 +49,7 @@ __all__ = [
     "graphics_fingerprint",
     "header_count",
     "local_resource_path",
+    "native_export_limitations",
     "navigation_problem",
     "opaque_payloads",
     "page_decisions",
@@ -57,6 +59,7 @@ __all__ = [
     "pages",
     "protected_xml",
     "repeated",
+    "require_native_context",
     "require_safe_boundary",
     "set_description",
     "set_style_language",
