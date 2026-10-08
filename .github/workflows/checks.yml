@@ -190,8 +190,10 @@ jobs:
           echo "/opt/libreoffice$series/program" >> "$GITHUB_PATH"
       - name: Install LibreOffice on macOS
         if: runner.os == 'macOS'
+        # A fetch stalled for 30 minutes before tests; the successful PR install took 48 seconds.
+        timeout-minutes: 10
         run: |
-          brew install --cask libreoffice
+          brew install --cask --verbose libreoffice
           echo "/Applications/LibreOffice.app/Contents/MacOS" >> "$GITHUB_PATH"
       - name: Install LibreOffice on Windows
         if: runner.os == 'Windows'

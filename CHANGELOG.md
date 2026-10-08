@@ -36,6 +36,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Internal
 
+- CI limits macOS LibreOffice provisioning to ten minutes and records verbose progress,
+  bounding stalled setup while retaining current-release selection and full native gates.
 - CI pins stable veraPDF 1.30.3 with its reviewed SHA-256 alongside the exact version.
 - PDF consumption uses the shared bounded scanner and reuses completed auxiliary-resource
   inspection, avoiding a redundant operation tree and repeated font-resource traversal.
