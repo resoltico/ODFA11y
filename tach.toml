@@ -127,7 +127,7 @@ depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.evidence"
-depends_on = ["odfa11y.errors", "odfa11y.staging"]
+depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
 
 [[modules]]
 path = "odfa11y.config"

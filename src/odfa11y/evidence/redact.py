@@ -112,7 +112,7 @@ class Redactor:
         """
         for pattern, placeholder in self.replacements:
             value = pattern.sub(placeholder, value)
-        return value
+        return ABSOLUTE_PATH.sub(_collapse, value)
 
     def record(self, data: dict[str, Any]) -> dict[str, Any]:
         """Redact every string of a JSON-shaped record, keys included, then any other path.
@@ -126,7 +126,7 @@ class Redactor:
         return cast("dict[str, Any]", self._walk(data))
 
     def _clean(self, value: str) -> str:
-        return ABSOLUTE_PATH.sub(_collapse, self.text(value))
+        return self.text(value)
 
     def _walk(self, value: object) -> object:
         if isinstance(value, str):

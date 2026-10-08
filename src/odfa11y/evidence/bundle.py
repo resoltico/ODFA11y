@@ -8,10 +8,13 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from lxml import etree
+
 from odfa11y.errors import OutputError
+from odfa11y.safe_xml import parse_secure
 from odfa11y.staging import staging_sibling
 
-from .manifest import write_manifest
+from .manifest import sha256_file, write_manifest
 from .paths import is_reserved_bundle_file, unsafe_reason
 from .review import render_review
 
@@ -19,8 +22,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .redact import Redactor
-
-TEXT_ARTIFACT_SUFFIXES = frozenset({".xml", ".json", ".md", ".txt"})
 
 
 def require_free_directory(directory: Path) -> None:
@@ -42,12 +43,19 @@ def write_bundle(
     record: dict[str, Any],
     artifacts: Mapping[str, Path],
     redactor: Redactor,
-) -> None:
+    *,
+    diagnostics: frozenset[str] | set[str] = frozenset(),
+) -> dict[str, str]:
     """Write artifacts, run.json, REVIEW.md and manifest.json, then publish in one rename.
 
     ``artifacts`` maps bundle-relative names to source files. The record, the review sheet
-    and every text artifact pass through ``redactor``, so no local path reaches the bundle;
-    binary artifacts are copied unchanged.
+    pass through ``redactor``. Only explicitly named diagnostics are transformed; document
+    payloads are copied unchanged regardless of suffix. Returned hashes identify staged bytes.
+
+    Returns
+    -------
+    dict[str, str]
+        SHA-256 values of the published artifacts, also written into the run record.
 
     Raises
     ------
@@ -70,12 +78,12 @@ def write_bundle(
         for name, source in artifacts.items():
             destination = staging / name
             destination.parent.mkdir(parents=True, exist_ok=True)
-            if destination.suffix in TEXT_ARTIFACT_SUFFIXES:
-                text = source.read_text(encoding="utf-8", errors="replace")
-                destination.write_text(redactor.text(text), encoding="utf-8")
+            if name in diagnostics:
+                _write_diagnostic(source, destination, redactor)
             else:
                 shutil.copyfile(source, destination)
-        safe_record = redactor.record(record)
+        outputs = {name: sha256_file(staging / name) for name in artifacts}
+        safe_record = redactor.record(record | {"outputs": outputs})
         (staging / "run.json").write_text(
             json.dumps(safe_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
             encoding="utf-8",
@@ -85,6 +93,25 @@ def write_bundle(
         if target.exists():
             target.rmdir()
         staging.replace(target)
+        return outputs
     finally:
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
+
+
+def _write_diagnostic(source: Path, destination: Path, redactor: Redactor) -> None:
+    if destination.suffix == ".xml":
+        root = parse_secure(source.read_bytes())
+        for node in root.iter():
+            if node.text:
+                node.text = redactor.text(node.text)
+            if node.tail:
+                node.tail = redactor.text(node.tail)
+            for key, value in node.attrib.items():
+                node.set(key, redactor.text(value))
+        destination.write_bytes(etree.tostring(root, encoding="utf-8", xml_declaration=True))
+    elif destination.suffix == ".json":
+        value = redactor.record(json.loads(source.read_text(encoding="utf-8")))
+        destination.write_text(json.dumps(value, ensure_ascii=False) + "\n", encoding="utf-8")
+    else:
+        destination.write_text(redactor.text(source.read_text(encoding="utf-8")), encoding="utf-8")

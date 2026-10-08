@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""No evidence file may carry a local path, whichever way a run succeeds or fails."""
+"""Diagnostic evidence redacts local directories on successful and failed runs."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from lxml import etree
 
 from odfa11y.content import GraphicDescription
 from odfa11y.evidence import check_bundle
@@ -25,15 +26,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 SENTINEL = "zz-private-person-zz"
-TEXT_SUFFIXES = {".json", ".md", ".xml", ".txt"}
+DIAGNOSTIC_NAMES = {"run.json", "REVIEW.md", "verapdf.xml", "manifest.json"}
 posix_only = pytest.mark.skipif(sys.platform == "win32", reason="uses shell-script stand-ins")
 
 
 def assert_path_free(bundle: Path, tmp_path: Path) -> None:
-    """Fail if any textual bundle file mentions a local path or the sentinel directory."""
+    """Fail if a generated diagnostic mentions a local path or sentinel directory."""
     assert check_bundle(bundle) == []
     for path in bundle.rglob("*"):
-        if path.suffix not in TEXT_SUFFIXES:
+        if path.name not in DIAGNOSTIC_NAMES:
             continue
         text = path.read_text(encoding="utf-8")
         assert SENTINEL not in text, path.name
@@ -156,7 +157,10 @@ def test_raw_tool_reports_of_a_real_run_are_not_leaked(
     )
     bundle = run(directory, options)
     assert_path_free(bundle, tmp_path)
-    report = (bundle / "verapdf.xml").read_text(encoding="utf-8")
+    root = etree.parse(bundle / "verapdf.xml").getroot()
+    report = " ".join(
+        value for node in root.iter() for value in [node.text or "", *node.attrib.values()]
+    )
     # The tool echoes the path with the platform's separators; a spelling the redactor cannot
     # know (a Windows 8.3 short name) collapses to <path> instead of <work>.
     assert re.search(r"<(work|path)>[\\/]remediated\.pdf", report)

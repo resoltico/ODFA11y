@@ -259,14 +259,15 @@ def run_pipeline(
             for path in sorted(work.rglob("*"))
             if path.is_file() and path.relative_to(work).parts[0] != "profile"
         }
-        record.outputs = {name: sha256_file(path) for name, path in artifacts.items()}
         redactor = Redactor.for_locations({
             "profile": work / "profile",
             "work": work,
             "source": source.parent,
             "output": target,
         })
-        write_bundle(target, record.as_dict(), artifacts, redactor)
+        record.outputs = write_bundle(
+            target, record.as_dict(), artifacts, redactor, diagnostics={"verapdf.xml"}
+        )
     return record
 
 
