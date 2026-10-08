@@ -166,7 +166,7 @@ depends_on = [
 
 [[modules]]
 path = "odfa11y.batch"
-depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.pipeline", "odfa11y.staging"]
+depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.external_tools", "odfa11y.pipeline", "odfa11y.staging"]
 
 [[modules]]
 path = "odfa11y.cli"

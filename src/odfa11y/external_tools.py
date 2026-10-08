@@ -11,9 +11,14 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO
+from typing import IO, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from types import FrameType
 
 from odfa11y.errors import ToolNotFoundError
 
@@ -244,3 +249,27 @@ def identify_running_or_by_file(
     if sys.platform == "win32":
         return identify_by_file_version(name, executable)
     return identify(name, executable, version_args)
+
+
+def _interrupt(_signum: int, _frame: FrameType | None) -> None:
+    raise KeyboardInterrupt
+
+
+@contextmanager
+def termination_interrupt() -> Generator[None]:
+    """Temporarily translate SIGTERM into interruption on the main thread.
+
+    Yields
+    ------
+    None
+        A scope whose original signal handler is restored on exit.
+
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    previous = signal.signal(signal.SIGTERM, _interrupt)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
