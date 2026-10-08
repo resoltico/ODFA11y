@@ -108,6 +108,7 @@ depends_on = [
 [[modules]]
 path = "odfa11y.audit"
 depends_on = [
+  "odfa11y.content",
   "odfa11y.errors",
   "odfa11y.families",
   "odfa11y.odf",
@@ -153,6 +154,7 @@ depends_on = [
 [[modules]]
 path = "odfa11y.pipeline"
 depends_on = [
+  "odfa11y.content",
   "odfa11y.audit",
   "odfa11y.errors",
   "odfa11y.evidence",
@@ -171,6 +173,7 @@ depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.e
 [[modules]]
 path = "odfa11y.cli"
 depends_on = [
+  "odfa11y.content",
   "odfa11y.batch",
   "odfa11y.audit",
   "odfa11y.config",

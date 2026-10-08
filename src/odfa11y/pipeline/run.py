@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf
+from odfa11y.content import require_native_context
 from odfa11y.errors import PackageError
 from odfa11y.evidence import Redactor, require_free_directory, sha256_file, write_bundle
 from odfa11y.families import GENERIC, adapter_for
@@ -108,7 +109,13 @@ class _Run:
         return self._export("export-source", self.captured or self.source, "source.pdf")
 
     def export_remediated(self) -> StageResult:
-        return self._export("export-remediated", self.remediated, "remediated.pdf")
+        if not self._exportable:
+            return self._no_pdf("export-remediated")
+        require_native_context(OdfDocument.open(self.remediated), captured_identity=True)
+        with capture_source(
+            self.remediated, directory=(self.captured or self.source).parent
+        ) as staged:
+            return self._export("export-remediated", staged, "remediated.pdf")
 
     def audit_pdf(self) -> StageResult:
         if not self._exportable:
@@ -132,7 +139,10 @@ class _Run:
         if result is None:
             required = self.record.profile.verapdf_required
             return StageResult(
-                "verapdf", "failed" if required else "skipped", "veraPDF unavailable", report=report
+                "verapdf",
+                "failed" if required else "skipped",
+                "veraPDF unavailable",
+                report=report,
             )
         (self.work / "verapdf.xml").write_text(result.raw_xml, encoding="utf-8")
         self.record.toolchain["veraPDF"] = result.identity.as_dict()
@@ -170,6 +180,7 @@ class _Run:
     def _export(self, name: str, document: Path, pdf_name: str) -> StageResult:
         if self.adapter.pdf_filter is None:
             return self._no_pdf(name)
+        require_native_context(OdfDocument.open(document), captured_identity=True)
         if self.executable is None:
             self.executable = find_soffice(self.options.soffice)
             self.record.toolchain["LibreOffice"] = identify_soffice(self.executable).as_dict()

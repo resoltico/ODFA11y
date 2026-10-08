@@ -18,6 +18,7 @@ from lxml import etree
 from odfa11y import __version__
 from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf, render_template
 from odfa11y.config import Config, load_config
+from odfa11y.content import require_native_context
 from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
 from odfa11y.evidence import check_bundle
 from odfa11y.external_tools import identify, termination_interrupt
@@ -164,6 +165,7 @@ def _pdf_filter(path: Path) -> str:
         kind = document.kind.name if document.kind is not None else "unrecognised"
         msg = f"No PDF export is defined for {kind} documents."
         raise UnsupportedKindError(msg)
+    require_native_context(document)
     return pdf_filter
 
 
