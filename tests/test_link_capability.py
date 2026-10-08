@@ -76,7 +76,7 @@ def reported_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("odfa11y.cli.commands.find_verapdf", lambda: "test-verapdf")
     monkeypatch.setattr(
         "odfa11y.cli.commands.identify",
-        lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.2"),
+        lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.3"),
     )
 
 
@@ -158,7 +158,7 @@ def test_doctor_reports_selected_tool_versions(
     info = json.loads(capsys.readouterr().out)
     assert info["odfa11y"] == __version__
     assert info["LibreOffice"] == "26.8.0.3"
-    assert info["veraPDF"] == "1.30.2"
+    assert info["veraPDF"] == "1.30.3"
     assert {"python", "lxml", "pypdf", "pypdfium2", "pillow", "odf_schemas"} <= info.keys()
     assert main(["doctor"]) == 0
     assert "odfa11y:" in capsys.readouterr().out
