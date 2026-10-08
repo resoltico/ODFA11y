@@ -13,8 +13,8 @@ from tools.install_verapdf import configuration, release_url, verify_sha256
 
 
 def test_the_release_url_groups_versions_by_series() -> None:
-    assert release_url("1.30.2") == (
-        "https://software.verapdf.org/releases/1.30/verapdf-greenfield-1.30.2-installer.zip"
+    assert release_url("1.30.3") == (
+        "https://software.verapdf.org/releases/1.30/verapdf-greenfield-1.30.3-installer.zip"
     )
 
 
