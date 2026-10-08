@@ -21,15 +21,26 @@ be referenced by a Link element's `/OBJR` on the annotation's page. Content is r
 the same way: each page's content stream is scanned for marked-content sequences, and the
 audit reports MCIDs that no structure element refers to (`PDF020`), references to MCIDs the
 page lacks (`PDF021`), MCIDs referred to more than once (`PDF022`) and text shown outside
-tagged content and `/Artifact` (`PDF023`). Only content streams of pages are scanned; form
-XObjects are not entered, and references into them (`/Stm`) are not judged. Whether tagged
+tagged content and `/Artifact` (`PDF023`). Invoked Form XObjects are scanned in their resource scopes, including nested and reused
+Forms. Page and Form MCIDs have distinct identities; `/Stm` references are reconciled against
+invoked streams. Leaf references count per incoming ownership edge while structure elements
+expand once and active-path array cycle protection bounds shared-container traversal. Whether tagged
 content is in a sensible reading order, or is correctly an artifact, stays with veraPDF and
 a person.
 
 Marked-content scanning skips raw inline images using their sample dimensions. Filtered
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
-where binary samples end. Form XObjects are not scanned. The decoded-page-content limit
-is checked after each stream is decoded; it does not bound the decoder's peak memory.
+where binary samples end. Whole-object Form ownership (`/StructParent`, rather than MCID sequences) is not reconciled
+and produces explicit incomplete inspection. Cyclic Forms, excessive depth/invocations and unsupported parser
+recursion produce explicit failed inspection. The 64 MiB budget counts unique decoded page,
+invoked Form, XMP, text CMap/encoding and applicable embedded Type1 font bytes. A separate 64 MiB content-work bound charges
+repeated page/Form invocations; at most 10,000 streams per content array, 5,000 Form
+invocations per document and 50 nested Forms are inspected. Audit and fidelity enforce this
+preflight for tagged and untagged PDFs. pypdf's scoped decoder controls limit supported
+filter outputs before decoding; final-byte accounting also rejects over-limit cached or
+other decoded data. These controls do not bound total peak memory or rendering allocations.
+The inspector establishes content correspondence and actual nonartifact graphic operations,
+not pixel visibility, reading order or PDF/UA conformance.
 
 
 ## Link descriptions
@@ -80,7 +91,7 @@ Spreadsheets use LibreOffice's `calc_pdf_Export` filter and the same PDF audit, 
 and fidelity gates as text documents. Checks describe the actual exporter output; source
 header rows or alt text alone do not establish PDF/UA conformance.
 
-With LibreOffice 26.8.0.3 and veraPDF 1.30.2, the sampled table export has tagged cells but
+With LibreOffice 26.8.0.3 and the pinned veraPDF 1.30.3, the tested table export has tagged cells but
 no `TH` cells (`PDF015`), and veraPDF reports inconsistent table-column counts (7.2-43).
 The `production` profile rejects the table-header warning before reaching veraPDF.
 Integration tests require that failure and reject unrelated validator failures.
@@ -138,7 +149,7 @@ structure elements. XML entity resolution and network access are disabled. Libre
 veraPDF are run with argument lists (never a shell), a temporary profile and timeouts, their
 output is captured only up to a size limit, and a timed-out run has its whole process tree
 killed (on Windows through `taskkill`). Outputs are published atomically, a source is never
-overwritten, and evidence never carries local paths or is read through links outside it
+overwritten, and evidence diagnostics redact local directories and are not read through links outside it
 (see [Evidence](EVIDENCE.md)).
 
 These controls do not sandbox anything and set no CPU or memory limit (a limit that

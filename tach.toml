@@ -209,6 +209,7 @@ from = [
   "odfa11y.fidelity",
   "odfa11y.odf",
   "odfa11y.pdf",
+  "odfa11y.pdf_content",
   "odfa11y.pipeline",
   "odfa11y.remediation",
   "odfa11y.report",
