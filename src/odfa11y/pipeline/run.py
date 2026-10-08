@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import tempfile
-from dataclasses import dataclass
+from contextlib import ExitStack
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf
-from odfa11y.errors import OdfA11yError, PackageError, ToolError
+from odfa11y.errors import PackageError
 from odfa11y.evidence import Redactor, require_free_directory, sha256_file, write_bundle
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.fidelity import compare_pdfs
@@ -29,6 +30,8 @@ from odfa11y.report import exit_status
 
 from .profiles import STAGE_NAMES
 from .record import PipelineOptions, RunRecord, StageResult
+from .source import capture_source
+from .stages import run_stage
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -36,8 +39,6 @@ if TYPE_CHECKING:
     from odfa11y.adapter import FamilyAdapter, Operation, ReviewItem
     from odfa11y.fidelity import FidelityPolicy
     from odfa11y.report import Report
-
-DETAIL_CHARS = 2048
 
 
 @dataclass(slots=True)
@@ -48,6 +49,8 @@ class _Run:
     policy: FidelityPolicy
     record: RunRecord
     options: PipelineOptions
+    lifetime: ExitStack
+    captured: Path | None = None
     adapter: FamilyAdapter = GENERIC
     executable: str | None = None
 
@@ -59,9 +62,10 @@ class _Run:
         return self.work / f"remediated{self.source.suffix}"
 
     def identify_source(self) -> StageResult:
-        self.record.document["sha256"] = sha256_file(self.source)
+        self.captured = self.lifetime.enter_context(capture_source(self.source))
+        self.record.document["sha256"] = sha256_file(self.captured)
         try:
-            document = OdfDocument.open(self.source)
+            document = OdfDocument.open(self.captured)
         except PackageError, OSError:
             return StageResult("identify-source", "passed", gate=False)  # audit-source explains
         detection = document.detection
@@ -78,7 +82,7 @@ class _Run:
         return StageResult("identify-source", "passed", gate=False)
 
     def audit_source(self) -> StageResult:
-        report = audit_odf(self.source, schema=True)
+        report = audit_odf(self.captured or self.source, schema=True)
         report.subject = self.source.name
         blocked = any(f.rule_id in BLOCKING_RULE_IDS for f in report.findings)
         return StageResult(
@@ -90,8 +94,10 @@ class _Run:
         )
 
     def remediate(self) -> StageResult:
-        result = remediate(self.source, self.remediated, self.operations)
-        return StageResult("remediate", "passed", remediation=result, gate=False)
+        result = remediate(self.captured or self.source, self.remediated, self.operations)
+        return StageResult(
+            "remediate", "passed", remediation=replace(result, source=self.source), gate=False
+        )
 
     def audit_remediated(self) -> StageResult:
         report = audit_odf(self.remediated)
@@ -99,7 +105,7 @@ class _Run:
         return self._gate("audit-remediated", report)
 
     def export_source(self) -> StageResult:
-        return self._export("export-source", self.source, "source.pdf")
+        return self._export("export-source", self.captured or self.source, "source.pdf")
 
     def export_remediated(self) -> StageResult:
         return self._export("export-remediated", self.remediated, "remediated.pdf")
@@ -238,9 +244,9 @@ def run_pipeline(
         profile=profile,
         human_review=review_items(GENERIC.review_items),
     )
-    with tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
+    with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
         work = Path(scratch)
-        run = _Run(source, work, operations, policy, record, options)
+        run = _Run(source, work, operations, policy, record, options, lifetime)
         steps: dict[str, Callable[[], StageResult]] = {
             "identify-source": run.identify_source,
             "audit-source": run.audit_source,
@@ -253,7 +259,7 @@ def run_pipeline(
             "fidelity": run.fidelity,
         }
         for name in STAGE_NAMES:
-            record.stages.append(_run_stage(name, steps[name], record))
+            record.stages.append(run_stage(name, steps[name], record))
         artifacts = {
             path.relative_to(work).as_posix(): path
             for path in sorted(work.rglob("*"))
@@ -269,28 +275,3 @@ def run_pipeline(
             target, record.as_dict(), artifacts, redactor, diagnostics={"verapdf.xml"}
         )
     return record
-
-
-def _run_stage(name: str, step: Callable[[], StageResult], record: RunRecord) -> StageResult:
-    if name not in record.profile.stages:
-        reason = f"not part of the {record.profile.name} profile"
-        return StageResult(name, "skipped", reason, gate=False)
-    if record.failed_stage:
-        return StageResult(name, "skipped", f"not run: {record.failed_stage} failed", gate=False)
-    try:
-        return step()
-    except (OdfA11yError, OSError) as exc:
-        details = getattr(exc, "details", "") if isinstance(exc, ToolError) else ""
-        return StageResult(
-            name,
-            "failed",
-            _describe(exc),
-            error=True,
-            details=details[:DETAIL_CHARS] or None,
-        )
-
-
-def _describe(exc: OdfA11yError | OSError) -> str:
-    if isinstance(exc, OSError) and not isinstance(exc, OdfA11yError):
-        return f"{type(exc).__name__}: {exc.strerror or 'operating-system error'}"
-    return str(exc)
