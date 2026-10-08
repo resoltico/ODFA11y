@@ -30,6 +30,14 @@ path = "odfa11y.pdf_limits"
 depends_on = ["odfa11y.errors"]
 
 [[modules]]
+path = "odfa11y.pdf_content"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
+path = "odfa11y.pdf_consumption"
+depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.pdf_content"]
+
+[[modules]]
 path = "odfa11y.report"
 depends_on = []
 
@@ -116,6 +124,8 @@ depends_on = [
   "odfa11y.errors",
   "odfa11y.external_tools",
   "odfa11y.pdf_limits",
+  "odfa11y.pdf_consumption",
+  "odfa11y.pdf_content",
   "odfa11y.report",
   "odfa11y.safe_xml",
   "odfa11y.staging",
@@ -123,7 +133,7 @@ depends_on = [
 
 [[modules]]
 path = "odfa11y.fidelity"
-depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.report"]
+depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.pdf_consumption", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.evidence"

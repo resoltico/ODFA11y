@@ -18,7 +18,7 @@ from pypdf.generic import (
 )
 
 from odfa11y.pdf import audit_pdfua
-from odfa11y.pdf.content_scan import scan_content
+from odfa11y.pdf_content import scan_content
 
 from .pdf_fixtures import set_page_content, tagged_writer
 

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from pypdf import PageObject
-    from pypdf.generic import IndirectObject
+    from pypdf.generic import IndirectObject, PdfObject
 
 Spec = str | tuple[str, "Sequence[Spec]"]
 
@@ -266,3 +266,15 @@ def text_pdf(
             page[NameObject("/Annots")] = ArrayObject(annotations)
     writer.write(path)
     return path
+
+
+def register(writer: PdfWriter, value: PdfObject) -> IndirectObject:
+    """Register an indirect fixture object using pypdf's only registration API.
+
+    Returns
+    -------
+    IndirectObject
+        The registered reference.
+
+    """
+    return writer._add_object(value)

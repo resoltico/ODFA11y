@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Size limits that keep hostile PDFs from exhausting the process."""
+"""Stored-size and traversal limits for PDF inspection; OS isolation remains necessary."""
 
 from __future__ import annotations
 
@@ -10,7 +10,9 @@ from odfa11y.errors import ToolFailedError
 MAX_PDF_BYTES = 256 * 1024 * 1024
 MAX_PDF_PAGES = 5_000
 MAX_STRUCTURE_NODES = 500_000
-MAX_CONTENT_BYTES = 64 * 1024 * 1024  # decoded page content of one document
+MAX_CONTENT_BYTES = (
+    64 * 1024 * 1024
+)  # unique consumed decoded streams; invocation work is bounded separately
 
 
 def check_file_size(path: str | Path) -> None:

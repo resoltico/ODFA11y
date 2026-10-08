@@ -13,11 +13,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from pypdf import PageObject
+    from pypdf.generic import DictionaryObject
 
     from .structure_walk import StructureNode
 
 
-def page_images(page: PageObject) -> Callable[[str], bool]:
+def page_images(page: PageObject | DictionaryObject) -> Callable[[str], bool]:
     """Resolve invoked images with positive dimensions and nonempty stored stream bytes.
 
     Returns
@@ -48,7 +49,9 @@ def page_images(page: PageObject) -> Callable[[str], bool]:
     return is_image
 
 
-def described_graphics(nodes: list[StructureNode], painted: dict[int, set[int]]) -> int:
+def described_graphics(
+    nodes: list[StructureNode], painted: dict[tuple[int | None, int | None], set[int]]
+) -> int:
     """Count reachable described Figures containing reconciled page graphic operations.
 
     Returns
@@ -62,7 +65,7 @@ def described_graphics(nodes: list[StructureNode], painted: dict[int, set[int]])
     count = 0
     for node in reversed(nodes):
         reconciled = any(
-            reference.mcid in painted.get(reference.page_xref, ())
+            reference.mcid in painted.get(reference.identity, ())
             for reference in node.marked_content
         ) or any(graphics[id(child)] for child in node.children)
         graphics[id(node)] = reconciled

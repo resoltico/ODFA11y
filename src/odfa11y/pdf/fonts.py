@@ -7,7 +7,8 @@ import re
 from pathlib import Path
 
 from pypdf import PdfReader
-from pypdf.errors import PyPdfError
+from pypdf.errors import PdfReadError, PyPdfError
+from pypdf.generic import ArrayObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf_limits import MAX_PDF_PAGES, check_file_size
@@ -56,6 +57,9 @@ def _describe(font: object) -> tuple[str, bool]:
     descendants = base.get("/DescendantFonts")
     if descendants is not None:
         descendants = descendants.get_object()
+        if not isinstance(descendants, ArrayObject):
+            msg = "Expected a PDF descendant-font array"
+            raise PdfReadError(msg)
         descriptor_sources += [pdf_dictionary(item) for item in descendants]
     embedded = any(
         key in pdf_dictionary(source.get("/FontDescriptor"))
