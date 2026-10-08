@@ -39,6 +39,8 @@ Also common to every family. `ODF009` says that a document's family has no seman
 | `ODF009` | Info | No semantic audit exists for this document family. |  |
 | `ODF010` | Error | A flat XML document's root is not office:document. |  |
 | `ODF011` | Error | A package's content root is not office:document-content. |  |
+| `ODF012` | Warning | Native rendering dependencies are external or unresolved. |  |
+| `ODF013` | Warning | Pipeline export cannot preserve filename/path fields. |  |
 | `ODF900` | Warning | A member does not validate against the ODF schema. |  |
 | `ODF905` | Info | No ODF schema is bundled for the declared version. |  |
 | `META001` | Error | Document title metadata is missing. | `document.title` |

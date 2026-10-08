@@ -145,7 +145,8 @@ Inputs are untrusted ZIP, XML and PDF files. Package input is limited to 10,000 
 256 MiB of declared uncompressed data, and a flat XML file to 256 MiB, checked before
 loading; packages are never extracted, so path traversal does not apply, and the writer
 refuses unsafe member names. PDF input is limited to 256 MiB, 5,000 pages and 500,000
-structure elements. XML entity resolution and network access are disabled. LibreOffice and
+structure elements. The XML parser disables entity resolution and network access. This does not deny network
+access to LibreOffice, veraPDF, pdfium or other native importers. LibreOffice and
 veraPDF are run with argument lists (never a shell), a temporary profile and timeouts, their
 output is captured only up to a size limit, and a timed-out run has its whole process tree
 killed (on Windows through `taskkill`). Outputs are published atomically, a source is never
@@ -190,3 +191,24 @@ unusable. `REVIEW.md` in an [evidence bundle](EVIDENCE.md) carries this checklis
 - [LibreOffice PDF/UA guidance](https://help.libreoffice.org/latest/en-US/text/shared/01/ref_pdf_export_universal_accessibility.html) and [PDF filter parameters](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html).
 - [veraPDF](https://docs.verapdf.org/): the PDF/UA validator.
 - [pypdf](https://pypdf.readthedocs.io/en/stable/) and [pypdfium2](https://pypdfium2.readthedocs.io/): PDF parsing and rendering.
+
+## Native document context and declared dependencies
+
+Native pipeline exports accept self-contained rendering references: inline embedded data or
+available package members without an unestablished XML rendering base. Known external or
+unresolved render references are reported by `ODF012` and refused before application export;
+ordinary navigational links are not automatic-fetch dependencies. Filename/path fields are
+reported by `ODF013` and refused in captured pipeline export. Direct export of the original
+can preserve original logical identity; `inspect` preserves authored fields and references.
+See [Evidence](EVIDENCE.md#no-local-paths) for capture limits, comparison identity and portability.
+
+The controlled macOS LibreOffice 26.8.0.3 experiment retained intended 4x4 RGB embedded images
+in flat and native-package positives. Its local/loopback external references did not retain
+those images, and no request was observed; equal missing assets were not retention controls.
+A separate healthy loopback responder proved observation was functional. These observations
+are configuration-specific; an older 25.2 report of a fetch is supplementary unsupported-runtime
+evidence. Run `uv run --no-sync python -m tools.probe_native_resources OUTPUT` in the supported
+native environment to retain actual PDFs, decoded-pixel hashes, options and tool identities.
+Linux/Windows observations require their own execution before cross-platform resource claims.
+Neither the `production` assurance profile nor this URI preflight is an offline/confidential
+sandbox. Native tools must run under caller-controlled isolation for untrusted inputs.

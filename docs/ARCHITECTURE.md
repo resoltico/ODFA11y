@@ -243,3 +243,12 @@ development tool groups and the lint, type and coverage settings, and for Hatchl
 selection. `[project].version` declares the package version; runtime reporting derives
 it from installed distribution metadata. The wheel ships `py.typed` and the ODF schemas. See
 [Development](DEVELOPING.md#packaging).
+
+Native context preflight is shared ODF content vocabulary (`content.export_context`), used
+by read-only audit and application orchestration. It distinguishes known rendering references
+from ordinary navigation. Captured pipeline inputs and validated candidate export copies
+share the resolved source directory, with bounded regular-file capture. Location-sensitive
+fields are explicitly refused at that native boundary rather than rewritten. Low-level
+`pdf.export_pdfua` remains an explicit native invocation API requiring caller policy/isolation;
+application CLI/pipeline preflight is not a universal importer sandbox. The detailed contract
+and physical input cap live in [Evidence](EVIDENCE.md#no-local-paths).

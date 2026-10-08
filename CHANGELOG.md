@@ -6,8 +6,14 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
-- Pipeline source directories must permit a temporary captured input beside the source.
-  Use a writable isolated workspace with stable dependencies when the original is read-only.
+- Pipeline source directories must permit private temporary inputs beside the resolved
+  source. Physical input/candidate capture is capped at 256 MiB separately from the declared
+  ZIP payload budget; packages with excessive headers/padding can now be rejected. Nonregular
+  inputs are refused without waiting for FIFO data. Use a writable isolated workspace.
+- Native pipeline export refuses authored filename/path fields and known external/unresolved
+  rendering dependencies (`ODF012`/`ODF013`). Use source-only inspection, review/embed required
+  assets in the native application, or directly export an original with its logical identity.
+  Ordinary navigational links remain distinct, and moving ODF output can change relative targets.
 - `write_bundle` callers must designate redacted report artifacts with `diagnostics`;
   artifacts otherwise retain their bytes regardless of suffix. Treat document payloads as
   private content that may contain authored paths.
@@ -21,9 +27,12 @@ Notable changes to this project are documented in this file. The format is based
   data for tagged and untagged inputs. Resource/parser refusals remain explicit failures.
 - Shared marked-content references now retain incoming ownership counts; indirect link URIs
   compare correctly and malformed fidelity annotations fail with execution status 3.
-- Pipeline stages process one captured source and preserve its original display name and
-  relative-resource directory. The source directory must allow temporary files; external
-  dependencies still require stable, isolated inputs.
+- Pipeline stages process one bounded captured source with its original display identity.
+  Source and validated candidate exports share the resolved source directory, including file
+  aliases; partial captures are cleaned on ordinary failure/interruption. Authored location
+  fields are preserved in source-only work and refused where staging cannot retain identity.
+- Unavailable required veraPDF now yields failed stage `verapdf` and execution status 3;
+  optional audit validation keeps its warning/strict-warning behavior.
 - Standalone CLI termination cleans up active tool processes on ordinary interruption,
   using the scoped termination handling shared with batch.
 

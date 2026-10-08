@@ -61,12 +61,43 @@ Document/PDF/image payloads may retain authored paths and private content. `outp
 final staged artifact bytes, matching the published record and manifest; a hash does not prove
 syntax validity, accessibility or review quality.
 
-Pipeline input is captured once in a temporary file beside the original source to preserve
-its relative-resource directory. Creating that file requires a writable source directory.
-The original name remains the display identity; the source digest identifies the captured
-bytes used by every stage. Concurrent in-place writes during capture may affect those bytes;
-external dependencies are not captured and must remain stable in the caller's isolated
-workspace. The captured input is removed and is not included in the evidence bundle.
+Pipeline input is captured once beside the resolved source, following ordinary file aliases.
+The opened descriptor must be a regular file; nonregular sources (including FIFOs) are
+refused before reading. Physical capture is limited to **256 MiB**, independently of the
+ZIP parser's 256 MiB declared-uncompressed budget. The physical limit includes ZIP headers,
+filenames, extra fields and padding and can reject a package whose declared payload would
+fit the parser budget. Size is checked before copying and on the descriptor, and a bounded
+copy also rejects growth. Capture refusal is an `identify-source` execution failure (status
+3), with failure evidence when its destination remains writable. Partial owned copies are
+removed on errors and ordinary interruption. This does not impose an OS memory/time sandbox
+on arbitrary filesystems.
+
+The source directory must permit private temporary files. Both baseline and candidate native
+exports use private copies in that same resolved directory; the candidate copy has exactly
+the validated artifact's bytes. The original display name remains separate from capture
+identity, and the digest identifies the captured bytes every stage processes. Capture and declaration
+preflight do not copy, rewrite or fetch external resources; native tools are not network-isolated. These known native limitations are reported
+by the source audit:
+
+- `ODF012`: a declared rendering reference is external, absent from the package, or governed
+  by an unestablished explicit XML resource base. Flat render references need embedded data.
+  Native application export/compare refuse those dependencies; source-only `inspect` remains
+  available for review and explicit remediation in the native application.
+- `ODF013`: authored filename/full-path fields require logical original identity. Native
+  pipeline export refuses them because the current exporter would substitute private capture
+  names. `inspect` preserves the fields; direct original export can use the actual original
+  identity. Authored fields are not frozen or removed, and comparison still rejects a real
+  visible change caused by a deliberately different final filename.
+
+Ordinary navigational hyperlinks are distinct from automatic rendering dependencies. Their
+references remain authored and are resolved by the native application against the controlled
+input directory/base. Relative navigation can change when the published document is moved;
+a copied ODF is not a self-contained bundle of external targets. An unresolved dependency is
+not established preservation just because both PDFs omit it. Embedded assets also require
+output/human review: presence, an image count or equal renders alone cannot prove the intended
+asset was loaded. The preflight covers known declarations in content/styles and does not
+establish universal importer isolation. Captures are removed and are not original-input
+copies in the evidence bundle.
 
 ## REVIEW.md
 
