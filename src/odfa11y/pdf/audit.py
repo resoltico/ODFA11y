@@ -12,6 +12,7 @@ from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.pdf_consumption import check_consumption
 from odfa11y.pdf_limits import check_file_size, check_limits
 from odfa11y.report import Report, rules
 from odfa11y.safe_xml import parse_secure
@@ -39,7 +40,7 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
     report = Report(kind="pdf", subject=str(pdf_path), sources=(pdf_path,))
     try:
         _inspect(pdf_path, report)
-    except (OSError, PyPdfError, ValueError, KeyError, ToolFailedError) as exc:
+    except (OSError, PyPdfError, ValueError, KeyError, RecursionError, ToolFailedError) as exc:
         report.add(rules.PDF000, f"Cannot inspect PDF: {exc}")
     return report
 
@@ -49,6 +50,7 @@ def _inspect(pdf_path: Path, report: Report) -> None:
         check_file_size(pdf_path)
         reader = PdfReader(stream, strict=True)
         check_limits(pdf_path, len(reader.pages))
+        check_consumption(reader)
         structure = _audit_metadata(reader, report)
         graphics = audit_structure(structure, report, link_annotations(reader), reader.pages)
         _audit_content(reader, report, graphics)

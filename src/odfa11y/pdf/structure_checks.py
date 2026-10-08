@@ -41,8 +41,7 @@ def audit_structure(
 ) -> int:
     """Record structure tags and report structure, link and marked-content defects.
 
-    Content is reconciled with the structure only when there is a structure tree; its absence
-    is already reported.
+    Content is inspected even when the structure tree is absent.
 
     Returns
     -------
@@ -58,7 +57,7 @@ def audit_structure(
     if role_map:
         report.metadata["role_map"] = dict(sorted(role_map.items()))
     check_link_structure(annotations, nodes, report)
-    graphic_count = check_marked_content(pages, nodes, report) if root else 0
+    graphic_count = check_marked_content(pages, nodes, report)
     _check_roles(nodes, report)
     _check_figures(nodes, report)
     _check_headings(nodes, report)

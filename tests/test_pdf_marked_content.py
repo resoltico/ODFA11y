@@ -12,7 +12,7 @@ from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObjec
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
-from odfa11y.pdf.content_scan import scan_content
+from odfa11y.pdf_content import scan_content
 
 from .pdf_fixtures import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
 
@@ -199,10 +199,10 @@ def test_a_named_property_list_without_an_mcid_does_not_tag_content(tmp_path: Pa
     assert {"PDF021", "PDF023"} <= set(content_findings(audit(tmp_path, writer)))
 
 
-def test_a_pdf_without_a_structure_tree_is_left_to_the_tagging_rules(tmp_path: Path) -> None:
+def test_a_pdf_without_a_structure_tree_still_reports_unmarked_content(tmp_path: Path) -> None:
     report = audit_pdfua(text_pdf(tmp_path / "untagged.pdf", [["x"]]))
     assert "PDF004" in {f.rule_id for f in report.findings}
-    assert not content_findings(report)
+    assert set(content_findings(report)) == {"PDF023"}
 
 
 def test_every_page_is_reconciled_with_its_own_content(tmp_path: Path) -> None:

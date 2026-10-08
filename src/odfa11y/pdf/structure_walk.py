@@ -13,6 +13,7 @@ from pypdf.generic import (
     IndirectObject,
     NameObject,
     NumberObject,
+    StreamObject,
 )
 
 from odfa11y.errors import ToolFailedError
@@ -107,6 +108,12 @@ class MarkedContentReference:
 
     mcid: int
     page_xref: int | None
+    stream_xref: int | None = None
+
+    @property
+    def identity(self) -> tuple[int | None, int | None]:
+        """Page stream or independent Form stream ownership scope."""
+        return (self.page_xref if self.stream_xref is None else None, self.stream_xref)
 
 
 @dataclass(slots=True)
@@ -168,13 +175,17 @@ def build_tree(root: DictionaryObject) -> StructureNode:
     top = StructureNode("StructTreeRoot", "StructTreeRoot", root)
     seen: set[int] = set()
     nodes = 0
+    work = [0]
     pending: list[tuple[object, StructureNode]] = [(root.get("/K"), top)]
     while pending:
         kids, parent = pending.pop()
-        for value in _children(kids, seen):
+        for value in _children(kids, work):
             nodes += 1
             _count(nodes)
             if isinstance(value, DictionaryObject) and isinstance(value.get("/S"), NameObject):
+                if id(value) in seen:
+                    continue
+                seen.add(id(value))
                 name = str(value["/S"]).removeprefix("/")
                 page = _xref(value.get("/Pg"))
                 node = StructureNode(
@@ -191,7 +202,14 @@ def build_tree(root: DictionaryObject) -> StructureNode:
 
 
 def _add_reference(parent: StructureNode, kid: DictionaryObject | int) -> None:
-    """Record a marked-content or object reference kid on its structure element."""
+    """Record a marked-content or object reference kid on its structure element.
+
+    Raises
+    ------
+    ToolFailedError
+        A stream reference has an unsupported shape.
+
+    """
     if isinstance(kid, int):
         parent.marked_content.append(MarkedContentReference(int(kid), parent.page_xref))
         return
@@ -199,8 +217,15 @@ def _add_reference(parent: StructureNode, kid: DictionaryObject | int) -> None:
     page = page if page is not None else parent.page_xref
     kind = kid.get("/Type")
     mcid = kid.get("/MCID")
-    if kind == "/MCR" and isinstance(mcid, NumberObject) and kid.get("/Stm") is None:
-        parent.marked_content.append(MarkedContentReference(int(mcid), page))
+    if kind == "/MCR" and isinstance(mcid, NumberObject):
+        stream = kid.get("/Stm")
+        if stream is not None and (
+            not isinstance(stream, IndirectObject)
+            or not isinstance(stream.get_object(), StreamObject)
+        ):
+            msg = "Cannot inspect a malformed /Stm content reference"
+            raise ToolFailedError(msg)
+        parent.marked_content.append(MarkedContentReference(int(mcid), page, _xref(stream)))
     elif kind == "/OBJR":
         parent.object_references.append(ObjectReference(_xref(kid.get("/Obj")), page))
 
@@ -215,18 +240,25 @@ def _xref(value: object) -> int | None:
     return value.idnum if isinstance(value, IndirectObject) else None
 
 
-def _children(kids: object, seen: set[int]) -> Iterator[DictionaryObject | int]:
-    stack = [kids]
+def _children(kids: object, work: list[int]) -> Iterator[DictionaryObject | int]:
+    stack: list[tuple[object, bool]] = [(kids, False)]
+    active: set[int] = set()
     while stack:
-        value = stack.pop()
+        value, leaving = stack.pop()
+        if leaving:
+            active.remove(id(value))
+            continue
+        work[0] += 1
+        _count(work[0])
         if isinstance(value, IndirectObject):
             value = value.get_object()
-        if isinstance(value, ArrayObject | DictionaryObject):
-            if id(value) in seen:
-                continue
-            seen.add(id(value))
         if isinstance(value, ArrayObject):
-            stack.extend(reversed(value))
+            if id(value) in active:
+                continue
+            _count(work[0] + len(value))
+            active.add(id(value))
+            stack.append((value, True))
+            stack.extend((child, False) for child in reversed(value))
         elif isinstance(value, DictionaryObject | NumberObject):
             yield value
 

@@ -6,19 +6,19 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from typing import TYPE_CHECKING
 
-from pypdf.generic import ArrayObject, NumberObject, StreamObject
+from pypdf.generic import ArrayObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf_limits import MAX_CONTENT_BYTES
 from odfa11y.report import rules
 
-from .content_scan import scan_content
-from .graphic_presence import described_graphics, page_images
+from .form_content import FormScanner
+from .graphic_presence import described_graphics
 from .link_structure import MAX_LISTED
 from .structure_walk import pdf_dictionary
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from pypdf import PageObject
 
@@ -35,8 +35,8 @@ def check_marked_content(
     Each page's content stream is scanned for marked-content sequences. Findings: MCIDs no
     structure element refers to (``PDF020``), references to MCIDs the page does not contain
     (``PDF021``), MCIDs referred to more than once (``PDF022``) and text shown outside tagged
-    content and ``/Artifact`` (``PDF023``). Content of form XObjects is not scanned, so
-    references into it (``/Stm``) are ignored. The check claims only these correspondences;
+    content and ``/Artifact`` (``PDF023``). Invoked Forms and their ``/Stm`` references
+    are inspected in independent stream scopes. The check claims only these correspondences;
     veraPDF remains the validator. Decoded content beyond ``MAX_CONTENT_BYTES`` in all pages
     raises ``ToolFailedError``.
 
@@ -46,34 +46,51 @@ def check_marked_content(
         Described Figures containing graphical operations reconciled on actual pages.
 
     """
-    references: dict[int | None, Counter[int]] = defaultdict(Counter)
+    references: dict[tuple[int | None, int | None], Counter[int]] = defaultdict(Counter)
     for node in nodes:
         for reference in node.marked_content:
-            references[reference.page_xref][reference.mcid] += 1
+            references[reference.identity][reference.mcid] += 1
     budget = MAX_CONTENT_BYTES
     untagged: list[dict[str, int]] = []
     unreferenced: list[dict[str, object]] = []
-    page_numbers: dict[int | None, int] = {}
-    contents: dict[int, set[int]] = {}
-    painted: dict[int, set[int]] = {}
+    page_numbers: dict[tuple[int | None, int | None], int] = {}
+    contents: dict[tuple[int | None, int | None], set[int]] = {}
+    painted: dict[tuple[int | None, int | None], set[int]] = {}
     for number, page in enumerate(pages, start=1):
         data = _decoded_content(page, budget)
         budget -= len(data)
-        scan = scan_content(data, _property_mcids(page), page_images(page))
+        scanner = FormScanner()
+        scan = scanner.scan(data, pdf_dictionary(page.get("/Resources")))
+        scanner.streams[None] = scan
         xref = page.indirect_reference.idnum if page.indirect_reference else None
-        page_numbers[xref] = number
-        contents[number] = scan.mcids
-        if xref is not None:
-            painted[xref] = scan.graphical_mcids
-        loose = sorted(scan.mcids - set(references.get(xref, ())))
-        if loose:
-            unreferenced.append({"page": number, "count": len(loose), "mcids": loose[:MAX_LISTED]})
-        if scan.unmarked_text_operations:
-            untagged.append({"page": number, "text_operations": scan.unmarked_text_operations})
+        for stream, scan in scanner.streams.items():
+            identity = (xref if stream is None else None, stream)
+            page_numbers[identity] = number
+            contents.setdefault(identity, set()).update(scan.mcids)
+            painted.setdefault(identity, set()).update(scan.graphical_mcids)
+            stream_details = {"stream": stream} if stream is not None else {}
+            loose = sorted(scan.mcids - set(references.get(identity, ())))
+            if loose:
+                unreferenced.append({
+                    "page": number,
+                    "count": len(loose),
+                    "mcids": loose[:MAX_LISTED],
+                })
+            if scan.unmarked_text_operations:
+                untagged.append({
+                    "page": number,
+                    "text_operations": scan.unmarked_text_operations,
+                    **stream_details,
+                })
     report.metadata["marked_content_ids"] = sum(len(ids) for ids in contents.values())
     _report(report, unreferenced, untagged, _dangling(references, page_numbers, contents))
     duplicated = [
-        {"page": page_numbers.get(xref), "mcid": mcid, "references": count}
+        {
+            "page": page_numbers.get(xref),
+            "mcid": mcid,
+            "references": count,
+            **({"stream": xref[1]} if xref[1] is not None else {}),
+        }
         for xref, counts in references.items()
         for mcid, count in counts.items()
         if count > 1
@@ -102,15 +119,19 @@ def _report(
 
 
 def _dangling(
-    references: dict[int | None, Counter[int]],
-    page_numbers: dict[int | None, int],
-    contents: dict[int, set[int]],
+    references: dict[tuple[int | None, int | None], Counter[int]],
+    page_numbers: dict[tuple[int | None, int | None], int],
+    contents: dict[tuple[int | None, int | None], set[int]],
 ) -> list[dict[str, int | None]]:
     return [
-        {"page": page_numbers.get(xref), "mcid": mcid}
+        {
+            "page": page_numbers.get(xref),
+            "mcid": mcid,
+            **({"stream": xref[1]} if xref[1] is not None else {}),
+        }
         for xref, counts in references.items()
         for mcid in sorted(counts)
-        if mcid not in contents.get(page_numbers.get(xref, 0), ())
+        if mcid not in contents.get(xref, ())
     ]
 
 
@@ -142,13 +163,3 @@ def _decoded_content(page: PageObject, budget: int) -> bytes:
                 msg = f"Page content is larger than the {MAX_CONTENT_BYTES}-byte limit"
                 raise ToolFailedError(msg)
     return b"\n".join(parts)
-
-
-def _property_mcids(page: PageObject) -> Callable[[str], int | None]:
-    properties = pdf_dictionary(pdf_dictionary(page.get("/Resources")).get("/Properties"))
-
-    def mcid_of(name: str) -> int | None:
-        value = pdf_dictionary(properties.get(name)).get("/MCID")
-        return int(value) if isinstance(value, NumberObject) else None
-
-    return mcid_of

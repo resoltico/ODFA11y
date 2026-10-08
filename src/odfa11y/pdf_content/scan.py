@@ -46,12 +46,14 @@ class ContentScan:
     mcids: set[int] = field(default_factory=set)
     unmarked_text_operations: int = 0
     graphical_mcids: set[int] = field(default_factory=set)
+    graphical_content: bool = False
 
 
 @dataclass(slots=True)
 class _Scanner:
     properties: Callable[[str], int | None]
     image: Callable[[str], bool] | None = None
+    invoke: Callable[[str, tuple[bool, bool]], bool] | None = None
     scan: ContentScan = field(default_factory=ContentScan)
     sequences: list[int | None] = field(default_factory=list)
     flags: bytearray = field(default_factory=bytearray)
@@ -126,11 +128,18 @@ class _Scanner:
             self.scan.unmarked_text_operations += 1
         elif word == b"Do":
             kind, name = self.operands[-1] if self.operands else _NO_OPERAND
-            if kind == "name" and self.image is not None and self.image(str(name)):
-                self.paint()
+            if kind == "name":
+                self._invoke(str(name))
         else:
             self._path(word)
         self.operands.clear()
+
+    def _invoke(self, name: str) -> None:
+        if (self.image is not None and self.image(name)) or (
+            self.invoke is not None
+            and self.invoke(name, (bool(self.covered), bool(self.artifacts)))
+        ):
+            self.paint()
 
     def _begin(self, operands: list[Operand]) -> None:
         tag = operands[0] if operands else _NO_OPERAND
@@ -151,6 +160,8 @@ class _Scanner:
         self.artifacts += artifact
 
     def paint(self) -> None:
+        if not self.artifacts:
+            self.scan.graphical_content = True
         if self.sequences and not self.artifacts:
             self.flags[-1] |= GRAPHICS_FLAG
 
@@ -187,13 +198,18 @@ class _Scanner:
 
 
 def scan_content(
-    data: bytes, properties: Callable[[str], int | None], image: Callable[[str], bool] | None = None
+    data: bytes,
+    properties: Callable[[str], int | None],
+    image: Callable[[str], bool] | None = None,
+    *,
+    invoke: Callable[[str, tuple[bool, bool]], bool] | None = None,
+    context: tuple[bool, bool] = (False, False),
 ) -> ContentScan:
     """Find the MCIDs of a content stream and count text shown outside tagged content.
 
     A text-showing operator is unmarked when no enclosing marked-content sequence carries an
     MCID or is an ``/Artifact``. Work is linear in the stream: one pass, with strings and
-    inline-image data skipped rather than re-scanned. Form XObjects are not entered.
+    inline-image data skipped rather than re-scanned. The invocation callback enters Forms.
 
     Parameters
     ----------
@@ -204,13 +220,19 @@ def scan_content(
     image
         Resolves an invoked resource name to a validated image resource. Forms are excluded.
 
+    invoke
+        Inspect a Form invocation in the current marked/artifact context.
+    context
+        Inherited tagged coverage and artifact status of the invoking operator.
+
     Returns
     -------
     ContentScan
         The MCIDs found and the count of unmarked text-showing operations.
 
     """
-    scanner = _Scanner(properties, image)
+    scanner = _Scanner(properties, image, invoke)
+    scanner.covered, scanner.artifacts = map(int, context)
     position = 0
     while match := _TOKEN.match(data, position):
         position = match.end()

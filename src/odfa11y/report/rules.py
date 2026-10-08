@@ -267,9 +267,14 @@ PDF016 = _rule("PDF016", WARNING, PDF, "A link annotation is not represented by 
 PDF017 = _rule("PDF017", WARNING, PDF, "A Link structure element refers to no link annotation.")
 PDF018 = _rule("PDF018", ERROR, PDF, "A link annotation is referenced from another page.")
 PDF019 = _rule("PDF019", ERROR, PDF, "A link has no alternate description.")
-PDF020 = _rule("PDF020", ERROR, PDF, "Marked content on a page is not part of the structure tree.")
+PDF020 = _rule(
+    "PDF020", ERROR, PDF, "Marked content in an inspected stream is not part of the structure tree."
+)
 PDF021 = _rule(
-    "PDF021", WARNING, PDF, "A structure element refers to marked content its page does not have."
+    "PDF021",
+    WARNING,
+    PDF,
+    "A structure element refers to marked content its inspected stream does not have.",
 )
 PDF022 = _rule("PDF022", WARNING, PDF, "Marked content is referenced by more than one element.")
 PDF023 = _rule("PDF023", ERROR, PDF, "Text is shown outside tagged content and artifacts.")
