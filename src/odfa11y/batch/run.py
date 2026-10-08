@@ -3,23 +3,19 @@
 
 from __future__ import annotations
 
-import signal
-import threading
-from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.config import load_config
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
+from odfa11y.external_tools import termination_interrupt
 from odfa11y.pipeline import PipelineOptions, RunRecord, StageResult, run_pipeline
 
 from .manifest import load_manifest, preflight
 from .record import BatchRecord
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-    from types import FrameType
     from typing import Any
 
     from .manifest import BatchItem
@@ -55,7 +51,7 @@ def run_batch(
     )
     output.mkdir(parents=True)
     record.publish(output)
-    with _termination_interrupt():
+    with termination_interrupt():
         try:
             for item, progress in zip(items, record.items, strict=True):
                 progress["status"] = "running"
@@ -119,20 +115,3 @@ def _failure(
     })
     write_bundle(target, record.as_dict(), {}, redactor)
     return record
-
-
-def _interrupt(_signum: int, _frame: FrameType | None) -> None:
-    raise KeyboardInterrupt
-
-
-@contextmanager
-def _termination_interrupt() -> Generator[None]:
-    """Handle process termination without replacing an embedding thread's signal policy."""
-    if threading.current_thread() is not threading.main_thread():
-        yield
-        return
-    previous = signal.signal(signal.SIGTERM, _interrupt)
-    try:
-        yield
-    finally:
-        signal.signal(signal.SIGTERM, previous)

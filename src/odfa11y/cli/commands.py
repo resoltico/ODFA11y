@@ -20,7 +20,7 @@ from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf, render_template
 from odfa11y.config import Config, load_config
 from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
 from odfa11y.evidence import check_bundle
-from odfa11y.external_tools import identify
+from odfa11y.external_tools import identify, termination_interrupt
 from odfa11y.families import adapter_for
 from odfa11y.families.text import ADAPTER as TEXT_ADAPTER
 from odfa11y.families.text import write_link_probe
@@ -75,9 +75,13 @@ def main(argv: list[str] | None = None) -> int:
     }
     sarif = getattr(args, "format", None) == "sarif"
     try:
-        if sarif:
-            _preflight_sarif(args)
-        return handlers[args.command](args)
+        with termination_interrupt():
+            if sarif:
+                _preflight_sarif(args)
+            return handlers[args.command](args)
+    except KeyboardInterrupt:
+        print("error: command interrupted", file=sys.stderr)
+        return EXECUTION_FAILURE
     except (OdfA11yError, OSError, ValueError) as exc:
         if sarif:
             print(

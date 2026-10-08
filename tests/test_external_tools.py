@@ -3,19 +3,32 @@
 
 from __future__ import annotations
 
+import json
+import multiprocessing
 import os
+import signal
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 from odfa11y import external_tools
+from odfa11y.batch import run_batch
+from odfa11y.cli import main
+from odfa11y.evidence import check_bundle
 from odfa11y.external_tools import ToolRun, identify, run_bounded
+from odfa11y.odf import PackageStorage
+from odfa11y.pipeline import PipelineOptions
+
+from .fixtures import make_minimal_odt
+from .test_batch import manifest_file
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from collections.abc import Callable
+    from multiprocessing.synchronize import Event
 
 PYTHON = sys.executable
 
@@ -137,3 +150,97 @@ def test_windows_identification_reads_the_file_version_instead_of_running_the_to
     assert seen[0][0] == "powershell"
     assert "O''Neil" in seen[0][-1]  # a quote in the path cannot end the literal
     assert "--version" not in " ".join(seen[0])
+
+
+def _native_command(
+    paths: tuple[str, str], tool: str, marker: str, ready: Event, mode: str
+) -> None:
+    source, output = paths
+    patch = pytest.MonkeyPatch()
+
+    def observe[**P](
+        factory: Callable[P, subprocess.Popen[bytes]],
+    ) -> Callable[P, subprocess.Popen[bytes]]:
+        def start(*args: P.args, **kwargs: P.kwargs) -> subprocess.Popen[bytes]:
+            process = factory(*args, **kwargs)
+            command = cast("list[str]", args[0])
+            original_wait = process.wait
+
+            def wait(timeout: float | None = None) -> int:
+                if "--convert-to" in command and "/second-input/" in command[-1]:
+                    Path(marker).write_text(str(process.pid), encoding="utf-8")
+                    ready.set()
+                return original_wait(timeout)
+
+            patch.setattr(process, "wait", wait)
+            return process
+
+        return start
+
+    patch.setattr(external_tools.subprocess, "Popen", observe(external_tools.subprocess.Popen))
+    if mode == "standalone":
+        sys.exit(main(["export", source, output, "--soffice", tool]))
+    result = run_batch(source, output, PipelineOptions(soffice=tool))
+    sys.exit(result.exit_status)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="POSIX signals/process groups require separate Windows controls"
+)
+@pytest.mark.parametrize("interrupt", [signal.SIGTERM, signal.SIGINT])
+@pytest.mark.parametrize("mode", ["standalone", "batch"])
+def test_real_native_termination_cleans_tool_and_preserves_completed_batch(
+    tmp_path: Path, external_tool: Callable[..., str], interrupt: int, mode: str
+) -> None:
+    tool = external_tool("soffice", "libreoffice")
+    directory = tmp_path / "second-input"
+    directory.mkdir()
+    source = make_minimal_odt(directory / "source.odt")
+    package = PackageStorage(source)
+    package.write_member(
+        "content.xml",
+        package.read("content.xml").replace(
+            b"Body paragraph.", b"Body paragraph.</text:p><text:p>" * 5_000 + b"End."
+        ),
+    )
+    package.save(source)
+    output = tmp_path / ("out.pdf" if mode == "standalone" else "batch")
+    if mode == "batch":
+        make_minimal_odt(tmp_path / "first.odt")
+        (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+        source = manifest_file(
+            tmp_path,
+            [
+                ("first", "first.odt", "plan.toml"),
+                ("second", "second-input/source.odt", "plan.toml"),
+            ],
+        )
+    context = multiprocessing.get_context("spawn")
+    ready = context.Event()
+    marker = tmp_path / "native.pid"
+    child = context.Process(
+        target=_native_command, args=((str(source), str(output)), tool, str(marker), ready, mode)
+    )
+    child.start()
+    try:
+        assert ready.wait(60), "native tool did not reach its wait boundary"
+        pid = int(marker.read_text())
+        os.kill(pid, 0)  # The native process actually exists when interruption is sent.
+        assert child.pid is not None
+        os.kill(child.pid, interrupt)
+        child.join(20)
+        assert child.exitcode == 3
+        with pytest.raises(ProcessLookupError):
+            os.killpg(pid, 0)
+        if mode == "batch":
+            assert check_bundle(output / "first") == []
+            summary = json.loads((output / "batch.json").read_text())
+            assert [item["status"] for item in summary["items"]] == ["completed", "interrupted"]
+        else:
+            assert not output.exists()
+    finally:
+        if child.is_alive():
+            child.kill()
+            child.join(20)
+        child.close()
