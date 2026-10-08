@@ -142,3 +142,9 @@ For several reports the highest status wins. Informational findings never fail a
 | LibreOffice version rejected | Install LibreOffice 26.8 or newer; unidentifiable versions are also rejected. |
 | LibreOffice executable not found | Install LibreOffice and expose its CLI on `PATH`, or pass `--soffice`. |
 | `FID005` after spacing or spacer changes | Content moved. Review the diff images; if the movement is intended set `fidelity.pagination = "may-change"`. |
+
+Missing veraPDF in a profile that requires it is an execution failure: failed stage
+`verapdf`, exit status **3**, retained completed artifacts and skipped fidelity. Optional
+`audit --verapdf` absence remains `VERA000` warning behavior (status 0 ordinarily, 1 with
+`--strict`). Native dependency/captured-identity limits and capture failures are described
+in [Evidence](EVIDENCE.md#no-local-paths); source-only inspection remains available.

@@ -26,8 +26,10 @@ def link_descriptions_supported(
     """Export a document whose content is a hyperlink and report whether the link is described.
 
     The PDF is judged by the same audit as any other: the answer is ``False`` exactly when
-    the audit reports ``PDF019`` for the export. The export goes to a temporary directory
-    and no network is used.
+    the audit reports ``PDF019`` for the export. The export goes to a temporary directory.
+    The built-in synthetic probe contains a navigational example.test link and no
+    automatic-fetch resource. A supplied document/exporter can have other native behavior;
+    this API does not enforce network isolation.
 
     Returns
     -------
