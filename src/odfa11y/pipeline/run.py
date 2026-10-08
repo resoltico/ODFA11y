@@ -143,6 +143,7 @@ class _Run:
                 "failed" if required else "skipped",
                 "veraPDF unavailable",
                 report=report,
+                error=required,
             )
         (self.work / "verapdf.xml").write_text(result.raw_xml, encoding="utf-8")
         self.record.toolchain["veraPDF"] = result.identity.as_dict()

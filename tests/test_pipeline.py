@@ -237,7 +237,9 @@ def test_an_unknown_profile_is_a_configuration_error(tmp_path: Path) -> None:
     assert not (tmp_path / "o").exists()
 
 
-def test_the_production_profile_fails_when_verapdf_is_unavailable(tmp_path: Path) -> None:
+def test_the_production_profile_fails_at_export_when_libreoffice_is_unavailable(
+    tmp_path: Path,
+) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     options = PipelineOptions(profile="production", soffice=str(tmp_path / "none"))
     record = run_pipeline(source, [], FidelityPolicy(), tmp_path / "o", options)
