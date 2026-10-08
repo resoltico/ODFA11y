@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from lxml import etree
 
 from odfa11y.evidence import (
     Redactor,
@@ -145,8 +146,14 @@ def test_text_artifacts_are_redacted_and_binary_ones_are_not(tmp_path: Path) -> 
     binary.write_bytes(str(work).encode())
     redactor = Redactor.for_locations({"work": work})
     target = tmp_path / "bundle"
-    write_bundle(target, record(), {"report.xml": xml, "data.bin": binary}, redactor)
-    assert (target / "report.xml").read_text() == "<name><work>/remediated.pdf</name>"
+    write_bundle(
+        target,
+        record(),
+        {"report.xml": xml, "data.bin": binary},
+        redactor,
+        diagnostics={"report.xml"},
+    )
+    assert etree.parse(target / "report.xml").getroot().text == "<work>/remediated.pdf"
     assert (target / "data.bin").read_bytes() == str(work).encode()
     assert check_bundle(target) == []
 
