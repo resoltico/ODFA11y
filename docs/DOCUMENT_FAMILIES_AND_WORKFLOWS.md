@@ -1,5 +1,11 @@
 # Document families and workflow design
 
+Implementation status: these family, batch and SARIF contracts shipped in
+[PR 32](https://github.com/resoltico/ODFA11y/pull/32) and
+[0.5.0](https://github.com/resoltico/ODFA11y/releases/tag/v0.5.0). The design/challenge and
+implementation-QA sections below retain their historical rationale; they are not a pending
+implementation plan. GitHub issues and pull requests remain the current roadmap.
+
 ## Scope and constraints
 
 This change covers #6 and every remaining implementation issue: heading levels (#20),
@@ -218,7 +224,8 @@ and `MarkTableHeaders`; each entry is a table object, not an integer shorthand. 
 mechanisms. No deprecated import, TOML spelling or serialized location format is accepted
 as a migration path. Keep legitimate published records and fixture provenance.
 
-Production implementation may now proceed against these contracts. A new observation
+At design approval, production implementation was authorized against these contracts;
+that implementation shipped in 0.5.0. A new observation
 that contradicts them reopens the relevant design/QA decision before more code is added.
 
 Implementation challenge refinements: header wrappers must not change reviewed graphic

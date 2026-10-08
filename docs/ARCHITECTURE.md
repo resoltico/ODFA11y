@@ -35,6 +35,8 @@ flowchart LR
 | `errors` | The domain exceptions; the CLI reports exactly these. |
 | `safe_xml` | The one XML parser for untrusted input: no entity expansion, no network. |
 | `staging`, `pdf_limits` | Sibling temporary names for atomic writes; size limits for hostile PDFs. |
+| `pdf_content` | Shared bounded token scanner and inline-image boundaries. |
+| `pdf_consumption` | Unique decoded-stream and invocation-work preflight for audit and fidelity. |
 | `external_tools` | Locate, identify and run LibreOffice and veraPDF with bounded output. |
 | `report` | The rule registry, findings, reports, rendering and exit statuses. |
 | `odf` | Storage layouts, logical parts, document kinds, detection, schema validation. |
@@ -211,7 +213,7 @@ non-compliance is a finding. Nothing here is a sandbox.
 
 Marked-content scanning skips raw inline images using their sample dimensions. Filtered
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
-where binary samples end. Form XObjects are not scanned. A text-free PDF can satisfy content-presence checks through
+where binary samples end. Invoked Forms are inspected with resource scopes and independent stream identities. A text-free PDF can satisfy content-presence checks through
 reachable described Figures whose own/descendant MCIDs match constructed-and-painted
 paths, valid raw inline images, or invoked image resources on the actual page with positive
 integer dimensions and nonempty stored stream bytes. Image-resource payloads are not decoded. Empty,
@@ -231,7 +233,8 @@ export). Once the output directory is acceptable, a bundle is published whether 
 passed or failed, even for an unreadable source. The
 [run record](../src/odfa11y/pipeline/record.py) is serialized without timestamps and
 published, with artifacts, review sheet and manifest, as one [evidence bundle](EVIDENCE.md);
-every textual file passes through a redactor first, so no local path reaches it.
+diagnostic values are redacted through their XML/JSON serialization, while document payloads
+retain their bytes and can contain authored paths. Artifact hashes identify final staged bytes.
 
 ## Packaging
 

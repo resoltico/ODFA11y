@@ -16,11 +16,12 @@ fidelity/            diff images for pages that differ
 
 The directory must not exist or must be empty. It is built in a temporary sibling and
 published with one rename, so it is never half-written; a failed run still publishes its
-evidence (and no remediated document).
+evidence. Artifacts are retained for stages that completed, including the remediated
+document when remediation passed even if a later gate failed.
 
 ## run.json
 
-Format 2. Sorted keys, no timestamps and no local paths:
+Format 2. Sorted keys, no timestamps and no local directories in diagnostic values:
 
 - `odfa11y`, `python`, `platform`, `libraries` and the locale `environment`;
 - `toolchain`: LibreOffice and veraPDF names and reported version numbers.
@@ -51,15 +52,21 @@ program behind it, and a hash proves integrity, not authorship.
 
 ### No local paths
 
-Evidence never contains a directory of the machine that produced it. Every textual file
-passes through a redactor before publication: the source's directory, the working
-directory, the output directory and the LibreOffice profile become `<source>`, `<work>`,
-`<output>` and `<profile>`, and any other absolute path (a home or temporary directory, a
-tool's location, a `file://` address) is reduced to `<path>/<file name>`. The raw veraPDF
-report is therefore the tool's report with its working-directory prefix replaced by
-`<work>`. Tool failures are recorded as a short message plus bounded, redacted output, never
-the command line. Tests scan every file of bundles from successful and failed runs for a
-sentinel directory name.
+Diagnostic records and explicitly designated report artifacts are redacted before publication.
+Known source, work, output and profile directories become `<source>`, `<work>`, `<output>`
+and `<profile>`; other path directories become `<path>`. XML/JSON values are redacted before
+serialization, preserving valid syntax and escaping. `write_bundle` callers designate report
+names with `diagnostics`; all other artifacts are copied byte for byte regardless of suffix.
+Document/PDF/image payloads may retain authored paths and private content. `outputs` identifies
+final staged artifact bytes, matching the published record and manifest; a hash does not prove
+syntax validity, accessibility or review quality.
+
+Pipeline input is captured once in a temporary file beside the original source to preserve
+its relative-resource directory. Creating that file requires a writable source directory.
+The original name remains the display identity; the source digest identifies the captured
+bytes used by every stage. Concurrent in-place writes during capture may affect those bytes;
+external dependencies are not captured and must remain stable in the caller's isolated
+workspace. The captured input is removed and is not included in the evidence bundle.
 
 ## REVIEW.md
 
@@ -70,8 +77,8 @@ Nothing semantic is turned into a pass.
 
 ## Privacy
 
-A bundle contains copies of the input document, its remediated document, both PDFs and diff
-images, and reports quote document text. Treat a bundle with the same confidentiality as the
+A bundle contains artifacts from completed stages: the remediated document, exported PDFs,
+diff images and diagnostics that can quote document text. It does not copy the original ODF. Treat a bundle with the same confidentiality as the
 document, and do not attach one to a public issue.
 
 ## Verifying

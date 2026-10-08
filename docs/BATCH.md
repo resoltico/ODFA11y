@@ -54,3 +54,11 @@ identify unrun entries. A forced kill or power loss can leave `running` evidence
 explicitly incomplete, never a completed result. Forced termination on Windows does not
 permit an interruption handler to run. Resume is not implicit; inspect retained evidence
 and create an explicit manifest and a fresh destination for remaining items.
+
+Standalone CLI commands and batch translate ordinary SIGTERM/SIGINT into controlled
+interruption so the active external tool tree is cleaned up where the platform allows it.
+The previous SIGTERM policy is restored when the scope ends; importing or embedding the
+tool runner does not install a handler. Windows forced termination, SIGKILL and power loss
+can bypass cleanup and summary publication. Completed item bundles remain independently
+verifiable; interrupted staging directories are not published evidence. There is no implicit
+recovery or automatic resumption. OS isolation and resource limits remain caller duties.

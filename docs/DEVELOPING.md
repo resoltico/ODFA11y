@@ -197,7 +197,7 @@ Linux/Windows LibreOffice installers are checksum-pinned. The lockfile does not 
 the complete operating system.
 
 veraPDF is a separately installed Java CLI used when an operator explicitly requests
-`--verapdf`. CI validates a LibreOffice export with a pinned veraPDF release; update
+`--verapdf`. CI validates a LibreOffice export with the exact stable veraPDF 1.30.3 release; update
 `ODFA11Y_VERAPDF_VERSION` and its checksum together. Its machine-validation scope is
 described in [Accessibility and limits](ACCESSIBILITY.md).
 
@@ -227,7 +227,8 @@ run alone does not prove that packaging included the required modules.
 2. Ambiguous semantic choices require explicit input.
 3. Structural editing preserves normalized document wording before saving.
 4. Package output retains the first/uncompressed `mimetype` invariant; untouched members stay byte-identical.
-5. Evidence carries no local path and is never read outside its directory.
+5. Evidence diagnostics redact local directories; document payloads retain authored content.
+   Evidence verification never reads outside its directory.
 6. Test new checks and meaningful rejection paths; verify external boundaries when claimed.
 7. Distinguish PDF diagnostics, machine validation and human acceptance.
 8. Keep customer/private documents out of source control and test fixtures.

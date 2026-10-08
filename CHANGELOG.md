@@ -4,6 +4,42 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Breaking
+
+- Pipeline source directories must permit a temporary captured input beside the source.
+  Use a writable isolated workspace with stable dependencies when the original is read-only.
+- `write_bundle` callers must designate redacted report artifacts with `diagnostics`;
+  artifacts otherwise retain their bytes regardless of suffix. Treat document payloads as
+  private content that may contain authored paths.
+
+### Fixed
+
+- Evidence publication preserves document payload bytes regardless of extension, redacts
+  structured diagnostic values without corrupting XML/JSON and records final artifact hashes.
+  Failed runs retain artifacts from completed stages; authored paths may remain in documents.
+- PDF inspection and fidelity account for decoded content, invoked Forms and consumed XMP/CMap
+  data for tagged and untagged inputs. Resource/parser refusals remain explicit failures.
+- Shared marked-content references now retain incoming ownership counts; indirect link URIs
+  compare correctly and malformed fidelity annotations fail with execution status 3.
+- Pipeline stages process one captured source and preserve its original display name and
+  relative-resource directory. The source directory must allow temporary files; external
+  dependencies still require stable, isolated inputs.
+- Standalone CLI termination cleans up active tool processes on ordinary interruption,
+  using the scoped termination handling shared with batch.
+
+### Added
+
+- PDF audit enters invoked Form XObjects with stream-specific MCIDs, scoped resources,
+  bounded nesting/reuse and nonartifact graphical-presence controls. This does not establish
+  PDF/UA conformance or pixel visibility.
+- Native compound Writer/Calc regression cases retain stricter exporter-failure controls.
+
+### Internal
+
+- CI pins stable veraPDF 1.30.3 with its reviewed SHA-256 alongside the exact version.
+- PDF consumption uses the shared bounded scanner and reuses completed auxiliary-resource
+  inspection, avoiding a redundant operation tree and repeated font-resource traversal.
+
 ## [0.5.0] - 2026-10-07
 
 ### Breaking
