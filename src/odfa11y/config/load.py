@@ -6,19 +6,18 @@ from __future__ import annotations
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from odfa11y.adapter import config_tables
 from odfa11y.errors import ConfigError
 from odfa11y.families import config_tables as family_tables
-from odfa11y.fidelity import PAGINATION_MODES, FidelityPolicy
+from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import SUPPORTED_VERSIONS
 from odfa11y.remediation import SetMetadata, SetOdfVersion
 
 if TYPE_CHECKING:
     from odfa11y.adapter import Operation
 
-MAX_CHANNEL_VALUE = 255
 COMMON_TABLES = {"document", "fidelity"}
 
 
@@ -81,21 +80,9 @@ def _fidelity(table: dict[str, object]) -> FidelityPolicy:
         table, {"pagination", "raster_tolerance", "ink_threshold", "dpi"}, "fidelity"
     )
     default = FidelityPolicy()
-    pagination = table.get("pagination", default.pagination)
-    if pagination not in PAGINATION_MODES:
-        msg = f"fidelity.pagination must be one of {', '.join(PAGINATION_MODES)}"
-        raise ConfigError(msg)
-    tolerance = table.get("raster_tolerance", default.raster_tolerance)
-    if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or tolerance < 0:
-        msg = "fidelity.raster_tolerance must be a non-negative number"
-        raise ConfigError(msg)
-    integer_keys = ("ink_threshold", "dpi")
-    integers = config_tables.typed(
-        {key: table[key] for key in integer_keys if key in table}, int, "fidelity"
+    return FidelityPolicy(
+        cast("str", table.get("pagination", default.pagination)),
+        cast("float", table.get("raster_tolerance", default.raster_tolerance)),
+        cast("int", table.get("ink_threshold", default.ink_threshold)),
+        cast("int", table.get("dpi", default.dpi)),
     )
-    threshold = integers.get("ink_threshold", default.ink_threshold)
-    dpi = integers.get("dpi", default.dpi)
-    if not 0 <= threshold <= MAX_CHANNEL_VALUE or dpi < 1:
-        msg = "fidelity.ink_threshold must be 0-255 and fidelity.dpi positive"
-        raise ConfigError(msg)
-    return FidelityPolicy(str(pagination), float(tolerance), threshold, dpi)

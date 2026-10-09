@@ -127,7 +127,7 @@ def test_false_flags_request_nothing(tmp_path: Path) -> None:
         ('[fidelity]\npagination = "never"', "fidelity.pagination must be one of"),
         ("[fidelity]\nraster_tolerance = -1", "non-negative number"),
         ("[fidelity]\nink_threshold = 300", "0-255"),
-        ("[fidelity]\ndpi = 0", "dpi positive"),
+        ("[fidelity]\ndpi = 0", "positive integer"),
         ("not = valid = toml", "Cannot read configuration"),
     ],
 )
