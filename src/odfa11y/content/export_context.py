@@ -46,6 +46,31 @@ RESOURCE_TARGETS = {
     ),
     qn("draw", "object"): (qn("xlink", "href"), "object"),
     qn("chart", "chart"): (qn("xlink", "href"), "chart"),
+    qn("presentation", "event-listener"): (qn("xlink", "href"), "event"),
+    qn("form", "form"): (qn("form", "datasource"), "data-source"),
+    qn("table", "source-service"): (qn("table", "name"), "data-source"),
+    qn("office", "dde-source"): (qn("office", "dde-application"), "data-source"),
+    qn("text", "dde-connection-decl"): (qn("office", "dde-application"), "data-source"),
+    **dict.fromkeys(
+        (
+            qn("table", name)
+            for name in ["database-source-sql", "database-source-table", "database-source-query"]
+        ),
+        (qn("table", "database-name"), "data-source"),
+    ),
+    **dict.fromkeys(
+        (
+            qn("text", name)
+            for name in [
+                "database-display",
+                "database-name",
+                "database-next",
+                "database-row-number",
+                "database-row-select",
+            ]
+        ),
+        (qn("text", "database-name"), "data-source"),
+    ),
     **dict.fromkeys(
         (qn("form", name) for name in ["button", "image", "image-frame"]),
         (qn("form", "image-data"), "file"),
@@ -58,7 +83,6 @@ RESOURCE_TARGETS = {
                 ("draw", "applet"),
                 ("text", "script"),
                 ("script", "event-listener"),
-                ("presentation", "event-listener"),
                 ("meta", "auto-reload"),
             ],
         ),
@@ -105,6 +129,12 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
 
 
 def _unresolved(node: etree._Element, href: str, shape: str, resources: ResourceIdentity) -> bool:
+    if shape == "event":
+        # ODF action semantics: show navigates; execute launches another application.
+        # Sound has its own child resource declaration; static actions do not consume href.
+        return node.get(qn("presentation", "action")) == "execute"
+    if shape == "data-source":
+        return bool(href)  # Named/IRI bindings are unestablished; empty binds no concrete source.
     if _explicit_base(node) or shape == "unestablished":
         return True
     if shape == "chart" and href == ".":

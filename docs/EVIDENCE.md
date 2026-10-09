@@ -82,7 +82,7 @@ a hard link to the same file, can change the export base. Renaming a parent duri
 can invalidate the owned copy's pathname and defeat pathname cleanup. Such concurrency is
 unsupported; use a stable isolated workspace. Concurrent in-place writes are also outside
 the identity guarantee. Under the stable-namespace prerequisite, owned cleanup applies.
- Both baseline and candidate native
+Both baseline and candidate native
 exports use private copies in that same resolved directory; the candidate copy has exactly
 the validated artifact's bytes. The original display name remains separate from capture
 identity, and the digest identifies the captured bytes every stage processes. Capture and declaration
@@ -97,8 +97,8 @@ by the source audit:
   File targets need an exact non-directory member; directory separators remain meaningful
   after percent decoding. `draw:object` can address a separate file or a subdocument folder
   containing `content.xml`; OLE targets require a file or inline data. Chart self-data `.`
-  has its own contextual meaning; parent-data `..` (also the omitted-attribute default) is unestablished at this scanned
-  boundary. Flat URI resources cannot rely on package members. Native application export/compare
+  has its own contextual meaning; parent-data `..` (also the omitted-attribute default) is
+  unestablished at this scanned boundary. Flat URI resources cannot rely on package members. Native application export/compare
   refuse these dependencies; source-only `inspect` and remediation remain available.
 - `ODF013`: authored filename/full-path fields require logical original identity. Native
   pipeline export refuses them because the current exporter would substitute private capture
@@ -115,8 +115,12 @@ output/human review: presence, an image count or equal renders alone cannot prov
 asset was loaded or decoded correctly. The preflight covers known declarations in
 content/styles/meta, including auto-reload replacement documents. Template provenance,
 operated form-button/image links, form submission and normal text/drawing/image-map
-navigation are distinct from image data. Declared applet code/base/archive, script/event
-code and form data connections remain unestablished and are refused; this is not a claim
+navigation are distinct from image data. Presentation event `show` targets are navigation;
+`execute` targets launch applications and remain unestablished. Child sound declarations
+use the media-file policy. Declared applet code/base/archive, script/application-execution
+code and nonempty form/table/text database, data-service and DDE bindings (named sources
+as well as IRIs) remain unestablished and are refused, even when cached values are present; empty named bindings
+identify no concrete dependency under this preflight policy. This is not a claim
 that every declaration executes or fetches. Embedded subdocument internals, opaque payloads,
 inline execution, dynamic importer behavior and OS isolation remain outside this scan.
 It does not establish universal importer isolation. Captures are removed and are not original-input

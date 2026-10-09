@@ -194,8 +194,8 @@ unusable. `REVIEW.md` in an [evidence bundle](EVIDENCE.md) carries this checklis
 
 ## Native document context and declared dependencies
 
-Native pipeline exports accept self-contained rendering references: inline embedded data or
-correctly addressed package members without an unestablished XML rendering base. Declaration
+The declaration preflight admits inline data and correctly addressed package targets without
+an unestablished XML rendering base; admission does not prove decoding or native loading. Declaration
 recognition includes unused fill/bullet images, chart symbols, SVG definitions and non-XLink
 form image data. Files and embedded subdocument directories have distinct addressing rules;
 presence does not establish payload decodability. Known external/unresolved/wrong-shape or

@@ -16,9 +16,11 @@ Notable changes to this project are documented in this file. The format is based
   exports refuse recognized external/unresolved or unestablished resource declarations
   (`ODF012`), including unused fill/bullet, chart-symbol, SVG definition and form-image-data
   references. File targets require exact non-directory members; embedded ODF objects admit
-  subdocument folders, while OLE targets require a file or inline data. Declared script/event,
-  applet, data-connection and auto-reload loading remains unestablished. Use source-only inspection, review/embed required
-  assets in the native application, or directly export an original with its logical identity.
+  subdocument folders, while OLE targets require a file or inline data. Declared script/application
+  execution, applet, nonempty named/IRI database/service/DDE bindings and auto-reload loading remain
+  unestablished. Use source-only inspection and review/embed required assets in the native
+  application. For filename/path fields, direct original export retains logical identity;
+  it still refuses unsupported resource declarations.
   Ordinary navigational links remain distinct, and moving ODF output can change relative targets.
 - `write_bundle` callers must designate redacted report artifacts with `diagnostics`;
   artifacts otherwise retain their bytes regardless of suffix. Treat document payloads as
