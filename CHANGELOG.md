@@ -9,9 +9,15 @@ Notable changes to this project are documented in this file. The format is based
 - Pipeline source directories must permit private temporary inputs beside the resolved
   source. Physical input/candidate capture is capped at 256 MiB separately from the declared
   ZIP payload budget; packages with excessive headers/padding can now be rejected. Nonregular
-  inputs are refused without waiting for FIFO data. Use a writable isolated workspace.
-- Native pipeline export refuses authored filename/path fields and known external/unresolved
-  rendering dependencies (`ODF012`/`ODF013`). Use source-only inspection, review/embed required
+  inputs and substitutions of the selected file are refused before copying, without waiting
+  for FIFO data. Use a writable isolated workspace whose ancestor directories remain stable
+  throughout processing; parent exchanges/renames and in-place writes are outside this guarantee.
+- Native pipeline export refuses authored filename/path fields (`ODF013`). Guarded native
+  exports refuse recognized external/unresolved or unestablished resource declarations
+  (`ODF012`), including unused fill/bullet, chart-symbol, SVG definition and form-image-data
+  references. File targets require exact non-directory members; embedded ODF objects admit
+  subdocument folders, while OLE targets require a file or inline data. Declared script/event,
+  applet, data-connection and auto-reload loading remains unestablished. Use source-only inspection, review/embed required
   assets in the native application, or directly export an original with its logical identity.
   Ordinary navigational links remain distinct, and moving ODF output can change relative targets.
 - `write_bundle` callers must designate redacted report artifacts with `diagnostics`;
@@ -29,7 +35,8 @@ Notable changes to this project are documented in this file. The format is based
   compare correctly and malformed fidelity annotations fail with execution status 3.
 - Pipeline stages process one bounded captured source with its original display identity.
   Source and validated candidate exports share the resolved source directory, including file
-  aliases; partial captures are cleaned on ordinary failure/interruption. Authored location
+  aliases; opened identity must match the selected file before copying. Partial captures are
+  cleaned on ordinary failure/interruption within the stable ancestor-namespace contract. Authored location
   fields are preserved in source-only work and refused where staging cannot retain identity.
 - Unavailable required veraPDF now yields failed stage `verapdf` and execution status 3;
   optional audit validation keeps its warning/strict-warning behavior.

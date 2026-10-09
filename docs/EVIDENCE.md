@@ -62,8 +62,11 @@ final staged artifact bytes, matching the published record and manifest; a hash 
 syntax validity, accessibility or review quality.
 
 Pipeline input is captured once beside the resolved source, following ordinary file aliases.
-The opened descriptor must be a regular file; nonregular sources (including FIFOs) are
-refused before reading. Physical capture is limited to **256 MiB**, independently of the
+After resolving deliberate file/directory aliases, capture retains the selected device/inode
+identity. The opened descriptor must be that same regular file; substitutions and nonregular
+sources (including FIFOs) are refused before capture creation or reading. POSIX uses
+anti-symlink open where available, plus the identity comparison; the latter also covers
+regular-file replacement and uses Python's stat/fstat identity on Windows. Physical capture is limited to **256 MiB**, independently of the
 ZIP parser's 256 MiB declared-uncompressed budget. The physical limit includes ZIP headers,
 filenames, extra fields and padding and can reject a package whose declared payload would
 fit the parser budget. Size is checked before copying and on the descriptor, and a bounded
@@ -72,17 +75,31 @@ copy also rejects growth. Capture refusal is an `identify-source` execution fail
 removed on errors and ordinary interruption. This does not impose an OS memory/time sandbox
 on arbitrary filesystems.
 
-The source directory must permit private temporary files. Both baseline and candidate native
+The source/staging directories must permit private temporary files and their caller-controlled
+ancestor namespaces must remain stable for the whole capture/export lifetime. Leaf-file
+identity does not establish parent/resource-directory identity: a parent exchange, even with
+a hard link to the same file, can change the export base. Renaming a parent during copying
+can invalidate the owned copy's pathname and defeat pathname cleanup. Such concurrency is
+unsupported; use a stable isolated workspace. Concurrent in-place writes are also outside
+the identity guarantee. Under the stable-namespace prerequisite, owned cleanup applies.
+ Both baseline and candidate native
 exports use private copies in that same resolved directory; the candidate copy has exactly
 the validated artifact's bytes. The original display name remains separate from capture
 identity, and the digest identifies the captured bytes every stage processes. Capture and declaration
 preflight do not copy, rewrite or fetch external resources; native tools are not network-isolated. These known native limitations are reported
 by the source audit:
 
-- `ODF012`: a declared rendering reference is external, absent from the package, or governed
-  by an unestablished explicit XML resource base. Flat render references need embedded data.
-  Native application export/compare refuse those dependencies; source-only `inspect` remains
-  available for review and explicit remediation in the native application.
+- `ODF012`: a recognized resource declaration is external, unresolved, addressed with the
+  wrong target shape, governed by an unestablished explicit XML base, or declares unestablished
+  dynamic loading/execution. The authoritative element/attribute/target policy lives in
+  [content/export_context.py](../src/odfa11y/content/export_context.py). It includes fill/bullet,
+  chart-symbol, SVG definition/font and form-image-data references, even unused declarations.
+  File targets need an exact non-directory member; directory separators remain meaningful
+  after percent decoding. `draw:object` can address a separate file or a subdocument folder
+  containing `content.xml`; OLE targets require a file or inline data. Chart self-data `.`
+  has its own contextual meaning; parent-data `..` (also the omitted-attribute default) is unestablished at this scanned
+  boundary. Flat URI resources cannot rely on package members. Native application export/compare
+  refuse these dependencies; source-only `inspect` and remediation remain available.
 - `ODF013`: authored filename/full-path fields require logical original identity. Native
   pipeline export refuses them because the current exporter would substitute private capture
   names. `inspect` preserves the fields; direct original export can use the actual original
@@ -95,8 +112,14 @@ input directory/base. Relative navigation can change when the published document
 a copied ODF is not a self-contained bundle of external targets. An unresolved dependency is
 not established preservation just because both PDFs omit it. Embedded assets also require
 output/human review: presence, an image count or equal renders alone cannot prove the intended
-asset was loaded. The preflight covers known declarations in content/styles and does not
-establish universal importer isolation. Captures are removed and are not original-input
+asset was loaded or decoded correctly. The preflight covers known declarations in
+content/styles/meta, including auto-reload replacement documents. Template provenance,
+operated form-button/image links, form submission and normal text/drawing/image-map
+navigation are distinct from image data. Declared applet code/base/archive, script/event
+code and form data connections remain unestablished and are refused; this is not a claim
+that every declaration executes or fetches. Embedded subdocument internals, opaque payloads,
+inline execution, dynamic importer behavior and OS isolation remain outside this scan.
+It does not establish universal importer isolation. Captures are removed and are not original-input
 copies in the evidence bundle.
 
 ## REVIEW.md

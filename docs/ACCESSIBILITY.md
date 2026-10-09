@@ -195,12 +195,18 @@ unusable. `REVIEW.md` in an [evidence bundle](EVIDENCE.md) carries this checklis
 ## Native document context and declared dependencies
 
 Native pipeline exports accept self-contained rendering references: inline embedded data or
-available package members without an unestablished XML rendering base. Known external or
-unresolved render references are reported by `ODF012` and refused before application export;
+correctly addressed package members without an unestablished XML rendering base. Declaration
+recognition includes unused fill/bullet images, chart symbols, SVG definitions and non-XLink
+form image data. Files and embedded subdocument directories have distinct addressing rules;
+presence does not establish payload decodability. Known external/unresolved/wrong-shape or
+unestablished dynamic references are reported by `ODF012` and refused before guarded export;
 ordinary navigational links are not automatic-fetch dependencies. Filename/path fields are
 reported by `ODF013` and refused in captured pipeline export. Direct export of the original
 can preserve original logical identity; `inspect` preserves authored fields and references.
-See [Evidence](EVIDENCE.md#no-local-paths) for capture limits, comparison identity and portability.
+See [Evidence](EVIDENCE.md#no-local-paths) for the authoritative policy boundary, capture
+file-identity checks, stable ancestor-namespace prerequisite, comparison identity and portability.
+The low-level `export_pdfua()` API is the raw application boundary; callers must apply their
+own resource policy and native isolation. CLI export/ODF comparison and pipeline own the shared guard.
 
 The controlled macOS LibreOffice 26.8.0.3 experiment retained intended 4x4 RGB embedded images
 in flat and native-package positives. Its local/loopback external references did not retain
