@@ -29,8 +29,6 @@ from odfa11y.fidelity import compare_pdfs
 from odfa11y.odf import SUPPORTED_VERSIONS, OdfDocument
 from odfa11y.pdf import (
     ExportSettings,
-    audit_pdfua,
-    check_pdfua,
     export_pdfua,
     find_soffice,
     find_verapdf,
@@ -41,6 +39,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import remediate
 from odfa11y.report import Report, exit_status, render_reports
 
+from .audit import audit_command, command_gate, is_pdf
 from .batch import batch_command
 from .parser import build_parser
 
@@ -49,7 +48,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 EXECUTION_FAILURE = 3
-PDF_MAGIC = b"%PDF"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -63,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
-        "audit": _audit,
+        "audit": audit_command,
         "batch": batch_command,
         "template": _template,
         "remediate": _remediate,
@@ -78,6 +76,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with termination_interrupt():
             if sarif:
+                if args.source_root is None:
+                    print(
+                        "error: SARIF requires an explicit source root (--source-root); "
+                        "all inputs must be files within it.",
+                        file=sys.stderr,
+                    )
+                    return EXECUTION_FAILURE
                 _preflight_sarif(args)
             return handlers[args.command](args)
     except KeyboardInterrupt:
@@ -100,27 +105,6 @@ def _preflight_sarif(args: argparse.Namespace) -> None:
     sources = tuple(args.sources) if args.command == "audit" else (args.candidate, args.source)
     report = Report(kind="source", subject="", sources=sources)
     render_reports([report], output_format="sarif", source_root=args.source_root)
-
-
-def _is_pdf(path: Path) -> bool:
-    with path.open("rb") as stream:
-        return stream.read(len(PDF_MAGIC)) == PDF_MAGIC
-
-
-def _audit(args: argparse.Namespace) -> int:
-    reports: list[Report] = []
-    for source in args.sources:
-        if _is_pdf(source):
-            reports.append(audit_pdfua(source))
-            if args.verapdf or args.verapdf_path:
-                report, _result = check_pdfua(
-                    source, subject=str(source), executable=args.verapdf_path
-                )
-                reports.append(report)
-        else:
-            reports.append(audit_odf(source, schema=args.schema))
-    print(render_reports(reports, output_format=args.format, source_root=args.source_root))
-    return exit_status(reports, strict=args.strict)
 
 
 def _template(args: argparse.Namespace) -> int:
@@ -171,19 +155,26 @@ def _pdf_filter(path: Path) -> str:
 
 def _compare(args: argparse.Namespace) -> int:
     policy = (load_config(args.config) if args.config else Config()).fidelity
+    source_pdf, candidate_pdf = is_pdf(args.source), is_pdf(args.candidate)
     with tempfile.TemporaryDirectory(prefix="odfa11y-compare-") as scratch:
         work = Path(scratch)
-        left = _as_pdf(args.source, work / "source.pdf", args, work / "profile")
-        right = _as_pdf(args.candidate, work / "candidate.pdf", args, work / "profile")
+        left = _as_pdf(args.source, work / "source.pdf", args, work / "profile", is_pdf=source_pdf)
+        right = _as_pdf(
+            args.candidate, work / "candidate.pdf", args, work / "profile", is_pdf=candidate_pdf
+        )
         report = compare_pdfs(left, right, policy, diff_dir=args.diff_dir)
     report.subject = f"{args.candidate.name} vs {args.source.name}"
     report.sources = (args.candidate, args.source)
     print(render_reports([report], output_format=args.format, source_root=args.source_root))
-    return exit_status([report], strict=args.strict)
+    status = exit_status([report], strict=args.strict)
+    command_gate(args, status)
+    return status
 
 
-def _as_pdf(path: Path, rendered: Path, args: argparse.Namespace, profile: Path) -> Path:
-    if _is_pdf(path):
+def _as_pdf(
+    path: Path, rendered: Path, args: argparse.Namespace, profile: Path, *, is_pdf: bool
+) -> Path:
+    if is_pdf:
         return path
     settings = ExportSettings(_pdf_filter(path), args.soffice, args.timeout, profile)
     return export_pdfua(path, rendered, settings)

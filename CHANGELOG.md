@@ -28,6 +28,19 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Fixed
 
+- Fidelity policy rejects nonfinite tolerances, unknown pagination modes and invalid numeric
+  types/ranges through both configuration and `FidelityPolicy` (`ConfigError`), before work
+  can publish evidence. Finite tolerances above 1.0 remain supported.
+- Fidelity compares effective URI link-annotation destinations using explicit catalog Base
+  values. Relative links without a supported absolute Base now refuse comparison rather than
+  claiming preservation; [supported scope](docs/FIDELITY.md) excludes other PDF references.
+- Unsupported PDF stream decoding produces structural `PDF000` audit refusal or controlled
+  comparison failure, without a traceback. CLI audit/compare refuse nonregular inputs promptly.
+- Text/JSON multi-input audit retains completed reports and inspects later inputs after an
+  unreadable file, with execution status 3 and per-input stderr diagnostics. SARIF retains
+  global preflight and no-partial-log behavior. Strict audit/compare gate outcomes appear on
+  stderr without changing report `passed`; help explains timeout defaults and assurance profiles.
+
 - Evidence publication preserves document payload bytes regardless of extension, redacts
   structured diagnostic values without corrupting XML/JSON and records final artifact hashes.
   Failed runs retain artifacts from completed stages; authored paths may remain in documents.

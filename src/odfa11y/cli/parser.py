@@ -70,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile",
         choices=tuple(PROFILES),
         default=DEFAULT_PROFILE,
-        help="Assurance profile: which stages run and how strictly they gate.",
+        help=_profile_help(),
     )
     p.add_argument(
         "--verapdf-path", type=Path, help="veraPDF executable for the production profile."
@@ -105,7 +105,12 @@ def _add_report_options(parser: argparse.ArgumentParser) -> None:
 
 def _add_tool_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--soffice", type=Path, help="LibreOffice executable.")
-    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help=f"Native tool timeout in seconds (default: {DEFAULT_TIMEOUT_SECONDS}).",
+    )
 
 
 def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:
@@ -121,7 +126,17 @@ def _add_batch(sub: argparse._SubParsersAction) -> None:
     )
     p.add_argument("manifest", type=Path)
     p.add_argument("--output-dir", type=Path, required=True)
-    p.add_argument("--profile", choices=tuple(PROFILES), default=DEFAULT_PROFILE)
+    p.add_argument(
+        "--profile", choices=tuple(PROFILES), default=DEFAULT_PROFILE, help=_profile_help()
+    )
     p.add_argument("--verapdf-path", type=Path)
     _add_tool_options(p)
     p.add_argument("--format", choices=("text", "json"), default="text")
+
+
+def _profile_help() -> str:
+    return (
+        f"Assurance profile (default: {DEFAULT_PROFILE}): inspect checks source/remediation; "
+        "verify adds PDF diagnostics and fidelity; production also requires veraPDF "
+        "and gates warnings."
+    )

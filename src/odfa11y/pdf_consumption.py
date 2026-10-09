@@ -76,7 +76,11 @@ class _Budget:
             run_length_maximum_output_length=max(remaining + 1, 1),
             array_based_stream_maximum_output_length=max(remaining + 1, 1),
         ):
-            data = stream.get_data()
+            try:
+                data = stream.get_data()
+            except NotImplementedError as exc:
+                msg = f"Unsupported PDF stream decoding: {str(exc)[:200]}"
+                raise ToolFailedError(msg) from exc
         if id(stream) not in self.seen:
             self.seen.add(id(stream))
             self.decoded += len(data)

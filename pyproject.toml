@@ -155,6 +155,8 @@ max-file-lines = 300
 "tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
 # CLI output is its stdout/stderr interface.
 "src/odfa11y/cli/commands.py" = ["print"]
+# Per-input audit diagnostics and strict command status are CLI output.
+"src/odfa11y/cli/audit.py" = ["print"]
 # These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
 "src/odfa11y/pdf/export.py" = ["suspicious-subprocess-import"]
 # Version probes run an explicitly selected local tool with an argument list; stopping a
@@ -181,6 +183,8 @@ max-file-lines = 300
 "src/odfa11y/odf/flat.py" = ["no-self-use"]
 # Same reason for the ZIP layout.
 "src/odfa11y/odf/package.py" = ["no-self-use"]
+# Deadline tests run the real CLI with explicit arguments and no shell.
+"tests/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
 # The tests exercise the subprocess wrapper and name the exception it raises on timeout.
 "tests/test_external_tools.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
 # pypdf has no public registration API for synthetic indirect structure objects.
