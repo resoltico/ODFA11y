@@ -27,8 +27,11 @@ or text reports when those detailed diagnostics are needed. Logical labels conta
 absolute host paths or URI credentials are rejected. Source-root violations and missing
 physical source identities are errors; display labels are never guessed as filenames.
 The CLI checks these prerequisites before auditing or exporting any input. SARIF execution
-errors use a generic stderr message to avoid leaking exception paths or tool diagnostics;
-rerun with text or JSON output to investigate the detailed local failure.
+errors use fixed path-free stderr advice to avoid leaking exception paths or tool diagnostics.
+A missing root identifies `--source-root` and the requirement that all inputs be files within
+it; other execution failures retain generic advice. Rerun with text or JSON output to
+investigate detailed local failures. With `--strict`, the CLI also reports the effective
+command gate on stderr; the SARIF log remains unchanged.
 
 Generated logs are checked against the unmodified official OASIS draft-07 schema in the
 test suite, with negative controls and additional rule-index/artifact-index assertions.

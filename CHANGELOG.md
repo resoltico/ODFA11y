@@ -6,6 +6,11 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Relative URI link comparison requires an explicit absolute catalog Base in the supported
+  schemes. Without an established context, comparison now refuses rather than claiming
+  preservation. Author absolute URI targets or an explicit supported Base; see
+  [the comparison scope](docs/FIDELITY.md). Other PDF references remain outside this check.
+
 - Pipeline source directories must permit private temporary inputs beside the resolved
   source. Physical input/candidate capture is capped at 256 MiB separately from the declared
   ZIP payload budget; packages with excessive headers/padding can now be rejected. Nonregular
@@ -32,8 +37,8 @@ Notable changes to this project are documented in this file. The format is based
   types/ranges through both configuration and `FidelityPolicy` (`ConfigError`), before work
   can publish evidence. Finite tolerances above 1.0 remain supported.
 - Fidelity compares effective URI link-annotation destinations using explicit catalog Base
-  values. Relative links without a supported absolute Base now refuse comparison rather than
-  claiming preservation; [supported scope](docs/FIDELITY.md) excludes other PDF references.
+  values, detecting Base-only destination changes and accepting equivalent relative/absolute
+  targets while preserving query/fragment semantics and duplicate counts.
 - Unsupported PDF stream decoding produces structural `PDF000` audit refusal or controlled
   comparison failure, without a traceback. CLI audit/compare refuse nonregular inputs promptly.
 - Text/JSON multi-input audit retains completed reports and inspects later inputs after an
