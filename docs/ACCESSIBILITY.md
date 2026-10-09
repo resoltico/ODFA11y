@@ -32,7 +32,9 @@ Marked-content scanning skips raw inline images using their sample dimensions. F
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
 where binary samples end. Whole-object Form ownership (`/StructParent`, rather than MCID sequences) is not reconciled
 and produces explicit incomplete inspection. Cyclic Forms, excessive depth/invocations and unsupported parser
-recursion produce explicit failed inspection. The 64 MiB budget counts unique decoded page,
+recursion produce explicit failed inspection. Unsupported stream decoding and malformed
+decoder-parameter type errors are normalized at the shared stream boundary; they produce
+`PDF000` in audit and controlled execution failure in comparison. The 64 MiB budget counts unique decoded page,
 invoked Form, XMP, text CMap/encoding and applicable embedded Type1 font bytes. A separate 64 MiB content-work bound charges
 repeated page/Form invocations; at most 10,000 streams per content array, 5,000 Form
 invocations per document and 50 nested Forms are inspected. Audit and fidelity enforce this

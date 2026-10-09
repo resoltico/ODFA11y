@@ -21,7 +21,9 @@ independent of page. Absolute URIs are retained; relative references resolve aga
 explicit catalog `/URI` `/Base`, following [RFC 3986 reference resolution](https://www.rfc-editor.org/rfc/rfc3986#section-5).
 Relative targets require an absolute `http`, `https`, `ftp` or `file` Base; absent,
 malformed or unsupported contexts cause a controlled execution failure. Query strings,
-fragments, percent encoding and duplicate targets are retained. Targets are never fetched.
+fragments, percent encoding and duplicate targets are retained. URI components must satisfy
+the RFC grammar: ports contain digits, brackets delimit IP literals only in authorities,
+and literal data delimiters must be percent-encoded where their component forbids them. Targets are never fetched.
 This scope excludes internal destinations, bookmarks, launch actions and hidden references;
 it is not an inventory of every reference in a PDF. See the
 [PDF Association's URI action guidance](https://pdfa.org/pdf-a-and-external-references/).
@@ -43,7 +45,9 @@ own ink, it is not diluted by white space:
 `raster_tolerance` (default `0.15`) sits between link-styling noise and real movement. A
 page that fails writes `page-NNN-diff.png` (white marks ink present in one render only)
 to `--diff-dir`, or to the evidence directory's `fidelity/`. Pages above 20 million
-pixels at the chosen dpi are not rendered (`FID007`).
+pixels at the chosen dpi are not rendered (`FID007`). Positive DPI has no arbitrary small
+maximum; a DPI outside the renderer's floating-point numeric range is refused with
+`ToolFailedError` before conversion. High representable DPI still uses the pixel budget.
 
 ## Policy
 

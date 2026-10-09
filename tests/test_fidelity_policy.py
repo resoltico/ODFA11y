@@ -14,6 +14,7 @@ from odfa11y.errors import ConfigError
 from odfa11y.fidelity import FidelityPolicy
 
 from .fixtures import make_minimal_odt
+from .pdf_fixtures import text_pdf
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -84,3 +85,17 @@ def test_finite_policy_boundaries_serialize_standard_json(pagination: str) -> No
         for tolerance in (0, 5.0, 1e308):
             policy = FidelityPolicy(pagination, tolerance, threshold, 1)
             assert json.loads(json.dumps(policy.as_dict(), allow_nan=False)) == policy.as_dict()
+
+
+def test_toml_enormous_positive_dpi_has_controlled_cli_refusal(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pdf = text_pdf(tmp_path / "dpi.pdf", [["Unchanged"]])
+    plan = tmp_path / "dpi.toml"
+    plan.write_text(f"[fidelity]\ndpi = {10**400}\n")
+    assert load_config(plan).fidelity.dpi == 10**400
+    assert main(["compare", str(pdf), str(pdf), "--config", str(plan)]) == 3
+    output = capsys.readouterr()
+    assert "DPI exceeds the numeric range" in output.err
+    assert "Traceback" not in output.err
+    assert not output.out

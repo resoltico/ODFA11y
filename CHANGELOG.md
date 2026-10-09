@@ -10,7 +10,6 @@ Notable changes to this project are documented in this file. The format is based
   schemes. Without an established context, comparison now refuses rather than claiming
   preservation. Author absolute URI targets or an explicit supported Base; see
   [the comparison scope](docs/FIDELITY.md). Other PDF references remain outside this check.
-
 - Pipeline source directories must permit private temporary inputs beside the resolved
   source. Physical input/candidate capture is capped at 256 MiB separately from the declared
   ZIP payload budget; packages with excessive headers/padding can now be rejected. Nonregular
@@ -38,21 +37,22 @@ Notable changes to this project are documented in this file. The format is based
   can publish evidence. Finite tolerances above 1.0 remain supported.
 - Fidelity compares effective URI link-annotation destinations using explicit catalog Base
   values, detecting Base-only destination changes and accepting equivalent relative/absolute
-  targets while preserving query/fragment semantics and duplicate counts.
-- Unsupported PDF stream decoding produces structural `PDF000` audit refusal or controlled
-  comparison failure, without a traceback. CLI audit/compare refuse nonregular inputs promptly.
+  targets while preserving query/fragment semantics and duplicate counts. Malformed URI
+  components refuse comparison; valid IPv6 and encoded delimiters remain supported.
+- Unsupported PDF stream decoding and malformed decoder-parameter types produce structural
+  `PDF000` audit refusal or controlled comparison failure, without a traceback. CLI audit/compare refuse nonregular inputs promptly.
+- Enormous positive DPI outside the renderer's numeric range is refused before float
+  conversion; representable DPI retains the existing 20-million-pixel budget.
 - Text/JSON multi-input audit retains completed reports and inspects later inputs after an
   unreadable file, with execution status 3 and per-input stderr diagnostics. SARIF retains
   global preflight and no-partial-log behavior. Strict audit/compare gate outcomes appear on
   stderr without changing report `passed`; help explains timeout defaults and assurance profiles.
-
 - Evidence publication preserves document payload bytes regardless of extension, redacts
   structured diagnostic values without corrupting XML/JSON and records final artifact hashes.
   Failed runs retain artifacts from completed stages; authored paths may remain in documents.
 - PDF inspection and fidelity account for decoded content, invoked Forms and consumed XMP/CMap
   data for tagged and untagged inputs. Resource/parser refusals remain explicit failures.
-- Shared marked-content references now retain incoming ownership counts; indirect link URIs
-  compare correctly and malformed fidelity annotations fail with execution status 3.
+- Shared marked-content references now retain incoming ownership counts.
 - Pipeline stages process one bounded captured source with its original display identity.
   Source and validated candidate exports share the resolved source directory, including file
   aliases; opened identity must match the selected file before copying. Partial captures are
@@ -68,9 +68,10 @@ Notable changes to this project are documented in this file. The format is based
 - PDF audit enters invoked Form XObjects with stream-specific MCIDs, scoped resources,
   bounded nesting/reuse and nonartifact graphical-presence controls. This does not establish
   PDF/UA conformance or pixel visibility.
-- Native compound Writer/Calc regression cases retain stricter exporter-failure controls.
 
 ### Internal
+
+- Native compound Writer/Calc regression cases retain stricter exporter-failure controls.
 
 - CI limits macOS LibreOffice provisioning to ten minutes and records verbose progress,
   bounding stalled setup while retaining current-release selection and full native gates.

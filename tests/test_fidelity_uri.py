@@ -138,3 +138,50 @@ def test_malformed_catalog_and_action_values_refuse(tmp_path: Path, shape: str) 
     writer.write(path)
     with pytest.raises(ToolFailedError, match="Expected"):
         read_snapshot(path)
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "https://example.test:notaport/a/",
+        "https://example.test/a[b]",
+        "https://example.test/a#first#second",
+        "https://example.test/?q=[x]",
+        "https://example.test/#frag[x]",
+        "https://a@b@host/a",
+        "https://[::1]tail/a",
+    ],
+)
+@pytest.mark.parametrize("field", ["Base", "action"])
+def test_malformed_uri_components_refuse_in_either_field(
+    tmp_path: Path, uri: str, field: str
+) -> None:
+    path = _with_base(
+        tmp_path / "malformed.pdf",
+        ["g" if field == "Base" else uri],
+        TextStringObject(uri if field == "Base" else "https://example.test/"),
+    )
+    with pytest.raises(ToolFailedError, match="URI"):
+        read_snapshot(path)
+
+
+@pytest.mark.parametrize(
+    ("base", "reference", "expected"),
+    [
+        ("https://[2001:db8::1]:8080/a/", "g", "https://[2001:db8::1]:8080/a/g"),
+        ("https://example.test:999999/a/", "g", "https://example.test:999999/a/g"),
+        ("ftp://example.test/a/", "g", "ftp://example.test/a/g"),
+        ("file:///a/", "g", "file:///a/g"),
+        (
+            "https://example.test/a/",
+            "g%5Bx%5D?q=%23#f%23",
+            "https://example.test/a/g%5Bx%5D?q=%23#f%23",
+        ),
+        ("https://example.test/a/", "g?x/y?z#f/?", "https://example.test/a/g?x/y?z#f/?"),
+    ],
+)
+def test_valid_authority_and_encoded_components_preserve_resolution(
+    tmp_path: Path, base: str, reference: str, expected: str
+) -> None:
+    path = _with_base(tmp_path / "valid.pdf", [reference], TextStringObject(base))
+    assert read_snapshot(path).links == Counter({expected: 1})

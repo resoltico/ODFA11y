@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -113,6 +114,9 @@ def _compare_raster(
     report: Report,
     diff_dir: Path | None,
 ) -> None:
+    if policy.dpi > sys.float_info.max:
+        msg = "DPI exceeds the numeric range supported by PDF rendering"
+        raise ToolFailedError(msg)
     scale = policy.dpi / POINTS_PER_INCH
     oversized = [
         index + 1

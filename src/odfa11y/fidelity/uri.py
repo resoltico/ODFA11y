@@ -11,20 +11,38 @@ from pypdf.generic import DictionaryObject, TextStringObject
 
 from odfa11y.pdf_consumption import resolve
 
-_URI_CHARACTERS = re.compile(r"(?:[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=-]|%[0-9A-Fa-f]{2})*")
+_UNRESERVED_SUBDELIMS = r"(?:[A-Za-z0-9._~!$&'()*+,;=-]|%[0-9A-Fa-f]{2})"
+_PCHAR = rf"(?:{_UNRESERVED_SUBDELIMS}|[:@])"
+_PATH = re.compile(rf"(?:{_PCHAR}|/)*")
+_QUERY_FRAGMENT = re.compile(rf"(?:{_PCHAR}|[/?])*")
+_AUTHORITY = re.compile(
+    rf"(?:(?:{_UNRESERVED_SUBDELIMS}|:)*@)?"
+    rf"(?:{_UNRESERVED_SUBDELIMS}*|\[[A-Za-z0-9._~!$&'()*+,;=:-]+\])(?::[0-9]*)?"
+)
 _RELATIVE_BASE_SCHEMES = {"http", "https", "ftp", "file"}
 
 
 def _uri(value: object, field: str) -> str:
     value = resolve(value)
-    if not isinstance(value, TextStringObject) or not _URI_CHARACTERS.fullmatch(value):
+    if not isinstance(value, TextStringObject):
         msg = f"Expected a valid PDF {field} URI string"
+        raise PdfReadError(msg)
+    if any(ord(character) <= ord(" ") for character in value):
+        msg = f"Malformed PDF {field} URI characters"
         raise PdfReadError(msg)
     try:
         parts = urlsplit(value)
     except ValueError as exc:
         msg = f"Malformed PDF {field} URI"
         raise PdfReadError(msg) from exc
+    if not (
+        _AUTHORITY.fullmatch(parts.netloc)
+        and _PATH.fullmatch(parts.path)
+        and _QUERY_FRAGMENT.fullmatch(parts.query)
+        and _QUERY_FRAGMENT.fullmatch(parts.fragment)
+    ):
+        msg = f"Malformed PDF {field} URI components"
+        raise PdfReadError(msg)
     if not parts.scheme and ":" in parts.path.split("/", 1)[0]:
         msg = f"Malformed PDF {field} relative URI"
         raise PdfReadError(msg)

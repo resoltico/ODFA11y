@@ -78,6 +78,9 @@ class _Budget:
         ):
             try:
                 data = stream.get_data()
+            except TypeError as exc:
+                msg = f"Malformed PDF stream decoding parameters: {str(exc)[:200]}"
+                raise PdfReadError(msg) from exc
             except NotImplementedError as exc:
                 msg = f"Unsupported PDF stream decoding: {str(exc)[:200]}"
                 raise ToolFailedError(msg) from exc
