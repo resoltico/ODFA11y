@@ -4,6 +4,10 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-09
+
+Prepared for maintainer review; not yet published.
+
 ### Breaking
 
 - Relative URI link comparison requires an explicit absolute catalog Base in the supported
