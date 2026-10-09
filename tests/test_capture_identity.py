@@ -98,7 +98,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
         tmp_path,
         [
             ("changed", source.name, "plan.toml"),
-            ("valid", str(valid.relative_to(tmp_path)), "plan.toml"),
+            ("valid", valid.relative_to(tmp_path).as_posix(), "plan.toml"),
         ],
     )
     result = run_batch(manifest, tmp_path / "batch", PipelineOptions(profile="inspect"))
