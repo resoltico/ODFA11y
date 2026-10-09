@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from itertools import starmap
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import ToolFailedError
@@ -16,23 +17,58 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 XML_BASE = "{http://www.w3.org/XML/1998/namespace}base"
-RENDER_REFERENCES = frozenset({
-    qn("draw", "image"),
-    qn("draw", "object"),
-    qn("draw", "object-ole"),
-    qn("draw", "plugin"),
-    qn("draw", "floating-frame"),
-    qn("style", "background-image"),
-    qn("svg", "font-face-uri"),
-    qn("text", "section-source"),
-    qn("text", "alphabetical-index-auto-mark-file"),
-    qn("table", "table-source"),
-    qn("table", "cell-range-source"),
-})
+# Attribute and addressing contract from ODF Part 3; navigation is deliberately absent.
+# Unestablished dynamic import/execution declarations are refused even for internal URIs.
+RESOURCE_TARGETS = {
+    **dict.fromkeys(
+        starmap(
+            qn,
+            [
+                ("draw", "image"),
+                ("draw", "fill-image"),
+                ("draw", "object-ole"),
+                ("draw", "plugin"),
+                ("draw", "floating-frame"),
+                ("style", "background-image"),
+                ("text", "list-level-style-image"),
+                ("chart", "symbol-image"),
+                ("svg", "definition-src"),
+                ("svg", "font-face-uri"),
+                ("text", "section-source"),
+                ("text", "alphabetical-index-auto-mark-file"),
+                ("table", "table-source"),
+                ("table", "cell-range-source"),
+                ("anim", "audio"),
+                ("presentation", "sound"),
+            ],
+        ),
+        (qn("xlink", "href"), "file"),
+    ),
+    qn("draw", "object"): (qn("xlink", "href"), "object"),
+    qn("chart", "chart"): (qn("xlink", "href"), "chart"),
+    **dict.fromkeys(
+        (qn("form", name) for name in ["button", "image", "image-frame"]),
+        (qn("form", "image-data"), "file"),
+    ),
+    **dict.fromkeys(
+        starmap(
+            qn,
+            [
+                ("form", "connection-resource"),
+                ("draw", "applet"),
+                ("text", "script"),
+                ("script", "event-listener"),
+                ("presentation", "event-listener"),
+                ("meta", "auto-reload"),
+            ],
+        ),
+        (qn("xlink", "href"), "unestablished"),
+    ),
+}
 
 
 def native_export_limitations(document: OdfDocument) -> dict[str, int]:
-    """Count known render references outside embedded storage and filename/path fields.
+    """Count unresolved/unestablished declared resources and filename/path fields.
 
     Ordinary navigational links are excluded. This is a narrow declaration preflight, not
     a sandbox or a proof that native importers load every embedded payload correctly.
@@ -47,13 +83,33 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
     """
     resources = ResourceIdentity(document.storage)
     dependencies = fields = 0
-    for tree in document.distinct_trees(Part.CONTENT, Part.STYLES):
+    for tree in document.distinct_trees(Part.CONTENT, Part.STYLES, Part.META):
         for node in tree.iter():
             fields += node.tag == qn("text", "file-name")
-            href = node.get(qn("xlink", "href"))
-            if node.tag in RENDER_REFERENCES and href is not None:
-                dependencies += _explicit_base(node) or not resources.available(href)
+            target = RESOURCE_TARGETS.get(node.tag)
+            if target is not None:
+                attribute, shape = target
+                href = node.get(attribute, "..") if shape == "chart" else node.get(attribute)
+                if href is not None:
+                    dependencies += _unresolved(node, href, shape, resources)
+            # Applet code/archive attributes are not single resource IRIs.
+            if (
+                node.tag == qn("draw", "applet")
+                and any(
+                    node.get(qn("draw", name)) is not None for name in ["code", "archive", "object"]
+                )
+                and node.get(qn("xlink", "href")) is None
+            ):
+                dependencies += 1
     return {"rendering_dependencies": dependencies, "location_fields": fields}
+
+
+def _unresolved(node: etree._Element, href: str, shape: str, resources: ResourceIdentity) -> bool:
+    if _explicit_base(node) or shape == "unestablished":
+        return True
+    if shape == "chart" and href == ".":
+        return False  # Normative self-data context, not a file/directory address.
+    return not resources.available(href, object_directory=shape in {"object", "chart"})
 
 
 def _explicit_base(node: etree._Element) -> bool:

@@ -92,7 +92,9 @@ ODF010 = _rule("ODF010", ERROR, ODF, "A flat XML document's root is not office:d
 ODF011 = _rule("ODF011", ERROR, ODF, "A package's content root is not office:document-content.")
 ODF900 = _rule("ODF900", WARNING, ODF, "A member does not validate against the ODF schema.")
 ODF905 = _rule("ODF905", INFO, ODF, "No ODF schema is bundled for the declared version.")
-ODF012 = _rule("ODF012", WARNING, ODF, "Native rendering dependencies are external or unresolved.")
+ODF012 = _rule(
+    "ODF012", WARNING, ODF, "Native resource declarations are unresolved or unestablished."
+)
 ODF013 = _rule("ODF013", WARNING, ODF, "Pipeline export cannot preserve filename/path fields.")
 
 META001 = _rule("META001", ERROR, META, "Document title metadata is missing.", "document.title")

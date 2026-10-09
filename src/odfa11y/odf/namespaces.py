@@ -23,6 +23,7 @@ NS = {
     "db": "urn:oasis:names:tc:opendocument:xmlns:database:1.0",
     "form": "urn:oasis:names:tc:opendocument:xmlns:form:1.0",
     "presentation": "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0",
+    "anim": "urn:oasis:names:tc:opendocument:xmlns:animation:1.0",
     "script": "urn:oasis:names:tc:opendocument:xmlns:script:1.0",
     "dr3d": "urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0",
     "math": "http://www.w3.org/1998/Math/MathML",
