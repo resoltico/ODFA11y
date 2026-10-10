@@ -6,82 +6,39 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [0.6.0] - 2026-10-09
 
-Prepared for maintainer review; not yet published.
-
 ### Breaking
 
-- Relative URI link comparison requires an explicit absolute catalog Base in the supported
-  schemes. Without an established context, comparison now refuses rather than claiming
-  preservation. Author absolute URI targets or an explicit supported Base; see
-  [the comparison scope](docs/FIDELITY.md). Other PDF references remain outside this check.
-- Pipeline source directories must permit private temporary inputs beside the resolved
-  source. Physical input/candidate capture is capped at 256 MiB separately from the declared
-  ZIP payload budget; packages with excessive headers/padding can now be rejected. Nonregular
-  inputs and substitutions of the selected file are refused before copying, without waiting
-  for FIFO data. Use a writable isolated workspace whose ancestor directories remain stable
-  throughout processing; parent exchanges/renames and in-place writes are outside this guarantee.
-- Native pipeline export refuses authored filename/path fields (`ODF013`). Guarded native
-  exports refuse recognized external/unresolved or unestablished resource declarations
-  (`ODF012`), including unused fill/bullet, chart-symbol, SVG definition and form-image-data
-  references. File targets require exact non-directory members; embedded ODF objects admit
-  subdocument folders, while OLE targets require a file or inline data. Declared script/application
-  execution, applet, nonempty named/IRI database/service/DDE bindings and auto-reload loading remain
-  unestablished. Use source-only inspection and review/embed required assets in the native
-  application. For filename/path fields, direct original export retains logical identity;
-  it still refuses unsupported resource declarations.
-  Ordinary navigational links remain distinct, and moving ODF output can change relative targets.
-- `write_bundle` callers must designate redacted report artifacts with `diagnostics`;
-  artifacts otherwise retain their bytes regardless of suffix. Treat document payloads as
-  private content that may contain authored paths.
-
-### Fixed
-
-- Fidelity policy rejects nonfinite tolerances, unknown pagination modes and invalid numeric
-  types/ranges through both configuration and `FidelityPolicy` (`ConfigError`), before work
-  can publish evidence. Finite tolerances above 1.0 remain supported.
-- Fidelity compares effective URI link-annotation destinations using explicit catalog Base
-  values, detecting Base-only destination changes and accepting equivalent relative/absolute
-  targets while preserving query/fragment semantics and duplicate counts. Malformed URI
-  components refuse comparison; valid IPv6 and encoded delimiters remain supported.
-- Unsupported PDF stream decoding and malformed decoder-parameter types produce structural
-  `PDF000` audit refusal or controlled comparison failure, without a traceback. CLI audit/compare refuse nonregular inputs promptly.
-- Enormous positive DPI outside the renderer's numeric range is refused before float
-  conversion; representable DPI retains the existing 20-million-pixel budget.
-- Text/JSON multi-input audit retains completed reports and inspects later inputs after an
-  unreadable file, with execution status 3 and per-input stderr diagnostics. SARIF retains
-  global preflight and no-partial-log behavior. Strict audit/compare gate outcomes appear on
-  stderr without changing report `passed`; help explains timeout defaults and assurance profiles.
-- Evidence publication preserves document payload bytes regardless of extension, redacts
-  structured diagnostic values without corrupting XML/JSON and records final artifact hashes.
-  Failed runs retain artifacts from completed stages; authored paths may remain in documents.
-- PDF inspection and fidelity account for decoded content, invoked Forms and consumed XMP/CMap
-  data for tagged and untagged inputs. Resource/parser refusals remain explicit failures.
-- Shared marked-content references now retain incoming ownership counts.
-- Pipeline stages process one bounded captured source with its original display identity.
-  Source and validated candidate exports share the resolved source directory, including file
-  aliases; opened identity must match the selected file before copying. Partial captures are
-  cleaned on ordinary failure/interruption within the stable ancestor-namespace contract. Authored location
-  fields are preserved in source-only work and refused where staging cannot retain identity.
-- Unavailable required veraPDF now yields failed stage `verapdf` and execution status 3;
-  optional audit validation keeps its warning/strict-warning behavior.
-- Standalone CLI termination cleans up active tool processes on ordinary interruption,
-  using the scoped termination handling shared with batch.
+- **Relative PDF URI links.** Comparison requires an explicit absolute catalog Base in a supported scheme; an unestablished relative context now refuses rather than claiming preservation. Author absolute URI targets or a supported Base. Only URI actions on Link annotations are compared, not every bookmark, launch action or hidden PDF reference; see [Fidelity](docs/FIDELITY.md).
+- **Source audit warnings.** Recognized native-resource limitations now produce `ODF012`, and authored filename/path fields produce `ODF013`, with `native_export_limitations` report metadata. `audit --strict` can therefore exit 1 without exporting. Review the reported declarations and fields before strict audit or native export; source-only `inspect` retains them for review.
+- **Pipeline capture.** Source directories must permit private temporary inputs beside the resolved source. Physical source/candidate capture is capped at 256 MiB independently of the ZIP declared-payload budget, so excessive headers/padding can be refused. Nonregular inputs and substitutions of the selected file are rejected before copying without waiting for FIFO data. Use a writable isolated workspace whose ancestor directories remain stable throughout processing; parent exchanges/renames and concurrent in-place writes are outside this guarantee.
+- **Native export dependencies and identity.** Captured pipeline export refuses authored filename/path fields (`ODF013`). Guarded native export refuses recognized external, unresolved or unestablished declarations (`ODF012`), including unused fill/bullet, chart-symbol, SVG definition/font and form-image-data references. File targets need exact non-directory members; embedded ODF objects can address subdocument folders, while OLE targets need a file or inline data. Script/application execution, applet, nonempty named/IRI database/service/DDE bindings and auto-reload loading remain unestablished. Review/embed required assets in the native application or use source-only inspection. Direct original export retains filename/path identity but still refuses unsupported resource declarations. Ordinary navigation remains distinct, and moving an ODF output can change relative targets. This declaration preflight does not inspect all opaque embedded internals or sandbox native tools; caller-controlled OS/network/resource isolation remains necessary for untrusted inputs. See [native boundaries](docs/ACCESSIBILITY.md#native-document-context-and-declared-dependencies).
+- **Evidence API and privacy.** `write_bundle` callers must designate redacted report artifacts with `diagnostics`; other artifacts retain their bytes regardless of suffix. Treat document/PDF/image payloads as private authored content that can contain paths; see [Evidence](docs/EVIDENCE.md).
 
 ### Added
 
-- PDF audit enters invoked Form XObjects with stream-specific MCIDs, scoped resources,
-  bounded nesting/reuse and nonartifact graphical-presence controls. This does not establish
-  PDF/UA conformance or pixel visibility.
+- PDF audit enters invoked Form XObjects with stream-specific MCIDs, scoped resources and bounded nesting/reuse. Page/Form correspondence extends `PDF020`/`PDF021`; whole-object `/StructParent` ownership and unsupported cycles/depth/invocation work produce explicit incomplete-inspection refusal. This establishes inspected content correspondence and nonartifact graphic operations, not pixel visibility, reading order or PDF/UA conformance; see [PDF diagnostic limits](docs/ACCESSIBILITY.md#what-each-tool-establishes).
+- Text/JSON multi-input audit retains completed reports and continues to later inputs after an unreadable file, identifying each failure on stderr and returning execution status 3. Failed inputs do not become clean reports. SARIF retains global identity/confinement preflight and no partial log on execution failure.
+
+### Fixed
+
+- Configuration and the public `FidelityPolicy` reject nonfinite raster tolerances, unknown pagination modes and invalid numeric types/ranges with `ConfigError` before export or comparison. Finite tolerances above 1.0 remain supported.
+- Fidelity compares effective URI link destinations using direct/indirect catalog Base and action values, detecting Base-only destination changes and accepting equivalent relative/absolute targets. Query/fragment semantics, percent encoding and duplicate counts are retained; malformed URI components refuse, while valid IPv6 and encoded delimiters remain supported. Missing targets retain `FID004`, and added targets retain informational `FID006`.
+- Unsupported PDF stream decoding and malformed decoder-parameter types produce structured `PDF000` audit refusal or controlled comparison execution failure without a traceback. Malformed annotation and descendant-font shapes also refuse rather than crashing or silently skipping inspection. CLI audit/compare reject nonregular inputs promptly, preserving ordinary regular-file aliases.
+- Enormous positive DPI outside the renderer's numeric range is refused before float conversion. Representable DPI retains the existing 20-million-pixel budget and `FID007` refusal; no arbitrary small DPI maximum is added.
+- Audit/compare show the effective `--strict` command gate on stderr without changing error-only `Report.passed` or structured report formats. Missing SARIF root advice names `--source-root` and containment requirements; help explains timeout units/defaults and `verify` versus required veraPDF validation with warning gates in `production`.
+- Evidence publication preserves document payload bytes, redacts structured diagnostic values without corrupting XML/JSON and records final staged artifact hashes. Failed runs retain artifacts from completed stages, including a remediated document when a later gate fails. Evidence does not include a separate original ODF copy; retain the original input separately. Authored private content can remain in payloads.
+- Audit and fidelity enforce the 64 MiB budget for unique consumed decoded page/Form, XMP, text CMap/encoding and applicable embedded Type1 data, plus a separate 64 MiB content-invocation work bound for tagged and untagged PDFs. Supported filter-output controls and stream/depth/invocation limits refuse incomplete inspection; they do not bound total peak memory or provide OS isolation.
+- Shared marked-content references no longer hide multiple owners: `PDF022` counts incoming references through shared containers, while active-path cycle and traversal-work controls bound inspection.
+- Pipeline stages process one captured source and record its digest separately from the original display identity. Baseline and validated candidate exports share the resolved source directory, including ordinary file aliases; the opened identity must match selection. Under the stable ancestor-namespace prerequisite, partial owned captures are cleaned on ordinary failure/interruption. Authored location fields remain unchanged in source-only work and are refused where staging cannot retain their identity.
+- Unavailable required veraPDF produces failed stage `verapdf` and execution status 3; optional audit validation retains warning/strict-warning behavior.
+- Standalone CLI commands and batch handle ordinary SIGINT/SIGTERM through scoped active-tool cleanup where the platform permits it, retaining completed evidence. Windows forced termination, SIGKILL and power loss can bypass cleanup/publication; there is no implicit recovery or automatic resumption. See [batch interruption](docs/BATCH.md).
 
 ### Internal
 
-- Native compound Writer/Calc regression cases retain stricter exporter-failure controls.
-
-- CI limits macOS LibreOffice provisioning to ten minutes and records verbose progress,
-  bounding stalled setup while retaining current-release selection and full native gates.
+- Native compound Writer/Calc regression cases retain independent positive and stricter exporter-failure controls.
+- CI bounds macOS LibreOffice provisioning to ten minutes and records verbose progress while retaining current-release selection and full native gates.
 - CI pins stable veraPDF 1.30.3 with its reviewed SHA-256 alongside the exact version.
-- PDF consumption uses the shared bounded scanner and reuses completed auxiliary-resource
-  inspection, avoiding a redundant operation tree and repeated font-resource traversal.
+- PDF consumption uses the shared bounded scanner and reuses completed auxiliary-resource inspection.
 
 ## [0.5.0] - 2026-10-07
 
