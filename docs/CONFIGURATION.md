@@ -89,7 +89,7 @@ A test extracts this block and loads it through the real reader.
 | `image.graphics.KEY` | As for `text.graphics`, addressing the standalone image frame. | Existing descriptions kept. |
 | `database.descriptions."TARGET"` | `{ text = "…", fingerprint = "…" }`, addressing the exact report target. Ordinal targets require the fingerprint. | Existing object descriptions kept. |
 | `fidelity.pagination` | `"same"` or `"may-change"`; see [Fidelity](FIDELITY.md). | `"same"`. |
-| `fidelity.raster_tolerance` | Non-negative number. | `0.15`. |
+| `fidelity.raster_tolerance` | Finite non-negative number; no upper cap. | `0.15`. |
 | `fidelity.ink_threshold` | Integer 0–255. | `200`. |
 | `fidelity.dpi` | Positive integer. | `72`. |
 

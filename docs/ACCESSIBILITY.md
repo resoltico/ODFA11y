@@ -32,7 +32,9 @@ Marked-content scanning skips raw inline images using their sample dimensions. F
 inline images or unsupported inline color spaces produce `PDF000` rather than guessing
 where binary samples end. Whole-object Form ownership (`/StructParent`, rather than MCID sequences) is not reconciled
 and produces explicit incomplete inspection. Cyclic Forms, excessive depth/invocations and unsupported parser
-recursion produce explicit failed inspection. The 64 MiB budget counts unique decoded page,
+recursion produce explicit failed inspection. Unsupported stream decoding and malformed
+decoder-parameter type errors are normalized at the shared stream boundary; they produce
+`PDF000` in audit and controlled execution failure in comparison. The 64 MiB budget counts unique decoded page,
 invoked Form, XMP, text CMap/encoding and applicable embedded Type1 font bytes. A separate 64 MiB content-work bound charges
 repeated page/Form invocations; at most 10,000 streams per content array, 5,000 Form
 invocations per document and 50 nested Forms are inspected. Audit and fidelity enforce this
@@ -194,13 +196,19 @@ unusable. `REVIEW.md` in an [evidence bundle](EVIDENCE.md) carries this checklis
 
 ## Native document context and declared dependencies
 
-Native pipeline exports accept self-contained rendering references: inline embedded data or
-available package members without an unestablished XML rendering base. Known external or
-unresolved render references are reported by `ODF012` and refused before application export;
+The declaration preflight admits inline data and correctly addressed package targets without
+an unestablished XML rendering base; admission does not prove decoding or native loading. Declaration
+recognition includes unused fill/bullet images, chart symbols, SVG definitions and non-XLink
+form image data. Files and embedded subdocument directories have distinct addressing rules;
+presence does not establish payload decodability. Known external/unresolved/wrong-shape or
+unestablished dynamic references are reported by `ODF012` and refused before guarded export;
 ordinary navigational links are not automatic-fetch dependencies. Filename/path fields are
 reported by `ODF013` and refused in captured pipeline export. Direct export of the original
 can preserve original logical identity; `inspect` preserves authored fields and references.
-See [Evidence](EVIDENCE.md#no-local-paths) for capture limits, comparison identity and portability.
+See [Evidence](EVIDENCE.md#no-local-paths) for the authoritative policy boundary, capture
+file-identity checks, stable ancestor-namespace prerequisite, comparison identity and portability.
+The low-level `export_pdfua()` API is the raw application boundary; callers must apply their
+own resource policy and native isolation. CLI export/ODF comparison and pipeline own the shared guard.
 
 The controlled macOS LibreOffice 26.8.0.3 experiment retained intended 4x4 RGB embedded images
 in flat and native-package positives. Its local/loopback external references did not retain

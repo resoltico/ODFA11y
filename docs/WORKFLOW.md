@@ -24,7 +24,18 @@ address them, a `remedy`: the key that holds the decision. `--schema` also valid
 every member against the bundled official ODF schema for the declared version
 (1.3 or 1.4); see [Accessibility and limits](ACCESSIBILITY.md#odf-schema-validation).
 Audit accepts several files and detects PDF by content, so
-`odfa11y audit a.odt b.pdf` reports both.
+`odfa11y audit a.odt b.pdf` reports both. Text and JSON audits retain completed reports
+and continue after unreadable inputs; stderr identifies each failed input and the command
+returns execution status 3 even when other inputs pass. Failed inputs do not become clean
+reports. JSON keeps the existing single-report object/multiple-report array shape.
+SARIF instead preflights all identities and confinement before inspection; an execution
+failure emits no partial SARIF log. Audit/compare accept regular files and ordinary file
+aliases; nonregular inputs are refused without waiting for FIFO data.
+
+With `--strict`, stderr shows `Command gate (--strict): PASS/FAIL (exit N)` for audit and
+compare. Report `passed` and text `Result` continue to mean no error findings; warnings
+can therefore pass a report while failing the strict command gate. JSON and SARIF payloads
+keep their existing contracts.
 
 Open the original in Writer and identify its intended heading hierarchy, language,
 data-table headers, meaningful graphic descriptions and intentional page breaks. These

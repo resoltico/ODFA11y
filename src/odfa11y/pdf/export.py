@@ -86,6 +86,10 @@ class ExportSettings:
 def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: ExportSettings) -> Path:
     """Export a document with the fixed PDF/UA options, publishing the PDF atomically.
 
+    This is the raw application boundary and does not perform ODF resource preflight.
+    Guarded CLI export/ODF comparison and pipeline own that policy; direct library callers
+    must establish their resource contract and isolate native processing themselves.
+
     Returns
     -------
     Path

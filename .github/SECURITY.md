@@ -31,8 +31,12 @@ The repository workflow checks known dependency advisories, secrets and workflow
 security. A clean scan covers those checks and the advisory data available at the
 time; it is not proof that the software has no vulnerabilities.
 
-Pipeline capture accepts bounded regular files and refuses known unsupported rendering
-references and location-sensitive fields before native pipeline export. These are narrow
+Pipeline capture binds bounded regular input to the selected device/inode identity before
+copying. Caller-controlled source/staging ancestor namespaces must remain stable; parent
+exchange/rename and concurrent in-place writes are not protected by leaf identity. The
+shared application preflight refuses recognized unsupported resource declarations and incorrect
+file/object addressing before guarded native export. Captured pipeline export also refuses
+location-sensitive fields. These are narrow
 input/context controls, not a universal network-isolation mode. Embedded objects and native
 importers can have behavior outside this preflight. `production` selects assurance gates;
 confidential/untrusted processing still requires caller-controlled OS isolation. See

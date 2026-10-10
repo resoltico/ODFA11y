@@ -114,21 +114,25 @@ class ResourceIdentity:
             self._references[path] = tuple((name, self._digests[name]) for name in names)
         return self._references[path]
 
-    def available(self, href: str) -> bool:
-        """Check a package resource reference without loading or hashing its payload.
+    def available(self, href: str, *, object_directory: bool = False) -> bool:
+        """Check file addressing, optionally admitting an embedded subdocument directory.
+
+        This establishes target shape/presence, not payload decodability. Directory intent
+        is checked before URI normalization; generic whole-object fingerprints are separate.
 
         Returns
         -------
         bool
-            Whether an internal package file/object exists; flat external references are false.
+            Whether an exact file or permitted subdocument target exists in this package.
 
         """
         path = local_resource_path(href)
-        return (
-            isinstance(self._storage, PackageStorage)
-            and path is not None
-            and bool(self._member_names(path))
-        )
+        if not isinstance(self._storage, PackageStorage) or path is None or path == ".":
+            return False
+        directory_intent = unquote(urlsplit(href).path).endswith(("/", "/.", "/.."))
+        if not directory_intent and self._storage.has(path):
+            return True
+        return object_directory and self._storage.has(path + "/content.xml")
 
     def _member_names(self, path: str) -> list[str]:
         names = [path] if self._storage.has(path) else []

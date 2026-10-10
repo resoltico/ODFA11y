@@ -59,7 +59,10 @@ def test_uri_multiplicity_and_change(tmp_path: Path, *, indirect: bool) -> None:
         value = register(writer, uri) if indirect else uri
         annotation = DictionaryObject({
             NameObject("/Subtype"): NameObject("/Link"),
-            NameObject("/A"): DictionaryObject({NameObject("/URI"): value}),
+            NameObject("/A"): DictionaryObject({
+                NameObject("/S"): NameObject("/URI"),
+                NameObject("/URI"): value,
+            }),
         })
         writer.pages[0][NameObject("/Annots")] = ArrayObject([annotation, annotation])
         path = tmp_path / f"{target}.pdf"

@@ -10,11 +10,13 @@ from typing import TYPE_CHECKING
 
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError, PyPdfError
-from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject
+from pypdf.generic import ArrayObject, DictionaryObject, NameObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_consumption import check_consumption
+from odfa11y.pdf_consumption import check_consumption, resolve
 from odfa11y.pdf_limits import check_file_size, check_limits
+
+from .uri import effective_uri, uri_base
 
 if TYPE_CHECKING:
     from pypdf import PageObject
@@ -73,6 +75,7 @@ def read_snapshot(path: str | Path) -> PdfSnapshot:
 def _snapshot(reader: PdfReader) -> PdfSnapshot:
     pages = []
     links: Counter[str] = Counter()
+    base = uri_base(reader.root_object)
     for page in reader.pages:
         box = page.mediabox
         text = " ".join((page.extract_text() or "").split())
@@ -83,38 +86,36 @@ def _snapshot(reader: PdfReader) -> PdfSnapshot:
                 text,
             )
         )
-        links.update(_link_targets(page))
+        links.update(_link_targets(page, base))
     return PdfSnapshot(tuple(pages), links)
 
 
-def _link_targets(page: PageObject) -> list[str]:
+def _link_targets(page: PageObject, base: str | None) -> list[str]:
     annotations = page.get("/Annots")
     if annotations is None:
         return []
     targets = []
-    annotations = _resolve(annotations)
+    annotations = resolve(annotations)
     if not isinstance(annotations, ArrayObject):
         msg = "Expected a PDF annotation array"
         raise PdfReadError(msg)
     for item in annotations:
-        annotation = _resolve(item)
+        annotation = resolve(item)
         if not isinstance(annotation, DictionaryObject):
             msg = "Expected a PDF annotation dictionary"
             raise PdfReadError(msg)
         if annotation.get("/Subtype") != "/Link":
             continue
-        action = _resolve(annotation.get("/A"))
+        action = resolve(annotation.get("/A"))
         if action is not None and not isinstance(action, DictionaryObject):
             msg = "Expected a PDF action dictionary"
             raise PdfReadError(msg)
-        uri = _resolve(action.get("/URI")) if action is not None else None
-        if uri is not None and not isinstance(uri, str):
-            msg = "Expected a PDF URI string"
+        subtype = resolve(action.get("/S")) if action is not None else None
+        if action is not None and not isinstance(subtype, NameObject):
+            msg = "Expected a PDF action subtype"
             raise PdfReadError(msg)
-        if isinstance(uri, str):
-            targets.append(uri)
+        if action is None or subtype != "/URI":
+            continue
+        uri = resolve(action.get("/URI"))
+        targets.append(effective_uri(uri, base))
     return targets
-
-
-def _resolve(value: object) -> object:
-    return value.get_object() if isinstance(value, IndirectObject) else value

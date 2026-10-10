@@ -9,6 +9,7 @@ import pytest
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.fidelity import compare as comparison
 
 from .pdf_fixtures import text_pdf
 
@@ -136,3 +137,24 @@ def test_unreadable_pdfs_raise_a_tool_error(tmp_path: Path) -> None:
     bad.write_bytes(b"not a pdf")
     with pytest.raises(ToolFailedError):
         compare(tmp_path, good, bad)
+
+
+def test_enormous_dpi_is_controlled_before_float_conversion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pdf = text_pdf(tmp_path / "dpi.pdf", [LINES])
+    before = pdf.read_bytes()
+    rendered = []
+    monkeypatch.setattr(comparison, "_render_ratios", lambda *args: rendered.append(args))
+    with pytest.raises(ToolFailedError, match="DPI exceeds the numeric range"):
+        compare_pdfs(pdf, pdf, FidelityPolicy(dpi=10**400), diff_dir=tmp_path / "diff")
+    assert not rendered
+    assert not (tmp_path / "diff").exists()
+    assert pdf.read_bytes() == before
+
+
+@pytest.mark.parametrize("dpi", [72, 144, 4096])
+def test_legitimate_dpi_uses_existing_pixel_budget(tmp_path: Path, dpi: int) -> None:
+    pdf = text_pdf(tmp_path / "dpi.pdf", [LINES])
+    report = compare_pdfs(pdf, pdf, FidelityPolicy(dpi=dpi))
+    assert ids(report) == ({"FID007"} if dpi == 4096 else set())

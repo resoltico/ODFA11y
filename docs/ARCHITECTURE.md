@@ -246,8 +246,13 @@ it from installed distribution metadata. The wheel ships `py.typed` and the ODF 
 
 Native context preflight is shared ODF content vocabulary (`content.export_context`), used
 by read-only audit and application orchestration. It distinguishes known rendering references
-from ordinary navigation. Captured pipeline inputs and validated candidate export copies
-share the resolved source directory, with bounded regular-file capture. Location-sensitive
+from ordinary navigation through one element/URI-attribute/target-shape policy. Exact files
+and embedded subdocument directories have separate admission semantics; generic resource
+fingerprints still inventory complete object payloads. The scan includes content/styles/meta
+and conservatively refuses unused unsupported declarations. Captured pipeline inputs and validated candidate export copies
+share the resolved source directory, with bounded regular-file capture whose opened identity
+must match selection. Stable ancestor namespaces are a caller prerequisite for context and
+pathname cleanup; leaf identity does not protect parent exchanges or in-place writes. Location-sensitive
 fields are explicitly refused at that native boundary rather than rewritten. Low-level
 `pdf.export_pdfua` remains an explicit native invocation API requiring caller policy/isolation;
 application CLI/pipeline preflight is not a universal importer sandbox. The detailed contract

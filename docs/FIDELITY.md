@@ -16,8 +16,17 @@ executable and profile, then compares the two PDFs.
 | Rendered ink per page | `FID005` | `pagination = "same"` |
 | Page too large to render safely | `FID007` | `pagination = "same"` |
 
-External link targets (URIs) are compared as a multiset, independent of page. Internal
-destinations are not compared.
+Effective targets of URI actions on Link annotations are compared as a multiset,
+independent of page. Absolute URIs are retained; relative references resolve against the
+explicit catalog `/URI` `/Base`, following [RFC 3986 reference resolution](https://www.rfc-editor.org/rfc/rfc3986#section-5).
+Relative targets require an absolute `http`, `https`, `ftp` or `file` Base; absent,
+malformed or unsupported contexts cause a controlled execution failure. Query strings,
+fragments, percent encoding and duplicate targets are retained. URI components must satisfy
+the RFC grammar: ports contain digits, brackets delimit IP literals only in authorities,
+and literal data delimiters must be percent-encoded where their component forbids them. Targets are never fetched.
+This scope excludes internal destinations, bookmarks, launch actions and hidden references;
+it is not an inventory of every reference in a PDF. See the
+[PDF Association's URI action guidance](https://pdfa.org/pdf-a-and-external-references/).
 
 ## Rendered ink
 
@@ -36,7 +45,9 @@ own ink, it is not diluted by white space:
 `raster_tolerance` (default `0.15`) sits between link-styling noise and real movement. A
 page that fails writes `page-NNN-diff.png` (white marks ink present in one render only)
 to `--diff-dir`, or to the evidence directory's `fidelity/`. Pages above 20 million
-pixels at the chosen dpi are not rendered (`FID007`).
+pixels at the chosen dpi are not rendered (`FID007`). Positive DPI has no arbitrary small
+maximum; a DPI outside the renderer's floating-point numeric range is refused with
+`ToolFailedError` before conversion. High representable DPI still uses the pixel budget.
 
 ## Policy
 
@@ -47,6 +58,12 @@ raster_tolerance = 0.15
 ink_threshold = 200
 dpi = 72
 ```
+
+The public `FidelityPolicy` constructor and TOML loader use the same validation contract:
+invalid choices raise `odfa11y.errors.ConfigError` before comparison/export/publication.
+Pagination must be `same` or `may-change`, tolerance must be a finite non-negative number
+(including values above 1.0), ink threshold an integer 0–255, and dpi a positive integer.
+Booleans are not numeric policy values. NaN and either infinity are refused.
 
 `"may-change"` is the explicit choice for operations that legitimately move content
 (spacing normalization, spacer removal, header rows that repeat across pages): page
