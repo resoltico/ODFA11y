@@ -77,8 +77,9 @@ def _pipeline(source: str, output: str) -> None:
     sys.exit(result.exit_status)
 
 
-@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX FIFO control")
 def test_fifo_pipeline_refuses_without_waiting_for_a_writer(tmp_path: Path) -> None:
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("POSIX FIFO control")
     source = tmp_path / "input.fodt"
     os.mkfifo(source)
     context = multiprocessing.get_context("spawn")
@@ -141,7 +142,6 @@ def test_regular_symlink_uses_resolved_directory_and_leaves_assets_unchanged(
     assert not list(target.glob(".odfa11y-source-*"))
 
 
-@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX replaced-input FIFO control")
 def test_descriptor_validation_rejects_replacement_fifo_nonblocking(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -151,6 +151,8 @@ def test_descriptor_validation_rejects_replacement_fifo_nonblocking(
     def replace(
         path: str | os.PathLike[str], flags: int, mode: int = 0o777, *, dir_fd: int | None = None
     ) -> int:
+        if not hasattr(os, "mkfifo"):
+            pytest.skip("POSIX replaced-input FIFO control")
         source.unlink()
         os.mkfifo(source)
         return original(path, flags, mode, dir_fd=dir_fd)
