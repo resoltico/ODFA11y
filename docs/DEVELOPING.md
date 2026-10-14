@@ -233,6 +233,12 @@ Runner images and macOS LibreOffice follow their current stable distribution;
 Linux/Windows LibreOffice installers are checksum-pinned. The lockfile does not freeze
 the complete operating system.
 
+Windows uses the runner's `curl.exe` for installer downloads, with transport retries,
+a 30-second connection limit and a three-minute limit per transfer. The Windows
+installation step has a 15-minute ceiling, including MSI installation; the retry
+budget is not a hard total download deadline. The downloaded installer must still
+match the pinned checksum before it can run.
+
 veraPDF is a separately installed Java CLI used when an operator explicitly requests
 `--verapdf`. CI validates a LibreOffice export with the exact stable veraPDF 1.30.3 release; update
 `ODFA11Y_VERAPDF_VERSION` and its checksum together. Its machine-validation scope is

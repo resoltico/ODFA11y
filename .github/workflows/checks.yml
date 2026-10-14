@@ -223,12 +223,17 @@ jobs:
           echo "/Applications/LibreOffice.app/Contents/MacOS" >> "$GITHUB_PATH"
       - name: Install LibreOffice on Windows
         if: runner.os == 'Windows'
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $installer = Join-Path $env:RUNNER_TEMP 'libreoffice.msi'
           $filename = "LibreOffice_$($env:ODFA11Y_LIBREOFFICE_VERSION)_Win_x86-64.msi"
           $url = "https://downloadarchive.documentfoundation.org/libreoffice/old/$($env:ODFA11Y_LIBREOFFICE_VERSION)/win/x86_64/$filename"
-          Invoke-WebRequest -Uri $url -OutFile $installer
+          curl.exe --version
+          curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 180 --retry-max-time 600 --output $installer $url
+          if ($LASTEXITCODE -ne 0) {
+            throw "LibreOffice download failed with exit code $LASTEXITCODE"
+          }
           if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:ODFA11Y_LIBREOFFICE_WINDOWS_SHA256) {
             throw 'LibreOffice installer checksum mismatch'
           }

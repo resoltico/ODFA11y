@@ -19,6 +19,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Internal
 
+- Windows CI retries bounded installer downloads and caps installation at 15 minutes while retaining the pinned checksum and installer exit checks.
 - Tach enforces explicit package-root and module-entry-point dependencies, removes obsolete CLI access to domain engines, and rejects boundary/interface/cycle violations through real negative controls.
 - CI reuses Go analysis caches by their actual tool pins and limits dependency/tool cache saves to main, avoiding PR copies and invalidation by unrelated workflow edits. Manual release checks bypass dependency-cache restoration.
 - Passing pytest temporary outputs are cleaned promptly; failed-call output retains the default three-session history. A five-example Hypothesis smoke profile supports short development checks; required checks retain 200 examples. See [Development](docs/DEVELOPING.md#types-boundaries-and-properties) for bounds and cleanup limits.

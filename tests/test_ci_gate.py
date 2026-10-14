@@ -114,6 +114,21 @@ def test_parallel_native_tests_still_require_tools_and_reject_worker_crashes() -
     assert "os: [ubuntu-latest, macos-latest, windows-latest]" in integration
 
 
+def test_windows_installation_bounds_downloads_and_verifies_before_installing() -> None:
+    block = job_block("integration").split("- name: Install LibreOffice on Windows\n", 1)[1]
+    block = block.split("- name: Install pinned veraPDF\n", 1)[0]
+    assert "timeout-minutes: 15" in block
+    assert "curl.exe --version" in block
+    assert "--fail --location --retry 3 --retry-all-errors" in block
+    assert "--connect-timeout 30 --max-time 180 --retry-max-time 600" in block
+    assert "--output $installer $url" in block
+    assert "Invoke-WebRequest" not in block
+    assert block.index("if ($LASTEXITCODE -ne 0)") < block.index("Get-FileHash")
+    assert block.index("Get-FileHash") < block.index("Start-Process msiexec.exe")
+    assert "throw 'LibreOffice installer checksum mismatch'" in block
+    assert "$installation.ExitCode -notin @(0, 3010)" in block
+
+
 def test_go_cache_identity_uses_the_same_pins_as_the_scanner_commands() -> None:
     static = job_block("static")
     for package in ("ODFA11Y_ACTIONLINT_PACKAGE", "ODFA11Y_GITLEAKS_PACKAGE"):
