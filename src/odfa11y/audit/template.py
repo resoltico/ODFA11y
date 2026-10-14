@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
-from odfa11y.report import Report, terminal_text
+from odfa11y.report import Report, rules, terminal_text
 
 from .engine import BLOCKING_RULE_IDS, audit_odf
+from .package import audit_structure
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -93,5 +94,15 @@ def prepare_template(source: str | Path) -> tuple[Report, str | None]:
     report = audit_odf(source)
     if template_blockers(report) is not None:
         return report, None
-    adapter = adapter_for(OdfDocument.open(source).kind)
+    document = OdfDocument.open(source)
+    if document.protection.encrypted:
+        report.add(rules.PKG009)
+        return report, None
+    if document.protection.malformed_manifest:
+        report.add(rules.XML001, document.protection.malformed_manifest)
+        return report, None
+    if document.protection.ambiguous_members or document.protection.unsafe_members:
+        audit_structure(document, report)
+        return report, None
+    adapter = adapter_for(document.kind)
     return report, render_template(report, adapter)

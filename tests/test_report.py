@@ -40,7 +40,7 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
 
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     single = json.loads(render_reports([_report()], output_format="json"))
-    assert single["format"] == 4
+    assert single["format"] == 5
     assert single["kind"] == "odf"
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]
@@ -103,9 +103,15 @@ def test_registry_ids_severities_and_remedies_are_consistent() -> None:
 
 def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_title() -> None:
     document = (Path(__file__).parents[1] / "docs/RULES.md").read_text(encoding="utf-8")
-    documented: dict[str, tuple[str, str]] = {}
+    documented: dict[str, tuple[str, str, str | None]] = {}
     for line in document.splitlines():
-        match = re.match(r"\| `([A-Z]+\d{3})` \| (Error|Warning|Info) \| (.+?) \|", line)
+        match = re.match(r"\| `([A-Z]+\d{3})` \| (Error|Warning|Info) \| (.+?) \| (.*?) \|", line)
         if match:
-            documented[match.group(1)] = (match.group(2).lower(), match.group(3))
-    assert documented == {key: (rule.severity.value, rule.title) for key, rule in RULES.items()}
+            documented[match.group(1)] = (
+                match.group(2).lower(),
+                match.group(3),
+                match.group(4).strip().strip("`") or None,
+            )
+    assert documented == {
+        key: (rule.severity.value, rule.title, rule.remedy) for key, rule in RULES.items()
+    }

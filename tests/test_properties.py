@@ -15,14 +15,14 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.config import load_config
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import ConfigError, PackageError
 from odfa11y.families.text import (
     URI_RE,
     LinkifyAddresses,
     MarkTableHeaders,
     RemoveEmptySpacers,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
     linkify_plain_addresses,
     split_trailing_punctuation,
@@ -182,7 +182,7 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
         operations.append(SetMetadata(language="de-AT"))
     if choices["alt"] and features.get("with_image_without_alt"):
         operations.append(
-            SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "Description")})
+            SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "Description")})
         )
     if choices["headers"] and features.get("with_data_table"):
         operations.append(MarkTableHeaders({"Data": TableHeaders(1)}))

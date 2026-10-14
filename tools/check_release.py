@@ -6,12 +6,18 @@ from __future__ import annotations
 import argparse
 import email
 import hashlib
+import subprocess
 import sys
 import tarfile
 import tomllib
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
+
+if TYPE_CHECKING or __package__:
+    from .source_inventory import archive_errors
+else:
+    from source_inventory import archive_errors
 
 if TYPE_CHECKING:
     from email.message import Message
@@ -43,9 +49,13 @@ def check_release(tag: str, directory: Path) -> list[str]:
         metadata = email.message_from_bytes(wheel.read(names[0]))
         errors.extend(_metadata_errors(metadata, project))
         errors.extend(_wheel_license_errors(wheel, root, project["license-files"]))
-        errors.extend(_wheel_inventory_errors(wheel, root))
+        errors.extend(_wheel_inventory_errors(wheel, root, project["license-files"]))
     with tarfile.open(archives[0]) as archive:
-        names = [member for member in archive.getmembers() if member.name.endswith("/PKG-INFO")]
+        names = [
+            member
+            for member in archive.getmembers()
+            if member.name.count("/") == 1 and member.name.endswith("/PKG-INFO")
+        ]
         if len(names) != 1:
             return [*errors, "Source archive must contain exactly one package metadata record"]
         stream = archive.extractfile(names[0])
@@ -55,6 +65,7 @@ def check_release(tag: str, directory: Path) -> list[str]:
         prefix = names[0].name.removesuffix("/PKG-INFO")
         errors.extend(_sdist_license_errors(archive, root, project["license-files"]))
         errors.extend(_sdist_inventory_errors(archive, root, prefix))
+        errors.extend(archive_errors(archive, root, prefix))
     return errors
 
 
@@ -81,13 +92,42 @@ def _sdist_license_errors(
     return errors
 
 
-def _wheel_inventory_errors(wheel: zipfile.ZipFile, root: Path) -> list[str]:
+def _wheel_inventory_errors(
+    wheel: zipfile.ZipFile, root: Path, license_files: list[str]
+) -> list[str]:
     shipped = {
         name: wheel.read(name)
         for name in wheel.namelist()
         if name.startswith("odfa11y/") and not name.endswith("/")
     }
-    return _package_errors(shipped, root, "Wheel")
+    errors = _package_errors(shipped, root, "Wheel")
+    seen = set()
+    for name in wheel.namelist():
+        canonical = name.rstrip("/")
+        path = PurePosixPath(canonical)
+        if (
+            name in seen
+            or path.is_absolute()
+            or ".." in path.parts
+            or "\\" in name
+            or path.as_posix() != canonical
+        ):
+            errors.append(f"Wheel duplicate or unsafe member: {name}")
+        seen.add(name)
+        if (
+            not name.endswith("/")
+            and not name.startswith("odfa11y/")
+            and (".dist-info/" not in name or not _wheel_metadata_name(name, license_files))
+        ):
+            errors.append(f"Wheel unexpected authored member: {name}")
+    return errors
+
+
+def _wheel_metadata_name(name: str, license_files: list[str]) -> bool:
+    prefix, _, relative = name.partition(".dist-info/")
+    allowed = {"METADATA", "WHEEL", "RECORD", "entry_points.txt"}
+    allowed.update("licenses/" + path for path in license_files)
+    return "/" not in prefix and relative in allowed
 
 
 def _sdist_inventory_errors(archive: tarfile.TarFile, root: Path, prefix: str) -> list[str]:
@@ -210,7 +250,13 @@ def main() -> int:
         errors = check_release(args.tag, args.directory)
         if not errors and args.notes_output is not None:
             _write_release_notes(args.notes_output)
-    except (OSError, ValueError, zipfile.BadZipFile, tarfile.TarError) as exc:
+    except (
+        OSError,
+        ValueError,
+        zipfile.BadZipFile,
+        tarfile.TarError,
+        subprocess.SubprocessError,
+    ) as exc:
         errors = [f"Cannot inspect release artifacts: {exc}"]
     if errors:
         sys.stderr.write("\n".join(errors) + "\n")

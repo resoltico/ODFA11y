@@ -1,16 +1,15 @@
 # Document workflow
 
-Use the locked environment from the [README](../README.md#start-here). Keep the
-original file: remediation refuses to write over its own source, and every command
-writes to a path you choose.
+Use the locked environment from the [README](../README.md#start-here). Keep the original:
+remediation refuses its own source as destination. Commands accept packaged or flat ODF
+according to declared media type. Native PDF stages depend on the
+[family's capability](ACCESSIBILITY.md#document-families), not its extension.
 
-The commands work on any OpenDocument file, a ZIP package (`.odt`, `.ods`, `.odp`, `.odg`,
-templates, …) or a flat XML file (`.fodt`, `.fods`, …); the file's declared media type, not
-its extension, decides what it is. Text, spreadsheet, presentation and drawing families have native PDF workflows. Formula
-has native source semantics and an exporter whose current tagging failures remain gates.
-Chart, Image and Base have source assurance only; production fails when required PDF
-stages cannot run. See [family contracts](ARCHITECTURE.md#document-families),
-[batch runs](BATCH.md) and [SARIF output](SARIF.md).
+Direct original export/comparison retain logical source identity. Pipeline export uses
+private captures beside the source and refuses filename/path-sensitive content. Both guard
+known native dependencies and require stable caller-controlled directories; see
+[native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies) and
+[source capture](EVIDENCE.md#source-capture). Guarded operations do not sandbox native tools.
 
 ## 1. Establish the baseline
 
@@ -19,102 +18,81 @@ uv run --no-sync odfa11y audit original.odt --schema --format json > before.json
 uv run --no-sync odfa11y styles original.odt
 ```
 
-An audit is read-only. Findings name a rule, a [location](RULES.md#locations) and, where a configuration can
-address them, a `remedy`: the key that holds the decision. `--schema` also validates
-every member against the bundled official ODF schema for the declared version
-(1.3 or 1.4); see [Accessibility and limits](ACCESSIBILITY.md#odf-schema-validation).
-Audit accepts several files and detects PDF by content, so
-`odfa11y audit a.odt b.pdf` reports both. Text and JSON audits retain completed reports
-and continue after unreadable inputs; stderr identifies each failed input and the command
-returns execution status 3 even when other inputs pass. Failed inputs do not become clean
-reports. JSON keeps the existing single-report object/multiple-report array shape.
-SARIF instead preflights all identities and confinement before inspection; an execution
-failure emits no partial SARIF log. Audit/compare accept regular files and ordinary file
-aliases; nonregular inputs are refused without waiting for FIFO data.
+Audit is read-only. Findings identify a rule, [logical location](RULES.md#locations) and,
+where applicable, a configuration `remedy`. `--schema` validates recognized ODF parts and
+native MathML against bundled schemas; it does not validate every arbitrary package member.
+See [schema limits](ACCESSIBILITY.md#odf-schema-validation). `styles` is text-family inspection.
 
-Text audit and comparison output starts with the actual command outcome, exit status
-and gate policy. Individual reports say `Check: no errors` or `Check: errors found`;
-warnings remain visible and fail the command when `--strict` is enabled. Findings
-precede metadata, and text wraps at 80 columns without splitting paths or identifiers.
-Terminal controls in filenames, document fields and tool diagnostics appear as visible
-escapes. JSON report `passed` still means no error findings. For JSON and SARIF,
-`--strict` retains `Command gate (--strict): PASS/FAIL (exit N)` on stderr; machine
-payloads and exit statuses are unchanged.
+Audit accepts multiple files and detects PDF by content: `odfa11y audit a.odt b.pdf` checks
+both. Text/JSON output retains completed reports and continues after unreadable inputs;
+stderr identifies failures and exit status 3 takes precedence. A failed input is never an
+empty clean report. JSON emits one object for one report, an array for multiple reports.
+[SARIF](SARIF.md) preflights all source identities before inspection and emits no partial
+log after execution failure. Audit/compare accept regular files and ordinary aliases;
+nonregular inputs refuse without waiting for FIFO data.
 
-Every `COMMAND --help` includes examples. Running `odfa11y` without a command prints
-the workflow help on stderr and exits 2; close command typos receive a suggestion
-without executing it. Readable ODF reports with open decisions suggest a print-only
-template command. Examples and copied command suggestions use POSIX shell quoting;
-control-bearing filenames are displayed safely without a copyable command suggestion.
-Configuration errors identify the existing plan and suggest editing it, rather than
-overwriting reviewed decisions.
+Text audit/compare output begins with command outcome, exit status and gate policy.
+Individual reports say `Check: no errors` or `Check: errors found`; warnings fail only
+under `--strict`. JSON `passed` means no error findings. JSON/SARIF strict commands print
+`Command gate (--strict): PASS/FAIL (exit N)` on stderr, keeping stdout machine-readable.
+Terminal controls are escaped; text wraps at 80 columns without splitting identifiers.
 
-For text commands with interactive stderr, append-only progress lines show active
-core stages, native work and evidence publication. Redirected stderr receives no
-progress. JSON/SARIF commands never receive progress, even with interactive stderr;
-redirecting stdout alone does not suppress text progress on interactive stderr.
-A disconnected progress stream disables progress without stopping document work.
+Every command's `--help` includes examples. Invoking `odfa11y` without a subcommand prints help on stderr and exits 2. Close command
+typos receive a suggestion without execution. Suggested commands use POSIX
+shell quoting; control-bearing filenames receive no copyable command. Configuration errors
+identify the selected plan and suggest editing it.
 
-Open the original in Writer and identify its intended heading hierarchy, language,
-data-table headers, meaningful graphic descriptions and intentional page breaks. These
-decisions cannot be inferred from appearance.
+Interactive text stderr receives append-only progress for core/native/publication stages.
+Redirected stderr and JSON/SARIF receive none. Redirecting stdout alone does not suppress
+interactive text progress. A disconnected progress stream does not stop document work.
+
+Open the source in its native application and decide intended structure, language,
+descriptions, headers and page breaks. Appearance alone cannot establish these choices.
 
 ## 2. Record the decisions
 
 ```bash
 uv run --no-sync odfa11y template original.odt > document.toml
-```
-
-The template lists the open decisions with every line commented out, including the
-fingerprint of each object it suggests. Uncomment and complete only what you have decided;
-see [Configuration](CONFIGURATION.md). The template refuses a document it cannot read well
-enough to plan (blocking findings on stderr, status 2) rather than printing an empty plan.
-Then:
-
-```bash
+# edit document.toml: uncomment and complete only reviewed decisions
 uv run --no-sync odfa11y remediate original.odt reviewed.odt --config document.toml --dry-run
 uv run --no-sync odfa11y remediate original.odt reviewed.odt --config document.toml
 ```
 
-Each target reports `applied`, `unchanged` or `failed`. Any failure (a table or graphic
-that does not exist, a header count that conflicts, an invalid language) aborts the run
-and writes nothing. Before publishing, the executor also checks that visible text is
-unchanged (apart from counted spacer removals) and that the ODF schema shows no
-violation the source did not already have; for a spreadsheet the guard compares every sheet
-name's position and every non-empty cell's text, so only sheet names may differ. A plan
-written for another family (a `[text]` table applied to a spreadsheet, a `[spreadsheet]`
-table applied to a text document) is refused outright. Publication is atomic.
+Templates leave every decision commented out and include reviewed object fingerprints.
+A source that cannot be inspected sufficiently yields blockers on stderr and status 2,
+not a usable empty plan. See [Configuration](CONFIGURATION.md).
 
-Dry runs label outcomes as proposed and write nothing. An empty plan explicitly says
-that no operations were configured; uncomment only decisions you have reviewed.
+Targets report `applied`, `unchanged` or `failed`; dry runs label outcomes as proposed and
+write nothing. A failed target, family mismatch, protected-content change or introduced
+schema violation prevents publication. Multi-target operations validate their selections
+before that operation edits. The executor publishes the whole candidate atomically after
+content and available-schema guards; direct low-level operation calls have separate
+[ownership](API.md). An empty plan explicitly reports no operations.
+
+Signatures, encryption, tracked changes and excluded contexts impose
+[preservation boundaries](ACCESSIBILITY.md#preservation-boundaries), including refusal
+of signed-package remediation even for dry runs/no-op plans.
 
 ## 3. Export and check the PDF
 
-With LibreOffice 26.8 or newer installed (`soffice` or `libreoffice` on `PATH`, or `--soffice PATH`):
+With LibreOffice 26.8 or newer on `PATH` (`soffice`/`libreoffice`, or `--soffice PATH`):
 
 ```bash
+uv run --no-sync odfa11y doctor
 uv run --no-sync odfa11y export reviewed.odt reviewed.pdf
 uv run --no-sync odfa11y audit reviewed.pdf --strict
 uv run --no-sync odfa11y audit reviewed.pdf --verapdf --strict
 ```
 
-`--verapdf-path PATH` names the validator executable and implies `--verapdf`.
+Export uses a temporary LibreOffice profile, requests tagging/PDF/UA-1 and publishes
+atomically. Export success does not establish PDF conformance. The built-in audit is a
+structural smoke test; `--verapdf` runs machine-verifiable PDF/UA-1 rules. Each failure
+retains the standard clause/test. `--verapdf-path PATH` implies validation. An unavailable
+optional validator reports `VERA000`, a warning that fails with `--strict`.
 
-Before relying on a LibreOffice installation for documents with hyperlinks, run
-`uv run --no-sync odfa11y doctor`. Its `pdfua_link_descriptions` line says whether that
-LibreOffice exports link descriptions (`supported`) or whether every hyperlink will be
-reported as `PDF019` (`unsupported`); see [Accessibility](ACCESSIBILITY.md).
-
-The exporter uses a temporary LibreOffice profile, requests PDF/UA-1 and tagged PDF, and
-publishes the PDF atomically. The built-in PDF audit is a fast smoke test of metadata,
-tagging and structure (roles, headings, lists, tables, figures, links). `--verapdf` runs
-the authoritative PDF/UA-1 validator and reports each failed rule with its clause and
-test number. If veraPDF cannot be found the report contains the warning `VERA000`;
-`--strict` makes that fail.
-
-Writer hyperlinks require an explicit meaningful **Name** (`office:name`). The doctor
-self-test checks a named link; an unnamed link fails PDF/UA-1 validation. See
-[link descriptions](ACCESSIBILITY.md#link-descriptions).
+Doctor's `pdfua_link_descriptions` probe measures native `office:title` support. A source
+description never waives `PDF019`; inspect [link limitations](ACCESSIBILITY.md#link-descriptions),
+[graphic roles](ACCESSIBILITY.md#graphic-roles) and the actual PDF.
 
 ## 4. Compare the renders
 
@@ -122,12 +100,11 @@ self-test checks a named link; an unnamed link fails PDF/UA-1 validation. See
 uv run --no-sync odfa11y compare original.odt reviewed.odt --diff-dir diffs
 ```
 
-Both documents are exported (only families with a PDF export can be) with the same LibreOffice and profile, then compared by page
-count and size, text, links and rendered ink; see [Fidelity](FIDELITY.md). Renaming a
-sheet changes the name Calc's default page header prints, so the comparison reports it as
-a text difference (`FID003`) unless the header is changed first; see
-[spreadsheet PDF exports](ACCESSIBILITY.md#spreadsheet-pdf-exports). `compare`
-also takes two PDFs directly.
+ODF inputs need an available family export filter; PDF inputs are compared directly and
+can be mixed with ODF. Native renders use the same LibreOffice/profile. Comparison gates
+extracted text and link targets, plus pages/ink under the [fidelity policy](FIDELITY.md).
+A sheet rename can change Calc's printed header (`FID003`); see
+[spreadsheet exports](ACCESSIBILITY.md#spreadsheet-pdf-exports).
 
 ## 5. Or do it all, with evidence
 
@@ -137,46 +114,44 @@ uv run --no-sync odfa11y pipeline original.odt --config document.toml \
 uv run --no-sync odfa11y check-evidence evidence
 ```
 
-An **assurance profile** names the stages a run requires and how strictly it gates; the
-effective profile is recorded in `run.json`.
-
-| Profile | Stages | Gating |
+| Profile | Required work | Gate |
 | --- | --- | --- |
-| `inspect` | identify, audit, remediate, audit the result | warnings do not fail |
-| `verify` (default) | `inspect` plus export, PDF audit and fidelity comparison | warnings do not fail |
-| `production` | `verify` plus veraPDF, which must be available | warnings fail (strict) |
+| `inspect` | Identify/audit source, remediate, audit result. | Errors fail; warnings allowed. |
+| `verify` (default) | Inspect plus export, PDF audit and fidelity. | Errors fail; warnings allowed. |
+| `production` | Verify plus required veraPDF. | Errors and warnings fail. |
 
-The pipeline runs the stages in order and stops at the first failed gate; later stages are
-recorded as `skipped`. A stage the document's family does not have (PDF export for a family
-without a PDF filter) is `not-applicable`, which is not a failure, except under `production`, which requires PDF
-validation and therefore fails for such a document. The
-[evidence directory](EVIDENCE.md) is published whether the run passed or failed, even when
-the source cannot be read.
+The selected profile is recorded in `run.json`. Stages stop at the first failed gate;
+later stages are `skipped`. Missing family capabilities are `not-applicable`, except that
+production fails when required PDF proof is unavailable. Source audit findings inform
+remediation; the remediated-source audit gates its result.
+
+An [evidence bundle](EVIDENCE.md) retains completed artifacts and failures even for an
+unreadable source, provided the destination remains safely writable. `check-evidence`
+checks recorded bytes, not accessibility, authenticity or human acceptance. See
+[batch workflows](BATCH.md) for explicit independent document runs.
 
 ## Exit statuses
 
 | Status | Meaning |
 | --- | --- |
-| `0` | Success; warnings are allowed without `--strict`. |
-| `1` | A report has warnings and `--strict` was supplied. |
-| `2` | A report has errors (also argparse's status for invalid arguments), `template` could not read the document, or `check-evidence` found problems. |
-| `3` | An execution failure: invalid configuration, failed remediation, missing or failing external tool, unreadable input. The message is on stderr. |
+| `0` | Success; warnings allowed without strict gating. |
+| `1` | Strict warning failure. |
+| `2` | Error findings; invalid CLI arguments; template blockers; bundle-integrity problems. |
+| `3` | Execution failure: invalid configuration, failed remediation, missing/failing required tool or unreadable input. |
 
-For several reports the highest status wins. Informational findings never fail a command.
+The strongest result wins across reports; informational findings never fail a command.
+Required veraPDF absence fails stage `verapdf` with status 3, retaining completed artifacts
+and skipping fidelity. Optional audit validation absence retains `VERA000` warning behavior.
+
+## Troubleshooting
 
 | Symptom | Action |
 | --- | --- |
-| Unknown TOML key or wrong type | Compare the field with [Configuration](CONFIGURATION.md); use unquoted booleans and positive integer header counts. |
-| `remediate` lists failed targets | Fix the named table, graphic key or header count; a selector that matches nothing is an error. |
-| "Remediation introduced ODF schema violations" | The operation produced markup the ODF schema rejects; the message lists the violations. |
-| `PDF019` | Give the Writer hyperlink a meaningful Name before export; check existing references before renaming it. |
-| `pdfua_link_descriptions: unsupported` | The supported runtime failed its named-link self-test; inspect the exporter installation. |
-| LibreOffice version rejected | Install LibreOffice 26.8 or newer; unidentifiable versions are also rejected. |
-| LibreOffice executable not found | Install LibreOffice and expose its CLI on `PATH`, or pass `--soffice`. |
-| `FID005` after spacing or spacer changes | Content moved. Review the diff images; if the movement is intended set `fidelity.pagination = "may-change"`. |
-
-Missing veraPDF in a profile that requires it is an execution failure: failed stage
-`verapdf`, exit status **3**, retained completed artifacts and skipped fidelity. Optional
-`audit --verapdf` absence remains `VERA000` warning behavior (status 0 ordinarily, 1 with
-`--strict`). Native dependency/captured-identity limits and capture failures are described
-in [Evidence](EVIDENCE.md#no-local-paths); source-only inspection remains available.
+| Unknown TOML key/wrong type | Use [Configuration](CONFIGURATION.md); booleans are unquoted and header counts positive integers. |
+| Failed remediation targets | Correct named selectors/counts or regenerate and review stale fingerprints. Nothing is published. |
+| Introduced schema violations | Inspect listed violations; the operation's result fails the supported schema regression boundary. |
+| `PDF019` | Inspect the exported link description. Existing Writer Names can matter, but renaming targets requires reference review. |
+| Probe reports `unsupported` | Native `office:title` did not establish a PDF description; source success does not clear PDF failures. |
+| LibreOffice rejected/unidentified | Install LibreOffice 26.8 or newer, expose its CLI, or select `--soffice`. |
+| `ODF012` / `ODF013` | Read [native-context limits](ACCESSIBILITY.md#native-document-context-and-declared-dependencies); source-only inspect remains available. |
+| `FID005` after deliberate movement | Review diffs; choose `fidelity.pagination = "may-change"` only if page/ink changes are intended. |

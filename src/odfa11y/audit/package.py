@@ -12,7 +12,6 @@ from odfa11y.odf import (
     Part,
     declared_version,
     is_office_element,
-    is_unsafe_member_name,
     qn,
     select_elements,
     validate,
@@ -80,17 +79,23 @@ def _audit_flat(document: OdfDocument, report: Report) -> bool:
 def _audit_package(document: OdfDocument, report: Report) -> bool:
     package = cast("PackageStorage", document.storage)
     names = list(package.member_names())
-    duplicates = sorted({name for name in names if names.count(name) > 1})
+    duplicates = document.protection.ambiguous_members
     if duplicates:
         report.add(
             rules.PKG006,
-            "Package contains duplicate ZIP member names.",
-            details={"duplicates": duplicates},
+            "Duplicate ZIP member names prevent complete inspection.",
+            details={"duplicates": list(duplicates)},
         )
-    _audit_mimetype(package, names, report)
-    unsafe = sorted(name for name in names if is_unsafe_member_name(name))
+    unsafe = document.protection.unsafe_members
     if unsafe:
-        report.add(rules.PKG007, details={"names": unsafe})
+        report.add(
+            rules.PKG007,
+            "Unsafe ZIP member names prevent complete inspection.",
+            details={"names": list(unsafe)},
+        )
+    if duplicates or unsafe:
+        return False
+    _audit_mimetype(package, names, report)
     usable = True
     for part in (Part.MANIFEST, Part.CONTENT):
         if not document.has(part):

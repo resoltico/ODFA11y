@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.content import GraphicDescription, PageDecision
+from odfa11y.content import GraphicAlternative, PageDecision
 from odfa11y.evidence import check_bundle
 from odfa11y.families import drawing, presentation
 from odfa11y.fidelity import FidelityPolicy
@@ -38,8 +38,8 @@ def _plan(family: str) -> list[Operation]:
                 "Fruit overview", "Fruit counts and an illustration", ("id2", "id1", "id3")
             )
         }),
-        api.SetGraphicDescriptions({
-            "Fruit illustration": GraphicDescription(
+        api.SetGraphicAlternatives({
+            "Fruit illustration": GraphicAlternative(
                 "Fruit illustration", "A red apple and a green pear"
             )
         }),
@@ -119,8 +119,8 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     plan = [
         SetMetadata(language="en-US"),
         drawing.SetPageSemantics({"Fruit overview": PageDecision("Fruit illustration")}),
-        drawing.SetGraphicDescriptions({
-            "Fruit illustration": GraphicDescription(
+        drawing.SetGraphicAlternatives({
+            "Fruit illustration": GraphicAlternative(
                 "Fruit illustration", "A red apple and a green pear"
             )
         }),

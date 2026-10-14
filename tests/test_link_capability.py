@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Named-link self-test, current-runtime behavior and real pipeline evidence."""
+"""Link-description self-test, native Name controls and pipeline evidence."""
 
 from __future__ import annotations
 
@@ -203,7 +203,17 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     doctor = json.loads(capsys.readouterr().out)
     assert doctor["LibreOffice"] == identify_soffice(soffice).version
     reported = doctor["pdfua_link_descriptions"]
-    assert reported == "supported"
+    titled_probe = tmp_path / "title-probe.odt"
+    write_link_probe(titled_probe)
+    probe_pdf = export_pdfua(
+        titled_probe, tmp_path / "title-probe.pdf", ExportSettings(WRITER, soffice=soffice)
+    )
+    expected_support = (
+        "unsupported"
+        if "PDF019" in {f.rule_id for f in audit_pdfua(probe_pdf).findings}
+        else "supported"
+    )
+    assert reported == expected_support
 
     record = run_pipeline(
         linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)

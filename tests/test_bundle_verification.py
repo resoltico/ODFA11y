@@ -174,8 +174,9 @@ def test_a_listed_file_replaced_by_a_link_is_reported(tmp_path: Path) -> None:
     assert any("Unsafe: x.bin" in problem for problem in check_bundle(target))
 
 
-@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="needs named pipes")
 def test_special_files_are_reported_without_being_opened(tmp_path: Path) -> None:
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("needs named pipes")
     target = bundle(tmp_path)
     os.mkfifo(target / "pipe")
     assert any("Unsafe: pipe" in problem for problem in check_bundle(target))

@@ -12,7 +12,7 @@ from lxml import etree
 from odfa11y.adapter import Status
 from odfa11y.content import (
     SHAPE_TAGS,
-    GraphicDescription,
+    GraphicAlternative,
     GraphicEditor,
     PageDecision,
     PageEditor,
@@ -52,7 +52,7 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
 ) -> None:
     doc = OdfDocument.open(make(tmp_path, family, Variant(body=_body(family))))
     page = pages(doc)[0]
-    fingerprint = page_fingerprint(page)
+    fingerprint = page_fingerprint(page, doc)
     before = page_snapshot(doc)
     editor = PageEditor(
         {
@@ -65,14 +65,14 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
     assert editor.apply(doc)[0].status is Status.APPLIED
     assert editor.apply(doc)[0].status is Status.UNCHANGED
     graphics = GraphicEditor(
-        {"Counts": GraphicDescription("Counts", "Three apples and four pears")},
+        {"Counts": GraphicAlternative("Counts", "Three apples and four pears")},
         "set_graphics",
         SHAPE_TAGS,
     )
     assert graphics.apply(doc)[0].status is Status.APPLIED
     assert graphics.apply(doc)[0].status is Status.UNCHANGED
     assert page_snapshot(doc) == before
-    assert page_fingerprint(page) == fingerprint
+    assert page_fingerprint(page, doc) == fingerprint
     assert validate(doc).count == 0
     assert [shape.get(qn("draw", "name")) for shape in page_shapes(page)] == ["Title", "Counts"]
 

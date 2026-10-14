@@ -7,17 +7,24 @@ import re
 from typing import TYPE_CHECKING
 
 from odfa11y.content import (
+    SHAPE_TAGS,
     GraphicIdentity,
+    audit_graphic_role,
     axis_count,
     declarations,
+    eligible_text_node,
+    graphic_selector,
     header_count,
     repeated,
+    require_safe_boundary,
     table_fingerprint,
+    visible_words,
 )
 from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import Location, rules
 
+from .contexts import context_location, text_nodes
 from .headings import MAX_HEADING_LEVEL, heading_fingerprint, heading_location
 from .text import element_text
 
@@ -35,9 +42,11 @@ MAX_DATA_HEADER_LENGTH = 80
 MAX_SIMPLE_HEADING_NUMBER = 99
 
 
-def audit_headings(tree: etree._ElementTree, report: Report) -> None:
+def audit_headings(
+    tree: etree._ElementTree, report: Report, document: OdfDocument | None = None
+) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
-    headings = select_elements(tree, "//office:body//text:h")
+    headings = text_nodes(tree, qn("text", "h"), main_only=True)
     report.metadata["heading_count"] = len(headings)
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
@@ -48,7 +57,7 @@ def audit_headings(tree: etree._ElementTree, report: Report) -> None:
         except ValueError:
             level = 0
         location = heading_location(heading, index)
-        excerpt = {"text": text[:80], "fingerprint": heading_fingerprint(heading)}
+        excerpt = {"text": text[:80], "fingerprint": heading_fingerprint(heading, document)}
         if not 1 <= level <= MAX_HEADING_LEVEL:
             report.add(
                 rules.TXT001,
@@ -93,29 +102,38 @@ def audit_headings(tree: etree._ElementTree, report: Report) -> None:
 def audit_images(document: OdfDocument, report: Report) -> None:
     """Report graphics and embedded objects that lack alternative text."""
     tree = document.tree(Part.CONTENT)
-    frames = select_elements(
-        tree, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
-    )
-    identity = GraphicIdentity(document, select_elements(tree, "//office:body//draw:frame"))
+    frames = [
+        node
+        for node in select_elements(tree, "//office:body//*")
+        if node.tag in SHAPE_TAGS and node.tag != qn("draw", "g") and eligible_text_node(node)
+    ]
+    for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
+        audit_graphic_role(document, group, report)
+    identity = GraphicIdentity(document, frames)
     report.metadata["graphic_object_count"] = len(frames)
     for index, frame in enumerate(frames, start=1):
+        if audit_graphic_role(document, frame, report):
+            continue
+        if visible_words(frame) and not select_elements(
+            frame, "./draw:image | ./draw:object | ./draw:object-ole"
+        ):
+            continue
         title = frame.findtext("svg:title", namespaces=NS)
         desc = frame.findtext("svg:desc", namespaces=NS)
         declared_name = frame.get(qn("draw", "name"))
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
-        selector = declared_name or href
+        selector = graphic_selector(frame) or declared_name or href
         addressed = identity.matching(selector) if selector else [frame]
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.add(
                 rules.TXT010,
                 "Graphic object has neither accessible title nor description.",
-                location=(
-                    Location.named(Part.CONTENT, "frame", declared_name)
-                    if declared_name
-                    else Location.indexed(Part.CONTENT, "frame", index)
-                ),
+                location=Location(selector)
+                if selector
+                else context_location(frame, "frame", index),
                 details={
+                    "selector": selector,
                     "frame": declared_name,
                     "href": href,
                     "fingerprint": identity.fingerprint(addressed),
@@ -123,17 +141,15 @@ def audit_images(document: OdfDocument, report: Report) -> None:
             )
 
 
-def audit_tables(tree: etree._ElementTree, report: Report) -> None:
+def audit_tables(
+    tree: etree._ElementTree, report: Report, document: OdfDocument | None = None
+) -> None:
     """Report table structure defects such as missing header rows."""
-    tables = select_elements(tree, "//office:body//table:table")
+    tables = text_nodes(tree, qn("table", "table"))
     report.metadata["table_count"] = len(tables)
     for index, table in enumerate(tables, start=1):
         declared_name = table.get(qn("table", "name"))
-        location = (
-            Location.named(Part.CONTENT, "table", declared_name)
-            if declared_name
-            else Location.indexed(Part.CONTENT, "table", index)
-        )
+        location = context_location(table, "table", index, declared_name)
         merged = select_elements(
             table,
             (
@@ -144,20 +160,13 @@ def audit_tables(tree: etree._ElementTree, report: Report) -> None:
         if merged:
             report.add(
                 rules.TXT020,
-                (
-                    "Table contains merged/split-cell structures that are "
-                    "problematic for PDF/UA export."
-                ),
+                ("Merged table cells require human review of header relationships."),
                 location=location,
                 details={"merged_markers": len(merged)},
             )
 
         try:
-            row_count = axis_count(table, "rows")
-            headers = header_count(table, "rows") + header_count(table, "columns")
-            rows = declarations(table, "rows")
-            data_like = _looks_like_data_table(rows, row_count)
-            fingerprint = table_fingerprint(table)
+            row_count, headers, data_like, fingerprint = _table_facts(table, document)
         except RemediationError as exc:
             report.add(rules.TXT022, str(exc), location=location)
             continue
@@ -166,7 +175,12 @@ def audit_tables(tree: etree._ElementTree, report: Report) -> None:
                 rules.TXT021,
                 "Table looks data-like but has no semantic header rows or columns.",
                 location=location,
-                details={"table": declared_name, "rows": row_count, "fingerprint": fingerprint},
+                details={
+                    "table": declared_name,
+                    "target": location.path,
+                    "rows": row_count,
+                    "fingerprint": fingerprint,
+                },
             )
 
 
@@ -196,3 +210,14 @@ def _looks_manually_numbered_heading(text: str) -> bool:
         return int(number) <= MAX_SIMPLE_HEADING_NUMBER
     except ValueError:
         return False
+
+
+def _table_facts(table: etree._Element, document: OdfDocument | None) -> tuple[int, int, bool, str]:
+    require_safe_boundary(table, None, None)
+    row_count = axis_count(table, "rows")
+    return (
+        row_count,
+        header_count(table, "rows") + header_count(table, "columns"),
+        _looks_like_data_table(declarations(table, "rows"), row_count),
+        table_fingerprint(table, document),
+    )

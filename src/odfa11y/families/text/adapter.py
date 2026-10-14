@@ -12,6 +12,8 @@ from .audit import audit_text, style_summary
 from .config import parse_text_table
 from .language import default_language, set_default_language
 from .link_probe import write_link_probe
+from .preflight import preflight_text
+from .protection import protect_edit
 from .template import text_template
 from .text import text_is_preserved, visible_text_snapshot
 
@@ -44,7 +46,7 @@ REVIEW_ITEMS = (
 
 
 def _snapshot(document: OdfDocument) -> tuple[str, ...]:
-    return visible_text_snapshot(document.tree(Part.CONTENT))
+    return visible_text_snapshot(document.tree(Part.CONTENT), document)
 
 
 def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed_blocks: int) -> bool:
@@ -79,4 +81,6 @@ ADAPTER = FamilyAdapter(
     pdf_filter="writer_pdf_Export",
     style_report=style_summary,
     link_probe=_link_probe,
+    preflight=preflight_text,
+    protect_edit=protect_edit,
 )

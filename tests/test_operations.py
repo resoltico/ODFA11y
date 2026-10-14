@@ -9,13 +9,13 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
     NormalizeSpacing,
     RemoveEmptySpacers,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
     derived_style_name,
 )
@@ -103,19 +103,19 @@ def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail
 ) -> None:
     doc = document(tmp_path, with_image_without_alt=True)
     entries = {
-        "Logo": GraphicDescription("Title", "Description"),
-        "Missing": GraphicDescription("x"),
+        "Logo": GraphicAlternative("Title", "Description"),
+        "Missing": GraphicAlternative("x"),
     }
-    assert run(SetGraphicDescriptions(entries), doc) == (Status.FAILED,)
+    assert run(SetGraphicAlternatives(entries), doc) == (Status.FAILED,)
     assert doc.edit_count == 0  # selectors are resolved before anything is edited
-    entries = {"Logo": GraphicDescription("Title", "Description")}
-    assert run(SetGraphicDescriptions(entries), doc) == (Status.APPLIED,)
+    entries = {"Logo": GraphicAlternative("Title", "Description")}
+    assert run(SetGraphicAlternatives(entries), doc) == (Status.APPLIED,)
     assert_valid(doc)
     assert run(
-        SetGraphicDescriptions({"Logo": GraphicDescription("Title", "Description")}), doc
+        SetGraphicAlternatives({"Logo": GraphicAlternative("Title", "Description")}), doc
     ) == (Status.UNCHANGED,)
     assert run(
-        SetGraphicDescriptions({"logo.svg": GraphicDescription(description="By file name")}), doc
+        SetGraphicAlternatives({"logo.svg": GraphicAlternative(description="By file name")}), doc
     ) == (Status.APPLIED,)
     assert_valid(doc)
 
@@ -156,11 +156,9 @@ def test_spacer_removal_retains_semantically_protected_paragraphs(
 ) -> None:
     doc = document(tmp_path, add_blank_body_paragraph=True)
     paragraph = select_elements(doc.tree(Part.CONTENT), "//text:p[not(text())]")[0]
-    paragraph.set("{http://www.w3.org/XML/1998/namespace}id", "protected")
     _protect(doc, paragraph, marker)
     RemoveEmptySpacers().apply(doc)
-    kept = select_elements(doc.tree(Part.CONTENT), "//*[@xml:id='protected']")
-    assert len(kept) == 1
+    assert paragraph in doc.tree(Part.CONTENT).iter()
 
 
 def _protect(doc: OdfDocument, paragraph: etree._Element, marker: str) -> None:
@@ -237,10 +235,12 @@ def test_spacing_failures_are_explicit(tmp_path: Path, operation: NormalizeSpaci
 
 
 def test_operations_describe_themselves_in_json_compatible_values() -> None:
-    described = SetGraphicDescriptions({"Logo": GraphicDescription("T", "D")}).as_dict()
+    described = SetGraphicAlternatives({"Logo": GraphicAlternative("T", "D")}).as_dict()
     assert described == {
-        "operation": "set_graphic_descriptions",
-        "entries": {"Logo": {"title": "T", "description": "D", "fingerprint": None}},
+        "operation": "set_graphic_alternatives",
+        "entries": {
+            "Logo": {"title": "T", "description": "D", "fingerprint": None, "decorative": None}
+        },
     }
     assert MarkTableHeaders({"Data": TableHeaders(1)}).as_dict() == {
         "operation": "mark_table_headers",

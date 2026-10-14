@@ -121,13 +121,39 @@ jobs:
         if: runner.os != 'Linux'
         run: uv run --no-sync pytest -m 'not integration' --durations=10
       - name: Build source distribution and wheel
-        run: uv build
+        run: |
+          uv build
+          tag="v$(uv run --no-sync python -c 'import odfa11y; print(odfa11y.__version__)')"
+          uv run --no-sync python -m tools.check_release "$tag" dist
       - name: Verify the distributions rebuild byte for byte
         if: runner.os == 'Linux'
         run: |
           uv build --out-dir "$RUNNER_TEMP/rebuild"
           (cd dist && sha256sum -- *.whl *.tar.gz) > "$RUNNER_TEMP/first.sha256"
           (cd "$RUNNER_TEMP/rebuild" && sha256sum -- *.whl *.tar.gz) | diff - "$RUNNER_TEMP/first.sha256"
+      - name: Verify extracted source archive contributor flow
+        run: |
+          uv run --no-sync python - <<'PYTHON'
+          import tarfile
+          import os
+          from pathlib import Path
+          target = Path(os.environ["RUNNER_TEMP"]) / "sdist-check"
+          target.mkdir()
+          with tarfile.open(next(Path("dist").glob("*.tar.gz"))) as archive:
+              archive.extractall(target, filter="data")
+          PYTHON
+          cd "$RUNNER_TEMP"/sdist-check/*
+          uv sync --locked
+          uv run --no-sync python -m tools.check_quality
+          uv run --no-sync ruff check . --ignore-noqa
+          uv run --no-sync ruff format --check .
+          uv run --no-sync python -m tools.check_quality --types
+          uv run --no-sync tach check
+          uv run --no-sync tach check-external
+          uv run --no-sync pytest -m 'not integration' --durations=10
+          uv build
+          tag="v$(uv run --no-sync python -c 'import odfa11y; print(odfa11y.__version__)')"
+          uv run --no-sync python -m tools.check_release "$tag" dist
       - name: Verify installed wheel with locked dependencies
         run: |
           uv venv --python "$(cat .python-version)" "$RUNNER_TEMP/wheel-env"
@@ -135,11 +161,13 @@ jobs:
           uv export --locked --no-emit-project --output-file "$RUNNER_TEMP/wheel-requirements.txt" > /dev/null
           uv pip sync --python "$wheel_python" --require-hashes "$RUNNER_TEMP/wheel-requirements.txt"
           uv pip install --python "$wheel_python" --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"/sdist-check/*
           "$wheel_python" - <<'PYTHON'
           import importlib.metadata
           import sys
           import tomllib
           from pathlib import Path
+          from tempfile import TemporaryDirectory
           from lxml import etree
           import odfa11y
           import odfa11y.odf
@@ -164,6 +192,20 @@ jobs:
           assert {p.relative_to(schemas).as_posix() for p in schemas.rglob("*.rng")} == set(recorded)
           parser = etree.XMLParser(resolve_entities=False, no_network=True)
           etree.RelaxNG(etree.parse(str(schemas / "mathml/mathml3.rng"), parser))
+          from tools.core_examples import inspect_source
+          from tests.documents import make_flat, make_package
+          with TemporaryDirectory() as scratch:
+              root = Path(scratch)
+              for layout, author in (("flat", make_flat), ("package", make_package)):
+                  directory = root / layout
+                  directory.mkdir()
+                  source = author(directory, "text")
+                  before = source.read_bytes()
+                  reports = inspect_source(source, directory / "work")
+                  assert len(reports) == 2
+                  assert source.read_bytes() == before
+                  assert (directory / "work" / ("reviewed" + source.suffix)).is_file()
+          assert not any(name == "odfa11y.cli" or name.startswith("odfa11y.cli.") for name in sys.modules)
           PYTHON
           "$wheel_python" -m pytest -m 'not integration' --durations=10
       - name: Preserve tested release distributions
@@ -216,7 +258,7 @@ jobs:
           echo "/opt/libreoffice$series/program" >> "$GITHUB_PATH"
       - name: Install LibreOffice on macOS
         if: runner.os == 'macOS'
-        # A fetch stalled for 30 minutes before tests; the successful PR install took 48 seconds.
+        # Bound package fetching and installation before native tests.
         timeout-minutes: 10
         run: |
           brew install --cask --verbose libreoffice
@@ -304,14 +346,7 @@ jobs:
         run: |
           tag="v$(uv run --no-sync python -c 'import odfa11y; print(odfa11y.__version__)')"
           echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
-          if gh api "repos/$REPOSITORY/git/ref/tags/$tag" > /dev/null 2>&1; then
-            echo "Tag $tag already exists" >&2
-            exit 1
-          fi
-          if gh release view "$tag" --repo "$REPOSITORY" > /dev/null 2>&1; then
-            echo "A release for $tag already exists" >&2
-            exit 1
-          fi
+          uv run --no-sync python -m tools.github_release absent "$REPOSITORY" "$tag"
       - name: Verify release inputs and extract exact changelog notes
         run: >-
           uv run --no-sync python tools/check_release.py "$RELEASE_TAG" dist
@@ -331,3 +366,11 @@ jobs:
           gh release create "$RELEASE_TAG" dist/*.whl dist/*.tar.gz "$RUNNER_TEMP/SHA256SUMS"
           --draft --target "$GITHUB_SHA" --title "$RELEASE_TAG"
           --notes-file "$RUNNER_TEMP/release-notes.md"
+      - name: Verify created draft target and exact tested assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: >-
+          uv run --no-sync python -m tools.github_release draft "$REPOSITORY" "$RELEASE_TAG"
+          --target "$GITHUB_SHA" --directory dist --checksums "$RUNNER_TEMP/SHA256SUMS"
+          --notes "$RUNNER_TEMP/release-notes.md"

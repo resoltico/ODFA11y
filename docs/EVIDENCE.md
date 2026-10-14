@@ -1,148 +1,109 @@
 # Evidence bundles
 
-`pipeline --output-dir DIR` publishes one directory that lets someone who was not there
-see what was changed, with which tools, and what a person must still decide.
+`pipeline --output-dir DIR` records automated decisions, their tools/results and required
+human review. A bundle can represent failure; integrity does not mean passing gates.
 
-```
+```text
 manifest.json        SHA-256 of every other file
-run.json             the complete run record
-REVIEW.md            gates, facts, findings and the human-review checklist
-remediated.<ext>     only when remediation passed; keeps the source's extension
-source.pdf           LibreOffice export of the source
-remediated.pdf       LibreOffice export of the remediated document
-verapdf.xml          raw veraPDF report, when veraPDF ran
-fidelity/            diff images for pages that differ
+run.json             published run record
+REVIEW.md            gates, findings and human-review checklist
+remediated.<ext>     when remediation passed; retains the source extension
+source.pdf           when original export completed
+remediated.pdf       when candidate export completed
+verapdf.xml          when validator output exists; diagnostic values are redacted
+fidelity/            generated diff images
 ```
 
-The directory must not exist or must be empty. It is built in a temporary sibling and
-published with one rename, so it is never half-written; a failed run still publishes its
-evidence. Artifacts are retained for stages that completed, including the remediated
-document when remediation passed even if a later gate failed.
-
-`REVIEW.md` labels its outcome as automated gates under the selected profile,
-separately from human review. It distinguishes veraPDF that did not run from a
-validator or validation that failed. `check-evidence` verifies recorded files and
-hashes; integrity does not establish accessibility, authenticity or review quality.
+The destination must be absent or empty. A temporary sibling is published with one rename,
+so a bundle is not exposed half-written. Completed artifacts survive later gate failures;
+unsafe destinations/publication failures can prevent evidence publication.
 
 ## run.json
 
-Format 2. Sorted keys, no timestamps and no local directories in diagnostic values:
+The run record uses format 2; embedded reports use format 5. Published JSON has sorted keys,
+no timestamps and redacted diagnostic paths. Fields include:
 
-- `odfa11y`, `python`, `platform`, `libraries` and the locale `environment`;
-- `toolchain`: LibreOffice and veraPDF names and reported version numbers.
-  Text exports also record `pdfua_link_descriptions`, measured with an explicitly named
-  synthetic link. The probe runs once at the first export; its files are excluded.
-  Inspect-only profiles and adapters without a probe do not measure it;
-- `schemas`: SHA-256 of each bundled ODF schema;
-- `export_options`: the exact LibreOffice PDF export options;
-- `document`: file name, SHA-256 (null when the file could not be read), and, when readable,
-  `kind`, `media_type`, `layout` (`package` or `flat`), `family`, `adapter` and `odf_version`;
-- `plan_sha256`: digest of the operations, fidelity policy and profile together, independent
-  of how the configuration file was formatted;
-- `profile`: the effective assurance profile (stages, strictness, veraPDF requirement);
-- `operations` and `fidelity_policy`: the effective configuration;
-- `stages`: in order `identify-source`, `audit-source`, `remediate`, `audit-remediated`,
-  `export-source`, `export-remediated`, `audit-pdf`, `verapdf`, `fidelity`, each `passed`,
-  `failed`, `skipped` or `not-applicable` with its reason, bounded diagnostic details,
-  report and remediation outcomes;
-- `fonts`: the fonts of the source and remediated PDFs, with whether each is embedded;
-- `human_review`: the family's checklist, as rendered in `REVIEW.md`;
-- `outputs`: SHA-256 of every published artifact; `status` and `failed_stage`.
+- `odfa11y`, `python`, `platform`, `libraries` and locale `environment`.
+- `toolchain`: selected applications/reported versions; text export's
+  `pdfua_link_descriptions` capability verdict. Its synthetic probe runs once at first
+  export; files are excluded. Inspect-only/adapters without that probe do not measure it.
+- `schemas`: bundled schema SHA-256 values; `export_options`: requested native options.
+- `document`: displayed filename/digest and readable kind, media type, layout, family,
+  adapter and declared ODF version. The digest is null when bytes could not be captured/hashed;
+  successfully captured malformed ODF can retain its digest.
+- `plan_sha256`: canonical operations, fidelity policy and profile together, independent
+  of TOML formatting; `operations`, `fidelity_policy` and effective `profile`.
+- `stages`: identify/audit source, remediate/audit result, export source/candidate, audit
+  PDF, veraPDF and fidelity. Each is `passed`, `failed`, `skipped` or `not-applicable`,
+  with reason, bounded diagnostic details and applicable reports/outcomes.
+- `fonts`: source/candidate PDF fonts and embedding; `human_review`: family checklist.
+- `outputs`: digests of retained stage artifacts, excluding generated `run.json`,
+  `REVIEW.md` and `manifest.json`; `status` and `failed_stage` describe the run.
 
-`audit-source` is informational (its errors are what remediation exists to fix) unless the
-document cannot be read. A validator outside the profile is `skipped`, never `passed`; in
-the `production` profile an unavailable veraPDF fails the run. Executable digests and
-signatures are deliberately not recorded: a launcher script's digest says little about the
-program behind it, and a hash proves integrity, not authorship.
+The manifest separately hashes **every other published file**, including `run.json` and
+`REVIEW.md`. The two inventories avoid hashing a record through its own output digest.
 
-### No local paths
+`audit-source` informs remediation unless unreadable; `audit-remediated` gates the result.
+Outside-profile stages are skipped, never passed. Required veraPDF absence fails
+production. Native executable digests/signatures are not recorded; reported versions do
+not establish executable authenticity. For batch invalid plans, failure evidence adds
+`load-plan`; see [Batch](BATCH.md).
 
-Diagnostic records and explicitly designated report artifacts are redacted before publication.
-Known source, work, output and profile directories become `<source>`, `<work>`, `<output>`
-and `<profile>`; other path directories become `<path>`. XML/JSON values are redacted before
-serialization, preserving valid syntax and escaping. `write_bundle` callers designate report
-names with `diagnostics`; all other artifacts are copied byte for byte regardless of suffix.
-Document/PDF/image payloads may retain authored paths and private content. `outputs` identifies
-final staged artifact bytes, matching the published record and manifest; a hash does not prove
-syntax validity, accessibility or review quality.
+## No local paths
 
-Pipeline input is captured once beside the resolved source, following ordinary file aliases.
-After resolving deliberate file/directory aliases, capture retains the selected device/inode
-identity. The opened descriptor must be that same regular file; substitutions and nonregular
-sources (including FIFOs) are refused before capture creation or reading. POSIX uses
-anti-symlink open where available, plus the identity comparison; the latter also covers
-regular-file replacement and uses Python's stat/fstat identity on Windows. Physical capture is limited to **256 MiB**, independently of the
-ZIP parser's 256 MiB declared-uncompressed budget. The physical limit includes ZIP headers,
-filenames, extra fields and padding and can reject a package whose declared payload would
-fit the parser budget. Size is checked before copying and on the descriptor, and a bounded
-copy also rejects growth. Capture refusal is an `identify-source` execution failure (status
-3), with failure evidence when its destination remains writable. Partial owned copies are
-removed on errors and ordinary interruption. This does not impose an OS memory/time sandbox
-on arbitrary filesystems.
+Published diagnostic records and designated report artifacts are redacted. Known source,
+work, output and profile directories become `<source>`, `<work>`, `<output>`, `<profile>`;
+other path directories become `<path>`. XML/JSON values are redacted before serialization,
+preserving syntax. `write_bundle` callers designate report names through `diagnostics`;
+other artifacts copy byte-for-byte regardless of suffix. Pipeline designates `verapdf.xml`
+as diagnostic XML, so it is not a byte-raw validator transcript.
 
-The source/staging directories must permit private temporary files and their caller-controlled
-ancestor namespaces must remain stable for the whole capture/export lifetime. Leaf-file
-identity does not establish parent/resource-directory identity: a parent exchange, even with
-a hard link to the same file, can change the export base. Renaming a parent during copying
-can invalidate the owned copy's pathname and defeat pathname cleanup. Such concurrency is
-unsupported; use a stable isolated workspace. Concurrent in-place writes are also outside
-the identity guarantee. Under the stable-namespace prerequisite, owned cleanup applies.
-Both baseline and candidate native
-exports use private copies in that same resolved directory; the candidate copy has exactly
-the validated artifact's bytes. The original display name remains separate from capture
-identity, and the digest identifies the captured bytes every stage processes. Capture and declaration
-preflight do not copy, rewrite or fetch external resources; native tools are not network-isolated. These known native limitations are reported
-by the source audit:
+The in-memory API result and ordinary local text/JSON diagnostics are not universally
+path-free. Documents, PDFs, images and quoted content can retain private data or authored
+paths. Treat a bundle with the source's confidentiality; do not attach private bundles to
+public issues. The original ODF is not copied into evidence, but its candidate/PDF content
+can reproduce sensitive material. Capture ownership and identity are defined below.
 
-- `ODF012`: a recognized resource declaration is external, unresolved, addressed with the
-  wrong target shape, governed by an unestablished explicit XML base, or declares unestablished
-  dynamic loading/execution. The authoritative element/attribute/target policy lives in
-  [content/export_context.py](../src/odfa11y/content/export_context.py). It includes fill/bullet,
-  chart-symbol, SVG definition/font and form-image-data references, even unused declarations.
-  File targets need an exact non-directory member; directory separators remain meaningful
-  after percent decoding. `draw:object` can address a separate file or a subdocument folder
-  containing `content.xml`; OLE targets require a file or inline data. Chart self-data `.`
-  has its own contextual meaning; parent-data `..` (also the omitted-attribute default) is
-  unestablished at this scanned boundary. Flat URI resources cannot rely on package members. Native application export/compare
-  refuse these dependencies; source-only `inspect` and remediation remain available.
-- `ODF013`: authored filename/full-path fields require logical original identity. Native
-  pipeline export refuses them because the current exporter would substitute private capture
-  names. `inspect` preserves the fields; direct original export can use the actual original
-  identity. Authored fields are not frozen or removed, and comparison still rejects a real
-  visible change caused by a deliberately different final filename.
+## Source capture
 
-Ordinary navigational hyperlinks are distinct from automatic rendering dependencies. Their
-references remain authored and are resolved by the native application against the controlled
-input directory/base. Relative navigation can change when the published document is moved;
-a copied ODF is not a self-contained bundle of external targets. An unresolved dependency is
-not established preservation just because both PDFs omit it. Embedded assets also require
-output/human review: presence, an image count or equal renders alone cannot prove the intended
-asset was loaded or decoded correctly. The preflight covers known declarations in
-content/styles/meta, including auto-reload replacement documents. Template provenance,
-operated form-button/image links, form submission and normal text/drawing/image-map
-navigation are distinct from image data. Presentation event `show` targets are navigation;
-`execute` targets launch applications and remain unestablished. Child sound declarations
-use the media-file policy. Declared applet code/base/archive, script/application-execution
-code and nonempty form/table/text database, data-service and DDE bindings (named sources
-as well as IRIs) remain unestablished and are refused, even when cached values are present; empty named bindings
-identify no concrete dependency under this preflight policy. This is not a claim
-that every declaration executes or fetches. Embedded subdocument internals, opaque payloads,
-inline execution, dynamic importer behavior and OS isolation remain outside this scan.
-It does not establish universal importer isolation. Captures are removed and are not original-input
-copies in the evidence bundle.
+Pipeline captures input once beside the resolved source. Deliberate file/directory aliases
+resolve first, then the opened regular-file descriptor must match the selected device/inode
+identity. Substitution/nonregular sources (including FIFOs) refuse before capture creation
+or reading. POSIX uses anti-symlink open where available; stat/fstat identity also applies
+on Windows. Concurrent in-place writes are outside this identity guarantee.
+
+Physical capture is capped at **256 MiB**, separate from the ZIP declared-uncompressed
+budget. ZIP headers, names, extra fields and padding count. Checks occur before copying,
+on the descriptor and during bounded copy to reject growth. Refusal is an
+`identify-source` execution failure (status 3), with failure evidence when writable.
+Owned partial copies are removed on errors/ordinary interruption under the directory
+prerequisite below.
+
+Source/staging directories must allow private files and their caller-controlled ancestor
+namespaces must remain stable throughout capture/export. Leaf identity does not protect
+parent/resource-directory exchange, even if a hard link retains the same leaf. A renamed
+parent can invalidate capture paths and cleanup; use a stable isolated workspace. There is
+no OS memory/time sandbox for arbitrary filesystems.
+
+Baseline/candidate native exports use private copies in the resolved source directory;
+the candidate copy has exactly the validated artifact's bytes. Display name remains separate
+from capture identity; the recorded digest identifies captured bytes. Private captures are
+removed and are not original-input artifacts in evidence.
+
+Capture does not copy/rewrite/fetch dependencies or isolate the network. Guarded native
+work refuses unresolved declarations (`ODF012`) and captured filename/path-sensitive content
+(`ODF013`). Direct original export/comparison can retain logical identity. See the canonical
+[native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies) and
+[formula policy](ACCESSIBILITY.md#formula-declarations). Relative navigation remains authored
+and may change when a published ODF moves; the candidate is not a bundle of external targets.
+Raw `pdf.export_pdfua()` callers own policy and isolation; see [API](API.md).
 
 ## REVIEW.md
 
-Separates *machine-established facts* (metadata, counts, schema and validator results,
-fidelity measurements) from the *human review still required* checklist, and states
-plainly when veraPDF did not run that the built-in PDF checks are not PDF/UA validation.
-Nothing semantic is turned into a pass.
-
-## Privacy
-
-A bundle contains artifacts from completed stages: the remediated document, exported PDFs,
-diff images and diagnostics that can quote document text. It does not copy the original ODF. Treat a bundle with the same confidentiality as the
-document, and do not attach one to a public issue.
+The review sheet separates automated gate outcomes and established facts from required human
+review. It distinguishes veraPDF not run, execution failure and validation failure. When
+veraPDF did not pass, it states that built-in checks are not PDF/UA validation. Semantic
+review is never turned into a machine pass.
 
 ## Verifying
 
@@ -150,19 +111,19 @@ document, and do not attach one to a public issue.
 uv run --no-sync odfa11y check-evidence DIR
 ```
 
-reports missing, modified and unlisted files (exit status 2 on any). The manifest is
-treated as untrusted input: it must be exactly `{"format": 1, "files": {…}}` with
-normalised relative names (no absolute or drive-qualified paths, no `.` or `..`, no
-backslashes or control characters) and 64-hex digests, and each listed file is reached
-component by component without following symbolic links, so a hostile bundle cannot make
-the verifier read outside it. Symbolic links, special files and any file that is not listed
-are reported, and only the root `manifest.json` is exempt from the inventory (a nested one
-is just another unlisted file). Verify a copy nobody is writing to. The manifest proves
-integrity against accidental change, not authorship: a person who can rewrite the
-directory can rewrite the manifest too.
+Missing, modified and unlisted files yield status 2. The untrusted manifest must be exactly
+`{"format": 1, "files": {…}}`, with normalized relative names and 64-hex digests: no absolute
+or drive-qualified paths, `.`/`..`, backslashes or controls. Verification rejects symbolic
+links/special files and traverses listed components without following links outside the
+bundle. Only root `manifest.json` is exempt from inventory; a nested one is ordinary data.
+
+The bundle **and ancestor namespace must remain stable throughout verification**. Verify a
+copy nobody is writing to; concurrent hostile directory replacement is outside the contract.
+Hashes establish integrity against the recorded manifest, not authenticity, accessibility
+or review quality. Someone able to rewrite the directory can also rewrite the manifest.
 
 ## Reproducibility
 
-Re-running with the same inputs, configuration and toolchain gives equal stages and
-operations and a byte-identical remediated document. PDF files embed exporter timestamps and
-IDs, so their hashes can differ between runs.
+Equivalent inputs, plan and toolchain give equal stages/operations and byte-identical
+remediated documents. Native PDF timestamps/IDs can make PDF hashes differ across runs.
+Rendering is compared on one machine/run; cross-machine pixel identity is not claimed.

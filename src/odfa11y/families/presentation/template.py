@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from odfa11y.content import link_template
+
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -49,8 +51,10 @@ def template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
         lines += [
             f"# [presentation.graphics.{json.dumps(selector)}]",
             '# title = ""',
+            "# decorative = false  # optional explicit role; requires ODF 1.4 and review",
             '# description = ""  # describe the graphic in context',
             f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}",
             "",
         ]
+    lines += link_template(by_remedy.get("presentation.links", ()), "presentation")
     return lines

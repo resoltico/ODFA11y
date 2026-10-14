@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odf
+from odfa11y.content import visible_words
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 
 from .corpus_manifest import (
@@ -17,7 +18,6 @@ from .corpus_manifest import (
     DOCUMENT_IDS,
     DOCUMENT_SUFFIXES,
     DOCUMENTS,
-    visible_text,
 )
 
 if TYPE_CHECKING:
@@ -84,7 +84,18 @@ def test_package_and_flat_forms_of_a_document_are_equivalent() -> None:
         assert sorted((f.rule_id, f.message) for f in reports[0]) == sorted(
             (f.rule_id, f.message) for f in reports[1]
         ), first.stem
-        assert visible_text(first.path) == visible_text(second.path), first.stem
+        # Independent producer outputs can use different style names and indentation.
+        # Compare their actual block words, not each source's protected-XML identity.
+        words = [
+            tuple(
+                visible_words(node)
+                for node in select_elements(
+                    document.tree(Part.CONTENT), "//office:body//text:p | //office:body//text:h"
+                )
+            )
+            for document in opened
+        ]
+        assert words[0] == words[1], first.stem
         # libxml2 stops at the first error of a failing content model, so the counts of the two
         # layouts may differ; whether the document is valid may not.
         verdicts = {validate(each).count == 0 for each in opened}

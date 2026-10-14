@@ -50,6 +50,7 @@ def audit_command(args: argparse.Namespace) -> int:
                     schema=args.schema,
                     verapdf=args.verapdf,
                     verapdf_path=args.verapdf_path,
+                    timeout=args.timeout,
                     on_progress=progress_callback(args.format),
                 )
             )

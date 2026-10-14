@@ -46,11 +46,7 @@ RULES: dict[str, Rule] = {}
 
 
 def _rule(
-    rule_id: str,
-    severity: Severity,
-    category: Category,
-    title: str,
-    remedy: str | None = None,
+    rule_id: str, severity: Severity, category: Category, title: str, remedy: str | None = None
 ) -> Rule:
     rule = Rule(rule_id, severity, category, title, remedy)
     RULES[rule_id] = rule
@@ -70,6 +66,8 @@ PKG004 = _rule("PKG004", ERROR, PKG, "mimetype is compressed.")
 PKG005 = _rule("PKG005", ERROR, PKG, "A member the document needs is missing.")
 PKG006 = _rule("PKG006", ERROR, PKG, "ZIP member names are duplicated.")
 PKG007 = _rule("PKG007", ERROR, PKG, "A ZIP member name is absolute or escapes its directory.")
+PKG008 = _rule("PKG008", WARNING, PKG, "Declared signatures are unverified.")
+PKG009 = _rule("PKG009", ERROR, PKG, "Manifest encryption prevents complete inspection.")
 XML001 = _rule("XML001", ERROR, XML, "A required XML member cannot be parsed.")
 ODF001 = _rule(
     "ODF001", ERROR, ODF, "Package members declare different ODF versions.", "document.odf_version"
@@ -96,15 +94,13 @@ ODF012 = _rule(
     "ODF012", WARNING, ODF, "Native resource declarations are unresolved or unestablished."
 )
 ODF013 = _rule("ODF013", WARNING, ODF, "Pipeline export cannot preserve filename/path fields.")
-
 META001 = _rule("META001", ERROR, META, "Document title metadata is missing.", "document.title")
 META002 = _rule("META002", ERROR, META, "Document language is not declared.", "document.language")
 META003 = _rule(
-    "META003",
-    WARNING,
-    META,
-    "Metadata and default style languages disagree.",
-    "document.language",
+    "META003", WARNING, META, "Metadata and default style languages disagree.", "document.language"
+)
+META004 = _rule(
+    "META004", WARNING, META, "Document language syntax or default-style target is unresolved."
 )
 TXT001 = _rule("TXT001", ERROR, SEM, "Heading has no valid outline level.", "text.heading_levels")
 TXT002 = _rule(
@@ -117,10 +113,13 @@ TXT002 = _rule(
 TXT003 = _rule("TXT003", WARNING, SEM, "Heading text resembles manually typed numbering.")
 TXT004 = _rule("TXT004", INFO, SEM, "No structural headings were found.")
 TXT005 = _rule("TXT005", WARNING, SEM, "Footnotes or endnotes need reading-order review.")
+TXT060 = _rule("TXT060", WARNING, SEM, "Tracked revision scope requires review.")
+TXT061 = _rule("TXT061", WARNING, SEM, "Hidden or conditional content requires visibility review.")
+TXT062 = _rule("TXT062", WARNING, SEM, "Paragraph style scope or properties are unresolved.")
 TXT010 = _rule(
     "TXT010", ERROR, SEM, "Graphic has neither accessible title nor description.", "text.graphics"
 )
-TXT020 = _rule("TXT020", ERROR, SEM, "Table has merged or split cells.")
+TXT020 = _rule("TXT020", WARNING, SEM, "Merged table cells need header-relationship review.")
 TXT022 = _rule("TXT022", ERROR, SEM, "Table grid or header bands cannot be resolved safely.")
 TXT021 = _rule(
     "TXT021", WARNING, SEM, "Data-like table has no semantic headers.", "text.table_headers"
@@ -143,11 +142,7 @@ TXT050 = _rule("TXT050", ERROR, STYLE, "Blinking text styling is declared.")
 
 SHEET001 = _rule("SHEET001", ERROR, SEM, "Sheet has no name.")
 SHEET002 = _rule(
-    "SHEET002",
-    WARNING,
-    SEM,
-    "Sheet keeps its default name.",
-    "spreadsheet.sheet_names",
+    "SHEET002", WARNING, SEM, "Sheet keeps its default name.", "spreadsheet.sheet_names"
 )
 SHEET003 = _rule("SHEET003", WARNING, SEM, "Data sheet marks no header rows.")
 SHEET004 = _rule("SHEET004", WARNING, SEM, "Data sheet merges cells.")
@@ -184,7 +179,7 @@ PRES007 = _rule("PRES007", WARNING, SEM, "Hidden content needs review.")
 PRES008 = _rule(
     "PRES008", INFO, SEM, "Notes or annotations need relationship and reading-order review."
 )
-PRES009 = _rule("PRES009", ERROR, LNK, "Hyperlink has no readable purpose.")
+PRES009 = _rule("PRES009", ERROR, LNK, "Hyperlink has no readable purpose.", "presentation.links")
 
 DRAW001 = _rule("DRAW001", ERROR, SEM, "Pages are missing, unnamed or ambiguously named.")
 DRAW002 = _rule("DRAW002", WARNING, SEM, "Page has no accessible title.", "drawing.pages")
@@ -206,7 +201,7 @@ DRAW007 = _rule("DRAW007", WARNING, SEM, "Hidden content needs review.")
 DRAW008 = _rule(
     "DRAW008", INFO, SEM, "Notes or annotations need relationship and reading-order review."
 )
-DRAW009 = _rule("DRAW009", ERROR, LNK, "Hyperlink has no readable purpose.")
+DRAW009 = _rule("DRAW009", ERROR, LNK, "Hyperlink has no readable purpose.", "drawing.links")
 
 MATH001 = _rule("MATH001", ERROR, SEM, "Native mathematical expression is missing or unsupported.")
 MATH002 = _rule("MATH002", ERROR, SEM, "Formula has no spoken alternative.", "formula.alternative")
@@ -293,3 +288,13 @@ FID004 = _rule("FID004", ERROR, FID, "A source link is missing or changed.")
 FID005 = _rule("FID005", ERROR, FID, "Rendered page differs beyond the tolerance.")
 FID006 = _rule("FID006", INFO, FID, "Links were added.")
 FID007 = _rule("FID007", ERROR, FID, "A page is too large to render for comparison.")
+
+
+GRAPHIC001 = _rule("GRAPHIC001", WARNING, SEM, "Graphic decorative role is unresolved or unsafe.")
+GRAPHIC002 = _rule(
+    "GRAPHIC002", WARNING, SEM, "Decorative graphic retains authored alternative metadata."
+)
+TXT031 = _rule("TXT031", ERROR, LNK, "Hyperlink has no readable source purpose.", "text.links")
+SHEET014 = _rule(
+    "SHEET014", ERROR, LNK, "Hyperlink has no readable source purpose.", "spreadsheet.links"
+)

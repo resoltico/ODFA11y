@@ -7,11 +7,17 @@ import json
 from typing import TYPE_CHECKING
 
 from odfa11y.adapter import FamilyAdapter, ReviewItem, config_tables
-from odfa11y.content import graphic_descriptions, protected_xml, set_style_language, style_language
+from odfa11y.content import (
+    graphic_alternatives,
+    normalized_graphic_tree,
+    protected_xml,
+    set_style_language,
+    style_language,
+)
 from odfa11y.odf import Family, Part, qn, select_elements
 
 from .audit import audit_image
-from .operations import SetGraphicDescriptions
+from .operations import SetGraphicAlternatives
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -23,14 +29,17 @@ if TYPE_CHECKING:
 
 def _parse(data: dict[str, object]) -> list[Operation]:
     config_tables.known(data, {"graphics"}, "image")
-    entries = graphic_descriptions(config_tables.table(data, "graphics"), "image.graphics")
-    return [SetGraphicDescriptions(entries)] if entries else []
+    entries = graphic_alternatives(config_tables.table(data, "graphics"), "image.graphics")
+    return [SetGraphicAlternatives(entries)] if entries else []
 
 
 def _snapshot(document: OdfDocument) -> tuple[str, ...]:
     bodies = select_elements(document.tree(Part.CONTENT), "//office:body")
     return tuple(
-        protected_xml(body, omitted_elements=(qn("svg", "title"), qn("svg", "desc")))
+        protected_xml(
+            normalized_graphic_tree(document, body),
+            omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
+        )
         for body in bodies
     )
 
@@ -55,6 +64,7 @@ def _template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
             lines += [
                 f"# [image.graphics.{json.dumps(selector)}]",
                 '# title = ""',
+                "# decorative = false  # optional explicit role; requires ODF 1.4 and review",
                 '# description = ""  # describe the image in context',
                 f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}",
                 "",

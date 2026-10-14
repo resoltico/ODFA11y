@@ -6,16 +6,16 @@ from __future__ import annotations
 from odfa11y.adapter import config_tables
 from odfa11y.errors import ConfigError
 
-from .graphics import GraphicDescription
+from .graphics import GraphicAlternative
 from .pages import PageDecision
 
 
-def graphic_descriptions(table: dict[str, object], label: str) -> dict[str, GraphicDescription]:
+def graphic_alternatives(table: dict[str, object], label: str) -> dict[str, GraphicAlternative]:
     """Read description entries without choosing their family applicability.
 
     Returns
     -------
-    dict[str, GraphicDescription]
+    dict[str, GraphicAlternative]
         Explicit fields and optional reviewed fingerprints.
 
     """
@@ -23,10 +23,20 @@ def graphic_descriptions(table: dict[str, object], label: str) -> dict[str, Grap
     for key in table:
         value = config_tables.table(table, key)
         entry_label = f"{label}.{key}"
-        config_tables.known(value, {"title", "description", "fingerprint"}, entry_label)
-        texts = config_tables.typed(value, str, entry_label)
-        entries[key] = GraphicDescription(
-            texts.get("title"), texts.get("description"), texts.get("fingerprint")
+        config_tables.known(
+            value, {"title", "description", "fingerprint", "decorative"}, entry_label
+        )
+        texts = config_tables.typed(
+            {k: v for k, v in value.items() if k != "decorative"}, str, entry_label
+        )
+        roles = config_tables.typed(
+            {k: v for k, v in value.items() if k == "decorative"}, bool, entry_label
+        )
+        entries[key] = GraphicAlternative(
+            texts.get("title"),
+            texts.get("description"),
+            texts.get("fingerprint"),
+            roles.get("decorative"),
         )
     return entries
 

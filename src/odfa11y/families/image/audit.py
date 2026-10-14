@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.content import GraphicIdentity, local_resource_path
+from odfa11y.content import GraphicIdentity, audit_graphic_role, local_resource_path
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import Location, rules
 
@@ -39,7 +39,8 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     href = images[0].get(qn("xlink", "href")) if images else None
     selector = name or href
     identity = GraphicIdentity(document, frames)
-    if not description.strip():
+    decorative = audit_graphic_role(document, frame, report)
+    if not description.strip() and not decorative:
         report.add(
             rules.IMAGE002,
             location=location,

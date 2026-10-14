@@ -3,16 +3,25 @@
 
 from __future__ import annotations
 
-import hashlib
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.errors import RemediationError
+from odfa11y.odf import Family, Part, qn
 
-from .derived_styles import adopt_style, derive_paragraph_style, is_generated_from, set_spacing
+from .contexts import text_nodes
+from .derived_styles import (
+    NO_STYLE,
+    adopt_style,
+    derive_paragraph_style,
+    derived_style_name,
+    is_generated_from,
+    set_spacing,
+)
+from .style_properties import paragraph_style_name
 from .styles import catalog_of
+from .text import element_text
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -20,10 +29,6 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
     from .styles import StyleCatalog
-
-NO_STYLE = "(none)"
-SAFE_NAME_LENGTH = 32
-NAME_DIGEST_LENGTH = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,15 +49,13 @@ class NormalizeSpacing(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        plan = self._plan(document)
+        try:
+            plan = self._plan(document)
+        except RemediationError as exc:
+            return (self._failed(str(exc)),)
         if isinstance(plan, tuple):
             return plan
         catalog = catalog_of(document)
-        conflicts = [
-            message for base in plan.needed if (message := _conflict(catalog, base)) is not None
-        ]
-        if conflicts:
-            return tuple(self._failed(message) for message in conflicts)
         changed = sum(_ensure_style(document, catalog, base, plan.spacing) for base in plan.needed)
         for paragraph in plan.direct:
             document.edit(Part.CONTENT)
@@ -76,30 +79,42 @@ class NormalizeSpacing(Operation):
         reference = self._reference(tree)
         if reference is None:
             return (self._failed(f"Reference paragraph not found: {self.reference_text!r}"),)
-        reference_style = reference.get(qn("text", "style-name"))
+        reference_style = paragraph_style_name(reference)
         spacing = catalog_of(document).spacing_signature(reference_style)
         if not spacing:
             return (self._failed(f"Reference style {reference_style!r} has no spacing to copy."),)
         clones = {derived_style_name(style): style for style in self.target_styles}
         if len(clones) != len(set(self.target_styles)):
             return (self._failed("Two target styles map to the same derived style name."),)
-        selector = "//office:body//text:p" + (
-            " | //office:body//text:h" if self.include_headings else ""
+        paragraphs = text_nodes(
+            tree,
+            qn("text", "p"),
+            *([qn("text", "h")] if self.include_headings else []),
+            main_only=True,
         )
-        paragraphs = select_elements(tree, selector)
         direct = [p for p in paragraphs if _style_key(p) in self.target_styles]
         derived = [p for p in paragraphs if _style_key(p) in clones]
+        for paragraph in [*direct, *derived]:
+            paragraph_style_name(paragraph)
         if not direct and not derived:
             return (self._failed("No paragraph uses a target style."),)
         needed = sorted({_style_key(p) for p in direct} | {clones[_style_key(p)] for p in derived})
-        return _Plan(reference_style, spacing, direct, needed)
+        plan = _Plan(reference_style, spacing, direct, needed)
+        catalog = catalog_of(document)
+        for base in needed:
+            catalog.effective_paragraph_properties(None if base == NO_STYLE else base)
+        conflicts = [
+            message for base in needed if (message := _conflict(catalog, base)) is not None
+        ]
+        conflicts += _excluded_consumers(document, plan, set(direct) | set(derived))
+        return tuple(self._failed(message) for message in conflicts) if conflicts else plan
 
     def _failed(self, message: str) -> Outcome:
         return Outcome(self.name, Status.FAILED, message)
 
     def _reference(self, tree: etree._ElementTree) -> etree._Element | None:
-        for node in select_elements(tree, "//office:body//text:p | //office:body//text:h"):
-            current = "".join(node.itertext()).strip()
+        for node in text_nodes(tree, qn("text", "p"), qn("text", "h"), main_only=True):
+            current = element_text(node)
             if (
                 (self.reference_text == current)
                 if self.exact_reference
@@ -150,22 +165,32 @@ def _ensure_style(
     return 1
 
 
-def derived_style_name(base: str) -> str:
-    """Name the derived style that carries normalized spacing for a base style.
-
-    The digest of the full base name keeps two bases that sanitise to the same text apart
-    and keeps the name out of the way of styles an author is likely to choose.
-
-    Returns
-    -------
-    str
-        A deterministic style name containing only letters, digits and underscores.
-
-    """
-    safe = re.sub(r"[^A-Za-z0-9_]+", "_", base).strip("_")[:SAFE_NAME_LENGTH] or "Body"
-    digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:NAME_DIGEST_LENGTH]
-    return f"A11ySpacing_{safe}_{digest}"
-
-
 def _style_key(paragraph: etree._Element) -> str:
     return paragraph.get(qn("text", "style-name")) or NO_STYLE
+
+
+def _excluded_consumers(
+    document: OdfDocument, plan: _Plan, selected: set[etree._Element]
+) -> list[str]:
+    catalog = catalog_of(document)
+    changed = {
+        derived_style_name(base)
+        for base in plan.needed
+        if catalog.own_spacing(derived_style_name(base)) != plan.spacing
+    }
+    if any(
+        (node.get(qn("text", "style-name")) in changed and node not in selected)
+        or any(
+            changed.intersection(node.get(qn("text", name), "").split())
+            for name in ("class-names", "cond-style-name")
+        )
+        for node in document.tree(Part.CONTENT).iter(qn("text", "p"), qn("text", "h"))
+    ):
+        return [
+            (
+                "A spacing style is shared with excluded content or other unselected "
+                "or unestablished consumers; "
+                "native editing is required."
+            )
+        ]
+    return []

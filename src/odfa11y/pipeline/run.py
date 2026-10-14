@@ -70,6 +70,8 @@ class _Run:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
             return StageResult("identify-source", "passed", gate=False)  # audit-source explains
+        if document.protection.inspection_blocked:
+            return StageResult("identify-source", "passed", gate=False)  # audit-source explains
         detection = document.detection
         self.adapter = adapter_for(detection.kind)
         self.record.document.update(
@@ -141,6 +143,7 @@ class _Run:
             self.work / "remediated.pdf",
             subject="remediated.pdf",
             executable=self.options.verapdf_path,
+            timeout=self.options.timeout,
         )
         if result is None:
             required = self.record.profile.verapdf_required

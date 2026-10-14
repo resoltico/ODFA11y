@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import ConfigError, OutputError
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import (
     MarkTableHeaders,
     RemoveEmptySpacers,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
 )
 from odfa11y.fidelity import FidelityPolicy
@@ -61,7 +61,7 @@ def test_remediation_failure_publishes_evidence_without_a_remediated_document(
     tmp_path: Path,
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    operations = [SetGraphicDescriptions({"Missing": GraphicDescription("x")})]
+    operations = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
     record = run_pipeline(source, operations, FidelityPolicy(), tmp_path / "out")
     assert statuses(record)["remediate"] == "failed"
     assert record.exit_status == 3
@@ -118,7 +118,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     operations = [
         SetMetadata(title="Evidence run", language="en-GB"),
         MarkTableHeaders({"Data": TableHeaders(1)}),
-        SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "A sample logo")}),
+        SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "A sample logo")}),
     ]
     options = PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf)
     record = run_pipeline(source, operations, FidelityPolicy(), tmp_path / "out", options)

@@ -13,7 +13,7 @@ severity, categories and configuration remedies. Informational findings use SARI
 so duplicate basenames remain distinct. ROOT itself is never serialized. Symbolic links
 are resolved before containment is checked; a link leaving ROOT is rejected. Comparisons
 carry candidate and original artifact identities explicitly, independently of their
-display label. Report format 4's internal `sources` references do not appear in JSON.
+display label. Physical `Report.sources` identities are internal and never appear in report-format-5 JSON.
 
 ODF findings use logical document locations rather than invented XML line numbers.
 Package members are diagnostic metadata, not separate source artifacts. Equivalent
@@ -33,7 +33,7 @@ it; other execution failures retain generic advice. Rerun with text or JSON outp
 investigate detailed local failures. With `--strict`, the CLI also reports the effective
 command gate on stderr; the SARIF log remains unchanged.
 
-Generated logs are checked against the unmodified official OASIS draft-07 schema in the
-test suite, with negative controls and additional rule-index/artifact-index assertions.
+The test suite validates generated logs against the unmodified official OASIS draft-07
+schema, including negative controls and rule-index/artifact-index assertions.
 The schema and its notice are test inputs in source distributions; they are not a
 runtime dependency or wheel asset. This format does not upload reports to GitHub.

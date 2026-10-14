@@ -10,10 +10,10 @@ import pytest
 from pypdf import PdfReader
 
 from odfa11y.audit import audit_odf
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import RemediationError
 from odfa11y.external_tools import run_bounded
-from odfa11y.families.spreadsheet import SetGraphicDescriptions, SetSheetNames
+from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.pdf import ExportSettings, export_pdfua, validate_pdfua
@@ -152,8 +152,8 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     )
     plan = [
         SetSheetNames({"Sheet1": "Fruit prices", "Blank": "Spare"}),
-        SetGraphicDescriptions({
-            "Logo": GraphicDescription("Logo", "A sample picture", fingerprint)
+        SetGraphicAlternatives({
+            "Logo": GraphicAlternative("Logo", "A sample picture", fingerprint)
         }),
     ]
     output = tmp_path / "remediated.ods"

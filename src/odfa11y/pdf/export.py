@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import OutputError, ToolFailedError
-from odfa11y.external_tools import find_executable, identify_running_or_by_file, run_bounded
+from odfa11y.external_tools import (
+    find_executable,
+    identify_running_or_by_file,
+    run_bounded,
+    validate_timeout,
+)
 from odfa11y.staging import staging_sibling
 
 if TYPE_CHECKING:
@@ -80,8 +85,12 @@ class ExportSettings:
 
     pdf_filter: str
     soffice: str | Path | None = None
-    timeout: int = DEFAULT_TIMEOUT_SECONDS
+    timeout: int | float = DEFAULT_TIMEOUT_SECONDS
     profile_dir: str | Path | None = None
+
+    def __post_init__(self) -> None:
+        """Reject an invalid duration before native work or output creation."""
+        validate_timeout(self.timeout)
 
 
 def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: ExportSettings) -> Path:
@@ -105,6 +114,7 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
         LibreOffice fails, times out, or returns without producing a PDF.
 
     """
+    validate_timeout(settings.timeout)
     source = Path(source).resolve()
     destination = Path(destination_pdf).resolve()
     if source == destination:

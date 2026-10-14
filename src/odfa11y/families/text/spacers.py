@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.odf import select_elements
+from odfa11y.odf import qn, select_elements
 
+from .contexts import text_nodes
 from .text import is_empty_paragraph
 
 if TYPE_CHECKING:
@@ -32,6 +33,6 @@ def spacer_candidates(tree: etree._ElementTree) -> list[etree._Element]:
     """
     return [
         paragraph
-        for paragraph in select_elements(tree, "//office:body//text:p")
+        for paragraph in text_nodes(tree, qn("text", "p"), main_only=True)
         if is_empty_paragraph(paragraph) and not select_elements(paragraph, PROTECTED_ANCESTORS)
     ]

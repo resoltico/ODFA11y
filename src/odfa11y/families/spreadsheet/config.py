@@ -6,16 +6,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.adapter import config_tables
-from odfa11y.content import GraphicDescription
+from odfa11y.content import graphic_alternatives, link_descriptions
 from odfa11y.errors import ConfigError
 
 from .names import SetSheetNames, invalid_name_reason
-from .objects import SetGraphicDescriptions
+from .objects import SetGraphicAlternatives, SetLinkDescriptions
 
 if TYPE_CHECKING:
     from odfa11y.adapter import Operation
 
-SPREADSHEET_KEYS = {"sheet_names", "graphics"}
+SPREADSHEET_KEYS = {"sheet_names", "graphics", "links"}
 
 
 def parse_spreadsheet_table(data: dict[str, object]) -> list[Operation]:
@@ -31,6 +31,9 @@ def parse_spreadsheet_table(data: dict[str, object]) -> list[Operation]:
     operations: list[Operation] = []
     operations += _sheet_names(config_tables.table(data, "sheet_names"))
     operations += _alt_text(config_tables.table(data, "graphics"))
+    links = link_descriptions(config_tables.table(data, "links"), "spreadsheet.links")
+    if links:
+        operations.append(SetLinkDescriptions(links))
     return operations
 
 
@@ -48,13 +51,5 @@ def _sheet_names(table: dict[str, object]) -> list[Operation]:
 
 
 def _alt_text(table: dict[str, object]) -> list[Operation]:
-    entries: dict[str, GraphicDescription] = {}
-    for key in table:
-        entry = config_tables.table(table, key)
-        label = f"spreadsheet.graphics.{key}"
-        config_tables.known(entry, {"title", "description", "fingerprint"}, label)
-        texts = config_tables.typed(entry, str, label)
-        entries[key] = GraphicDescription(
-            texts.get("title"), texts.get("description"), texts.get("fingerprint")
-        )
-    return [SetGraphicDescriptions(entries)] if entries else []
+    entries = graphic_alternatives(table, "spreadsheet.graphics")
+    return [SetGraphicAlternatives(entries)] if entries else []

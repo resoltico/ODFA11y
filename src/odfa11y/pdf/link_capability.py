@@ -27,14 +27,14 @@ def link_descriptions_supported(
 
     The PDF is judged by the same audit as any other: the answer is ``False`` exactly when
     the audit reports ``PDF019`` for the export. The export goes to a temporary directory.
-    The built-in synthetic probe contains a navigational example.test link and no
+    The built-in synthetic probe contains a navigational example.com link and no
     automatic-fetch resource. A supplied document/exporter can have other native behavior;
     this API does not enforce network isolation.
 
     Returns
     -------
     bool
-        Whether the export describes the link, as PDF/UA requires.
+        Whether the inspected probe export has no PDF019 missing-description finding.
 
     Raises
     ------

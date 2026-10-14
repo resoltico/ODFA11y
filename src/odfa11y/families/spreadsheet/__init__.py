@@ -3,12 +3,13 @@
 
 from .adapter import ADAPTER
 from .names import SetSheetNames, invalid_name_reason
-from .objects import SetGraphicDescriptions
+from .objects import SetGraphicAlternatives, SetLinkDescriptions
 from .snapshot import sheet_snapshot, sheets_preserved
 
 __all__ = [
     "ADAPTER",
-    "SetGraphicDescriptions",
+    "SetGraphicAlternatives",
+    "SetLinkDescriptions",
     "SetSheetNames",
     "invalid_name_reason",
     "sheet_snapshot",

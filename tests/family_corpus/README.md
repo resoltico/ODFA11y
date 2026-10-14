@@ -1,44 +1,59 @@
 # Native document-family fixtures
 
-These invented documents were authored through LibreOffice 26.8.0.3 application services
-on macOS. The authoring profile selected **ODF 1.4**, not the producer's extended save
-mode. All primary fixtures validate with zero ODF/MathML violations.
-`manifest.toml` records their byte identity and producer; the hashes do not replace the
-semantic and real-export tests.
+These invented documents exercise family semantics, preservation and native export
+boundaries. [manifest.toml](manifest.toml) is authoritative for producer identity, standard
+ODF version, authoring method, stored-byte hashes and expected schema results. Every stored
+fixture validates with zero ODF/MathML violations. Hashes identify artifacts; semantic
+tests and real exports establish the separate behavioral properties below.
 
-Both page documents contain a title, fruit counts, an embedded SVG illustration and an
-explicit native navigation order. The illustration intentionally lacks an alternative.
-The native PDF export fails the built-in `PDF007` check and veraPDF clause 7.3 test 1.
-The explicit library plan supplies the description, page metadata and language; the
-production pipeline then passes PDF checks, veraPDF, fidelity and evidence verification.
+## Fixture contracts
 
-`sources/page-documents.bas` creates the documents; `sources/fruit.svg` is the invented
-graphic. To reproduce them, set `ODFA11Y_FIXTURE_ROOT` to an existing output directory
-containing `fruit.svg`, load the BASIC module as `Standard.Module1` in a disposable native
-profile, and invoke `macro:///Standard.Module1.Main`. Configure that profile's
+- `fruit-presentation.odp` and `fruit-drawing.odg` contain a title, fruit counts, an
+  embedded SVG illustration and explicit native navigation order. The illustration lacks
+  an alternative. Their native negative controls require `PDF007` and veraPDF clause 7.3
+  test 1. The supplied library plan adds the description, page metadata and language;
+  production-pipeline tests then require passing PDF checks, veraPDF, fidelity and bundle
+  verification.
+- `sum-formula.odf` contains native MathML and its StarMath annotation. Supplying a spoken
+  alternative preserves the expression and annotation. Native Math export fails
+  required tagging and veraPDF; a valid source does not establish PDF accessibility.
+- `fruit-chart.odc` contains native Calc internal-data-provider chart parts in a standard
+  Chart package. It exercises source data, range, metadata and preservation checks.
+- `fruit-image.odi` contains a native Draw frame, geometry and embedded SVG under the
+  standard `office:image` body. It exercises source descriptions, payload integrity and
+  preservation. Chart and Image have source-only library assurance, with no native PDF
+  export contract or conversion shim.
+- `fruit-database.odb` contains embedded Firebird storage with invented `Fruit` rows
+  Apples/3 and Pears/4. Optional metadata and styles parts are absent. Explicit metadata
+  remediation creates the standard part while protecting embedded bytes and settings.
+  Library inspection and remediation never open a database connection.
+
+## Sources and regeneration
+
+Use a disposable LibreOffice profile and an existing output directory. Set
+`ODFA11Y_FIXTURE_ROOT` to that directory. For page documents, copy
+[sources/fruit.svg](sources/fruit.svg) there. Configure the disposable profile's
 `/org.openoffice.Office.Common/Save/ODF/DefaultVersion` to `12`, the native constant for
-standard ODF 1.4. Authoring the trusted fixture module also needs macro execution enabled
-in that disposable profile. Never apply those authoring settings to a user's profile.
+standard ODF 1.4, and enable macro execution for these trusted fixture modules only.
+Never apply these authoring settings to a user's profile.
 
-Keep the original producer output. Update the manifest when regenerating, verify the
-schema, inspect XML and payloads for private paths, and run the native family integration
-tests. Native outputs contain no scripts, external image references or personal author
-metadata; the author is `ODFA11y fixture`.
+Load one BASIC source as `Standard.Module1`, invoke `macro:///Standard.Module1.Main`, and
+use a separate application run for each module:
 
-`sum-formula.odf` contains native MathML and its StarMath annotation, created by
-`sources/formula-document.bas`. Missing spoken alternatives are detected; supplying one
-preserves the expression but the native PDF still fails tagging and veraPDF.
+- [page-documents.bas](sources/page-documents.bas) creates the presentation and drawing.
+- [formula-document.bas](sources/formula-document.bas) creates the formula package.
+- [database-document.bas](sources/database-document.bas) creates the invented database.
+  This trusted authoring module opens a connection to populate fixture rows.
+- [chart-document.bas](sources/chart-document.bas) creates `fruit-chart-source.ods`.
+  The standalone Chart fixture requires explicit package assembly: its native
+  `Fruit/content.xml`, `styles.xml` and `meta.xml` occupy the package root, with the
+  standard Chart mimetype and manifest. The Image fixture likewise uses the drawing's
+  native frame and SVG in a standard Image body and package. Neither assembly claims
+  direct standalone native save or export support.
 
-`fruit-chart.odc` uses native Calc internal-data-provider chart parts generated by
-`sources/chart-document.bas`. The `Fruit/content.xml`, `styles.xml` and `meta.xml` members
-were placed at the package root with the standard Chart mimetype and manifest.
-`fruit-image.odi` uses the native drawing frame, geometry and SVG, with its body changed
-to standard `office:image`, and standard Image mimetype/manifest. These are explicit
-standard-package assemblies from native components, not claims of direct standalone save
-or export support. Source semantics, schema and preservation are tested independently.
-Native standalone Chart export stalls; Image import fails. No conversion shim is provided.
-
-`fruit-database.odb` is native embedded Firebird storage with invented Fruit rows Apples/3
-and Pears/4, created by `sources/database-document.bas`. Its native package omits optional
-metadata and styles. Tests create metadata explicitly and protect the embedded bytes and
-settings. Only trusted fixture authoring creates a connection; the library never does.
+Native regeneration reproduces semantics rather than exact bytes. Retain unmodified
+native outputs or the explicitly described assemblies, inspect XML and payloads for
+private paths, review schema and audit results, and update the manifest deliberately.
+Run source-preservation tests and the applicable native family integration tests; a
+matching hash cannot replace those checks. Fixtures must contain invented content without
+scripts, external image references or personal metadata.

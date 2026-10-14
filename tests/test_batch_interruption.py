@@ -114,13 +114,12 @@ def _blocked_publication(manifest: str, output: str, ready: Event, boundary: str
     runner.run_batch(manifest, output, PipelineOptions(profile="inspect"))
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="SIGKILL publication boundaries are POSIX controls"
-)
 @pytest.mark.parametrize("boundary", ["before", "after"])
 def test_forced_kill_at_publication_preserves_completed_bundles(
     tmp_path: Path, boundary: str
 ) -> None:
+    if sys.platform == "win32":
+        pytest.skip("SIGKILL publication boundaries are POSIX controls")
     make_minimal_odt(tmp_path / "doc.odt")
     (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
     manifest = manifest_file(

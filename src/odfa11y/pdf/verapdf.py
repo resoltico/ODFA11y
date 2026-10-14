@@ -10,9 +10,11 @@ from pathlib import Path
 from lxml import etree
 
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
-from odfa11y.external_tools import ToolIdentity, find_executable, run_bounded
+from odfa11y.external_tools import ToolIdentity, find_executable, run_bounded, validate_timeout
 from odfa11y.report import Report, rules
 from odfa11y.safe_xml import parse_secure
+
+from .export import DEFAULT_TIMEOUT_SECONDS
 
 MAX_REPORTED_CHECKS = 3
 MAX_REPORT_BYTES = 32 * 1024 * 1024
@@ -60,7 +62,7 @@ def validate_pdfua(
     *,
     executable: str | Path | None = None,
     flavour: str = "ua1",
-    timeout: int = 180,
+    timeout: float = 180,
 ) -> VeraPdfResult:
     """Validate a PDF against a veraPDF profile and parse the XML report.
 
@@ -79,6 +81,7 @@ def validate_pdfua(
         returns a report that is not valid veraPDF XML.
 
     """
+    validate_timeout(timeout)
     command = [
         find_verapdf(executable),
         "-f",
@@ -104,7 +107,11 @@ def validate_pdfua(
 
 
 def check_pdfua(
-    pdf: str | Path, *, subject: str, executable: str | Path | None = None
+    pdf: str | Path,
+    *,
+    subject: str,
+    executable: str | Path | None = None,
+    timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> tuple[Report, VeraPdfResult | None]:
     """Validate a PDF and report the outcome, treating an unavailable validator as a warning.
 
@@ -115,13 +122,14 @@ def check_pdfua(
         parsed result, which is None when the validator was unavailable.
 
     """
+    validate_timeout(timeout)
     report = Report(kind="verapdf", subject=subject, sources=(Path(pdf),))
     try:
         located = find_verapdf(executable)
     except ToolNotFoundError as exc:
         report.add(rules.VERA000, str(exc))
         return report, None
-    result = validate_pdfua(pdf, executable=located)
+    result = validate_pdfua(pdf, executable=located, timeout=timeout)
     add_verapdf_findings(report, result)
     return report, result
 

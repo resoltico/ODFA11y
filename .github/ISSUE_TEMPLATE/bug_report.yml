@@ -4,8 +4,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Never attach real or confidential documents.** Evidence bundles contain copies of the
-        input document. Reproduce with a minimal synthetic file instead.
+        **Never attach real or confidential documents.** Evidence bundles can contain authored
+        content in remediated documents and PDFs; reports, diagnostics and document payloads
+        can expose private paths or other sensitive information. Do not attach those artifacts
+        publicly. Reproduce with a minimal synthetic file and inspect every attachment instead.
   - type: textarea
     id: observed
     attributes:

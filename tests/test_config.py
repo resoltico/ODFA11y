@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 
 from odfa11y.config import load_config
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import ConfigError
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
     NormalizeSpacing,
     RemoveEmptySpacers,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
 )
 from odfa11y.fidelity import FidelityPolicy
@@ -75,8 +75,8 @@ def test_full_configuration_yields_operations_in_canonical_order(tmp_path: Path)
         SetMetadata("Decision", "Decision letter", "en-GB"),
         LinkifyAddresses(),
         RemoveEmptySpacers(),
-        SetGraphicDescriptions({
-            "Logo": GraphicDescription("Organisation", "Organisation logo.", "def")
+        SetGraphicAlternatives({
+            "Logo": GraphicAlternative("Organisation", "Organisation logo.", "def")
         }),
         MarkTableHeaders({"Data": TableHeaders(1), "Other": TableHeaders(2, fingerprint="abc")}),
         NormalizeSpacing("Reference", ("BodyTight",), exact_reference=True),
@@ -151,3 +151,11 @@ def test_example_configuration_is_valid(tmp_path: Path) -> None:
         SetMetadata("Example report", "Summary of the reporting period", "en-GB")
         in config.operations
     )
+
+
+@pytest.mark.parametrize("tag", ["en-u", "en-a-foo-a-bar", "sl-rozaj-rozaj"])
+def test_config_rejects_malformed_language_syntax(tmp_path: Path, tag: str) -> None:
+    path = tmp_path / "language.toml"
+    path.write_text(f'[document]\nlanguage = "{tag}"\n', encoding="utf-8")
+    with pytest.raises(ConfigError, match="Invalid language"):
+        load_config(path)

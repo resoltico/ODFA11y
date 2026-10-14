@@ -3,7 +3,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, qn
+
+if TYPE_CHECKING:
+    from lxml import etree
 
 SPACING_ATTRIBUTES = (
     qn("fo", "margin-top"),
@@ -17,7 +23,30 @@ BREAK_ATTRIBUTES = (
     qn("fo", "break-before"),
     qn("fo", "break-after"),
     qn("style", "master-page-name"),
+    qn("style", "page-number"),
 )
+
+
+def paragraph_style_name(node: etree._Element) -> str | None:
+    """Select a paragraph's single style only when its precedence is established.
+
+    Returns
+    -------
+    str | None
+        The ordinary style reference, or None for the default style.
+
+    Raises
+    ------
+    RemediationError
+        Class overlays or conditional references require native style review.
+    """
+    if any(qn("text", name) in node.attrib for name in ("class-names", "cond-style-name")):
+        msg = (
+            "Paragraph class overlays or conditional style references "
+            "cannot establish effective properties."
+        )
+        raise RemediationError(msg)
+    return node.get(qn("text", "style-name"))
 
 
 def display_attr(qname: str) -> str:

@@ -97,18 +97,18 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
     source = with_body(tmp_path, ANNOTATED)
     audited = [f for f in audit_odf(source).findings if f.rule_id == "TXT030"]
     assert sorted(f.details["text"] for f in audited) == [
-        "https://example.test/note",
         "https://example.test/real",
         "qa@example.test",
     ]
     document = OdfDocument.open(source)
     (outcome,) = LinkifyAddresses().apply(document)
-    assert (outcome.status, outcome.count) == (Status.APPLIED, 3)
+    assert (outcome.status, outcome.count) == (Status.APPLIED, 2)
     content = document.tree(Part.CONTENT)
-    assert not select_elements(content, "//svg:desc/text:a | //dc:creator/text:a")
+    assert not select_elements(
+        content, "//svg:desc/text:a | //dc:creator/text:a | //office:annotation//text:a"
+    )
     links = select_elements(content, "//text:a")
     assert sorted(link.text or "" for link in links) == [
-        "https://example.test/note",
         "https://example.test/real",
         "qa@example.test",
     ]
@@ -131,10 +131,11 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
 def test_paragraphs_with_markers_or_fields_are_never_removed_as_spacers(
     tmp_path: Path, marker: bytes
 ) -> None:
-    body = b'<text:p text:style-name="Body" xml:id="marked">' + marker + b"</text:p>"
+    body = b'<text:p text:style-name="Body">' + marker + b"</text:p>"
     document = OdfDocument.open(with_body(tmp_path, body))
+    paragraph = select_elements(document.tree(Part.CONTENT), "//text:p")[0]
     RemoveEmptySpacers().apply(document)
-    assert select_elements(document.tree(Part.CONTENT), "//*[@xml:id='marked']")
+    assert paragraph in document.tree(Part.CONTENT).iter()
 
 
 def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None:

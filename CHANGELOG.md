@@ -4,27 +4,39 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-14
+
+Release candidate prepared on this date; public publication is pending.
+
 ### Breaking
 
-- Human-readable CLI reports replace `Result: PASS/FAIL` with check findings and the actual command gate outcome, put findings before metadata, wrap text and visibly escape terminal controls. Consumers parsing text should use JSON or SARIF instead; their formats and exit statuses are unchanged.
+- Graphic decisions and operations are now `GraphicAlternative` and `SetGraphicAlternatives`, serialized as `set_graphic_alternatives`. Update Python imports and consumers of serialized plans; no compatibility aliases remain. Existing family `graphics` tables remain available.
+- JSON report format 5 uses current-body, note and text-box targets and stronger reviewed fingerprints. Regenerate templates/fingerprints after upgrading. Ordinal link-description plans must be separate from address linkification and table-header changes; legal unique ID targets can compose when structural guards permit them.
+- Guarded remediation refuses declared signatures, including empty/no-op plans and dry runs. Manifest encryption, duplicate package names and unsafe archive paths block complete inspection, planning, remediation and guarded native export; signatures remain unverified. Use a deliberately prepared supported source in the native application. Low-level storage, `save()` and direct operation calls remain caller-owned surfaces.
+- Native work refuses unestablished formula loading, dynamic references, unsupported namespaces/functions/condition grammars and captured filename dependencies. Named dependencies use bounded traversal without multiplying parser recursion; exhausted budgets produce explicit incomplete classification. Original exports retain original identity subject to the other guards; source inspection remains available. See [Workflow](docs/WORKFLOW.md#formula-declarations-at-native-export).
+- `TXT020` classifies valid merged-cell complexity as a header-relationship review warning; unresolved/malformed grids remain errors and production strict warnings still fail. This change does not establish accessible header relationships.
+- Selected high-level timeouts now govern veraPDF as well as LibreOffice; audit/work defaults are 120 seconds. Direct `validate_pdfua` retains 180 seconds. Invalid/nonfinite/boolean values and durations beyond `(2**32 - 2) / 1000` seconds refuse before side effects; fractional library values remain supported.
+- Human-readable CLI reports show findings and actual gate outcomes, wrap text and escape terminal controls. Consumers parsing terminal text should use JSON or SARIF and review the report-format change above.
 
 ### Added
 
-- CLI help includes workflow examples and typo suggestions; text commands offer recovery guidance and interactive progress without adding output to JSON/SARIF. Dry runs distinguish proposed changes, and evidence integrity checks distinguish recorded-file verification from accessibility review.
-- Public core entrypoints support document inspection, guarded native export, ODF/PDF comparison, tool diagnostics, template preparation and style inspection without invoking the CLI. Native-resource guards and comparison input identity remain enforced in core operations.
+- Explicit ODF 1.4 decorative decisions resolve supported style inheritance/class overlays and derive isolated styles without changing shared authored peers. Meaningful/decorative choices, alternative conflicts, interactive/text-bearing objects and unestablished style scopes remain explicit review/refusal states. Role changes without an explicit established style reference refuse because introducing a style can alter native placement. Reviewed group, link and page fingerprints include descendant graphic style dependencies. Decorative declarations never suppress payload/resource diagnostics. Measured LibreOffice 26.8.1.1 ignores the native property, retaining strict `PDF007` and veraPDF failures; no PDF artifact behavior is promised.
+- `LinkDescription` and family `SetLinkDescriptions` author supplied `office:title` through `text`, `spreadsheet`, `presentation` and `drawing` link tables. Destinations, visible labels, geometry and authored target Names remain protected; no descriptions or Names are inferred. Measured LibreOffice 26.8.1.1 ignores `office:title` for PDF alternate descriptions, retaining strict `PDF019` and veraPDF failures.
+- Public core operations support incremental document inspection, guarded export/comparison, partial tool diagnostics, template/style inspection, remediation and evidence publication without the CLI. [API examples](docs/API.md) run against the installed wheel outside the checkout. CLI help provides examples, recovery guidance, typo suggestions and interactive progress while keeping machine output clean.
 
 ### Fixed
 
-- Pipeline output shows warning-only strict failures, successful gate warnings and retained tool diagnostics. Review sheets no longer say veraPDF did not run when validation or validator execution failed.
+- Text processing distinguishes current flow from stored revisions, annotations, conditionally hidden paragraphs and conditional/foreign branches. Empty paragraphs carrying identities, RDF metadata or structural attributes are preserved. Only title/description metadata edits are supported for revision-bearing sources. ODF spaces/tabs/breaks retain word boundaries; protected XML checks reject damaged existing references, geometry, fields, history and unrelated styles while permitting reviewed, idempotent edits and bounded logical repeats.
+- Language defaults preserve scripts, numeric regions, variants, extensions/private and grandfathered syntax with standard component/full-tag properties across all three default channels. Stale competing declarations are replaced; local authored overrides remain untouched. Ambiguous targets and invalid declarations produce explicit refusals or incomplete-inspection findings, without registry lookups or alias inference. Native reload can still drop/alias tags (`zh-Hant-TW` → `zh-TW`, `i-klingon` → `tlh`, `zh-cmn-Hans-CN` → `cmn-Hans-CN`); exact native preservation remains an exporter condition. Source success is not an accessibility certificate or a waiver of human, PDF and fidelity checks.
+- Paragraph style resolution respects legal common/automatic scopes and protects inherited page breaks, master-page assignments and page-number resets. Conditional, duplicate, cyclic and broken style contexts cannot authorize spacing or spacer removal. Paragraph class overlays and conditional style references remain read-only unresolved contexts; spacing edits refuse rather than copy incomplete base properties.
+- Strict warning-only pipeline failures, successful gate warnings and bounded tool diagnostics remain visible. Evidence sheets distinguish validators that did not run from failed validation/execution. Evidence verification documents its stable bundle/ancestor namespace prerequisite; integrity does not establish accessibility, authenticity or review quality.
 
 ### Internal
 
-- Native interruption checks keep readiness notifications out of cleanup waits, retaining the termination deadline and process-tree assertions.
-- Windows CI retries bounded installer downloads and caps installation at 15 minutes while retaining the pinned checksum and installer exit checks.
-- Tach enforces explicit package-root and module-entry-point dependencies, removes obsolete CLI access to domain engines, and rejects boundary/interface/cycle violations through real negative controls.
-- CI reuses Go analysis caches by their actual tool pins and limits dependency/tool cache saves to main, avoiding PR copies and invalidation by unrelated workflow edits. Manual release checks bypass dependency-cache restoration.
-- Passing pytest temporary outputs are cleaned promptly; failed-call output retains the default three-session history. A five-example Hypothesis smoke profile supports short development checks; required checks retain 200 examples. See [Development](docs/DEVELOPING.md#types-boundaries-and-properties) for bounds and cleanup limits.
-
+- Source archives are checked against Git-derived contributor paths/bytes, including `.gitignore`, docs, tools and native fixtures. Generated contributor caches and root build outputs are excluded while nested authored paths remain checked. Extracted contributor checks rebuild and inspect the archive after property tests; installed-wheel examples/tests run outside the original checkout; wheel/sdist contents and byte reproducibility remain release checks.
+- Release state queries fail closed on unsuccessful/malformed responses and inspect exact tags/releases, including drafts. Draft/publication verification binds the requested commit, notes and preserved asset bytes; correcting an unpublished draft requires explicit handling. Public release publication remains separately authorized.
+- Native interruption tests retain termination/process-tree deadlines. Windows installer retries keep the pinned checksum and installer exit checks. Required property checks retain 200 examples; successful temporary test outputs are cleaned and useful failure evidence is retained.
+- Package boundaries reject real import/interface/cycle violations. CI caches remain keyed by pinned tools and saves are limited to main; manual release checks bypass dependency-cache restoration.
 ## [0.6.0] - 2026-10-09
 
 ### Breaking

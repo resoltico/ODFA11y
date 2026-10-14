@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.errors import RemediationError
 from odfa11y.odf import Family, Part, qn
 
 from .spacers import spacer_candidates
@@ -29,7 +30,12 @@ class RemoveEmptySpacers(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        count = remove_empty_spacer_paragraphs(document.tree(Part.CONTENT), catalog_of(document))
+        try:
+            count = remove_empty_spacer_paragraphs(
+                document.tree(Part.CONTENT), catalog_of(document)
+            )
+        except RemediationError as exc:
+            return (Outcome(self.name, Status.FAILED, str(exc)),)
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No removable spacer paragraphs."),)
         document.edit(Part.CONTENT)
@@ -46,10 +52,13 @@ def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatal
         The number of removed body paragraphs.
 
     """
+    candidates = [
+        paragraph
+        for paragraph in spacer_candidates(tree)
+        if not catalog.has_break_semantics(paragraph.get(qn("text", "style-name")))
+    ]
     removed = 0
-    for paragraph in spacer_candidates(tree):
-        if catalog.has_break_semantics(paragraph.get(qn("text", "style-name"))):
-            continue
+    for paragraph in candidates:
         parent = paragraph.getparent()
         if parent is None:
             continue

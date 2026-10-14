@@ -55,3 +55,5 @@ class FamilyAdapter:
     pdf_filter: str | None = None
     style_report: Callable[[OdfDocument], list[StyleUsage]] | None = None
     link_probe: Callable[[Path], Path] | None = None
+    preflight: Callable[[OdfDocument, Sequence[Operation]], None] | None = None
+    protect_edit: Callable[[OdfDocument, Operation], Callable[[], bool]] | None = None

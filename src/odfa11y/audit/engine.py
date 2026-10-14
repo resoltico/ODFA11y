@@ -25,6 +25,9 @@ PARSED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.MANIFEST)
 BLOCKING_RULE_IDS = frozenset({
     rules.PKG000.id,
     rules.PKG005.id,
+    rules.PKG006.id,
+    rules.PKG007.id,
+    rules.PKG009.id,
     rules.XML001.id,
     rules.ODF005.id,
     rules.ODF010.id,
@@ -49,6 +52,20 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
         report.add(rules.PKG000, _describe(exc, source))
         return report
 
+    protection = document.protection
+    if protection.signatures:
+        report.add(
+            rules.PKG008,
+            "Declared signatures are unverified: structure, references, cryptography and trust "
+            "were not validated.",
+            details={"members": list(protection.signatures)},
+        )
+    if protection.malformed_manifest:
+        report.add(rules.XML001, protection.malformed_manifest)
+        return report
+    if protection.encrypted:
+        report.add(rules.PKG009)
+        return report
     if not audit_structure(document, report) or not audit_kind(document, report):
         return report
     if not _parseable(document, report):

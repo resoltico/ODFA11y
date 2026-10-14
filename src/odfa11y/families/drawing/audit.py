@@ -9,6 +9,11 @@ from typing import TYPE_CHECKING
 from odfa11y.content import (
     SHAPE_TAGS,
     GraphicIdentity,
+    audit_graphic_role,
+    document_links,
+    link_fingerprint,
+    link_has_description,
+    link_location,
     navigation_problem,
     page_fingerprint,
     page_shapes,
@@ -44,7 +49,7 @@ def audit_document(document: OdfDocument, report: Report) -> None:
             if name
             else Location.indexed(Part.CONTENT, "page", index)
         )
-        details = {"page": name, "fingerprint": page_fingerprint(page)}
+        details = {"page": name, "fingerprint": page_fingerprint(page, document)}
         if not name or names[name] != 1:
             report.add(rules.DRAW001, location=location)
         if not (page.findtext("svg:title", namespaces=NS) or "").strip():
@@ -74,6 +79,9 @@ def _graphics(document: OdfDocument, report: Report) -> None:
     identity = GraphicIdentity(document, shapes)
     report.metadata["shape_count"] = len(shapes)
     for index, shape in enumerate(shapes, 1):
+        decorative = audit_graphic_role(document, shape, report)
+        if decorative or shape.tag == qn("draw", "g"):
+            continue
         name = shape.get(qn("draw", "name"))
         description = (shape.findtext("svg:title", namespaces=NS) or "") + (
             shape.findtext("svg:desc", namespaces=NS) or ""
@@ -101,18 +109,15 @@ def _graphics(document: OdfDocument, report: Report) -> None:
 
 
 def _links(document: OdfDocument, report: Report) -> None:
-    links = select_elements(
-        document.tree(Part.CONTENT), "//office:body//text:a | //office:body//draw:a"
-    )
+    links = document_links(document)
     report.metadata["link_count"] = len(links)
     for index, link in enumerate(links, 1):
-        metadata = select_elements(link, ".//svg:title | .//svg:desc")
-        if not (
-            visible_words(link)
-            or (link.get(qn("office", "name")) or "").strip()
-            or any((node.text or "").strip() for node in metadata)
-        ):
-            report.add(rules.DRAW009, location=Location.indexed(Part.CONTENT, "link", index))
+        if not link_has_description(link):
+            report.add(
+                rules.DRAW009,
+                location=link_location(link, index),
+                details={"fingerprint": link_fingerprint(document, link)},
+            )
 
 
 def _review_content(document: OdfDocument, report: Report) -> None:

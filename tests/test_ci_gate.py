@@ -155,3 +155,29 @@ def test_dependency_caches_are_saved_only_from_main_and_release_caches_are_bypas
         "static"
     )
     assert "enable-cache: false" in job_block("draft")
+
+
+def test_draft_creation_requires_successful_state_queries_and_verifies_downloaded_assets() -> None:
+    draft = job_block("draft")
+    assert 'tools.github_release absent "$REPOSITORY" "$tag"' in draft
+    assert 'tools.github_release draft "$REPOSITORY" "$RELEASE_TAG"' in draft
+    assert '--target "$GITHUB_SHA" --directory dist --checksums' in draft
+    assert "gh release view" not in draft
+    assert "2>&1" not in draft
+    assert draft.index("tools.github_release absent") < draft.index("gh release create")
+    assert draft.index("gh release create") < draft.index("tools.github_release draft")
+
+
+def test_contributor_and_installed_checks_run_from_the_extracted_source_archive() -> None:
+    test = job_block("test")
+    assert 'archive.extractall(target, filter="data")' in test
+    assert test.count('cd "$RUNNER_TEMP"/sdist-check/*') == 2
+    assert 'uv run --no-sync python -m tools.check_release "$tag" dist' in test
+    assert test.index("Verify extracted source archive") < test.index("Verify installed wheel")
+
+
+def test_extracted_checks_rebuild_and_inspect_archives_after_property_test_caches_exist() -> None:
+    flow = job_block("test").split("- name: Verify extracted source archive contributor flow", 1)[1]
+    flow = flow.split("- name: Verify installed wheel", 1)[0]
+    assert flow.index("pytest -m 'not integration'") < flow.index("uv build")
+    assert flow.index("uv build") < flow.index('tools.check_release "$tag" dist')

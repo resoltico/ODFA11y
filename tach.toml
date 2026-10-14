@@ -55,7 +55,7 @@ depends_on = ["odfa11y.errors"]
 
 [[modules]]
 path = "odfa11y.content"
-depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf"]
+depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.families.text"
@@ -144,6 +144,7 @@ depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
 [[modules]]
 path = "odfa11y.config"
 depends_on = [
+  "odfa11y.content",
   "odfa11y.adapter",
   "odfa11y.errors",
   "odfa11y.families",

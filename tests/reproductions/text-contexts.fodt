@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:db="urn:oasis:names:tc:opendocument:xmlns:database:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" office:version="1.4" office:mimetype="application/vnd.oasis.opendocument.text"><office:meta><dc:title>Synthetic document</dc:title><dc:language>en-GB</dc:language></office:meta><office:body><office:text>
+<text:tracked-changes><text:changed-region text:id="revision">
+<text:deletion><office:change-info><dc:creator>Invented Author</dc:creator>
+<dc:date>2026-10-14T12:00:00</dc:date></office:change-info>
+<text:h text:outline-level="9">Deleted heading</text:h><text:p>https://deleted.example</text:p>
+</text:deletion></text:changed-region></text:tracked-changes>
+<text:h text:outline-level="1">Main heading</text:h>
+<text:p>One<text:s/>Two<text:tab/>Three<text:line-break/>Four
+<text:a xlink:href="https://original.example" xlink:type="simple">Original label</text:a>
+<text:bookmark text:name="retained"/><text:page-number>1</text:page-number>
+<text:note text:id="note" text:note-class="footnote"><text:note-citation>1</text:note-citation>
+<text:note-body><text:h text:outline-level="8">Note heading</text:h>
+<text:p>https://note.example</text:p></text:note-body></text:note>
+<office:annotation><dc:creator>Invented Author</dc:creator><dc:date>2026-10-14T12:00:00</dc:date>
+<text:p>https://comment.example</text:p></office:annotation>
+</text:p><text:section text:name="conditional" text:condition="true" text:display="condition">
+<text:p>https://hidden.example</text:p></text:section>
+</office:text></office:body></office:document>

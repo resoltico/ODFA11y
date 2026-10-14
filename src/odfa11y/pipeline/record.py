@@ -13,6 +13,7 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
 from odfa11y import __version__
+from odfa11y.external_tools import validate_timeout
 from odfa11y.odf import provenance
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
 from odfa11y.report import exit_status
@@ -170,8 +171,12 @@ class PipelineOptions:
     profile: str = DEFAULT_PROFILE
     soffice: str | None = None
     verapdf_path: str | None = None
-    timeout: int = DEFAULT_TIMEOUT_SECONDS
+    timeout: int | float = DEFAULT_TIMEOUT_SECONDS
     on_progress: Callable[[str, str], None] | None = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """Reject an invalid duration before native work or output creation."""
+        validate_timeout(self.timeout)
 
     @property
     def assurance(self) -> Profile:

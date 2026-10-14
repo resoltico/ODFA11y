@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, ClassVar, override
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.odf import Family, Part, qn
 
+from .contexts import text_nodes
 from .links import URI_RE, split_trailing_punctuation
 from .prose import prose_slots
 
@@ -44,7 +45,7 @@ def linkify_plain_addresses(tree: etree._ElementTree) -> int:
 
     """
     count = 0
-    for block in select_elements(tree, "//office:body//text:p | //office:body//text:h"):
+    for block in text_nodes(tree, qn("text", "p"), qn("text", "h")):
         # Collect the slots first: inserting links mutates the tree while we walk it.
         for owner, attr in list(prose_slots(block)):
             count += _linkify_slot(owner, attr)

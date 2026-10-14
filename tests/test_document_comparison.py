@@ -37,10 +37,11 @@ def test_core_comparison_preflights_both_inputs_before_export(
     assert not calls
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="POSIX FIFO")
 def test_core_pdf_probe_refuses_fifo_without_opening(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    if sys.platform == "win32":
+        pytest.skip("POSIX FIFO")
     fifo = tmp_path / "input"
     os.mkfifo(fifo)
     calls: list[object] = []

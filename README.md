@@ -1,23 +1,26 @@
 # ODFA11y
 
 Recognise and check every kind of OpenDocument file, and audit, explicitly remediate and
-export supported document families as PDF/UA-1 with evidence of what changed and what a person must still
-check.
+request PDF/UA-1 export for supported document families, with evidence of what changed
+and what a person must still check.
 
 ODFA11y works on both the editable ODF source and the exported PDF, because an accessible
 source does not guarantee an accessible export.
 
 - **Every OpenDocument kind, packaged or flat XML:** recognised from its declared media type
   and given the common checks of package structure, document kind, version, metadata and
-  schema validity.
+  optional bundled-schema validation.
 - **Text documents (`.odt`, templates, master and web documents):** semantic audit of
   headings, graphics, tables and links; remediation of the changes *you* decide in one TOML
-  file, refusing anything that alters the text or breaks the ODF schema; LibreOffice export;
+  file, preserving protected content and refusing introduced violations when a bundled
+  result schema is available;
+  LibreOffice export;
   PDF inspection and veraPDF; comparison of source and candidate renders; and a hashed
   evidence directory.
 - **Spreadsheets (`.ods`, `.ots`, `.fods`):** semantic audit of sheet names, header rows,
-  merged cells, graphics, links and hidden content; explicit sheet renaming and object alt
-  text; Calc export and evidence. Exporter limitations can prevent PDF/UA conformance;
+  merged cells, graphics, links and hidden content; explicit sheet renaming, graphic
+  alternatives/roles and link descriptions; Calc export and evidence. Exporter limitations
+  can prevent PDF/UA conformance;
   see [spreadsheet exports](docs/ACCESSIBILITY.md#spreadsheet-pdf-exports).
 - **Presentations and drawings:** native Impress/Draw page and shape audits, supplied
   descriptions, complete navigation decisions, export, validation, fidelity and evidence.
@@ -57,8 +60,9 @@ uv run --no-sync odfa11y pipeline original.odt --config document.toml \
 uv run --no-sync odfa11y check-evidence evidence
 ```
 
-`evidence/` then holds the remediated document and PDF, the veraPDF report, a run record and a
-`REVIEW.md` that separates machine-established facts from the human review still required.
+A passing production run retains the remediated document and PDF, the veraPDF report, a
+run record and `REVIEW.md`. Failed runs retain completed artifacts and failure evidence.
+`REVIEW.md` separates machine-established facts from the human review still required.
 `--profile` selects how much assurance a run requires: `inspect`, `verify` (the default) or
 `production` (veraPDF required, warnings fail).
 
@@ -66,16 +70,16 @@ uv run --no-sync odfa11y check-evidence evidence
 
 | Command | Purpose |
 | --- | --- |
-| `audit FILE...` | Read-only checks of ODF or PDF files; `--schema` validates ODF against the ODF schema, `--verapdf` validates PDFs. |
+| `audit FILE...` | Read-only checks of ODF or PDF files; `--schema` validates recognized ODF parts against bundled schemas, `--verapdf` validates PDFs. |
 | `template FILE` | Print a commented configuration for the decisions an audit leaves open. |
 | `remediate SRC DEST --config FILE` | Apply the configured operations; `--dry-run` shows outcomes without writing. |
-| `export SRC DEST` | Export an ODF document to PDF/UA with LibreOffice. |
+| `export SRC DEST` | Request a tagged PDF/UA-1 export with LibreOffice; validate the result separately. |
 | `compare A B` | Compare two ODF documents or PDFs for pages, text, links and rendered ink. |
 | `pipeline SRC --config FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
 | `batch MANIFEST --output-dir DIR` | Independent manifest runs, atomic per-item evidence and aggregate status; see [Batch](docs/BATCH.md). |
 | `styles FILE` | Paragraph-style usage and effective spacing. |
 | `check-evidence DIR` | Verify an evidence directory against its manifest. |
-| `doctor` | Dependency and external-tool versions, and its named-link PDF/UA self-test (`pdfua_link_descriptions`). |
+| `doctor` | Dependency and external-tool versions, and its link-description export probe (`pdfua_link_descriptions`). |
 
 Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
 [workflow](docs/WORKFLOW.md) is for human review between steps.
@@ -90,8 +94,9 @@ incrementally, preserving completed checks if a later validator fails.
 `odfa11y.audit.prepare_template` prepares reviewed configuration decisions, and
 `odfa11y.remediation.remediate` applies explicit operation objects. Low-level
 `odfa11y.pdf.export_pdfua` remains available; its callers own native preflight.
-Each package exposes its API through its `__init__`. See
-[Architecture](docs/ARCHITECTURE.md).
+See the [public library contract](docs/API.md) for results, errors, output ownership and
+executable installed-package examples, and [Architecture](docs/ARCHITECTURE.md) for package
+boundaries.
 
 ## Documentation
 
@@ -103,6 +108,7 @@ Each package exposes its API through its `__init__`. See
 - [Evidence](docs/EVIDENCE.md): the evidence directory, its record and verification.
 - [Accessibility and limits](docs/ACCESSIBILITY.md): scope, known limitations and human checks.
 - [Rule reference](docs/RULES.md): stable finding identifiers and their meanings.
+- [Public API](docs/API.md): supported library operations, ownership and error boundaries.
 - [Development](docs/DEVELOPING.md): setup, checks, CI and packaging.
 - [Architecture](docs/ARCHITECTURE.md): implementation responsibilities and invariants.
 - [Releasing](docs/RELEASING.md): starting a release, draft assets and the required CI check.
@@ -110,8 +116,9 @@ Each package exposes its API through its `__init__`. See
 
 ## Status and roadmap
 
-Current work and planned features are tracked in [GitHub issues](https://github.com/resoltico/ODFA11y/issues)
-and [pull requests](https://github.com/resoltico/ODFA11y/pulls).
+The [roadmap to v1.0.0](docs/ROADMAP.md) describes planned milestones and their completion
+criteria. [GitHub issues](https://github.com/resoltico/ODFA11y/issues)
+and [pull requests](https://github.com/resoltico/ODFA11y/pulls) track its execution.
 
 ## License
 
@@ -126,3 +133,6 @@ LibreOffice, veraPDF and OpenDocument are names of their respective owners; the 
 only invokes the first two as external applications and does not redistribute them.
 
 The normative MathML 3.0 grammar is bundled unmodified under the [W3C software notice](src/odfa11y/odf/schemas/mathml/NOTICE.txt); schema source URLs and digests share [the provenance record](src/odfa11y/odf/schemas/PROVENANCE.toml).
+
+Normative formula classifications retain their
+[OASIS notice](src/odfa11y/content/formula_data/NOTICE.txt) and pinned provenance.

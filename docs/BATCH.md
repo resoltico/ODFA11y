@@ -55,16 +55,15 @@ stage. The overall exit status is the strongest result: execution failure 3, aud
 2, strict warnings 1, or success 0.
 
 The summary is published before execution and atomically replaced after each item.
-SIGINT and SIGTERM mark an active run `interrupted`, retain completed item evidence and
-identify unrun entries. A forced kill or power loss can leave `running` evidence: it is
-explicitly incomplete, never a completed result. Forced termination on Windows does not
-permit an interruption handler to run. Resume is not implicit; inspect retained evidence
-and create an explicit manifest and a fresh destination for remaining items.
+Ordinary CLI SIGINT/SIGTERM interrupts active work, cleans up its external tool tree where
+the platform permits, retains completed item evidence and identifies unrun entries. Importing
+the runner installs no signal handler. Main-thread CLI and direct `run_batch()` execution
+can temporarily replace SIGTERM handling and restore the caller's policy afterward;
+non-main-thread execution installs no handler.
 
-Standalone CLI commands and batch translate ordinary SIGTERM/SIGINT into controlled
-interruption so the active external tool tree is cleaned up where the platform allows it.
-The previous SIGTERM policy is restored when the scope ends; importing or embedding the
-tool runner does not install a handler. Windows forced termination, SIGKILL and power loss
-can bypass cleanup and summary publication. Completed item bundles remain independently
-verifiable; interrupted staging directories are not published evidence. There is no implicit
-recovery or automatic resumption. OS isolation and resource limits remain caller duties.
+SIGKILL, Windows forced termination, power loss and escaped descendants can bypass cleanup
+or summary publication. A retained `running` state is incomplete, never a completed result;
+interrupted staging directories are not published evidence. Completed bundles remain
+independently verifiable. There is no implicit resume: inspect retained evidence, create an
+explicit manifest for remaining items and use a fresh output root. OS isolation/resource
+limits remain caller duties.

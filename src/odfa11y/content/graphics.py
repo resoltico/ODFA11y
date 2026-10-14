@@ -17,13 +17,16 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 from .graphic_identity import GraphicIdentity
+from .graphic_roles import GraphicRoleEditor
+from .graphic_styles import decorative_problem
+from .text import eligible_text_node
 
 MIN_CONFLICTING_VALUES = 2
 FIELDS = (("title", qn("svg", "title")), ("description", qn("svg", "desc")))
 
 
 @dataclass(frozen=True, slots=True)
-class GraphicDescription:
+class GraphicAlternative:
     """Accessible text for a graphic; ``None`` leaves that field untouched.
 
     ``fingerprint``, when given, must match the addressed graphics or the entry fails: the
@@ -33,13 +36,14 @@ class GraphicDescription:
     title: str | None = None
     description: str | None = None
     fingerprint: str | None = None
+    decorative: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class GraphicEditor:
     """Set title/description on graphic frames matched by frame name, image path or file name."""
 
-    entries: Mapping[str, GraphicDescription]
+    entries: Mapping[str, GraphicAlternative]
     name: str
     shape_tags: tuple[str, ...] = (qn("draw", "frame"),)
 
@@ -56,16 +60,23 @@ class GraphicEditor:
         frames = [
             node
             for node in select_elements(document.tree(Part.CONTENT), "//office:body//*")
-            if node.tag in tags
+            if node.tag in tags and eligible_text_node(node)
         ]
         identity = GraphicIdentity(document, frames)
         matched = {key: identity.matching(key) for key in self.entries}
         failures = self._preflight(identity, matched)
+        roles = GraphicRoleEditor(document)
+        failures += self._role_failures(document, roles, matched)
         if failures:
             return failures
         outcomes = []
         for key, text in self.entries.items():
-            changed = sum(set_description(document, frame, text) for frame in matched[key])
+            changed = 0
+            for frame in matched[key]:
+                edited = set_description(document, frame, text)
+                if text.decorative is not None:
+                    edited = roles.set_role(frame, decorative=text.decorative) or edited
+                changed += edited
             if changed:
                 message = f"Set accessible text on {changed} graphic frame(s)."
                 outcomes.append(Outcome(self.name, Status.APPLIED, message, key=key, count=changed))
@@ -74,6 +85,47 @@ class GraphicEditor:
                     Outcome(self.name, Status.UNCHANGED, "Accessible text already set.", key=key)
                 )
         return tuple(outcomes)
+
+    def _role_failures(
+        self,
+        document: OdfDocument,
+        roles: GraphicRoleEditor,
+        matched: dict[str, tuple[etree._Element, ...]],
+    ) -> tuple[Outcome, ...]:
+        """Preflight role decisions against established style and source contexts.
+
+        Returns
+        -------
+        tuple[Outcome, ...]
+            Refusals before any document mutation.
+
+        """
+        role_failures = []
+        for key, frames in matched.items():
+            entry = self.entries[key]
+            if entry.decorative is None:
+                continue
+            problem = None
+            if type(entry.decorative) is not bool:
+                problem = "Graphic decorative decision must be a boolean."
+            elif not entry.fingerprint:
+                problem = "A role decision requires a reviewed graphic fingerprint."
+            elif document.tree(Part.CONTENT).getroot().get(qn("office", "version")) != "1.4":
+                problem = "Explicit graphic roles require an explicitly selected ODF 1.4 document."
+            for frame in frames:
+                problem = problem or (
+                    "Explicit group role edits are unsupported."
+                    if frame.tag == qn("draw", "g")
+                    else None
+                )
+                problem = problem or roles.role(frame).problem
+                if not problem and type(entry.decorative) is bool:
+                    problem = roles.change_problem(frame, decorative=entry.decorative)
+                if entry.decorative:
+                    problem = problem or decorative_problem(frame)
+            if problem:
+                role_failures.append(Outcome(self.name, Status.FAILED, problem, key=key))
+        return tuple(role_failures)
 
     def _preflight(
         self, identity: GraphicIdentity, matched: dict[str, tuple[etree._Element, ...]]
@@ -96,8 +148,25 @@ class GraphicEditor:
             ):
                 failures[key] = "Graphic title, description and fingerprint must be strings."
                 continue
+            if any(
+                value is not None and not value.strip()
+                for value in (entry.title, entry.description)
+            ):
+                failures[key] = "Supplied graphic alternatives must not be blank."
+                continue
             if not frames:
                 failures[key] = f"No graphic matches {key!r}."
+                continue
+            problem = next(
+                (
+                    identity.style_problem(frame)
+                    for frame in frames
+                    if identity.style_problem(frame)
+                ),
+                None,
+            )
+            if problem:
+                failures[key] = problem
                 continue
             expected = entry.fingerprint
             if expected is not None and expected != identity.fingerprint(frames):
@@ -105,9 +174,33 @@ class GraphicEditor:
                     "The addressed graphic is no longer the object this plan was reviewed against."
                 )
         self._find_conflicts(matched, failures)
+        self._role_conflicts(matched, failures)
         return tuple(
             Outcome(self.name, Status.FAILED, message, key=key) for key, message in failures.items()
         )
+
+    def _role_conflicts(
+        self, matched: dict[str, tuple[etree._Element, ...]], failures: dict[str, str]
+    ) -> None:
+        owners: dict[int, list[str]] = {}
+        for key, frames in matched.items():
+            for frame in frames:
+                owners.setdefault(id(frame), []).append(key)
+        for keys in owners.values():
+            entries = [self.entries[key] for key in keys]
+            roles = {entry.decorative for entry in entries if type(entry.decorative) is bool}
+            conflict = len(roles) > 1 or (
+                True in roles
+                and any(
+                    entry.title is not None or entry.description is not None for entry in entries
+                )
+            )
+            if conflict:
+                for key in keys:
+                    failures[key] = (
+                        "Overlapping graphic decisions supply contradictory roles "
+                        "or decorative alternatives."
+                    )
 
     def _find_conflicts(
         self, matched: dict[str, tuple[etree._Element, ...]], failures: dict[str, str]
@@ -130,7 +223,7 @@ class GraphicEditor:
                 )
 
 
-def set_description(document: OdfDocument, frame: etree._Element, text: GraphicDescription) -> bool:
+def set_description(document: OdfDocument, frame: etree._Element, text: GraphicAlternative) -> bool:
     """Edit supplied description fields in the standard order for the element.
 
     Returns

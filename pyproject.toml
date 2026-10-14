@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "odfa11y"
-version = "0.6.0"
+version = "0.7.0"
 description = "Audit and explicitly remediate OpenDocument families; verify supported PDF/UA exports with evidence"
 readme = "README.md"
 requires-python = ">=3.14"
 # Code uses MPL-2.0; bundled ODF and MathML grammars retain OASIS and W3C notices.
 license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
-license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt"]
+license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt", "src/odfa11y/content/formula_data/NOTICE.txt"]
 authors = [
   { name = "Ervins Strauhmanis" }
 ]
@@ -75,6 +75,7 @@ include = [
   "/.github",
   "/.editorconfig",
   "/.gitattributes",
+  "/.gitignore",
   "/.python-version",
   "/tach.toml",
   "/AGENTS.md",
@@ -152,6 +153,8 @@ min-file-size = 0
 max-file-lines = 300
 
 [tool.ruff.lint.per-file-ignores]
+# The public audit API selects independent inspection, validation, timeout and observer options.
+"src/odfa11y/pipeline/inspection.py" = ["too-many-arguments"]
 # pytest assertions provide failure introspection; test names describe behavior; expected
 # values are literals, and identical renders must differ by exactly zero.
 "tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
@@ -168,6 +171,12 @@ max-file-lines = 300
 "tools/check_quality.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
 # Exception verification invokes the locked Ruff module with explicit arguments and no shell.
 "tools/lint_policy.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
+# Release inspection reports failures from the local Git inventory helper.
+"tools/check_release.py" = ["suspicious-subprocess-import"]
+# Contributor inventories inspect local tracked Git paths with fixed argument lists.
+"tools/source_inventory.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]
+# Release inspection invokes the authenticated GitHub CLI with argument lists and no shell.
+"tools/github_release.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]
 # CI tooling: downloads one pinned HTTPS release, verifies its SHA-256 and runs the installer
 # with the runner's java through an argument list.
 "tools/install_verapdf.py" = ["suspicious-subprocess-import", "suspicious-url-open-usage", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]

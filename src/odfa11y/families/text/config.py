@@ -6,10 +6,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from odfa11y.adapter import config_tables
-from odfa11y.content import GraphicDescription
+from odfa11y.content import graphic_alternatives, link_descriptions
 from odfa11y.errors import ConfigError
 
-from .graphics import SetGraphicDescriptions
+from .graphics import SetGraphicAlternatives, SetLinkDescriptions
 from .headings import MAX_HEADING_LEVEL, HeadingLevel, SetHeadingLevels
 from .linkify import LinkifyAddresses
 from .remove_spacers import RemoveEmptySpacers
@@ -19,7 +19,7 @@ from .tables import MarkTableHeaders, TableHeaders
 if TYPE_CHECKING:
     from odfa11y.adapter import Operation
 
-TEXT_KEYS = {"remediation", "graphics", "table_headers", "spacing", "heading_levels"}
+TEXT_KEYS = {"remediation", "graphics", "links", "table_headers", "spacing", "heading_levels"}
 
 
 def parse_text_table(data: dict[str, object]) -> list[Operation]:
@@ -38,6 +38,9 @@ def parse_text_table(data: dict[str, object]) -> list[Operation]:
     operations += _headings(config_tables.table(data, "heading_levels"))
     operations += _tables(config_tables.table(data, "table_headers"))
     operations += _spacing(config_tables.table(data, "spacing"))
+    links = link_descriptions(config_tables.table(data, "links"), "text.links")
+    if links:
+        operations.append(SetLinkDescriptions(links))
     return operations
 
 
@@ -55,16 +58,8 @@ def _remediation(table: dict[str, object]) -> list[Operation]:
 
 
 def _graphics(table: dict[str, object]) -> list[Operation]:
-    entries: dict[str, GraphicDescription] = {}
-    for key in table:
-        entry = config_tables.table(table, key)
-        label = f"text.graphics.{key}"
-        config_tables.known(entry, {"title", "description", "fingerprint"}, label)
-        texts = config_tables.typed(entry, str, label)
-        entries[key] = GraphicDescription(
-            texts.get("title"), texts.get("description"), texts.get("fingerprint")
-        )
-    return [SetGraphicDescriptions(entries)] if entries else []
+    entries = graphic_alternatives(table, "text.graphics")
+    return [SetGraphicAlternatives(entries)] if entries else []
 
 
 def _tables(table: dict[str, object]) -> list[Operation]:

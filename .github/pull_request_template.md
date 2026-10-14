@@ -1,7 +1,8 @@
-## What changed and why
+## What changes and why
 
-## Checks
+## Verification
 
-- [ ] `ruff`, `ty`, `tach` and the tests pass locally (see DEVELOPING.md)
-- [ ] CHANGELOG.md `[Unreleased]` records any user-visible change
-- [ ] No confidential document, credential or personal data is included in code, tests or fixtures
+- [ ] Relevant [development checks](https://github.com/resoltico/ODFA11y/blob/main/docs/DEVELOPING.md#required-checks) ran; failures, skips and unavailable tools/platforms are reported.
+- [ ] Behavior and relevant rejection paths have proportionate evidence; claimed native integration uses real applications.
+- [ ] Affected documentation reflects current behavior, and notable release outcomes are recorded in Unreleased.
+- [ ] No confidential document, credential or identifiable production material is included.

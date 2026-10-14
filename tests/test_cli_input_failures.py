@@ -22,11 +22,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="POSIX FIFO; Windows file-kind tests run separately"
-)
 @pytest.mark.parametrize("operand", ["audit", "source", "candidate"])
 def test_fifo_refuses_before_deadline(tmp_path: Path, operand: str) -> None:
+    if sys.platform == "win32":
+        pytest.skip("POSIX FIFO; Windows file-kind tests run separately")
     fifo = tmp_path / "input"
     os.mkfifo(fifo)
     regular = make_minimal_odt(tmp_path / "regular.odt")

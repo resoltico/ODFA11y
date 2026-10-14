@@ -192,10 +192,11 @@ def _native_command(
         patch.undo()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="checks the POSIX process group")
 def test_interrupted_native_readiness_does_not_reenter_the_event_during_cleanup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    if sys.platform == "win32":
+        pytest.skip("checks the POSIX process group")
     ready = multiprocessing.get_context("spawn").Event()
     marker = tmp_path / "native.pid"
     announcements = 0
@@ -225,14 +226,13 @@ def test_interrupted_native_readiness_does_not_reenter_the_event_during_cleanup(
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="POSIX signals/process groups require separate Windows controls"
-)
 @pytest.mark.parametrize("interrupt", [signal.SIGTERM, signal.SIGINT])
 @pytest.mark.parametrize("mode", ["standalone", "batch"])
 def test_real_native_termination_cleans_tool_and_preserves_completed_batch(
     tmp_path: Path, external_tool: Callable[..., str], interrupt: int, mode: str
 ) -> None:
+    if sys.platform == "win32":
+        pytest.skip("POSIX signals/process groups require separate Windows controls")
     tool = external_tool("soffice", "libreoffice")
     directory = tmp_path / "second-input"
     directory.mkdir()
