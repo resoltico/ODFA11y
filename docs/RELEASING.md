@@ -1,105 +1,108 @@
 # Publication and releases
 
-The package version is declared once in `[project].version` in `pyproject.toml`. Record
-notable net outcomes in the Unreleased section of `CHANGELOG.md` as work lands; at release,
-retain Unreleased, move completed outcomes into a dated version section, and update the project version. Runtime
-reporting reads installed distribution metadata. After changing the version in a checkout,
-run `uv lock` and `uv sync --locked` to refresh the lockfile and editable installation.
+`[project].version` in [pyproject.toml](../pyproject.toml) is the package-version authority.
+Runtime reporting derives installed distribution metadata. After changing the declaration,
+run `uv lock` and `uv sync --locked` to refresh the lockfile/editable environment.
+Record release outcomes in `CHANGELOG.md`; retain Unreleased and use a dated matching
+version section for release notes.
 
 ## Repository settings
 
-These are GitHub settings, not promises this source tree can enforce:
+Source files describe required settings; they do not establish the live GitHub state.
+Before release, verify:
 
-- Enable private vulnerability reporting and secret scanning/push protection where
-  available. Restrict creation and modification of release tags to the maintainer, and enable
-  *Immutable releases* so a published release's tag and assets can no longer change.
-- Create a GitHub environment named `release` and add the maintainer as a required reviewer;
-  the draft job waits for that approval.
-- Require exactly one status check, **`CI gate`**, on the default branch. The gate is a
-  final job that waits for the static, per-OS test and integration jobs and fails unless
-  every one succeeded (a skipped or cancelled job fails it), so jobs can be added or
-  renamed without touching the setting. [`.github/rulesets/default-branch.json`](../.github/rulesets/default-branch.json)
-  holds the ruleset as code: import it under *Settings → Rules → Rulesets → Import a
-  ruleset* (or `gh api repos/OWNER/REPO/rulesets --input .github/rulesets/default-branch.json`),
-  then remove any older protection that requires individual job checks. A test keeps the
-  ruleset and the workflow's gate name in agreement.
-- Derive the repository description from `[project].description` in `pyproject.toml`;
-  do not maintain a separate literal copy.
-- Do not add deployment or package-registry credentials just to enable GitHub releases.
+- Private vulnerability reporting and secret scanning/push protection are enabled where
+  available. Release-tag creation/modification is restricted to the maintainer, and
+  *Immutable releases* protects published tags/assets.
+- The GitHub environment named `release` has a required maintainer reviewer. The draft job
+  uses this environment; it waits for review only when that protection is configured.
+- The default branch requires exactly **CI gate**. This job waits for static analysis,
+  platform Quality and Integration jobs and fails unless every required job succeeds,
+  including rejection of skipped/cancelled results.
+- The repository description agrees with `[project].description`, rather than a separate
+  manually maintained description authority.
 
-Review the intended release, including hidden files: keep private documents, reports,
-environment files, credentials, virtual environments and build outputs out of it.
-`.gitignore` prevents accidental staging of common local inputs; it does not remove
-sensitive files already committed. Run the [development checks](DEVELOPING.md#required-checks)
-and the [audit hygiene](DEVELOPING.md#audit-hygiene) scans before tagging. Hosted checks
-must pass; local success does not establish GitHub runner behavior. Runtime dependencies
-and developer tools are locked. LibreOffice 26.8 is the minimum; the Linux/Windows installers and
-veraPDF are checksum-pinned, while macOS LibreOffice and runner images may vary.
+[.github/rulesets/default-branch.json](../.github/rulesets/default-branch.json) declares
+the branch ruleset. Import it under *Settings → Rules → Rulesets → Import a ruleset*, or
+use `gh api repos/OWNER/REPO/rulesets --input .github/rulesets/default-branch.json` when
+authorized. A test checks its required check against the workflow gate. Other repository
+protections still require direct inspection; this file does not configure release tags,
+environments, immutable releases or private reporting.
+
+GitHub release creation uses the scoped workflow token and needs no package-registry
+credentials. Repository settings changes require corresponding authorization.
+
+## Qualify the release inputs
+
+Inspect intended files, including hidden paths, for private documents, reports, environment
+files, credentials, virtual environments and build outputs. `.gitignore` limits accidental
+staging; it does not sanitize committed content. Run [required development checks](DEVELOPING.md#required-checks)
+and [audit hygiene scans](DEVELOPING.md#audit-hygiene), then require hosted checks on the
+exact release commit. Local results do not establish hosted-platform behavior.
+
+Dependency/tool constraints and the lockfile define Python inputs. Native installer pins,
+checksums, runner selection and cache policy are declared in
+[Checks](../.github/workflows/checks.yml). Some native/runner inputs follow their configured
+current distributions; a Python lockfile does not freeze the complete toolchain.
 
 ## Start a release
 
-Releases are started by hand and never by pushing a tag. Commit the version in
-`pyproject.toml` and the dated changelog section to the default branch, wait for its
-checks, then start the workflow on that branch:
+Commit the intended package version and matching dated changelog section to `main`, wait
+for its checks, then manually dispatch:
 
 ```bash
 gh workflow run checks.yml --ref main -f release=true
 ```
 
-or use *Actions → Checks → Run workflow* with **release** ticked. The run only creates a
-release from `main`; on any other ref the release job is skipped. Do not move a published
-tag or replace its assets; prepare a new version instead.
+The equivalent UI is *Actions → Checks → Run workflow*, selecting `main` and **release**.
+Only manual dispatch on `main` with that input creates a draft. Pushes, tags, pull requests
+and other manual runs run checks without starting a release.
 
 ## What the workflow does
 
-The [Checks workflow](../.github/workflows/checks.yml) also creates the draft release, so
-release logic reuses the same gates on the same commit:
+The same [Checks workflow](../.github/workflows/checks.yml) qualifies and creates the draft:
 
-1. Run policy, lint, type and boundary checks, tests (including real LibreOffice and
-   veraPDF integration), known-dependency advisories, workflow security and a redacted
-   history secret scan; the `CI gate` job summarises them.
-2. Build a wheel from the source archive and test its isolated installation. Restore the
-   extracted source archive with `uv sync --locked` and run its contributor checks without
-   importing modules from the original checkout or requiring `.git`.
-3. Preserve the tested Linux wheel and source archive as an immutable workflow artifact.
-4. Download those exact assets into the release job; do not rebuild after testing.
-5. Derive the tag `v<version>` from the package and fail if that tag or any release (draft
-   included) already exists. `tools.github_release absent` requires successful authenticated,
-   paginated exact-state inspection; transport, authentication, server and parse failures
-   abort rather than imply absence. Verify package metadata, licenses, schemas and the
-   complete tracked contributor inventory with `tools/check_release.py` in a clean release checkout.
-6. Extract the matching version section from the checked-out `CHANGELOG.md`.
-   Include its heading/date and retain all internal wording and Markdown; only outer
-   whitespace is trimmed. Missing or duplicate version sections fail the release.
-7. Attest the build provenance of both distributions (`actions/attest-build-provenance`) and
-   write `SHA256SUMS`.
-8. Create a **draft** GitHub release containing the wheel, source archive, `SHA256SUMS` and those
-   exact changelog notes, targeting the tested commit. The tag does not exist yet; GitHub creates it
-   at that commit when the draft is published. Unreleased and adjacent release sections are excluded.
-   Re-query the created draft, require the exact target SHA/notes/asset inventory, and
-   download every asset to compare its bytes with the preserved tested files.
+1. Run static/security gates, per-platform tests and required real LibreOffice/veraPDF
+   integration. **CI gate** requires all those job groups to succeed.
+2. Build/inspect a source archive and wheel. Run the extracted source's contributor checks
+   without `.git` or imports from the original checkout. Verify an isolated installed wheel
+   with locked/hashed dependencies. Linux also requires byte-identical rebuilds.
+3. Preserve the tested Linux distributions as a workflow artifact. The draft job downloads
+   those exact assets and does not rebuild them.
+4. Derive `v<version>` and require that neither that tag nor a matching release/draft exists.
+   `tools.github_release absent` uses authenticated paginated exact-state queries;
+   transport, authentication, server and parse failures abort rather than imply absence.
+5. Validate package metadata, resources, notices and complete contributor inventory with
+   `tools/check_release.py` in a clean release checkout. Extract exactly the matching
+   changelog section, including its heading/date and internal Markdown. Missing/duplicate
+   sections fail; Unreleased and adjacent sections are excluded.
+6. Attest provenance for both distributions and write `SHA256SUMS`.
+7. Create a draft targeting the tested full commit SHA with the exact notes, distributions
+   and checksums. Re-query its identity and asset inventory, then download every asset and
+   compare bytes with the preserved files. The verifier requires the tag to remain absent
+   while the release is a draft.
 
-CI also rebuilds the distributions and requires byte-identical results, so the assets can be
-reproduced from the released source with `uv build`. Consumers can verify a downloaded asset with
-`gh attestation verify FILE --repo resoltico/odfa11y` and `sha256sum --check SHA256SUMS`.
-Provenance attestations require a repository that supports them; if the draft job fails at that
-step, fix the repository setting rather than removing the step.
+The draft job requires **CI gate** and the configured `release` environment. It alone gets
+repository-write and attestation permissions. Attestation failure must be resolved rather
+than bypassed. CodeQL default setup and the scheduled Dependency audit are separate
+repository/security controls; they are not additional jobs inside **CI gate**.
 
-A weekly `Dependency audit` workflow re-checks the locked dependencies against advisories
-between pushes. Enable GitHub's CodeQL default setup in the repository settings for code scanning;
-no workflow file is needed.
+Consumers can verify downloaded assets with:
 
-A failed `CI gate` prevents the draft job. The release job alone gets the repository
-write and attestation permissions it needs; it uses GitHub's scoped workflow token,
-not a long-lived personal token. Only a manual run of the workflow on `main` with
-**release** ticked creates a draft; pushes, PRs, tags and other manual runs do not.
+```bash
+gh attestation verify FILE --repo resoltico/ODFA11y
+sha256sum --check SHA256SUMS
+```
+
+Preserve the tested distributions, exact notes, checksums, commit identity and successful
+workflow run so publication verification can use the same inputs.
 
 ## Publish the reviewed draft
 
-Publication requires separate maintainer authorization. The changelog in the tested
-commit is the notes authority; the workflow does not generate prose from commit history.
-Immediately before an authorized publication, recheck the draft with the preserved
-artifacts, checksums and notes, substituting the tested full commit SHA:
+Publication requires separate maintainer authorization. The matching changelog section in
+the tested commit is the notes authority; commit history is not a release-note generator.
+Immediately before authorized publication, substitute the tested full commit SHA and
+preserved input paths:
 
 ```bash
 uv run --no-sync python -m tools.github_release draft OWNER/REPO vVERSION \
@@ -107,20 +110,18 @@ uv run --no-sync python -m tools.github_release draft OWNER/REPO vVERSION \
   --checksums /path/to/SHA256SUMS --notes /path/to/release-notes.md
 ```
 
-Only after that succeeds and publication is authorized, publish through GitHub. Run the
-same command with `published` afterwards: it requires the exact assets/notes and a
-lightweight or peeled annotated tag pointing to the tested commit. A successful draft
-verification does not establish publication; failed queries/downloads leave it unverified.
+After successful verification and authorization, publish through GitHub. Run the same
+command with `published` afterwards. It requires exact assets/notes and a lightweight or
+peeled annotated tag pointing to the tested commit. Draft verification alone does not
+establish publication; query/download failure leaves the state unverified.
 
-For a correction to an **unpublished** draft, first verify its draft status and target.
-With explicit authorization, delete that draft and any unpublished tag created for it,
-then commit the correction and rerun the full workflow. Its uniqueness gate deliberately
-refuses existing drafts; a second run does not silently overwrite one. Do not edit notes
-independently in GitHub or alter a published tag, release, asset or historical attribution.
-Published corrections require a new version. Settings changes, draft deletion and public
-publication each require corresponding authorization.
+To correct an unpublished draft, verify its draft status and target first. With explicit
+authorization, delete the draft and any unpublished tag created for it, commit the
+correction and rerun full qualification. The uniqueness gate refuses existing drafts;
+rerunning does not replace them. Do not edit notes independently in GitHub or change a
+published tag, release or asset. Published corrections require a new version. Draft/tag
+deletion and publication require corresponding authorization.
 
-No PyPI publication is configured. GitHub release assets can be installed locally,
-for example with `python -m pip install /path/to/odfa11y-VERSION-py3-none-any.whl` using
-Python 3.14. A package-registry release can be added later with trusted publishing
-when the registry project and publishing policy have been explicitly established.
+No PyPI publication is configured. A GitHub wheel asset can be installed with
+`python -m pip install /path/to/odfa11y-VERSION-py3-none-any.whl` on a supported Python
+interpreter. A package-registry workflow needs an explicitly established publishing policy.

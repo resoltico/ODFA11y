@@ -188,5 +188,8 @@ def _doctor(args: argparse.Namespace) -> int:
                 else "not found"
             )
             print(f"{key}: {terminal_text(value) if value is not None else missing}")
-        print("Scope: dependency identities and a named-link export probe; no conformance verdict.")
+        print(
+            "Scope: dependency identities and a link-description export probe; "
+            "no conformance verdict."
+        )
     return status

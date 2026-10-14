@@ -258,7 +258,7 @@ jobs:
           echo "/opt/libreoffice$series/program" >> "$GITHUB_PATH"
       - name: Install LibreOffice on macOS
         if: runner.os == 'macOS'
-        # A fetch stalled for 30 minutes before tests; the successful PR install took 48 seconds.
+        # Bound package fetching and installation before native tests.
         timeout-minutes: 10
         run: |
           brew install --cask --verbose libreoffice

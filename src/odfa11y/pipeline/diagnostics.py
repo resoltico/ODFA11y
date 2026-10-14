@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Inspect dependency identities and the text family's named-link export capability."""
+"""Inspect dependency identities and the text family's link-description export capability."""
 
 from __future__ import annotations
 
@@ -36,16 +36,16 @@ if TYPE_CHECKING:
 def inspect_tools(
     options: NativeOptions | None = None,
 ) -> tuple[dict[str, object], OdfA11yError | None]:
-    """Collect identities and test named-link export, retaining facts if the probe fails.
+    """Collect identities and test link-description export, retaining facts if the probe fails.
 
     Missing tool identities are ``None``. Unsupported tool versions still fail identity
-    inspection. The named-link probe returns its controlled error alongside partial facts;
+    inspection. The link-description probe returns its controlled error alongside partial facts;
     neither an identity nor the probe establishes document accessibility or conformance.
 
     Returns
     -------
     tuple[dict[str, object], OdfA11yError | None]
-        Dependency and tool facts, plus the named-link probe error if it could not complete.
+        Dependency and tool facts, plus the link-description probe error if it could not complete.
 
     """
     options = options or NativeOptions()
@@ -65,7 +65,7 @@ def inspect_tools(
     }
     try:
         if options.on_progress:
-            options.on_progress("Test named-link PDF export", "running")
+            options.on_progress("Test link-description PDF export", "running")
         info["pdfua_link_descriptions"] = _link_descriptions(options)
     except OdfA11yError as exc:
         info["pdfua_link_descriptions"] = None
@@ -84,12 +84,12 @@ def _link_descriptions(options: NativeOptions) -> str:
     Raises
     ------
     UnsupportedKindError
-        The text family has no PDF filter or named-link probe.
+        The text family has no PDF filter or link-description probe.
 
     """
     adapter = REGISTRY[Family.TEXT]
     if adapter.pdf_filter is None or adapter.link_probe is None:
-        msg = "No named-link PDF export probe is defined for text documents."
+        msg = "No link-description PDF export probe is defined for text documents."
         raise UnsupportedKindError(msg)
     settings = ExportSettings(adapter.pdf_filter, options.soffice, options.timeout)
     with tempfile.TemporaryDirectory(prefix="odfa11y-doctor-") as scratch:

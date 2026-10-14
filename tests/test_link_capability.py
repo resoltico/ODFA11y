@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Named-link self-test, current-runtime behavior and real pipeline evidence."""
+"""Link-description self-test, native Name controls and pipeline evidence."""
 
 from __future__ import annotations
 

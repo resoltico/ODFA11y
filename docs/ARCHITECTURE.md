@@ -1,277 +1,232 @@
 # Architecture
 
-> **The ODF core understands OpenDocument structure; a document family understands what its
-> documents mean. Families own semantic decisions. Shared ODF vocabulary lives in `content`; orchestration
-> does not select family XML or contain family rules.**
-
-An audit or remediation shares parsed trees within its document model. A workflow
-runs those core operations in stages, emits typed findings from one rule registry,
-and records the stages and their results in one run record.
+The ODF core owns document storage and standard structure. Family adapters own the
+meaning of text, spreadsheet, presentation, drawing, formula, chart, image and database
+documents. Shared ODF primitives live in `content`; orchestration does not select family
+XML or decide family semantics.
 
 ```mermaid
 flowchart LR
-    Doc[ODF document: package or flat XML] --> Core[ODF core: storage, parts, kind, schema]
-    Core --> Adapter[Family adapter]
-    Adapter --> Audit[Read-only audit]
-    Config[odfa11y.toml] --> Ops[Typed operations]
-    Adapter --> Ops
-    Ops --> Gate{Executor postconditions}
-    Gate -->|content kept, no new schema violations| Reviewed[Remediated document]
-    Reviewed --> Export[LibreOffice export, if the family has one]
-    Doc --> ExportSrc[LibreOffice export]
-    Export --> Inspect[PDF audit]
-    Export --> Vera[veraPDF]
-    Export --> Compare[Fidelity comparison]
-    ExportSrc --> Compare
+    Source[ODF package or flat XML] --> Model[Storage and parsed parts]
+    Model --> Family[Family adapter]
+    Family --> Audit[Read-only audit]
+    Plan[Reviewed TOML decisions] --> Edit[Typed operations]
+    Family --> Edit
+    Edit --> Guard[Preservation and schema checks]
+    Guard --> Candidate[Remediated source]
+    Source --> Export[Guarded native export]
+    Candidate --> Export
+    Export --> PDF[PDF audit and veraPDF]
+    Export --> Fidelity[Fidelity comparison]
     Audit --> Evidence[Evidence bundle]
-    Inspect --> Evidence
-    Vera --> Evidence
-    Compare --> Evidence
+    PDF --> Evidence
+    Fidelity --> Evidence
 ```
 
 ## Packages and dependency rules
 
 | Package | Responsibility |
 | --- | --- |
-| `errors` | The domain exceptions; the CLI reports exactly these. |
-| `safe_xml` | The one XML parser for untrusted input: no entity expansion, no network. |
-| `staging`, `pdf_limits` | Sibling temporary names for atomic writes; size limits for hostile PDFs. |
-| `pdf_content` | Shared bounded token scanner and inline-image boundaries. |
-| `pdf_consumption` | Unique decoded-stream and invocation-work preflight for audit and fidelity. |
-| `external_tools` | Locate, identify and run LibreOffice and veraPDF with bounded output. |
-| `report` | The rule registry, findings, reports, rendering and exit statuses. |
-| `odf` | Storage layouts, logical parts, document kinds, detection, schema validation. |
-| `content` | Shared ODF primitives for language, graphics, table grids and protected payloads; no family decisions. |
-| `adapter` | The contract between the core and families: `FamilyAdapter`, `Operation`, `Outcome`. |
-| `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
-| `families.spreadsheet` | Everything specific to spreadsheets: audit rules, operations, snapshot, plan table. |
-| `families` | Family selection and supported style inspection; the generic adapter for unimplemented kinds. |
-| `batch` | Strict manifests and independent pipelines with atomic aggregate evidence. |
-| `audit` | Read-only ODF checks and family-aware template preparation with shared readability policy. |
-| `remediation` | The executor and the operations common to every family. |
-| `pdf` | LibreOffice export, structural PDF audit, link correlation, veraPDF. |
-| `fidelity` | PDF text, link and rendered-ink comparison. |
-| `evidence` | Manifests, redaction, the review sheet and atomic bundle publication. |
-| `config` | The TOML file → operations and fidelity policy. |
-| `pipeline` | Core document inspection, guarded native export, ODF/PDF comparison, tool diagnostics, assurance stages and evidence publication. |
-| `cli` | Argument/configuration translation, rendering, terminal progress and recovery guidance. |
+| `odf` | Package/flat storage, logical parts, document kinds, protection declarations and schema validation. |
+| `adapter` | Family, operation, outcome and review contracts. |
+| `content` | Shared ODF text, language, graphics, links, tables, resource context and protected XML primitives. |
+| `families.<family>` | Family audit rules, explicit operations, protected-content policy, configuration and native capabilities. |
+| `families` | Adapter registry and supported style inspection. |
+| `audit`, `remediation` | Read-only source inspection/template preparation and guarded operation execution. |
+| `pdf`, `fidelity` | Native PDF export/inspection/validation and publication comparison. |
+| `evidence` | Manifests, redaction, review sheets and atomic bundle publication/verification. |
+| `config` | Strict TOML decisions translated into operations and fidelity policy. |
+| `pipeline`, `batch` | Public document workflows, assurance stages and serial manifest execution. |
+| `report` | Rule registry, findings, reports, rendering, SARIF and command statuses. |
+| `cli` | Argument translation, terminal output, progress and recovery guidance. |
+| `safe_xml`, `external_tools`, `staging` | Secure XML parsing, bounded native processes and atomic output paths. |
+| `pdf_limits`, `pdf_content`, `pdf_consumption` | PDF budgets, bounded token scanning and shared decoded-stream/work preflight. |
+| `errors` | Domain exceptions reported by application boundaries. |
 
-Dependencies point one way: `cli` → `pipeline`, `config` → `audit`, `remediation`, `pdf`,
-`fidelity`, `evidence` → `families` → `families.<family>` → `content`, `adapter` → `odf` → the leaves.
-The five engines never import each other, and **families never import each other**, nor
-does anything below the registry import a family. [tach.toml](../tach.toml) is the
-authority: `tach check` rejects an undeclared dependency, a cycle, or an import that
-bypasses a package's public interface (a package's public API is exactly what its
-`__init__.py` re-exports). The CLI depends on core public operations and report rendering;
-it cannot import family implementations, the document-storage layer or the PDF engine. The package root
-is a leaf exposing only `__version__`; `odfa11y.__main__` is the explicit entry point
-allowed to call the CLI. Unregistered files inside `odfa11y` inherit the root leaf's
-empty dependency list; unregistered top-level source files cannot import project modules.
-`exact = true` also rejects unused dependency declarations so retired edges cannot keep
-permitting coupling. Tests challenge these rules using the installed Tach CLI on isolated
-source copies, including deliberately permitted circular dependencies. Files with no
-imports do not violate a dependency boundary; Tach does not require a separate declaration
-for every file. A quality gate adds the part tach cannot see: it fails when a
-core package directly names family content through qualified-name calls (including ordinary
-import aliases, qualified calls and keyword prefixes) or XPath literals. Shared `content`
-primitives may use that vocabulary; structural namespace declarations and normative schema
-validation remain core responsibilities.
+[tach.toml](../tach.toml) is the dependency authority. The CLI calls public core
+operations and cannot import family implementations, document storage or the PDF engine.
+The registry selects adapters; families never import one another, and lower layers do
+not import family implementations. Audit, remediation, PDF, fidelity and evidence do not
+import one another. The adapter package has runtime dependencies only on domain errors;
+its ODF/report annotations are type-only references.
 
-The file-size policy scans authored Python, including hidden and Git-ignored files.
-Environment/cache directories and repository-root build/distribution outputs are generated;
-a nested domain directory named `build` or `dist` remains authored code. Ruff's explicit
-exclusions use the same scope, rather than defaults that hide such nested directories.
-Function complexity, branch, argument, return and statement limits are declared in
-[pyproject.toml](../pyproject.toml); exceptions require a central, specific reason.
+Tach rejects undeclared or unused dependencies, cycles and imports that bypass package
+interfaces. An interface exposes the names re-exported by its `__init__.py`. The package
+root exposes only `__version__`; `__main__` is the explicit caller of the CLI. Unregistered
+files inherit the root's empty dependency list, and unregistered top-level modules cannot
+import project packages.
 
-These are enforceable limits, not a numerical architecture score. A small class can still
-combine unrelated responsibilities, and dynamic imports or computed XML names can hide
-coupling from static checks. Design review and a separate challenge pass must assess
-responsibility, state ownership and downstream effects; passing size/lint/boundary checks
-alone does not prove that a design is cohesive or free of a god object.
+The policy checker also rejects literal family XML selection in orchestration, including
+qualified-name calls, ordinary aliases and XPath literals. Shared `content` primitives
+may name their vocabulary. Storage dispatch, namespace declarations and normative schema
+selection remain core responsibilities. Static checks cannot establish semantic cohesion:
+design review must assess responsibilities, state ownership and downstream effects.
 
-The CLI does not own document dispatch, export filters, native-resource preflight,
-comparison scratch lifetimes, named-link probes or template eligibility. Its handlers
-call public core entrypoints and render their reports, paths or diagnostic results.
-`NativeOptions` supplies tool settings for standalone operations; `PipelineOptions`
-also selects an assurance profile. Optional observers receive labels and statuses,
-carry no document payloads, and must not raise. They do not change persisted records,
-options identity or plan hashes. Publication progress completes only after the atomic
-bundle write succeeds; failure and interruption remain failures.
+The authored-file inventory includes hidden and Git-ignored Python. Generated environments,
+caches and root distribution/build outputs are excluded; nested domain directories named
+`build` or `dist` remain authored source. [pyproject.toml](../pyproject.toml) owns file-size,
+function-complexity, lint and type policy. See [Development](DEVELOPING.md#required-checks).
 
 ## The document model
 
-An ODF document is stored as a **package** (a ZIP with a manifest) or as one **flat XML**
-file. Both load into an [OdfStorage](../src/odfa11y/odf/storage.py), and everything above
-the storage talks to **parts** (`content`, `styles`, `meta`, `settings`, `manifest`), never
-to member names: in a package each part is a member, in a flat document every part but the
-manifest is the same tree.
+[OdfStorage](../src/odfa11y/odf/storage.py) exposes logical parts (`content`, `styles`,
+`meta`, `settings`, `manifest`) over package members or one flat XML tree.
+[OdfDocument](../src/odfa11y/odf/document.py) parses a member once and shares that tree
+between checks and operations. `tree(part)` provides the mutable cached tree for reading;
+callers must use `edit(part)` before modification so the member is marked for serialization.
+This is caller discipline, not an immutable-tree API. Audits neither edit nor save sources.
 
-[OdfDocument](../src/odfa11y/odf/document.py) parses each XML member once. `tree(part)`
-reads; `edit(part)` returns the same tree and marks its member edited. `save()` re-serializes
-only edited members, so untouched members stay byte-identical, and the storage validates and
-replaces the destination atomically (a package keeps `mimetype` first and stored). Audit
-checks use `tree()` only, which is why an audit cannot modify a document.
+`save()` serializes only edited members. Untouched package members remain byte-identical;
+flat logical parts share one serialized tree. Storage validates output and replaces the
+destination atomically. Package output keeps `mimetype` first and uncompressed.
+
+Protection declarations are inspected before semantic XML selection. Signed packages can
+be inspected without establishing signature validity, but remediation refuses them even
+for dry runs and empty plans. Encryption, duplicate/unsafe member names and malformed or
+ambiguous protection declarations prevent complete inspection and guarded planning,
+remediation and native work. See [preservation boundaries](ACCESSIBILITY.md#preservation-boundaries).
 
 ### Kinds
 
-[kinds.py](../src/odfa11y/odf/kinds.py) lists every OpenDocument media type with its family
-(`text`, `spreadsheet`, `presentation`, `graphics`, `formula`, `chart`, `image`,
-`database`), template flag and body element, including the standard's deprecated image family. Retired database producer aliases are rejected.
-[Detection](../src/odfa11y/odf/detect.py) reads the declared media type (the `mimetype` file,
-or `office:mimetype` of a flat document, falling back to the manifest), the manifest's
-media type, the body element and the file extension. The file extension never selects the
-kind; a mismatch is a finding. An unrecognised media type ends the audit with `ODF005`.
+[kinds.py](../src/odfa11y/odf/kinds.py) defines supported media types, families, template
+flags and body elements. Detection reads package `mimetype` or flat `office:mimetype`,
+falling back to a package manifest declaration. Manifest/body disagreements are findings;
+the extension corroborates the declaration and never selects a family. An unknown media
+type stops semantic audit with `ODF005`. Database uses the standard
+`application/vnd.oasis.opendocument.base` media type. The standard Image kind is recognized
+and reported as deprecated by ODF.
 
 ## Document families
 
-A family implements a [FamilyAdapter](../src/odfa11y/adapter/family.py): its audit, its
-default language (a family's styles decide where one lives), an optional hyperlink-probe document for exporter capability evidence, the content snapshot the
-executor compares, optional whole-plan preflight and operation-specific protected-edit checks, the plan table it reads, its template lines, its review checklist and,
-if LibreOffice can export it to PDF, the export filter. Kinds without an implementation get
-the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
-audit exists, and the body text must not change.
+A [FamilyAdapter](../src/odfa11y/adapter/family.py) supplies audit and language hooks,
+protected-content snapshots, operation-specific guards, optional whole-plan preflight,
+configuration tables, templates and human-review items. It also declares an optional PDF
+filter, style report and link-capability probe. The generic adapter performs common checks
+for an unimplemented kind and reports the absent semantic audit explicitly.
 
-Eight families are implemented, and none imports another:
+| Family implementation | Semantic ownership and protected content |
+| --- | --- |
+| `text` | Current reading contexts, headings, logical table headers, graphics, links, addresses, spacing and inert spacers; wording, references, excluded content and unrelated styles remain protected. |
+| `spreadsheet` | Sheet names, graphic decisions and link descriptions; sheet positions, values, formulas, grids and other sheet XML remain protected. |
+| `presentation`, `drawing` | Page descriptions, graphic decisions and explicit complete navigation order; page/shape identity, visible text, geometry, links and payloads remain protected. The drawing adapter serves ODF's `graphics` family. |
+| `formula` | Spoken alternative and root language on packaged native MathML; expression structure, annotations, references and other attributes remain protected. An office-body Formula wrapper is outside this contract. |
+| `chart` | Labels, cached ranges/series and source consistency; its nonvisual alternative uses common document metadata. Chart body data, types, values and references remain protected. |
+| `image` | Graphic identity, supplied alternatives/roles and payload inspection; graphic content, geometry and resource identity remain protected. |
+| `database` | Offline connection/privacy and object-description checks; SQL, connection settings, form bindings and embedded storage remain protected. No connection or query is executed. |
 
-- `text` (text, templates, master and web documents) owns the `TXT` rules, explicit semantic operations
-  and the `[text]` configuration table.
-- `spreadsheet` (`.ods`, `.ots`, flat `.fods`) owns the `SHEET` rules, explicit sheet-name, graphic-alternative and link-description operations, the `[spreadsheet]` table, the `calc_pdf_Export`
-  filter and a snapshot of protected sheet XML whose `preserved` rule lets only
-  sheet names, supplied alternatives/roles and link descriptions change. It shows that the contract needs nothing from the core about
-  spreadsheets: the default language lives on a different style, the snapshot is not
-  paragraphs, and the operations resolve sheets and frames instead of paragraphs and
-  tables. Both families bind the shared graphic editor to their own operation contract. The common
-  helper understands `draw:` vocabulary without selecting family rules.
-
-- `presentation` (`.odp`, `.otp`, flat `.fodp`) and `drawing` (`.odg`, `.otg`, flat `.fodg`)
-  bind shared page/shape mechanics to separate `PRES`/`DRAW` rules and explicit configuration.
-  The drawing adapter serves the standard's `graphics` family. Both preserve complete body
-  structure, geometry, references and resource bytes while allowing reviewed descriptions
-  and complete navigation lists. Their native Impress/Draw filters are independently tested
-  through production assurance with real standard-ODF 1.4 fixtures.
-
-
-- `formula` owns native MathML alternative/language decisions and `MATH` rules. Formal
-  expressions use the bundled normative W3C grammar. `math_pdf_Export` is measured and
-  currently fails PDF tagging; no success is inferred from a valid source.
-- `chart`, `image` and `database` own `CHART`, `IMAGE` and `BASE` source audits. Their
-  snapshots protect data, geometry, SQL, bindings and settings; opaque resources are
-  protected by the executor. They expose no PDF filter. Chart uses common document
-  metadata; Image binds the shared graphic editor; Base describes declarations offline.
+Native export capability is separate from source semantics. The current family/export
+matrix and exporter limits live in [Accessibility scope and limits](ACCESSIBILITY.md#document-families).
+Configuration fields, selectors and fingerprints live in [Configuration](CONFIGURATION.md).
 
 ### Adding a family
 
-1. Create `families/<family>/` with an `ADAPTER`, its audit, operations and plan table;
-   declare each operation's `family`. Where the family's default language lives, what its
-   snapshot is and what `preserved` allows are the family's decisions, not the core's.
-2. Add one line to the registry and one `[[modules]]` entry to `tach.toml`.
-3. Add `<PREFIX>` rules to the registry and `docs/RULES.md` (a test keeps them equal).
-4. Add synthetic fixtures for both layouts to `tests/documents.py` and the family's tests.
+1. Implement its adapter, audit, operations, configuration and review items under
+   `families/<family>/`. Define default-language semantics and precisely which content an
+   operation may change.
+2. Register the adapter and declare its actual dependencies and public interface in
+   `tach.toml`.
+3. Register findings and keep [Rules](RULES.md) synchronized with the rule registry.
+4. Test supported representations, rejected/ambiguous inputs, complete preflight,
+   idempotence and preservation. Use real native documents and export evidence for any
+   claimed native capability; do not require a flat representation the standard/adapter
+   does not support.
 
-Nothing else changes: not `odf`, `audit`, `remediation`, `pipeline`, `evidence`, `config`
-or `cli`. A test registers a stand-in adapter through the registry alone to keep that true.
-A family's operations are rejected for documents of any other family, so a plan can never
-act on a document it was not written for.
+Family selection stays in the registry; generic engines consume the contract without
+family-specific branches. Operations addressed to another family are refused.
 
-## Findings and rules
+## Operations and preservation
 
-Every finding references a [registered rule](../src/odfa11y/report/rules.py) with its id,
-severity, category and *remedy*, the configuration key that holds the decision. The id's
-prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `SHEET` (spreadsheet family), `PDF`,
-`VERA`, `FID` (outputs). Reports serialize as
-`{"format": 5, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
-`location` is `{"path", "member"}` or null: a storage-neutral logical path, and the package
-member only where it helps ([locations](RULES.md#locations)).
+An [Operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass with parameters,
+`apply(document)` and a serialized decision record. It returns per-target `applied`,
+`unchanged` or `failed` outcomes. Repeating a supported reviewed decision is idempotent.
+The TOML configuration is the plan; there is no second persisted plan format.
 
-## Operations and the executor
+Addressed operations such as graphic, heading, table-header and spacing edits resolve and
+validate their targets before mutation. Missing, ambiguous or stale identities refuse.
+Heading edits change only the explicit outline level. Table-header decisions use logical
+row/column counts, including repetitions and groups; crossing spans refuse. A repeat split
+that would duplicate structural objects or XML/drawing identities also refuses.
 
-An [operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass: its fields are its
-parameters, `apply(document)` returns one `Outcome` per target (`applied`, `unchanged` or
-`failed`), and `as_dict()` records it. Applying twice never accumulates changes. Operations
-that need resolving first (graphics, heading levels, table headers, spacing) resolve and validate every
-selector before the first edit. The TOML configuration *is* the plan: declarative, strict
-and reviewed by a person; there is no second plan format.
+The [executor](../src/odfa11y/remediation/apply.py) checks family applicability and optional
+whole-plan preflight, then checks operation-specific protection after each operation.
+Edit accounting applies per operation: reporting any applied outcome requires a recorded
+edit, while an unchanged operation must record none. Failed outcomes prevent publication.
+Final checks compare family snapshots, counted inert-spacer removals and opaque resources.
+Opaque package members outside standard editable parts and flat embedded binary payloads
+are protected separately.
 
-The [executor](../src/odfa11y/remediation/apply.py) applies operations in order and
-publishes only if: every operation belongs to the document's family; no outcome failed;
-every `applied` outcome made at least one `edit()` (and `unchanged` made none), which
-catches a lost edit; the family's snapshot of visible content is preserved apart from
-counted spacer removals; opaque package and embedded payloads are unchanged; and the ODF schema shows no violation the source did not already
-have. Failure writes nothing. It also refuses to write over its source.
+Protected XML digests include structure, attributes, references and in-scope namespace
+bindings used by attribute values. Families omit only explicitly editable metadata;
+copying XML must not erase a formula prefix's meaning. Graphic target identities include
+subtree/resource/style facts, while reviewed accessibility metadata is excluded where
+needed for idempotence. The public preservation scope and its limits are described in
+[Accessibility](ACCESSIBILITY.md#preservation-boundaries).
+
+Explicit metadata decisions can create a missing optional package metadata part for a
+declared supported ODF version. Creation preflights the storage slot and manifest,
+refuses duplicate/conflicting declarations and never overwrites a resource. Database
+description edits use only the standard declared-object description attributes.
+
+Successful remediation writes atomically to a destination distinct from the source. A
+failure or dry run writes no destination. Direct low-level model editing remains the
+caller's responsibility; it does not automatically execute the remediation postconditions.
 
 ## Schema validation
 
-The [bundled schemas](../src/odfa11y/odf/schema.py) are unmodified OASIS files with
-recorded digests. libxml2 reports one error per failing content model and gives each an
-element path but no stable position, so a violation is identified by its message and a
-*fingerprint* of the failing element (tag, attributes, parent and neighbouring tags). The
-comparison before and after an edit is a multiset of those identities: a violation fixed in
-one place cannot hide an equal one introduced elsewhere, and edits elsewhere do not turn an
-old violation into a new one. What it cannot see is a second error inside a content model
-that already failed; violations without a resolvable location are compared by count and
-reported as unlocated.
+The bundled OASIS ODF schemas and W3C MathML grammar retain their notices and recorded
+digests. Validation is offline. Remediation compares schema violations when the result's
+version has a bundled schema. If only the result has one, it must validate outright; if
+the result has none, the result records a skipped schema check rather than conformance.
 
-## PDF boundary
+Violations are matched as a multiset of message/element fingerprints, including the
+element, attributes, parent and neighboring tags. Fixing one location cannot hide the same
+reported violation introduced elsewhere. libxml2 may expose only one failure within an
+already failing content model; unlocated violations are compared by count. See
+[schema assurance limits](ACCESSIBILITY.md#odf-schema-validation).
 
-[Export](../src/odfa11y/pdf/export.py) and [veraPDF](../src/odfa11y/pdf/verapdf.py) use
-argument lists, timeouts, a bounded output capture that kills the process tree on timeout,
-and a temporary LibreOffice profile, and publish files atomically. PDF input has size, page,
-structure-node and decoded-content limits. The [structure walker](../src/odfa11y/pdf/structure_walk.py)
-builds the reachable structure tree once, resolving `/OBJR` and marked-content (`/MCR` or
-integer) kids to their pages; the [checks](../src/odfa11y/pdf/structure_checks.py) and the
-[link correlation](../src/odfa11y/pdf/link_structure.py) read roles, headings, lists,
-tables, figures and the correspondence of link annotations to Link elements from it. The
-[marked-content check](../src/odfa11y/pdf/marked_content.py) scans each page's content stream
-once with a [linear tokenizer](../src/odfa11y/pdf/content_scan.py) and compares its MCIDs
-with those the tree refers to; decoded page content is capped per document.
-veraPDF's XML is parsed into failed rules with clause, test number and sample contexts; a
-missing validator, an execution failure and malformed output are distinct errors, while
-non-compliance is a finding. Nothing here is a sandbox.
+## Native and PDF boundaries
 
-Marked-content scanning skips raw inline images using their sample dimensions. Filtered
-inline images or unsupported inline color spaces produce `PDF000` rather than guessing
-where binary samples end. Invoked Forms are inspected with resource scopes and independent stream identities. A text-free PDF can satisfy content-presence checks through
-reachable described Figures whose own/descendant MCIDs match constructed-and-painted
-paths, valid raw inline images, or invoked image resources on the actual page with positive
-integer dimensions and nonempty stored stream bytes. Image-resource payloads are not decoded. Empty,
-artifact-only, wrong-page and orphan Figure declarations cannot satisfy that check.
-This establishes structural graphical-content presence; it does not establish decoded pixel
-integrity or visibility under clipping, transparency or hidden content. The decoded-page-content limit
-is checked after each stream is decoded; it does not bound the decoder's peak memory.
+Application operations share native-resource/context preflight from `content`. They
+distinguish rendering dependencies from navigation and exact package files from embedded
+subdocument directories. Original export and captured pipeline export have different
+identity requirements. The authoritative supported declarations, Formula bounds and
+refusals live in [Accessibility](ACCESSIBILITY.md#native-document-context-and-declared-dependencies);
+capture identity and directory-lifetime requirements live in [Evidence](EVIDENCE.md#source-capture).
+The low-level `pdf.export_pdfua()` call requires caller policy and isolation.
 
+Native processes use argument lists, validated timeouts, bounded output capture and
+temporary LibreOffice profiles. Process cleanup has platform limits; these controls are
+not a sandbox. [external_tools.py](../src/odfa11y/external_tools.py) owns native process
+handling and [pdf/export.py](../src/odfa11y/pdf/export.py) owns LibreOffice export.
+
+The PDF structure walker builds reachable structure and reconciles page/Form marked
+content and link-object references. [pdf_content/scan.py](../src/odfa11y/pdf_content/scan.py)
+owns bounded tokenization and inline-image boundaries. Audit and fidelity share decoded
+stream/work preflight. Unsupported content produces explicit incomplete inspection or
+failure. Graphic-presence checks establish inspected painted content rather than pixel
+visibility. Detailed budgets and uninspected cases belong to
+[Accessibility](ACCESSIBILITY.md#threat-model).
 
 ## Pipeline and evidence
 
-[`run_pipeline`](../src/odfa11y/pipeline/run.py) runs the stages an **assurance profile**
-(`inspect`, `verify`, `production`) names, in a fixed order, and stops at the first failed
-gate. A stage is `passed`, `failed`, `skipped` (could have run: earlier failure, or outside
-the profile) or `not-applicable` (the document's family has no such stage, for example PDF
-export). Once the output directory is acceptable, a bundle is published whether the run
-passed or failed, even for an unreadable source. The
-[run record](../src/odfa11y/pipeline/record.py) is serialized without timestamps and
-published, with artifacts, review sheet and manifest, as one [evidence bundle](EVIDENCE.md);
-diagnostic values are redacted through their XML/JSON serialization, while document payloads
-retain their bytes and can contain authored paths. Artifact hashes identify final staged bytes.
+Public pipeline operations own document dispatch, guarded native export, comparisons,
+scratch lifetimes and assurance stages. The CLI translates arguments and renders results.
+`NativeOptions` supplies standalone tool settings; `PipelineOptions` also selects an
+assurance profile. Optional observers receive labels/statuses without document payloads
+and must not raise. They do not alter persisted records, plan hashes or gate policy.
+
+`run_pipeline` executes a fixed stage order and stops at a failed gate. Stage status
+distinguishes success, failure, skipped work and unsupported/not-applicable work. An
+acceptable output directory receives a bundle for passed and failed runs, including
+unreadable sources. Publication progress completes only after atomic bundle publication.
+Bundle manifests identify final staged bytes; hashes establish identity, not review
+quality. See [Workflow](WORKFLOW.md), [Evidence](EVIDENCE.md), [Batch](BATCH.md) and
+[SARIF](SARIF.md) for their public contracts.
 
 ## Packaging
 
-[pyproject.toml](../pyproject.toml) is the authority for metadata, dependencies,
-development tool groups and the lint, type and coverage settings, and for Hatchling build
-selection. `[project].version` declares the package version; runtime reporting derives
-it from installed distribution metadata. The wheel ships `py.typed` and the ODF schemas. See
-[Development](DEVELOPING.md#packaging).
-
-Native context preflight is shared ODF content vocabulary (`content.export_context`), used
-by read-only audit and application orchestration. It distinguishes known rendering references
-from ordinary navigation through one element/URI-attribute/target-shape policy. Exact files
-and embedded subdocument directories have separate admission semantics; generic resource
-fingerprints still inventory complete object payloads. The scan includes content/styles/meta
-and conservatively refuses unused unsupported declarations. Captured pipeline inputs and validated candidate export copies
-share the resolved source directory, with bounded regular-file capture whose opened identity
-must match selection. Stable ancestor namespaces are a caller prerequisite for context and
-pathname cleanup; leaf identity does not protect parent exchanges or in-place writes. Location-sensitive
-fields are explicitly refused at that native boundary rather than rewritten. Low-level
-`pdf.export_pdfua` remains an explicit native invocation API requiring caller policy/isolation;
-application CLI/pipeline preflight is not a universal importer sandbox. The detailed contract
-and physical input cap live in [Evidence](EVIDENCE.md#no-local-paths).
+[pyproject.toml](../pyproject.toml) owns metadata, dependency/tool constraints, analyzer
+policy and Hatchling build selection. `[project].version` is the version authority;
+runtime reporting derives installed distribution metadata. The wheel includes runtime
+resources and `py.typed`; source archives include contributor materials. See
+[Development](DEVELOPING.md#packaging) for distribution verification.

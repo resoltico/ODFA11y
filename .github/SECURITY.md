@@ -1,43 +1,41 @@
 # Security
 
-ODFA11y parses document containers, XML and PDF objects and can invoke LibreOffice
-and veraPDF. It is alpha software. The maintainer is Ervins Strauhmanis; there is no
-staffed response service or guaranteed response time.
+ODFA11y parses document containers, XML and PDF objects and can invoke LibreOffice and
+veraPDF. Its [project metadata](../pyproject.toml) declares alpha status and the maintainer.
+There is no staffed response service or guaranteed response time.
 
 ## Reporting
 
-Use **Security → Report a vulnerability** when GitHub private vulnerability
-reporting is enabled. If that route is unavailable, open an issue asking the
-maintainer for a private contact route without posting exploit details or sensitive
-files. Supply a synthetic reproduction, affected revision and tool versions
-through the private channel. Never send customer documents or credentials.
+Use **Security → Report a vulnerability** when GitHub private vulnerability reporting is
+enabled. If unavailable, open an issue requesting a private contact route without posting
+exploit details or sensitive files. Supply a synthetic reproduction, affected revision
+and tool versions through the private channel. Never send customer documents or credentials.
 
 ## Processing boundaries
 
-The XML parser disables entity resolution and network access. LibreOffice, veraPDF and
-other native importers do not inherit a network-denial policy from that parser setting. Document writes are validated
-before replacement, and duplicate or unsafe ZIP member names cannot be rewritten.
-These controls do not sandbox the parser, the pdfium renderer used for fidelity
-comparison or external applications. Archives are loaded into memory after member-count/unpacked-size checks; hostile
-documents can still exhaust process resources.
+The XML parser disables entity resolution and network access. Native importers do not
+inherit that network restriction. Package/XML/PDF limits, guarded source decisions and
+atomic writes reduce specific risks; they do not sandbox parsers, pdfium, LibreOffice or
+veraPDF, and they do not impose a process CPU/memory limit. Hostile inputs can exhaust
+resources. See [scope and threat model](../docs/ACCESSIBILITY.md#threat-model).
 
-Process untrusted documents in an isolated environment with operating-system
-resource limits and no sensitive files or credentials. Treat reports as potentially
-sensitive: titles, text excerpts, image paths and diagnostic paths can appear in
-them. Keep external applications current and inspect supported versions before
-using production inputs.
+Guarded native operations refuse recognized unsupported rendering/resource declarations
+and incorrect file/object addressing. Captured pipeline exports also refuse
+location-sensitive fields. These are bounded declaration/context controls, not universal
+network isolation or inspection of opaque embedded internals. The low-level native export
+API requires caller policy and isolation. `production` selects assurance gates; it does
+not provide an isolated execution environment.
 
-The repository workflow checks known dependency advisories, secrets and workflow
-security. A clean scan covers those checks and the advisory data available at the
-time; it is not proof that the software has no vulnerabilities.
+Pipeline capture checks bounded regular-file identity. Source/staging ancestor namespaces
+must remain stable; leaf identity does not prevent parent exchanges or concurrent in-place
+writes. Bundle verification likewise requires stable directory namespaces. See
+[Evidence](../docs/EVIDENCE.md#no-local-paths) for privacy and capture/verification details.
 
-Pipeline capture binds bounded regular input to the selected device/inode identity before
-copying. Caller-controlled source/staging ancestor namespaces must remain stable; parent
-exchange/rename and concurrent in-place writes are not protected by leaf identity. The
-shared application preflight refuses recognized unsupported resource declarations and incorrect
-file/object addressing before guarded native export. Captured pipeline export also refuses
-location-sensitive fields. These are narrow
-input/context controls, not a universal network-isolation mode. Embedded objects and native
-importers can have behavior outside this preflight. `production` selects assurance gates;
-confidential/untrusted processing still requires caller-controlled OS isolation. See
-[Evidence](../docs/EVIDENCE.md#no-local-paths) for the physical cap and portability contract.
+Process untrusted documents under operating-system isolation/resource limits, without
+sensitive files or credentials. Keep native applications current within the supported
+toolchain. Reports can contain titles, text excerpts and authored references; bundles
+include document payloads. Diagnostic path redaction does not make documents public-safe.
+
+Repository checks cover configured dependency advisories, secrets and workflow security.
+A passing scan establishes those checks against the available advisory data, not absence
+of vulnerabilities. Follow [audit hygiene](../docs/DEVELOPING.md#audit-hygiene) for review.

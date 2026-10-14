@@ -30,10 +30,14 @@ def remediate(
 ) -> RemediationResult:
     """Apply operations in order and publish the result only if every postcondition holds.
 
-    Postconditions: every operation belongs to the document's family, no operation failed,
-    the family's notion of visible content is preserved (apart from counted spacer removals),
-    and the ODF schema reports no violation that the source did not already have. On any
-    failure nothing is written.
+    Operations must match the document family and succeed with consistent edit accounting.
+    Family-specific protected content and opaque resources must remain intact, apart from
+    explicitly permitted changes and counted inert-spacer removals. Protected, ambiguous or
+    malformed packages are refused, including signed packages and dry runs.
+
+    When a bundled result schema is available, no new violations may be introduced; a result
+    with no available source schema must validate outright. An unsupported result version
+    records a skipped schema check rather than conformance. Any failure writes no destination.
 
     Returns
     -------
@@ -43,8 +47,8 @@ def remediate(
     Raises
     ------
     RemediationError
-        An operation does not apply to this kind of document, an operation failed, content
-        changed, or the schema check regressed.
+        The package cannot be safely remediated, an operation is inapplicable or failed,
+        protected content changed, or an available schema check failed.
 
     """
     source, destination = Path(source), Path(destination)

@@ -1,8 +1,8 @@
 # Fidelity comparison
 
-Remediation can look successful and still change links, wording or layout. `compare`
-(and the `pipeline`) exports the source and the candidate with the same LibreOffice
-executable and profile, then compares the two PDFs.
+`compare` and pipeline fidelity compare the source and candidate PDFs. ODF inputs are
+exported with the same LibreOffice executable/profile in one run; PDF inputs are read
+directly. This detects protected publication changes, not accessibility or correct meaning.
 
 ## What is compared
 
@@ -10,44 +10,40 @@ executable and profile, then compares the two PDFs.
 | --- | --- | --- |
 | Page count | `FID001` | `pagination = "same"` |
 | Page sizes | `FID002` | `pagination = "same"` |
-| Document text in reading order, whitespace-normalized | `FID003` | always |
-| Source link targets present in the candidate | `FID004` | always |
-| Links only in the candidate | `FID006` (info) | always |
-| Rendered ink per page | `FID005` | `pagination = "same"` |
-| Page too large to render safely | `FID007` | `pagination = "same"` |
+| Extracted page text, whitespace-normalized | `FID003` | Always |
+| Source URI link targets present in candidate | `FID004` | Always |
+| Additional candidate URI link targets | `FID006` (info) | Always |
+| Rendered ink per page | `FID005` | `pagination = "same"`, with equal page counts/sizes |
+| Page too large to render safely | `FID007` | When raster comparison runs |
 
-Effective targets of URI actions on Link annotations are compared as a multiset,
-independent of page. Absolute URIs are retained; relative references resolve against the
-explicit catalog `/URI` `/Base`, following [RFC 3986 reference resolution](https://www.rfc-editor.org/rfc/rfc3986#section-5).
-Relative targets require an absolute `http`, `https`, `ftp` or `file` Base; absent,
-malformed or unsupported contexts cause a controlled execution failure. Query strings,
-fragments, percent encoding and duplicate targets are retained. URI components must satisfy
-the RFC grammar: ports contain digits, brackets delimit IP literals only in authorities,
-and literal data delimiters must be percent-encoded where their component forbids them. Targets are never fetched.
-This scope excludes internal destinations, bookmarks, launch actions and hidden references;
-it is not an inventory of every reference in a PDF. See the
-[PDF Association's URI action guidance](https://pdfa.org/pdf-a-and-external-references/).
+Text comes from PDF page extraction in page order, not structure-tree reading order.
+Logical reading order and assistive-technology behavior require separate review.
+
+URI actions on Link annotations compare as a multiset independent of page. Absolute URIs
+are retained; relative references resolve against catalog `/URI` `/Base` under
+[RFC 3986](https://www.rfc-editor.org/rfc/rfc3986#section-5). A relative reference requires
+an absolute `http`, `https`, `ftp` or `file` base; absent/malformed/unsupported contexts fail
+execution. Query strings, fragments, percent encoding and duplicate targets remain.
+Components must satisfy the RFC grammar, including numeric ports and correctly placed IP
+literal brackets/delimiters. No target is fetched.
+
+Internal destinations/bookmarks, launch actions and hidden references are outside this
+link comparison. It is not an inventory of every PDF reference; see the
+[PDF Association URI guidance](https://pdfa.org/pdf-a-and-external-references/).
 
 ## Rendered ink
 
-Each page is rendered with pdfium at `dpi` (default 72). A pixel is *ink* when its
-luminance is below `ink_threshold` (default 200). A page differs by the fraction of its
-ink that is present in only one render. Because the measure is relative to the page's
-own ink, it is not diluted by white space:
+pdfium renders each page at `dpi` (default 72). A pixel is ink if luminance is below
+`ink_threshold` (default 200). The difference is the number of pixels inked in exactly
+one render divided by `max(source ink pixels, candidate ink pixels, 1)`. It is relative
+to ink, not white page area, and can exceed 1. Pure colour changes that stay on the same
+side of the threshold are invisible to this binary measure.
 
-| Change (measured on LibreOffice exports) | Difference |
-| --- | --- |
-| Metadata or identical content | 0 |
-| Two hyperlinks added (colour and underline only) | about 3% |
-| Links, alt text and header rows on a very small page | about 9% |
-| Two spacer paragraphs removed, moving a line up | about 116% |
-
-`raster_tolerance` (default `0.15`) sits between link-styling noise and real movement. A
-page that fails writes `page-NNN-diff.png` (white marks ink present in one render only)
-to `--diff-dir`, or to the evidence directory's `fidelity/`. Pages above 20 million
-pixels at the chosen dpi are not rendered (`FID007`). Positive DPI has no arbitrary small
-maximum; a DPI outside the renderer's floating-point numeric range is refused with
-`ToolFailedError` before conversion. High representable DPI still uses the pixel budget.
+A ratio above `raster_tolerance` (default `0.15`) produces `FID005`. When a diff directory
+is supplied, `page-NNN-diff.png` marks differing ink in white; pipeline uses `fidelity/`.
+More than 20 million pixels at the chosen DPI produces `FID007` instead of rendering.
+DPI beyond floating-point numeric range fails with `ToolFailedError` before conversion;
+representable DPI remains subject to the pixel budget.
 
 ## Policy
 
@@ -59,22 +55,19 @@ ink_threshold = 200
 dpi = 72
 ```
 
-The public `FidelityPolicy` constructor and TOML loader use the same validation contract:
-invalid choices raise `odfa11y.errors.ConfigError` before comparison/export/publication.
-Pagination must be `same` or `may-change`, tolerance must be a finite non-negative number
-(including values above 1.0), ink threshold an integer 0–255, and dpi a positive integer.
-Booleans are not numeric policy values. NaN and either infinity are refused.
+`FidelityPolicy` and TOML use the same validation: pagination is `same`/`may-change`,
+tolerance finite/non-negative (no upper cap), threshold an integer 0–255, DPI a positive
+integer. Booleans are not numeric values; NaN/infinities refuse. Invalid choices raise
+`odfa11y.errors.ConfigError` before comparison/export/publication.
 
-`"may-change"` is the explicit choice for operations that legitimately move content
-(spacing normalization, spacer removal, header rows that repeat across pages): page
-count, size and raster checks are skipped, while text and links stay gated. The effective
-policy and the measured maximum difference are recorded in the report and the
-[evidence](EVIDENCE.md), so a loosened gate is visible.
+`may-change` permits deliberate repagination, spacing or repeated-header movement by
+skipping page-count/size/raster checks. Extracted text and links remain gated. Review
+layout manually. The effective policy and available raster measurements are recorded in
+the report and [evidence](EVIDENCE.md); skipped raster checks provide no measured difference.
 
 ## Limits
 
-Rendering is compared between two exports made on the same machine in one run; pixel
-identity across machines is not claimed. A small movement in a dense page can stay under
-the tolerance; lower `raster_tolerance` to tighten it. The comparison cannot judge
-whether a change is *right*; see the human checks in
-[Accessibility and limits](ACCESSIBILITY.md#human-acceptance).
+Renders compare on one machine/run; cross-machine pixel identity is not claimed. Movement
+can remain below tolerance; lowering it tightens the threshold without establishing correct
+layout. Text extraction, binary ink and URI matching have distinct blind spots. Review the
+publication using the [human checklist](ACCESSIBILITY.md#human-acceptance).

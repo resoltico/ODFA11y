@@ -1,10 +1,9 @@
 # Rule reference
 
-Every finding comes from one registered rule (the identifier prefix names its owner: `PKG`, `XML`, `ODF` and `META` belong to the ODF core, `TXT` to the text family, `SHEET` to the spreadsheet family, `PDF`, `VERA` and `FID` to the output checks) with a stable ID, a severity, a category and,
-where a configuration can address it, a **remedy**: the configuration key that holds the
-decision. Severity decides exit statuses (see [the workflow](WORKFLOW.md#exit-statuses));
-the code registry in [rules.py](../src/odfa11y/report/rules.py) is authoritative and a test
-checks that this document lists exactly its rules and severities.
+Every finding comes from the [rule registry](../src/odfa11y/report/rules.py), with a
+stable identifier, severity, category and optional configuration **remedy**. Prefixes group
+domains as shown below. Severity determines [exit status](WORKFLOW.md#exit-statuses).
+The registry is authoritative; a test checks every documented ID, severity, title and remedy.
 
 ## Package and XML
 
@@ -20,6 +19,8 @@ These apply to every ODF document, whatever its family.
 | `PKG005` | Error | A member the document needs is missing. |  |
 | `PKG006` | Error | ZIP member names are duplicated. |  |
 | `PKG007` | Error | A ZIP member name is absolute or escapes its directory. |  |
+| `PKG008` | Warning | Declared signatures are unverified. |  |
+| `PKG009` | Error | Manifest encryption prevents complete inspection. |  |
 | `XML001` | Error | A required XML member cannot be parsed. |  |
 
 ## ODF declarations, kind, schema and metadata
@@ -28,6 +29,10 @@ Also common to every family. `ODF009` says that a document's family has no seman
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
+| `META001` | Error | Document title metadata is missing. | `document.title` |
+| `META002` | Error | Document language is not declared. | `document.language` |
+| `META003` | Warning | Metadata and default style languages disagree. | `document.language` |
+| `META004` | Warning | Document language syntax or default-style target is unresolved. |  |
 | `ODF001` | Error | Package members declare different ODF versions. | `document.odf_version` |
 | `ODF002` | Error | Manifest root file-entry '/' is missing. |  |
 | `ODF003` | Error | Manifest root file-entry version differs from the document version. | `document.odf_version` |
@@ -43,10 +48,6 @@ Also common to every family. `ODF009` says that a document's family has no seman
 | `ODF013` | Warning | Pipeline export cannot preserve filename/path fields. |  |
 | `ODF900` | Warning | A member does not validate against the ODF schema. |  |
 | `ODF905` | Info | No ODF schema is bundled for the declared version. |  |
-| `META001` | Error | Document title metadata is missing. | `document.title` |
-| `META002` | Error | Document language is not declared. | `document.language` |
-| `META003` | Warning | Metadata and default style languages disagree. | `document.language` |
-| `META004` | Warning | Document language syntax or default-style target is unresolved. |  |
 
 ## Text documents
 
@@ -61,11 +62,15 @@ Owned by the text family (`TXT`). A document of another family never produces th
 | `TXT005` | Warning | Footnotes or endnotes need reading-order review. |  |
 | `TXT010` | Error | Graphic has neither accessible title nor description. | `text.graphics` |
 | `TXT020` | Warning | Merged table cells need header-relationship review. |  |
-| `TXT022` | Error | Table grid or header bands cannot be resolved safely. |  |
 | `TXT021` | Warning | Data-like table has no semantic headers. | `text.table_headers` |
+| `TXT022` | Error | Table grid or header bands cannot be resolved safely. |  |
 | `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.remediation.linkify_plain_addresses` |
+| `TXT031` | Error | Hyperlink has no readable source purpose. | `text.links` |
 | `TXT040` | Info | Empty paragraphs may be visual spacers. | `text.remediation.remove_empty_spacers` |
 | `TXT050` | Error | Blinking text styling is declared. |  |
+| `TXT060` | Warning | Tracked revision scope requires review. |  |
+| `TXT061` | Warning | Hidden or conditional content requires visibility review. |  |
+| `TXT062` | Warning | Paragraph style scope or properties are unresolved. |  |
 
 ## Spreadsheets
 
@@ -81,6 +86,7 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `SHEET006` | Warning | Hyperlink text is a raw address. |  |
 | `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
 | `SHEET008` | Warning | Hidden sheets, rows or columns are present. |  |
+| `SHEET014` | Error | Hyperlink has no readable source purpose. | `spreadsheet.links` |
 
 ## Presentations
 
@@ -133,11 +139,11 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
-| `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
-| `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
 | `IMAGE001` | Error | Image body does not contain one supported graphic frame. |  |
 | `IMAGE002` | Error | Image has no accessible description. | `image.graphics` |
 | `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
+| `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
+| `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
 
 ## Databases
 
@@ -149,6 +155,16 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `BASE004` | Warning | Database object description is missing or ambiguous. | `database.descriptions` |
 | `BASE005` | Warning | Database has executable scripts requiring offline review. |  |
 | `BASE006` | Info | Queries, forms or reports require native semantic review. |  |
+
+## Shared graphic roles
+
+`GRAPHIC` findings apply to graphic-bearing families. Decorative roles remove only the
+missing-alternative requirement; payload, interactivity and navigation checks remain.
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `GRAPHIC001` | Warning | Graphic decorative role is unresolved or unsafe. |  |
+| `GRAPHIC002` | Warning | Decorative graphic retains authored alternative metadata. |  |
 
 ## PDF inspection and veraPDF
 
@@ -197,21 +213,24 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 
 `ODF900` is a warning because pristine LibreOffice output often fails the strict ODF
 schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
-which `remediate` enforces: it refuses any result with a violation the source did not
-already have. The `TXT` link, table, numbering and spacer findings use heuristics; inspect the
-source in context. Graphics need supplied descriptions, and table headers need a named
-table with explicit leading row or column counts. `TXT040` is observational: [spacer
+which `remediate` enforces when a bundled schema is available: it refuses a result with
+a detected violation the source did not already have. The `TXT` link, table, numbering and spacer findings use heuristics; inspect the
+source in context. Graphics need supplied descriptions, and table headers need an unambiguous
+reviewed table target with explicit leading row or column counts; unnamed ordinal targets
+require their fingerprint. `TXT040` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
 The `SHEET` findings are structural: a *default name* is a name of the form `Sheet` and
 digits (other languages' defaults are not recognised); a *data sheet* is one whose first row
 with text holds at least two short labels and which has another row with text, and only such
 sheets are checked for header rows (`table:table-header-rows`, which Calc writes for rows
-repeated on every printed page) and merged cells; `SHEET005` covers pictures, charts and
-embedded objects, not drawn shapes; `SHEET006` flags link text that is itself an address;
+repeated on every printed page) and merged cells. `SHEET005` covers eligible frames and
+vector shapes, including pictures, charts and embedded objects; `SHEET006` flags raw-address labels without a native `office:title` description;
 `SHEET007` flags empty sheets after the last one with text or graphics (the first sheet is
 always kept); `SHEET008` reports counts, as hidden content is sometimes intended. Header
-rows, merged cells, link text and hidden content need a person's decision in Calc: only
-`SHEET002` and `SHEET005` have a configuration remedy.
+rows, merged cells, visible link text and hidden content need a person's decision in Calc.
+Sheet names, eligible graphic alternatives/roles and native link descriptions have explicit
+configuration remedies. `SHEET014` reports links without readable source purpose; a supplied
+`office:title` can establish purpose without rewriting labels or target Names.
 `VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
 number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.
 
@@ -245,20 +264,3 @@ missing or conflicting metadata field. `styles` covers style definitions whereve
 stored, `package/mimetype` is the ZIP `mimetype` member, and `document` is a flat file or
 a schema or parse defect in one. The text report prints `path` followed by the member in
 parentheses, for example `manifest (META-INF/manifest.xml)`.
-
-## Source protection, contexts and explicit descriptions
-
-Shared graphic rules (`GRAPHIC`) apply in each graphic-bearing family. Context and package
-findings keep incomplete inspection and human scope decisions visible.
-
-| ID | Severity | Finding | Remedy |
-| --- | --- | --- | --- |
-| `PKG008` | Warning | Declared signatures are unverified. |  |
-| `PKG009` | Error | Manifest encryption prevents complete inspection. |  |
-| `TXT060` | Warning | Tracked revision scope requires review. |  |
-| `TXT061` | Warning | Hidden or conditional content requires visibility review. |  |
-| `TXT062` | Warning | Paragraph style scope or properties are unresolved. |  |
-| `GRAPHIC001` | Warning | Graphic decorative role is unresolved or unsafe. |  |
-| `GRAPHIC002` | Warning | Decorative graphic retains authored alternative metadata. |  |
-| `TXT031` | Error | Hyperlink has no readable source purpose. | `text.links` |
-| `SHEET014` | Error | Hyperlink has no readable source purpose. | `spreadsheet.links` |

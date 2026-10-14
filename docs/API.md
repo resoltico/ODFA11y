@@ -1,66 +1,61 @@
 # Public library operations
 
-The executable examples in [core_examples.py](../tools/core_examples.py) use the installed
-package's public imports. They cover incremental audit, styles, template preparation,
-explicit remediation, partial diagnostics, export, comparison and the evidence pipeline.
-`inspect_source()` demonstrates supported text-family source edits. `native_work()` returns
-fidelity, the pipeline record and bundle integrity problems; inspect all three independently.
-Run them outside the source checkout with a wheel installed in an isolated environment;
-see [Development](DEVELOPING.md) for the distribution checks. Core operations neither import
-the CLI nor print terminal output. Applications choose rendering, JSON/SARIF serialization
-and strict warning policy themselves.
+The installed-package examples in [core_examples.py](../tools/core_examples.py) cover audit,
+styles, templates, explicit remediation, partial diagnostics, export, comparison and evidence.
+`inspect_source()` demonstrates text-family edits; `native_work()` returns fidelity, a run
+record and bundle-integrity problems, which require separate inspection. Run outside the
+checkout in an isolated installed-wheel environment; see [Development](DEVELOPING.md).
 
-| Entry point | Inputs and result | Ownership and failure |
+Core operations neither import the CLI nor print terminal output. Applications choose
+rendering, JSON/SARIF serialization and strict warning policy.
+
+| Entry point | Inputs/result | Ownership and failure |
 | --- | --- | --- |
-| `pipeline.audit_document` | Regular ODF/PDF path; iterator of `Report` objects. Optional schema and PDF validation, selected timeout. | Read-only. Work begins on iteration. Consume incrementally to keep completed reports if a later validator fails; stopping early omits remaining checks. |
-| `audit.prepare_template` | ODF path; `(Report, commented TOML or None)`. | Read-only; unreadable, encrypted or ambiguous/unsafe packages produce blockers rather than usable decisions. Templates never choose meaning or enable guesses. |
-| `families.style_usage` | ODF path; list of style usage rows. | Read-only; families without paragraph-style inspection raise `UnsupportedKindError`; parsed storage and OS errors propagate. |
-| `remediation.remediate` | Distinct source/destination, explicit operations and optional dry run; `RemediationResult`. | Refuses blocked package inspection before selecting document data; atomically publishes only after guards, protected-content and schema checks. Failure preserves existing destination. Dry run publishes nothing. |
-| `pipeline.export_document` | ODF path, PDF destination and `NativeOptions`; published `Path`. | Guarded original native export retains source identity. Caller owns executable selection and stable source/resource directories. |
-| `pipeline.compare_documents` | Original ODF/PDF paths, fidelity policy, optional diff directory/options; `Report`. | Temporary renders are cleaned; requested diff artifacts remain. Fidelity does not establish accessibility. |
-| `pipeline.inspect_tools` | Optional `NativeOptions`; `(partial identity facts, controlled probe error or None)`. | May run bounded tool identity/capability probes; callers must inspect both values. An identity is not document conformance. |
-| `pipeline.run_pipeline` | Source, operations, policy, empty/new evidence directory and `PipelineOptions`; `RunRecord`. | Converts stage failures to recorded failure/skip states and publishes evidence when its destination remains writable. Inspect `record.exit_status`, each stage and human review; successful integrity is not a passing gate. |
-| `evidence.check_bundle` | Bundle directory; list of integrity problems. | Read-only static unsafe-path checks. Bundle and ancestor directory namespace must remain stable throughout verification. Hashes establish integrity against the manifest, not authenticity or review. |
+| `pipeline.audit_document` | Regular ODF/PDF path; iterator of `Report`; optional schema/PDF validation and timeout. | Read-only; starts on iteration. Consume incrementally to keep completed reports if a later validator fails. Stopping early omits checks. |
+| `audit.prepare_template` | ODF path; `(Report, commented TOML or None)`. | Read-only. Unreadable, encrypted, ambiguous or unsafe inputs yield blockers; templates choose no meaning. |
+| `families.style_usage` | ODF path; style-usage rows. | Read-only. Unsupported families/blocked inspection raise `UnsupportedKindError`; storage/OS failures can propagate. |
+| `remediation.remediate` | Distinct source/destination, explicit operations, optional dry run; `RemediationResult`. | Guards package inspection, family/protected-content/schema contracts; publishes atomically only on success. Failure preserves destination; dry run writes nothing. |
+| `pipeline.export_document` | Original ODF, PDF destination, optional `NativeOptions`; published `Path`. | Guarded original export preserves logical identity. Caller chooses executables and stable source/resource directories. |
+| `pipeline.compare_documents` | Original ODF/PDF inputs, policy, optional diffs/options; `Report`. | Guards native inputs, owns temporary renders/profile through comparison, preserves requested diffs. Fidelity is not accessibility. |
+| `pipeline.inspect_tools` | Optional `NativeOptions`; `(partial identity facts, controlled probe error or None)`. | Can run bounded identity/capability probes; inspect both values. Version/capability is not document conformance. |
+| `pipeline.run_pipeline` | Source, operations, policy, absent/empty destination, optional `PipelineOptions`; `RunRecord`. | Records domain/OS stage failures and skips, publishing evidence when safely writable. Inspect `exit_status`, stages and required review. Unsafe destination/publication failures may raise. |
+| `evidence.check_bundle` | Bundle directory; list of integrity problems. | Read-only static unsafe-path/hash checks. Bundle/ancestor namespace must stay stable. Integrity is not authenticity/review. |
 
-Expected failures use `OdfA11yError` subclasses: `ConfigError` for invalid choices and native
-timeouts, `PackageError` for unreadable input, `RemediationError` for unsupported edits or
-failed postconditions, `UnsupportedKindError` for unavailable family/native contexts and
-`ToolError` for native execution failures. Ordinary filesystem errors may also propagate.
-The audit generator can raise during consumption. Pipeline stage-domain/OS failures become
-recorded execution failures; unsafe evidence destinations or publication failures may raise.
-There is no universal result wrapper; use each documented result and error boundary.
+Expected domain failures use `OdfA11yError` subclasses: `ConfigError` for invalid choices
+(including invalid timeout values), `PackageError` for unreadable inputs,
+`RemediationError` for unsupported edits/postconditions, `UnsupportedKindError` for unavailable
+family/native contexts, and `ToolError` subclasses for native failures, including elapsed
+tool deadlines. Ordinary filesystem errors can propagate. Audit generators can raise while
+consumed. There is no universal result wrapper; respect each operation's error boundary.
 
-Observers are optional synchronous callbacks receiving fixed progress labels/statuses,
-without document payload or paths. They must not raise. They are presentation hooks, excluded
-from execution identity, and their current display labels are not a frozen machine protocol.
-Machine JSON and SARIF remain clean when observers render elsewhere.
+`NativeOptions` supplies native settings; `PipelineOptions` also selects assurance profile.
+Observers are optional synchronous callbacks with fixed labels/statuses and no document
+payload/paths. They must not raise. Display labels are not a frozen machine protocol;
+observers do not affect execution identity or persisted evidence. Rendering elsewhere
+keeps machine JSON/SARIF clean.
 
-`OdfDocument.tree()` reads cached XML. Mutable storage, `edit()`, `save()` and direct
-`Operation.apply()` are caller-owned low-level surfaces. They do not imply the guards of
-`remediate()`. Similarly `pdf.export_pdfua()` is a raw native boundary: callers must establish
-resource/protection policy and native OS isolation. The supported guarded alternatives are
-`remediate()` and `export_document()`/`compare_documents()`/`run_pipeline()`.
+## Guarded and caller-owned surfaces
 
-Source semantics, actual exporter behavior, PDF inspection/veraPDF, fidelity and human review
-remain separate conclusions. The production profile fails strict warnings and requires
-veraPDF; missing tools or skipped stages are never a passing validation. See
-[Accessibility](ACCESSIBILITY.md), [Workflow](WORKFLOW.md) and [Evidence](EVIDENCE.md).
+`OdfDocument.tree()` returns mutable cached XML. `edit()` additionally records serialization
+intent; storage, `save()` and direct `Operation.apply()` are caller-owned low-level surfaces.
+They do not imply executor safeguards or whole-plan atomicity. Multi-target operations
+preflight their own targets; guarded `remediate()` enforces final preservation/schema and
+atomic publication across the plan.
 
-Graphic review identities bind referenced styles throughout groups, links and pages, including
-nested graphic visual properties. `content.page_fingerprint(page, document)` requires the
-`OdfDocument` to resolve package style definitions; a detached page alone cannot establish
-those dependencies. Graphic, link and page metadata operations refuse unresolved descendant
-style contexts before editing, including conditional mappings and unestablished mixed cascades.
-Permitted alternative metadata and proven target-specific role derivations compose and reapply.
+`pdf.export_pdfua()` is a raw native boundary. Its caller establishes resource/protection
+policy and OS isolation. Guarded `export_document()`, `compare_documents()` and
+`run_pipeline()` establish the shared declaration policy; they still do not sandbox native
+tools. Direct original export/comparison preserve logical identity; pipeline capture has
+its own [identity/stable-directory contract](EVIDENCE.md#source-capture).
 
-A graphic role change requires an established explicit style or class reference. An unstyled
-object's implicit native placement and wrapping are not proven by an empty derived style, so
-such changes refuse before mutation. Optional absent styles still resolve to the standard
-meaningful source role; an explicit false decision that already matches remains a no-op.
+Duplicate/unsafe package names block guarded planning, remediation and native work before
+manifest/body selection. Signatures, encryption, tracked changes and excluded contexts
+have explicit [preservation boundaries](ACCESSIBILITY.md#preservation-boundaries).
+Graphic/page/link metadata uses reviewed structural/style identities; detached pages do
+not establish style dependencies. `content.page_fingerprint(page, document)` requires the
+`OdfDocument`; see [configuration identities](CONFIGURATION.md#every-selector-must-match-and-mean-what-you-reviewed).
 
-For duplicate ZIP member names or unsafe member paths, `protection.inspection_blocked` is
-an early package fact. Guarded APIs do not select a manifest, body or native input from
-that ambiguous package. Audits report `PKG006`/`PKG007` with incomplete inspection;
-template preparation produces no usable plan, and remediation/export/comparison/pipeline
-boundaries refuse or record failure without publishing a candidate. The low-level
-caller-owned surfaces above retain their existing ownership contract.
+Source semantics, exporter capability, PDF audit/veraPDF, fidelity and human review remain
+separate. Production requires veraPDF and fails warnings. Missing tools and skipped stages
+are not passing validation; inspect [Workflow](WORKFLOW.md),
+[Accessibility](ACCESSIBILITY.md) and [Evidence](EVIDENCE.md).

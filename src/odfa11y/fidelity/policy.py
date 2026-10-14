@@ -15,13 +15,14 @@ PAGINATION_MODES = ("same", "may-change")
 
 @dataclass(frozen=True, slots=True)
 class FidelityPolicy:
-    """Comparison rules; defaults demand identical pagination and unmoved page content.
+    """Comparison rules for extracted text, links and optional page/raster checks.
 
-    A pixel is *ink* when its luminance is below ``ink_threshold`` (0-255). A page differs by
-    the fraction of its ink that is present in only one render, so moved content scores high
-    while a colour change or an underline scores low. ``raster_tolerance`` is the largest
-    fraction allowed per page; the default sits between measured link-styling changes
-    (about 3-9%) and a two-line layout shift (over 100%).
+    ``same`` pagination checks page count and geometry, then ink when those match;
+    ``may-change`` retains text and link checks. A pixel is ink when its luminance is below
+    ``ink_threshold``. For equal-sized rasters, the difference is the exclusive-or ink count
+    divided by the larger source/candidate ink count, with a minimum denominator of one.
+    The ratio can exceed one; ``raster_tolerance`` is the largest accepted per-page ratio.
+    This comparison does not establish logical reading order or accessibility.
     """
 
     pagination: str = "same"

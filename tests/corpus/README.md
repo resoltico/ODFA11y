@@ -1,35 +1,36 @@
 # Writer regression corpus
 
-Small documents authored by a real LibreOffice Writer, used to test ODFA11y against what
-Writer actually writes rather than against the synthetic documents of `tests/documents.py`.
-All content is invented for this corpus and released with the project under MPL-2.0.
+Small, invented LibreOffice Writer documents exercise ODFA11y against native producer
+output alongside the synthetic documents in `tests/documents.py`. Their content is
+released with the project under MPL-2.0.
 
-[manifest.toml](manifest.toml) is the authority for each document's expected audit rule ids
-(`rules`), the rule ids left after the standard remediation plan (`rules_after_plan`), the
-number of ODF schema violations Writer's own output has (`schema_violations`) and the SHA-256
-of its bytes. The tests in `tests/test_corpus*.py` check all of it, so a change to a document
-or to a rule fails a test until the manifest is deliberately updated.
+[manifest.toml](manifest.toml) identifies the producer and records each stored document's
+expected audit rule IDs (`rules`), remaining rule IDs after the standard remediation plan
+(`rules_after_plan`), bundled-schema violation count (`schema_violations`) and SHA-256.
+The tests in `tests/test_corpus*.py` verify those expectations and byte identities. Hashes
+identify the stored artifacts; they do not establish semantic correctness.
 
-## Provenance
+## Sources and validation
 
-LibreOffice 24.2.7.2 (420, Build:2) on Linux, run headless by [build.sh](build.sh) from the
-files in [sources/](sources/): Writer imports each HTML or flat-XML source and saves it as a
-package (`.odt`), and for five documents also as flat XML (`.fodt`). Nothing is edited by hand
-after Writer saves it. Every document declares ODF 1.3, as Writer 24.2 writes it.
+[build.sh](build.sh) imports the HTML and flat-XML files in [sources/](sources/) through
+Writer and saves packages (`.odt`), with five documents also saved as flat XML (`.fodt`).
+The stored documents are unmodified Writer output and declare ODF 1.3. The producer
+identity in the manifest describes these fixtures, not a supported execution runtime.
 
-Writer's output is not schema-valid ODF: every document has violations against the bundled
-ODF schema (LibreOffice-specific style properties), which the manifest records. Flat files
-report fewer violations than the package of the same document because libxml2 stops at the
-first error of a failing content model; the tests only require both forms to agree on validity.
+Every stored document has violations against the bundled ODF schema, including
+LibreOffice-specific style properties. Package and flat forms can have different
+diagnostic counts because libxml2 stops at the first error of a failing content model.
+Tests require paired forms to agree on audit findings, visible words and schema validity;
+the manifest records the diagnostic count for each file separately.
 
 ## Documents
 
-Each purpose below belongs to the document named; a name listed with both extensions exists as
-a package and as flat XML, and the two must audit identically.
+Each purpose below belongs to the named document. A name with both extensions has package
+and flat forms.
 
 | Document | Purpose |
 | --- | --- |
-| `bookmarks.odt` | Heading bookmarks and an internal link to one; a clean baseline. |
+| `bookmarks.odt` | Heading bookmarks and an internal link to one; a clean semantic-audit baseline. |
 | `footnotes.odt`, `footnotes.fodt` | Two footnotes; reading order needs manual review. |
 | `frames-textbox.odt` | A floating text box anchored to a paragraph. |
 | `header-footer.odt`, `header-footer.fodt` | A running header and a footer with a page number. |
@@ -45,8 +46,12 @@ a package and as flat XML, and the two must audit identically.
 | `table-no-header-row.odt` | A data table without a header row. |
 
 Writer's HTML import leaves an empty paragraph after a table, so the three table documents
-also report the spacer rule. No document contains tracked changes; a test checks that.
+also report the spacer rule. Tests verify that no document contains tracked changes.
 
-## Change the corpus
+## Regenerating
 
-See [Developing](../../docs/DEVELOPING.md#writer-regression-corpus).
+Follow [Developing](../../docs/DEVELOPING.md#writer-regression-corpus). Native regeneration
+reproduces document semantics, not exact bytes: generated metadata and producer choices
+can change the output. Review the documents, audit findings and schema results before
+updating the manifest's identities and expectations. Keep source changes, retained native
+outputs and the filename inventory above consistent.
