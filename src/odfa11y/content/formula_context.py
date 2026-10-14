@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from functools import partial
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import qn
@@ -98,12 +99,23 @@ class FormulaContext:
             Declaration dependency counts.
 
         """
-        return classify_formula(
-            expression, node.nsmap, lambda name: self.resolve(node, name, active)
-        )
+        pending = [(node, expression, active)]
+        facts = FormulaFacts()
+        while pending:
+            origin, declaration, ancestors = pending.pop()
+            facts += classify_formula(
+                declaration,
+                origin.nsmap,
+                partial(self.resolve, origin, active=ancestors, pending=pending),
+            )
+        return facts
 
     def resolve(
-        self, origin: etree._Element, name: str, active: frozenset[etree._Element]
+        self,
+        origin: etree._Element,
+        name: str,
+        active: frozenset[etree._Element],
+        pending: list[tuple[etree._Element, str, frozenset[etree._Element]]],
     ) -> FormulaFacts:
         """Resolve one name, refusing missing, ambiguous, cyclic or oversized work.
 
@@ -124,4 +136,5 @@ class FormulaContext:
         expression = node.get(qn("table", "expression"))
         if expression is None:
             expression = "[" + node.get(qn("table", "cell-range-address"), "") + "]"
-        return self.classify(node, expression, active | {node})
+        pending.append((node, expression, active | {node}))
+        return FormulaFacts()

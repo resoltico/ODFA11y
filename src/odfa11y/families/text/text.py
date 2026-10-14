@@ -16,7 +16,11 @@ from odfa11y.odf import qn
 from .contexts import text_nodes
 from .spacing_snapshot import normalized_spacing_tree
 
-INERT_INLINE_TAGS = frozenset({qn("text", "span"), qn("text", "s")})
+INERT_ATTRIBUTES = {
+    qn("text", "p"): frozenset({qn("text", "style-name")}),
+    qn("text", "span"): frozenset({qn("text", "style-name")}),
+    qn("text", "s"): frozenset({qn("text", "c")}),
+}
 # Accessibility metadata, and the image bytes a flat XML document embeds, are not rendered text.
 HIDDEN_TAGS = frozenset({qn("svg", "title"), qn("svg", "desc"), qn("office", "binary-data")})
 
@@ -26,7 +30,8 @@ def is_empty_paragraph(p: etree._Element) -> bool:
 
     Anything else (a frame, bookmark, tab, field, change marker, index entry, ...) means the
     paragraph may carry meaning, so it is not a spacer; only an allow-list of inert elements
-    counts as empty.
+    counts as empty. Attributes also carry identities, RDF metadata and conditional or
+    layered style references; only the ordinary style reference and space count are inert.
 
     Returns
     -------
@@ -36,7 +41,10 @@ def is_empty_paragraph(p: etree._Element) -> bool:
     """
     if element_text(p).strip():
         return False
-    return all(child.tag in INERT_INLINE_TAGS for child in p.iter("*") if child is not p)
+    return all(
+        (allowed := INERT_ATTRIBUTES.get(str(node.tag))) is not None and set(node.attrib) <= allowed
+        for node in p.iter()
+    )
 
 
 def element_text(element: etree._Element) -> str:

@@ -70,7 +70,7 @@ class _Run:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
             return StageResult("identify-source", "passed", gate=False)  # audit-source explains
-        if document.protection.encrypted or document.protection.malformed_manifest:
+        if document.protection.inspection_blocked:
             return StageResult("identify-source", "passed", gate=False)  # audit-source explains
         detection = document.detection
         self.adapter = adapter_for(detection.kind)

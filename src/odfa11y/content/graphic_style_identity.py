@@ -126,27 +126,44 @@ def graphic_style_fingerprint(document: OdfDocument, shape: etree._Element) -> s
     """
     catalog = GraphicStyles(document)
     shadow = normalized_graphic_tree(document, shape)
-    try:
-        return _style_facts(catalog, shadow)
-    except ValueError as error:
-        return str(error)
+    return _style_facts(catalog, shadow)
 
 
 def _style_facts(catalog: GraphicStyles, shadow: etree._Element) -> str:
-    _ns, family, names = catalog.context(shadow)
-    facts = [protected_xml(style) for style in catalog.defaults.get(family, [])]
+    if catalog.scope_problem:
+        raise ValueError(catalog.scope_problem)
+    if shadow.tag == qn("draw", "page"):
+        family = "drawing-page"
+        names = [name] if (name := shadow.get(qn("draw", "style-name"))) else []
+    else:
+        _ns, family, names = catalog.context(shadow)
+    defaults = catalog.defaults.get(family, [])
+    if len(defaults) > 1:
+        message = "Graphic default style is ambiguous."
+        raise ValueError(message)
+    facts = [_visual_style_xml(style) for style in defaults]
     for source_name in names:
         name = source_name
         style = catalog.style(family, name)
         seen: set[etree._Element] = set()
-        while style not in seen:
+        while True:
+            if style in seen:
+                message = "Graphic visual style inheritance contains a cycle."
+                raise ValueError(message)
             seen.add(style)
-            facts.append(protected_xml(style))
+            facts.append(_visual_style_xml(style))
             parent = style.get(qn("style", "parent-style-name"))
             if not parent:
                 break
             style = catalog.style(family, parent, common=True)
     return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def _visual_style_xml(style: etree._Element) -> str:
+    if style.find("style:map", NS) is not None:
+        message = "Conditional graphic style mapping is not established."
+        raise ValueError(message)
+    return protected_xml(style)
 
 
 def _style_signature(style: etree._Element) -> list[object]:

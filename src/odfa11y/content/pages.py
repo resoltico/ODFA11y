@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -12,6 +14,7 @@ from lxml import etree
 from odfa11y.adapter import Outcome, Status
 from odfa11y.odf import Part, qn, select_elements
 
+from .graphic_identity import SHAPE_TAGS, GraphicIdentity, graphic_style_dependencies
 from .graphic_style_identity import normalized_graphic_tree
 from .graphics import GraphicAlternative, set_description
 from .xml import protected_xml
@@ -22,30 +25,7 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
-SHAPE_TAGS = (
-    *(
-        qn("draw", name)
-        for name in (
-            "frame",
-            "rect",
-            "ellipse",
-            "line",
-            "path",
-            "polygon",
-            "polyline",
-            "regular-polygon",
-            "custom-shape",
-            "connector",
-            "measure",
-            "g",
-            "caption",
-            "circle",
-            "page-thumbnail",
-            "control",
-        )
-    ),
-    qn("dr3d", "scene"),
-)
+
 
 DESCRIPTIONS = (qn("svg", "title"), qn("svg", "desc"))
 
@@ -101,7 +81,7 @@ def shape_identity(shape: etree._Element) -> str | None:
     return identity
 
 
-def page_fingerprint(page: etree._Element, document: OdfDocument | None = None) -> str:
+def page_fingerprint(page: etree._Element, document: OdfDocument) -> str:
     """Bind a reviewed page to words, shape identities, geometry, notes and references.
 
     Returns
@@ -110,14 +90,16 @@ def page_fingerprint(page: etree._Element, document: OdfDocument | None = None) 
         A digest excluding description metadata and the editable navigation list.
 
     """
-    return protected_xml(
-        normalized_graphic_tree(document, page) if document is not None else page,
+    content = protected_xml(
+        normalized_graphic_tree(document, page),
         omitted_element_attributes={
             qn(ns, "a"): (qn("office", "title"),) for ns in ("draw", "text")
         },
         omitted_root_attributes=(qn("draw", "nav-order"),),
         omitted_elements=DESCRIPTIONS,
-    )[:16]
+    )
+    facts = (content, graphic_style_dependencies(document, page))
+    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
 
 
 def page_snapshot(document: OdfDocument) -> tuple[str, ...]:
@@ -219,6 +201,8 @@ def _problem(
     ):
         return "Page title, description and fingerprint must be strings."
     page = matches[0]
+    if problem := GraphicIdentity(document, ()).style_problem(page):
+        return problem
     if entry.fingerprint is not None and entry.fingerprint != page_fingerprint(page, document):
         return "The page is no longer the object this plan was reviewed against."
     if entry.navigation is None:

@@ -58,8 +58,10 @@ def native_export_settings(
     """
     validate_timeout(timeout)
     protection = document.protection
-    if protection.encrypted or protection.malformed_manifest:
-        msg = "Encrypted or malformed package cannot establish native inspection."
+    if protection.inspection_blocked:
+        msg = (
+            "Encrypted, ambiguous, unsafe or malformed package cannot establish native inspection."
+        )
         raise UnsupportedKindError(msg)
     pdf_filter = adapter_for(document.kind).pdf_filter
     if pdf_filter is None:

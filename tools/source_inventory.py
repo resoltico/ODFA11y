@@ -13,16 +13,22 @@ if TYPE_CHECKING:
 
 # Development outputs are absent in an untouched extracted archive. Exclude only the
 # documented generated directories/files when tests subsequently run in that archive.
-GENERATED_DIRECTORIES = frozenset({
-    ".git",
-    ".venv",
-    "__pycache__",
-    ".pytest_cache",
-    ".ruff_cache",
-    "build",
-    "dist",
-    "htmlcov",
-})
+CACHE_DIRECTORIES = frozenset({"__pycache__", ".pytest_cache", ".ruff_cache", ".hypothesis"})
+ROOT_GENERATED_DIRECTORIES = frozenset({".git", ".venv", "build", "dist", "htmlcov"})
+
+
+def _extracted_names(root: Path) -> list[str]:
+    names = []
+    for directory, children, files in root.walk():
+        excluded = CACHE_DIRECTORIES | (ROOT_GENERATED_DIRECTORIES if directory == root else set())
+        children[:] = [name for name in children if name not in excluded]
+        for name in files:
+            if directory == root and (
+                name in {"PKG-INFO", ".coverage"} or name.startswith(".coverage.")
+            ):
+                continue
+            names.append((directory / name).relative_to(root).as_posix())
+    return names
 
 
 def source_files(root: Path) -> dict[str, bytes]:
@@ -48,15 +54,7 @@ def source_files(root: Path) -> dict[str, bytes]:
         )
         names = result.stdout.decode("utf-8").split("\0")[:-1]
     else:
-        names = [
-            p.relative_to(root).as_posix()
-            for p in root.rglob("*")
-            if p.is_file()
-            and not (set(p.relative_to(root).parts) & GENERATED_DIRECTORIES)
-            and p.name != "PKG-INFO"
-            and not p.name.startswith(".coverage")
-            and not p.name.endswith((".pyc", ".pyo"))
-        ]
+        names = _extracted_names(root)
     files = {}
     for name in names:
         path = root / name

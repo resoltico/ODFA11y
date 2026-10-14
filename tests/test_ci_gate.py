@@ -174,3 +174,10 @@ def test_contributor_and_installed_checks_run_from_the_extracted_source_archive(
     assert test.count('cd "$RUNNER_TEMP"/sdist-check/*') == 2
     assert 'uv run --no-sync python -m tools.check_release "$tag" dist' in test
     assert test.index("Verify extracted source archive") < test.index("Verify installed wheel")
+
+
+def test_extracted_checks_rebuild_and_inspect_archives_after_property_test_caches_exist() -> None:
+    flow = job_block("test").split("- name: Verify extracted source archive contributor flow", 1)[1]
+    flow = flow.split("- name: Verify installed wheel", 1)[0]
+    assert flow.index("pytest -m 'not integration'") < flow.index("uv build")
+    assert flow.index("uv build") < flow.index('tools.check_release "$tag" dist')

@@ -151,6 +151,9 @@ jobs:
           uv run --no-sync tach check
           uv run --no-sync tach check-external
           uv run --no-sync pytest -m 'not integration' --durations=10
+          uv build
+          tag="v$(uv run --no-sync python -c 'import odfa11y; print(odfa11y.__version__)')"
+          uv run --no-sync python -m tools.check_release "$tag" dist
       - name: Verify installed wheel with locked dependencies
         run: |
           uv venv --python "$(cat .python-version)" "$RUNNER_TEMP/wheel-env"

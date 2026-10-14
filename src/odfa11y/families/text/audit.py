@@ -21,6 +21,7 @@ from .links import URI_RE, split_trailing_punctuation
 from .prose import prose_slots
 from .semantics import audit_headings, audit_images, audit_tables
 from .spacers import spacer_candidates
+from .style_properties import paragraph_style_name
 from .styles import catalog_of
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     if select_elements(
         content,
         (
-            "//text:hidden-text | //text:conditional-text | "
+            "//text:hidden-text | //text:conditional-text | //text:hidden-paragraph | "
             "//text:section[@text:condition or @text:display='none' or @text:display='condition']"
         ),
     ):
@@ -163,15 +164,20 @@ def style_summary(document: OdfDocument) -> list[StyleUsage]:
 
 
 def _style_rows(document: OdfDocument) -> tuple[list[StyleUsage], dict[str, str]]:
-    counts = Counter(
-        node.get(qn("text", "style-name")) or "(none)"
-        for node in text_nodes(
-            document.tree(Part.CONTENT), qn("text", "p"), qn("text", "h"), main_only=True
-        )
-    )
+    counts: Counter[str] = Counter()
+    problems = {}
+    for node in text_nodes(
+        document.tree(Part.CONTENT), qn("text", "p"), qn("text", "h"), main_only=True
+    ):
+        name = node.get(qn("text", "style-name")) or "(none)"
+        try:
+            paragraph_style_name(node)
+        except RemediationError as exc:
+            problems[name] = str(exc)
+        else:
+            counts[name] += 1
     catalog = catalog_of(document)
     rows: list[StyleUsage] = []
-    problems = {}
     for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
         style_name = None if name == "(none)" else name
         try:

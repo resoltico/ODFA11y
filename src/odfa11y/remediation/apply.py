@@ -50,12 +50,8 @@ def remediate(
     source, destination = Path(source), Path(destination)
     _require_distinct(source, destination)
     document = OdfDocument.open(source)
-    if (
-        document.protection.signatures
-        or document.protection.encrypted
-        or document.protection.malformed_manifest
-    ):
-        msg = "Protected or malformed package cannot be remediated; nothing was written."
+    if document.protection.signatures or document.protection.inspection_blocked:
+        msg = "Protected, ambiguous or malformed package cannot be remediated; nothing was written."
         raise RemediationError(msg)
     if document.kind is None:
         msg = f"{source.name} is not a recognised OpenDocument document; nothing was written."

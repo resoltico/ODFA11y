@@ -80,8 +80,8 @@ def style_usage(source: str | Path) -> list[StyleUsage]:
 
     """
     document = OdfDocument.open(source)
-    if document.protection.encrypted or document.protection.malformed_manifest:
-        msg = "Protected or malformed package cannot establish style inspection."
+    if document.protection.inspection_blocked:
+        msg = "Protected, ambiguous, unsafe or malformed package cannot establish style inspection."
         raise UnsupportedKindError(msg)
     style_report = adapter_for(document.kind).style_report
     if style_report is None:

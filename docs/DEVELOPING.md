@@ -273,7 +273,9 @@ bytes with Git's tracked source inventory in the release checkout; only root `PK
 and directory entries are generated packaging additions. Missing/altered contributor docs,
 native corpus binaries, tools or configuration, duplicates, unsafe names and unexpected
 authored files fail. In an extracted archive the checker derives contributor files locally,
-excluding only documented generated development outputs.
+excluding root build/distribution/virtual-environment/coverage outputs and root generated
+`PKG-INFO`, plus recursive Python, pytest, Ruff and Hypothesis cache directories. Nested
+authored `build`, `dist` and `PKG-INFO` paths remain part of the inventory.
 
 ## Contribution invariants
 

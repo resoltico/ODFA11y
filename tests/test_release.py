@@ -16,6 +16,7 @@ import pytest
 import odfa11y
 from odfa11y import __version__
 from tools import check_release as release_checks
+from tools import source_inventory
 from tools.check_release import check_release
 from tools.source_inventory import source_files
 
@@ -162,3 +163,14 @@ def test_release_version_uses_project_even_with_stale_runtime_metadata(
         assert release_checks.check_release(f"v{PROJECT['version']}", tmp_path) == []
         assert release_checks.check_release("v9.9.9", tmp_path)
     importlib.reload(release_checks)
+
+
+def test_nested_authored_pkg_info_is_not_distribution_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    relative = "docs/PKG-INFO"
+    authored = b"Authored documentation about package metadata, not generated metadata"
+    expected = {**source_files(ROOT), relative: authored}
+    monkeypatch.setattr(source_inventory, "source_files", lambda _root: expected)
+    _distributions(tmp_path, Variant(sdist_files={relative: authored}))
+    assert check_release(f"v{__version__}", tmp_path) == []

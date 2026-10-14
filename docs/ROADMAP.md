@@ -56,10 +56,10 @@ source and publication assurance changes. Complete all of them before release.
 
 The implementing agent must complete a focused design challenge before building the
 affected mechanisms and revisit it when a real native experiment contradicts an assumption.
-The 0.7.0 candidate implements these work units. Local verification on 2026-10-14 passed
-1,862 unit tests and all 67 required real LibreOffice/veraPDF integration cases, without
-native skips. The candidate's distribution and delivered-commit hosted checks are recorded
-with its review result; they must pass before publication.
+The 0.7.0 candidate implements these work units, including the independently discovered
+preservation, visibility, style, formula and release-workflow corrections. Actual local,
+distribution and delivered-commit hosted results are recorded in [PR 38](https://github.com/resoltico/ODFA11y/pull/38).
+The required checks must pass on the delivered commit before publication.
 
 Measured LibreOffice 26.8.1.1 still ignores standard decorative roles and `office:title`
 PDF descriptions, and aliases/drops some language tags. Source declarations are retained;
@@ -70,7 +70,7 @@ authorized rollout remain required.
 
 Acceptance requires package and flat-layout tests, wrong-type and stale-target rejection,
 idempotence, preservation controls and real native positive and negative cases. Required
-policy, lint, format, type, boundary, coverage, distribution and security checks pass, with
+policy, lint, format, type, boundary, coverage, distribution and security checks must pass, with
 real LibreOffice and veraPDF integration on Linux, macOS and Windows. The hosted checks
 must validate the release commit and tested assets. Preserve known exporter failures as
 explicit outcomes; do not suppress them to make this release green.

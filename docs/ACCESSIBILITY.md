@@ -176,7 +176,10 @@ runs and empty/no-op plans, refuses signed packages. Original native export rema
 to its ordinary guard and makes no signature claim; neither exported PDF nor evidence is
 signed by a source signature. Manifest encryption (`PKG009`) blocks complete inspection,
 template planning, remediation and guarded native export before ciphertext is parsed as
-body XML. Malformed manifests remain malformed, never assumed unsigned/unencrypted.
+body XML. Duplicate names (`PKG006`) and unsafe archive paths (`PKG007`) also prevent
+a complete inspection view and refuse guarded planning, remediation and native work before
+manifest or body selection. Malformed manifests remain malformed, never assumed
+unsigned/unencrypted.
 
 Tracked declarations/markers permit only title/description metadata edits. Language,
 version and other operations refuse before the first edit. The main outline and spacing/
@@ -208,7 +211,9 @@ documents in an isolated environment with operating-system resource limits.
 
 `remove_empty_spacers` is opt-in. It removes only empty body paragraphs without protected
 graphic, bookmark, tab or break content, table/text-box/annotation/list ancestry, or page
-or master-page style semantics. The text guard permits exactly the counted removals.
+or master-page style semantics. XML identities, RDF metadata, conditional/class style references
+and unrecognized paragraph or inline attributes also prevent removal. The text guard permits
+exactly the counted removals of established inert paragraphs.
 Removing spacers usually moves content, so the default fidelity gate flags it; review the
 diff images and set `fidelity.pagination = "may-change"` when the movement is intended.
 

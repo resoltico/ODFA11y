@@ -181,7 +181,12 @@ def _inspect_arguments(args: argparse.Namespace) -> None:
     if args.mode == "absent":
         require_absent(args.repository, args.tag)
     else:
-        assets = {p.name: p.read_bytes() for p in args.directory.iterdir() if p.is_file()}
+        wheels = list(args.directory.glob("*.whl"))
+        archives = list(args.directory.glob("*.tar.gz"))
+        if len(wheels) != 1 or len(archives) != 1:
+            msg = "Release inspection requires exactly one wheel and one source archive"
+            raise ValueError(msg)
+        assets = {p.name: p.read_bytes() for p in (*wheels, *archives)}
         assets[args.checksums.name] = args.checksums.read_bytes()
         expectation = ReleaseExpectation(args.target, assets, args.notes.read_text())
         verify_release(args.repository, args.tag, expectation, draft=args.mode == "draft")

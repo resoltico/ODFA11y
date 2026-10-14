@@ -157,6 +157,17 @@ class GraphicEditor:
             if not frames:
                 failures[key] = f"No graphic matches {key!r}."
                 continue
+            problem = next(
+                (
+                    identity.style_problem(frame)
+                    for frame in frames
+                    if identity.style_problem(frame)
+                ),
+                None,
+            )
+            if problem:
+                failures[key] = problem
+                continue
             expected = entry.fingerprint
             if expected is not None and expected != identity.fingerprint(frames):
                 failures[key] = (

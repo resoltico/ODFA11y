@@ -97,7 +97,7 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     assert report.metadata["extractable_text_characters"] > 0
     assert report.metadata["described_graphics"] >= 1
     assert ((4, 4), PIXELS) in decoded_images(pdf)
-    assert compare_pdfs(control_pdf, pdf, FidelityPolicy()).passed
+    assert compare_pdfs(control_pdf, pdf, FidelityPolicy(raster_tolerance=0.0)).passed
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:
         # Standard draw:decorative is ignored by LibreOffice 26.8.1.1. No extension is authored.

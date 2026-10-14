@@ -13,9 +13,9 @@ and strict warning policy themselves.
 | Entry point | Inputs and result | Ownership and failure |
 | --- | --- | --- |
 | `pipeline.audit_document` | Regular ODF/PDF path; iterator of `Report` objects. Optional schema and PDF validation, selected timeout. | Read-only. Work begins on iteration. Consume incrementally to keep completed reports if a later validator fails; stopping early omits remaining checks. |
-| `audit.prepare_template` | ODF path; `(Report, commented TOML or None)`. | Read-only; unreadable/encrypted input produces blockers rather than usable decisions. Templates never choose meaning or enable guesses. |
+| `audit.prepare_template` | ODF path; `(Report, commented TOML or None)`. | Read-only; unreadable, encrypted or ambiguous/unsafe packages produce blockers rather than usable decisions. Templates never choose meaning or enable guesses. |
 | `families.style_usage` | ODF path; list of style usage rows. | Read-only; families without paragraph-style inspection raise `UnsupportedKindError`; parsed storage and OS errors propagate. |
-| `remediation.remediate` | Distinct source/destination, explicit operations and optional dry run; `RemediationResult`. | Atomically publishes only after guards, protected-content and schema checks. Failure preserves existing destination. Dry run publishes nothing. |
+| `remediation.remediate` | Distinct source/destination, explicit operations and optional dry run; `RemediationResult`. | Refuses blocked package inspection before selecting document data; atomically publishes only after guards, protected-content and schema checks. Failure preserves existing destination. Dry run publishes nothing. |
 | `pipeline.export_document` | ODF path, PDF destination and `NativeOptions`; published `Path`. | Guarded original native export retains source identity. Caller owns executable selection and stable source/resource directories. |
 | `pipeline.compare_documents` | Original ODF/PDF paths, fidelity policy, optional diff directory/options; `Report`. | Temporary renders are cleaned; requested diff artifacts remain. Fidelity does not establish accessibility. |
 | `pipeline.inspect_tools` | Optional `NativeOptions`; `(partial identity facts, controlled probe error or None)`. | May run bounded tool identity/capability probes; callers must inspect both values. An identity is not document conformance. |
@@ -45,3 +45,22 @@ Source semantics, actual exporter behavior, PDF inspection/veraPDF, fidelity and
 remain separate conclusions. The production profile fails strict warnings and requires
 veraPDF; missing tools or skipped stages are never a passing validation. See
 [Accessibility](ACCESSIBILITY.md), [Workflow](WORKFLOW.md) and [Evidence](EVIDENCE.md).
+
+Graphic review identities bind referenced styles throughout groups, links and pages, including
+nested graphic visual properties. `content.page_fingerprint(page, document)` requires the
+`OdfDocument` to resolve package style definitions; a detached page alone cannot establish
+those dependencies. Graphic, link and page metadata operations refuse unresolved descendant
+style contexts before editing, including conditional mappings and unestablished mixed cascades.
+Permitted alternative metadata and proven target-specific role derivations compose and reapply.
+
+A graphic role change requires an established explicit style or class reference. An unstyled
+object's implicit native placement and wrapping are not proven by an empty derived style, so
+such changes refuse before mutation. Optional absent styles still resolve to the standard
+meaningful source role; an explicit false decision that already matches remains a no-op.
+
+For duplicate ZIP member names or unsafe member paths, `protection.inspection_blocked` is
+an early package fact. Guarded APIs do not select a manifest, body or native input from
+that ambiguous package. Audits report `PKG006`/`PKG007` with incomplete inspection;
+template preparation produces no usable plan, and remediation/export/comparison/pipeline
+boundaries refuse or record failure without publishing a candidate. The low-level
+caller-owned surfaces above retain their existing ownership contract.

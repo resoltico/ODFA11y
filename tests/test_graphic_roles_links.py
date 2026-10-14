@@ -14,7 +14,6 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative, LinkDescription, graphics_fingerprint
 from odfa11y.content.graphic_style_identity import normalized_role_attributes
 from odfa11y.content.graphic_styles import (
-    ROLE,
     GraphicStyles,
     effective_graphic_role,
 )
@@ -23,6 +22,7 @@ from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 
 from .fixtures import make_minimal_odt
+from .graphic_fixtures import _style
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,31 +35,6 @@ def _graphic(tmp_path: Path, version: str = "1.4") -> tuple[OdfDocument, etree._
         )
     )
     return document, select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
-
-
-def _style(
-    document: OdfDocument,
-    name: str,
-    *,
-    role: str | None = None,
-    parent: str | None = None,
-    automatic: bool = False,
-) -> etree._Element:
-    part = Part.CONTENT if automatic else Part.STYLES
-    root = document.edit(part).getroot()
-    styles = root.find("office:automatic-styles" if automatic else "office:styles", NS)
-    assert styles is not None
-    style = etree.SubElement(
-        styles, qn("style", "style"), {qn("style", "name"): name, qn("style", "family"): "graphic"}
-    )
-    if parent:
-        style.set(qn("style", "parent-style-name"), parent)
-    props = etree.SubElement(
-        style, qn("style", "graphic-properties"), {qn("draw", "fill-color"): "#112233"}
-    )
-    if role is not None:
-        props.set(ROLE, role)
-    return style
 
 
 def _decision(
@@ -145,6 +120,8 @@ def test_unresolved_roles_refuse_without_mutation(tmp_path: Path, problem: str) 
 @pytest.mark.parametrize("kind", ["text", "control", "ancestor-link", "event"])
 def test_decorative_intent_refuses_text_or_interactive_context(tmp_path: Path, kind: str) -> None:
     document, frame = _graphic(tmp_path)
+    _style(document, "Visual")
+    frame.set(qn("draw", "style-name"), "Visual")
     if kind == "text":
         etree.SubElement(frame, qn("text", "p")).text = "Caption"
     elif kind == "control":
@@ -254,6 +231,8 @@ def test_group_role_refuses_and_does_not_hide_child_findings(tmp_path: Path, dec
 
 def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> None:
     document, frame = _graphic(tmp_path)
+    _style(document, "Visual")
+    frame.set(qn("draw", "style-name"), "Visual")
     title = etree.SubElement(frame, qn("svg", "title"))
     title.text = "Authored title"
     assert _decision(document, frame, decorative=True).apply(document)[0].status == Status.APPLIED
@@ -264,6 +243,8 @@ def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> Non
 
 def test_unproven_generated_style_cannot_normalize_geometry_or_visual_drift(tmp_path: Path) -> None:
     document, frame = _graphic(tmp_path)
+    _style(document, "Visual")
+    frame.set(qn("draw", "style-name"), "Visual")
     operation = _decision(document, frame, decorative=True)
     assert operation.apply(document)[0].status == Status.APPLIED
     name = frame.get(qn("draw", "style-name"), "")

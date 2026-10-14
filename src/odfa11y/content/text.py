@@ -68,6 +68,8 @@ def eligible_text_node(node: etree._Element, *, main_only: bool = False) -> bool
             return False
         if ancestor.tag in TEXT_EXCLUDED_CONTEXTS:
             return False
+        if ancestor.tag in {qn("text", "p"), qn("text", "h")} and _conditional_paragraph(ancestor):
+            return False
         if ancestor.tag == qn("text", "section") and (
             ancestor.get(qn("text", "condition")) is not None
             or ancestor.get(qn("text", "display")) in {"none", "condition"}
@@ -76,6 +78,14 @@ def eligible_text_node(node: etree._Element, *, main_only: bool = False) -> bool
         if main_only and ancestor.tag in {qn("text", "note"), qn("draw", "text-box")}:
             return False
     return True
+
+
+def _conditional_paragraph(block: etree._Element) -> bool:
+    for marker in block.iter(qn("text", "hidden-paragraph")):
+        owner = next(marker.iterancestors(qn("text", "p"), qn("text", "h")), None)
+        if owner is block:
+            return True
+    return False
 
 
 def text_context_path(node: etree._Element) -> str:

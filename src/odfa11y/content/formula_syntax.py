@@ -88,7 +88,7 @@ def classify_formula(
         parser.expression(0)
         if parser.index != len(parser.lexemes):
             return FormulaFacts(incomplete=1)
-    except UnestablishedFormulaError:
+    except UnestablishedFormulaError, RecursionError:
         return FormulaFacts(incomplete=1)
     return parser.facts
 

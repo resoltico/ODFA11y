@@ -12,6 +12,7 @@ from urllib.parse import quote
 from odfa11y.odf import NS, qn, select_elements
 
 from .graphic_style_identity import graphic_style_fingerprint, normalized_graphic_tree
+from .graphic_styles import GraphicStyles
 from .resources import ResourceIdentity
 from .tables import AXES, declarations, repeated
 from .text import text_context_path
@@ -23,6 +24,39 @@ if TYPE_CHECKING:
     from lxml import etree
 
     from odfa11y.odf import OdfDocument
+
+
+SHAPE_TAGS = (
+    *(
+        qn("draw", name)
+        for name in (
+            "frame",
+            "rect",
+            "ellipse",
+            "line",
+            "path",
+            "polygon",
+            "polyline",
+            "regular-polygon",
+            "custom-shape",
+            "connector",
+            "measure",
+            "g",
+            "caption",
+            "circle",
+            "page-thumbnail",
+            "control",
+        )
+    ),
+    qn("dr3d", "scene"),
+)
+
+
+STYLE_CONTENT_TAGS = frozenset({
+    *SHAPE_TAGS,
+    qn("draw", "page"),
+    *(qn("dr3d", name) for name in ("cube", "sphere", "extrude", "rotate")),
+})
 
 
 def graphic_keys(frame: etree._Element) -> set[str]:
@@ -77,6 +111,9 @@ class GraphicIdentity:
         self._registered = {id(group) for group in self._groups.values()}
         self._resources = ResourceIdentity(document.storage)
         self._facts: dict[etree._Element, list[object]] = {}
+        self._style_facts: dict[etree._Element, str] = {}
+        self._style_problems: dict[etree._Element, str | None] = {}
+        self._styles = GraphicStyles(document)
         self._group_digests: dict[int, str] = {}
         self._sibling_ordinals: dict[etree._Element, dict[etree._Element, int]] = {}
         self._table_ordinals: dict[tuple[etree._Element, str], dict[etree._Element, int]] = {}
@@ -118,7 +155,7 @@ class GraphicIdentity:
             ]
             self._facts[frame] = [
                 self.logical_position(frame),
-                graphic_style_fingerprint(self._document, frame),
+                self.style_dependencies(frame),
                 protected_xml(
                     normalized_graphic_tree(self._document, frame),
                     omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
@@ -129,6 +166,47 @@ class GraphicIdentity:
                 payloads,
             ]
         return self._facts[frame]
+
+    def style_dependencies(self, root: etree._Element) -> tuple[str, ...]:
+        """Bind the effective visual style dependencies of each graphical descendant.
+
+        Returns
+        -------
+        tuple[str, ...]
+            Source-ordered root/shape style facts, excluding only proven role derivations.
+
+        """
+        nodes = [node for node in root.iter() if node.tag in STYLE_CONTENT_TAGS]
+        for node in nodes:
+            if node not in self._style_facts:
+                self._read_style(node)
+        return tuple(self._style_facts[node] for node in nodes)
+
+    def style_problem(self, root: etree._Element) -> str | None:
+        """Refuse metadata decisions when their subtree's visual dependencies are unresolved.
+
+        Returns
+        -------
+        str | None
+            The first unresolved source style context, or None for bound dependencies.
+
+        """
+        self.style_dependencies(root)
+        return next(
+            (self._style_problems[node] for node in root.iter() if self._style_problems.get(node)),
+            None,
+        )
+
+    def _read_style(self, node: etree._Element) -> None:
+        try:
+            self._style_facts[node] = graphic_style_fingerprint(self._document, node)
+            problem = None
+        except ValueError as error:
+            self._style_facts[node] = "unresolved"
+            problem = str(error)
+        if node.tag != qn("draw", "page"):
+            problem = problem or self._styles.role(node).problem
+        self._style_problems[node] = problem
 
     def logical_position(self, node: etree._Element) -> list[tuple[str, int]]:
         """Bind source order independently of storage and reviewed header wrappers.
@@ -185,3 +263,15 @@ def graphics_fingerprint(document: OdfDocument, frames: Sequence[etree._Element]
 
     """
     return GraphicIdentity(document, frames).fingerprint(frames)
+
+
+def graphic_style_dependencies(document: OdfDocument, root: etree._Element) -> tuple[str, ...]:
+    """Bind a subtree to every descendant shape's referenced visual properties.
+
+    Returns
+    -------
+    tuple[str, ...]
+        Fresh style identities; no cached mutable document state is retained.
+
+    """
+    return GraphicIdentity(document, ()).style_dependencies(root)

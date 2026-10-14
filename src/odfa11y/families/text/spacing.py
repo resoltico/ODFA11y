@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import eligible_text_node
 from odfa11y.errors import RemediationError
 from odfa11y.odf import Family, Part, qn
 
@@ -20,6 +19,7 @@ from .derived_styles import (
     is_generated_from,
     set_spacing,
 )
+from .style_properties import paragraph_style_name
 from .styles import catalog_of
 from .text import element_text
 
@@ -79,7 +79,7 @@ class NormalizeSpacing(Operation):
         reference = self._reference(tree)
         if reference is None:
             return (self._failed(f"Reference paragraph not found: {self.reference_text!r}"),)
-        reference_style = reference.get(qn("text", "style-name"))
+        reference_style = paragraph_style_name(reference)
         spacing = catalog_of(document).spacing_signature(reference_style)
         if not spacing:
             return (self._failed(f"Reference style {reference_style!r} has no spacing to copy."),)
@@ -94,6 +94,8 @@ class NormalizeSpacing(Operation):
         )
         direct = [p for p in paragraphs if _style_key(p) in self.target_styles]
         derived = [p for p in paragraphs if _style_key(p) in clones]
+        for paragraph in [*direct, *derived]:
+            paragraph_style_name(paragraph)
         if not direct and not derived:
             return (self._failed("No paragraph uses a target style."),)
         needed = sorted({_style_key(p) for p in direct} | {clones[_style_key(p)] for p in derived})
@@ -104,7 +106,7 @@ class NormalizeSpacing(Operation):
         conflicts = [
             message for base in needed if (message := _conflict(catalog, base)) is not None
         ]
-        conflicts += _excluded_consumers(document, plan)
+        conflicts += _excluded_consumers(document, plan, set(direct) | set(derived))
         return tuple(self._failed(message) for message in conflicts) if conflicts else plan
 
     def _failed(self, message: str) -> Outcome:
@@ -167,7 +169,9 @@ def _style_key(paragraph: etree._Element) -> str:
     return paragraph.get(qn("text", "style-name")) or NO_STYLE
 
 
-def _excluded_consumers(document: OdfDocument, plan: _Plan) -> list[str]:
+def _excluded_consumers(
+    document: OdfDocument, plan: _Plan, selected: set[etree._Element]
+) -> list[str]:
     catalog = catalog_of(document)
     changed = {
         derived_style_name(base)
@@ -175,9 +179,17 @@ def _excluded_consumers(document: OdfDocument, plan: _Plan) -> list[str]:
         if catalog.own_spacing(derived_style_name(base)) != plan.spacing
     }
     if any(
-        node.get(qn("text", "style-name")) in changed
-        and not eligible_text_node(node, main_only=True)
+        (node.get(qn("text", "style-name")) in changed and node not in selected)
+        or any(
+            changed.intersection(node.get(qn("text", name), "").split())
+            for name in ("class-names", "cond-style-name")
+        )
         for node in document.tree(Part.CONTENT).iter(qn("text", "p"), qn("text", "h"))
     ):
-        return ["A spacing style is shared with excluded content; native editing is required."]
+        return [
+            (
+                "A spacing style is shared with unselected or unestablished content; "
+                "native editing is required."
+            )
+        ]
     return []

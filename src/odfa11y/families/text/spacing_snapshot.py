@@ -34,6 +34,9 @@ def normalized_spacing_tree(document: OdfDocument, root: etree._Element) -> etre
         for source, target in zip(root.iter(), clone.iter(), strict=True)
         if source.tag in {qn("text", "p"), qn("text", "h")}
         and eligible_text_node(source, main_only=True)
+        and not any(
+            qn("text", name) in source.attrib for name in ("class-names", "cond-style-name")
+        )
     ]
     used = {node.get(qn("text", "style-name")) for node in nodes}
     if not any(name and name.startswith("A11ySpacing_") for name in used):

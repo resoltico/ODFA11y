@@ -17,7 +17,8 @@ from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.remediation import remediate
 
-from .test_graphic_roles_links import _decision, _graphic, _style
+from .graphic_fixtures import _style
+from .test_graphic_roles_links import _decision, _graphic
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -64,6 +65,8 @@ def test_common_generated_name_is_not_proven_output_and_cannot_shadow_a_peer(
 ) -> None:
 
     document, frame = _graphic(tmp_path)
+    _style(document, "Visual")
+    frame.set(qn("draw", "style-name"), "Visual")
     parent = frame.getparent()
     assert parent is not None
     document.edit(Part.CONTENT)

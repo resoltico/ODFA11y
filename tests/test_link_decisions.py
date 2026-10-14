@@ -26,6 +26,7 @@ from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat
+from .graphic_fixtures import _style
 from .test_graphic_roles_links import _graphic
 
 if TYPE_CHECKING:
@@ -46,6 +47,10 @@ def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
     )
     source = make_flat(tmp_path, family, Variant(body=body))
     document = OdfDocument.open(source)
+    _style(document, "Visual")
+    target = select_elements(document.edit(Part.CONTENT), "//draw:rect[@draw:name='Decoration']")[0]
+    target.set(qn("draw", "style-name"), "Visual")
+    document.save(source)
     adapter = presentation if family == "presentation" else drawing
     page = pages(document)[0]
     link = select_elements(document.tree(Part.CONTENT), "//draw:a")[0]
@@ -165,7 +170,7 @@ def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: s
             load_config(config)
 
 
-def test_unstyled_link_graphic_restores_meaning_and_composes_under_decorative_default(
+def test_unstyled_restoration_refuses_and_styled_role_composes_under_decorative_default(
     tmp_path: Path,
 ) -> None:
     document, frame = _graphic(tmp_path)
@@ -194,6 +199,22 @@ def test_unstyled_link_graphic_restores_meaning_and_composes_under_decorative_de
         },
     )
     link.append(frame)
+    reviewed = link_fingerprint(document, link)
+    graphics = text.SetGraphicAlternatives({
+        "Logo": GraphicAlternative(
+            decorative=False,
+            description="A meaningful logo",
+            fingerprint=graphics_fingerprint(document, [frame]),
+        )
+    })
+    links = text.SetLinkDescriptions({
+        link_location(link, 1).path: LinkDescription("Read the guide", reviewed)
+    })
+    edits = document.edit_count
+    assert graphics.apply(document)[0].status == Status.FAILED
+    assert document.edit_count == edits
+    _style(document, "Visual")
+    frame.set(qn("draw", "style-name"), "Visual")
     reviewed = link_fingerprint(document, link)
     graphics = text.SetGraphicAlternatives({
         "Logo": GraphicAlternative(

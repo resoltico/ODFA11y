@@ -25,6 +25,8 @@ PARSED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.MANIFEST)
 BLOCKING_RULE_IDS = frozenset({
     rules.PKG000.id,
     rules.PKG005.id,
+    rules.PKG006.id,
+    rules.PKG007.id,
     rules.PKG009.id,
     rules.XML001.id,
     rules.ODF005.id,

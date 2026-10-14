@@ -131,10 +131,11 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
 def test_paragraphs_with_markers_or_fields_are_never_removed_as_spacers(
     tmp_path: Path, marker: bytes
 ) -> None:
-    body = b'<text:p text:style-name="Body" xml:id="marked">' + marker + b"</text:p>"
+    body = b'<text:p text:style-name="Body">' + marker + b"</text:p>"
     document = OdfDocument.open(with_body(tmp_path, body))
+    paragraph = select_elements(document.tree(Part.CONTENT), "//text:p")[0]
     RemoveEmptySpacers().apply(document)
-    assert select_elements(document.tree(Part.CONTENT), "//*[@xml:id='marked']")
+    assert paragraph in document.tree(Part.CONTENT).iter()
 
 
 def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None:

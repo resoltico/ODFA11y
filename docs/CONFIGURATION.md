@@ -232,7 +232,9 @@ result, so applying it again changes nothing. A style of that name is reused onl
 provably ODFA11y's own earlier output (an unmodified derivation of the base style that
 differs from it only in spacing); anything else of that name is left untouched and the
 operation fails, so an author's style is never overwritten or reinterpreted. Use
-`odfa11y styles` to choose the styles.
+`odfa11y styles` to choose the styles. Paragraph `text:class-names` overlays and
+`text:cond-style-name` references have unestablished precedence here: style inspection reports
+`TXT062`, and affected reference or target paragraphs refuse spacing edits before mutation.
 
 ## Re-applying a configuration
 
@@ -279,7 +281,10 @@ text-bearing/action/control contexts, groups and unresolved styles refuse before
 Existing authored alternative metadata is retained; a decorative conflict produces a
 review warning and fails production strict gates. Target-specific derived styles preserve
 visual properties, legal parents and class overlays; repeated decisions do not add styles.
-Mixed graphic/presentation precedence remains an explicit unsupported context.
+Mixed graphic/presentation precedence remains an explicit unsupported context. A role change
+without an established explicit style reference also refuses: introducing a style can change
+native implicit placement and wrapping. Fingerprints bind descendant graphical style
+dependencies for group, hyperlink and page targets as well as their own content.
 
 `<family>.links."TARGET"` is supported for `text`, `spreadsheet`, `presentation` and
 `drawing`. Each entry requires a nonblank `description` and reviewed `fingerprint`.

@@ -81,6 +81,9 @@ class GraphicRoleEditor(GraphicStyles):
         """
         if self.role(shape).decorative == decorative:
             return False
+        problem = self.change_problem(shape, decorative=decorative)
+        if problem:
+            raise ValueError(problem)
         ns, style = self.derived(shape, decorative=decorative)
         name = style.get(qn("style", "name"), "")
         family = style.get(qn("style", "family"), "")
@@ -121,6 +124,10 @@ class GraphicRoleEditor(GraphicStyles):
         """
         if self.role(shape).decorative == decorative:
             return None
+        if not any(
+            value.split() for value in normalized_role_attributes(self.document, shape).values()
+        ):
+            return "Unstyled graphic placement and wrapping are unestablished; role edits refuse."
         _ns, style = self.derived(shape, decorative=decorative)
         key = (style.get(qn("style", "family"), ""), style.get(qn("style", "name"), ""))
         if self.common.get(key):

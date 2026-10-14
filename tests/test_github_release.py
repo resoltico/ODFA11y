@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 
 from tools import github_release as releases
 from tools.github_release import ReleaseExpectation, require_absent, verify_release
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 TARGET = "a" * 40
 EXPECTED = ReleaseExpectation(TARGET, {"wheel.whl": b"tested"}, "Exact notes\n")
@@ -164,3 +168,83 @@ def test_api_process_failure_is_not_discarded_by_the_query_boundary(
     monkeypatch.setattr(releases.subprocess, "run", failed_process)
     with pytest.raises(releases.subprocess.CalledProcessError):
         require_absent("owner/repo", "v0.7.0")
+
+
+def test_manual_release_inspection_selects_only_preserved_distribution_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = tmp_path / "dist"
+    directory.mkdir()
+    for name, content in {
+        "candidate.whl": b"wheel",
+        "candidate.tar.gz": b"source",
+        ".gitignore": b"*",
+    }.items():
+        (directory / name).write_bytes(content)
+    checksums = tmp_path / "SHA256SUMS"
+    checksums.write_bytes(b"Preserved checksums")
+    notes = tmp_path / "notes.md"
+    notes.write_text("Preserved notes")
+    captured = []
+    monkeypatch.setattr(releases, "verify_release", lambda *args, **_kwargs: captured.append(args))
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "github_release",
+            "draft",
+            "owner/repo",
+            "v0.7.0",
+            "--target",
+            TARGET,
+            "--directory",
+            str(directory),
+            "--checksums",
+            str(checksums),
+            "--notes",
+            str(notes),
+        ],
+    )
+    assert releases.main() == 0
+    assert len(captured) == 1
+    assert captured[0][2].assets == {
+        "candidate.whl": b"wheel",
+        "candidate.tar.gz": b"source",
+        "SHA256SUMS": b"Preserved checksums",
+    }
+
+
+@pytest.mark.parametrize("artifacts", [[], ["one.whl"], ["one.whl", "two.whl", "source.tar.gz"]])
+def test_manual_release_inspection_refuses_incomplete_or_ambiguous_assets_before_queries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    artifacts: list[str],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    for name in artifacts:
+        (tmp_path / name).write_bytes(b"Invented distribution bytes")
+    notes = tmp_path / "notes.md"
+    notes.write_text("Notes")
+    sums = tmp_path / "SHA256SUMS"
+    sums.write_text("Checksums")
+    calls = []
+    monkeypatch.setattr(releases, "verify_release", lambda *args, **_kwargs: calls.append(args))
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "github_release",
+            "draft",
+            "owner/repo",
+            "v0.7.0",
+            "--target",
+            TARGET,
+            "--directory",
+            str(tmp_path),
+            "--checksums",
+            str(sums),
+            "--notes",
+            str(notes),
+        ],
+    )
+    assert releases.main() == 1
+    assert calls == []
+    assert "inspection failed" in capsys.readouterr().err

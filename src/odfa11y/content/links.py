@@ -15,11 +15,10 @@ from odfa11y.errors import ConfigError
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.report import Location
 
-from .graphic_identity import GraphicIdentity
+from .graphic_identity import SHAPE_TAGS, GraphicIdentity
 from .graphic_style_identity import (
     normalized_graphic_tree,
 )
-from .pages import SHAPE_TAGS
 from .text import eligible_text_node, text_context_path, visible_words
 from .xml import protected_xml
 
@@ -199,6 +198,8 @@ def _link_problem(
         for attr in ("number-rows-repeated", "number-columns-repeated")
     ):
         problem = "Repeated link targets do not establish a unique logical link identity."
+    elif problem := GraphicIdentity(document, ()).style_problem(links[0]):
+        return problem
     elif link_fingerprint(document, links[0]) != entry.fingerprint:
         problem = "The source link changed since this decision was reviewed."
     return problem

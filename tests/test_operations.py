@@ -156,11 +156,9 @@ def test_spacer_removal_retains_semantically_protected_paragraphs(
 ) -> None:
     doc = document(tmp_path, add_blank_body_paragraph=True)
     paragraph = select_elements(doc.tree(Part.CONTENT), "//text:p[not(text())]")[0]
-    paragraph.set("{http://www.w3.org/XML/1998/namespace}id", "protected")
     _protect(doc, paragraph, marker)
     RemoveEmptySpacers().apply(doc)
-    kept = select_elements(doc.tree(Part.CONTENT), "//*[@xml:id='protected']")
-    assert len(kept) == 1
+    assert paragraph in doc.tree(Part.CONTENT).iter()
 
 
 def _protect(doc: OdfDocument, paragraph: etree._Element, marker: str) -> None:

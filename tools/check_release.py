@@ -51,7 +51,11 @@ def check_release(tag: str, directory: Path) -> list[str]:
         errors.extend(_wheel_license_errors(wheel, root, project["license-files"]))
         errors.extend(_wheel_inventory_errors(wheel, root, project["license-files"]))
     with tarfile.open(archives[0]) as archive:
-        names = [member for member in archive.getmembers() if member.name.endswith("/PKG-INFO")]
+        names = [
+            member
+            for member in archive.getmembers()
+            if member.name.count("/") == 1 and member.name.endswith("/PKG-INFO")
+        ]
         if len(names) != 1:
             return [*errors, "Source archive must contain exactly one package metadata record"]
         stream = archive.extractfile(names[0])
