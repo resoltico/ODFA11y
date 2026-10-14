@@ -188,7 +188,8 @@ def _excluded_consumers(
     ):
         return [
             (
-                "A spacing style is shared with unselected or unestablished content; "
+                "A spacing style is shared with excluded content or other unselected "
+                "or unestablished consumers; "
                 "native editing is required."
             )
         ]

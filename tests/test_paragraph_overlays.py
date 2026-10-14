@@ -119,7 +119,7 @@ def test_unselected_overlay_consumer_prevents_creating_or_updating_spacing_style
     original = source.read_bytes()
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"Keep destination")
-    with pytest.raises(RemediationError, match="unselected or unestablished content"):
+    with pytest.raises(RemediationError, match="unselected or unestablished consumers"):
         remediate(source, destination, [NormalizeSpacing("Second reference", ("Base",))])
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"Keep destination"
@@ -150,7 +150,7 @@ def test_ordinary_heading_consumer_requires_explicit_heading_selection(
     original = first.read_bytes()
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"Keep destination")
-    with pytest.raises(RemediationError, match="unselected or unestablished content"):
+    with pytest.raises(RemediationError, match="unselected or unestablished consumers"):
         remediate(first, destination, [NormalizeSpacing("Second reference", ("Base",))])
     assert first.read_bytes() == original
     assert destination.read_bytes() == b"Keep destination"
