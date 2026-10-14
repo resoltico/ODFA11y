@@ -27,6 +27,12 @@ Use `--profile verify` for native export and built-in PDF/fidelity gates, or
 uses the same `--soffice`, `--verapdf-path` and `--timeout` options as `pipeline`.
 `--format json` prints the batch summary.
 
+Text summaries include the profile, aggregate exit status and each item's failed
+stage and relative evidence reference. Interactive text progress reports item IDs
+and status only; it exposes no source or plan paths. Redirected stderr and JSON
+commands have no progress output. A completed batch means its selected automated
+gates completed; inspect each item's `REVIEW.md` for required human review.
+
 The manifest accepts only a nonempty `[[documents]]` list. Each entry requires exactly
 `id`, `source` and `plan`. Source and plan paths are relative to the manifest directory;
 absolute paths are rejected. IDs contain 1–64 ASCII letters, digits, underscores or

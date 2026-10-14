@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.cli import commands, main
+from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
@@ -36,7 +36,8 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
         text_pdf(destination, "Safe operand")
         return destination
 
-    monkeypatch.setattr(commands, "export_pdfua", export)
+    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", export)
+    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", export)
     monkeypatch.setattr(pipeline_run, "export_pdfua", export)
     assert main(["export", str(source), str(tmp_path / "export.pdf")]) == 3
     for left, right in [(source, safe), (safe, source)]:

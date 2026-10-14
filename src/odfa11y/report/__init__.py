@@ -5,6 +5,7 @@ from . import rules
 from .models import Finding, Location, Report
 from .render import FORMATS, exit_status, render_reports
 from .rules import RULES, Category, Rule, Severity
+from .terminal import terminal_text
 
 __all__ = [
     "FORMATS",
@@ -18,4 +19,5 @@ __all__ = [
     "exit_status",
     "render_reports",
     "rules",
+    "terminal_text",
 ]

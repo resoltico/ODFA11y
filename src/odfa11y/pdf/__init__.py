@@ -3,6 +3,7 @@
 
 from .audit import audit_pdfua
 from .export import (
+    DEFAULT_TIMEOUT_SECONDS,
     EXPORT_OPTIONS,
     ExportSettings,
     export_pdfua,
@@ -21,6 +22,7 @@ from .verapdf import (
 )
 
 __all__ = [
+    "DEFAULT_TIMEOUT_SECONDS",
     "EXPORT_OPTIONS",
     "ExportSettings",
     "FailedRule",

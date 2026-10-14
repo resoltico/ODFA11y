@@ -208,7 +208,8 @@ can preserve original logical identity; `inspect` preserves authored fields and 
 See [Evidence](EVIDENCE.md#no-local-paths) for the authoritative policy boundary, capture
 file-identity checks, stable ancestor-namespace prerequisite, comparison identity and portability.
 The low-level `export_pdfua()` API is the raw application boundary; callers must apply their
-own resource policy and native isolation. CLI export/ODF comparison and pipeline own the shared guard.
+own resource policy and native isolation. Core `export_document`, `compare_documents`
+and pipeline stages own the shared guard; the CLI calls those guarded operations.
 
 The controlled macOS LibreOffice 26.8.0.3 experiment retained intended 4x4 RGB embedded images
 in flat and native-package positives. Its local/loopback external references did not retain

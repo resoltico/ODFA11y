@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from jsonschema import Draft7Validator
 
-from odfa11y.cli import commands, main
+from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
 
 from .fixtures import make_minimal_odt
@@ -76,7 +76,7 @@ def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_de
         line = "Unchanged" if input_path == source else "Changed"
         return text_pdf(destination, [[line]])
 
-    monkeypatch.setattr(commands, "export_pdfua", exporter)
+    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
     assert (
         main([
             "compare",
@@ -234,7 +234,7 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
         calls.append(input_path)
         return text_pdf(destination, [["Actual comparison"]])
 
-    monkeypatch.setattr(commands, "export_pdfua", exporter)
+    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
     diff = tmp_path / "diff"
     extra: list[str] = []
     if outside:
@@ -270,7 +270,7 @@ def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
         message = "Conversion failed"
         raise ToolFailedError(message, details=diagnostic)
 
-    monkeypatch.setattr(commands, "export_pdfua", exporter)
+    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
     arguments = ["compare", str(source), str(candidate)]
     assert main([*arguments, "--format", "sarif", "--source-root", str(tmp_path)]) == 3
     sarif_output = capsys.readouterr()

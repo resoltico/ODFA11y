@@ -12,6 +12,8 @@ on:
         default: false
 env:
   ODFA11Y_UV_VERSION: "0.12.23"
+  ODFA11Y_ACTIONLINT_PACKAGE: "github.com/rhysd/actionlint/cmd/actionlint@v1.7.12"
+  ODFA11Y_GITLEAKS_PACKAGE: "github.com/zricethezav/gitleaks/v8@v8.30.1"
   ODFA11Y_LIBREOFFICE_VERSION: "26.8.0.3"
   ODFA11Y_LIBREOFFICE_LINUX_SHA256: "d0a6031a3837e48f9854e6d2da6489b9fadbd814afa4741fa32a197741663a22"
   ODFA11Y_LIBREOFFICE_WINDOWS_SHA256: "4aa6c6e1895f4055104effcb556bd3362d20c6ad707c149543304f395ef9db95"
@@ -38,6 +40,11 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
+          cache-dependency-glob: |
+            uv.lock
+            .python-version
+          restore-cache: ${{ github.event_name != 'workflow_dispatch' || !inputs.release }}
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Restore locked Python environment
         run: uv sync --locked --group audit
       - name: Audit workflow security
@@ -63,19 +70,28 @@ jobs:
         run: |
           printf 'version=%s\nmodules=%s\nbuild=%s\n' \
             "$(go env GOVERSION)" "$(go env GOMODCACHE)" "$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
-      - name: Cache pinned Go analysis tools
+      - name: Restore pinned Go analysis tools
+        id: go-cache-restore
         if: github.event_name != 'workflow_dispatch' || !inputs.release
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           lookup-only: ${{ startsWith(github.ref, 'refs/tags/') }}
           path: |
             ${{ steps.go-cache.outputs.modules }}
             ${{ steps.go-cache.outputs.build }}
-          key: ${{ runner.os }}-${{ runner.arch }}-go-${{ steps.go-cache.outputs.version }}-${{ hashFiles('.github/workflows/checks.yml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-go-${{ steps.go-cache.outputs.version }}-${{ env.ODFA11Y_ACTIONLINT_PACKAGE }}-${{ env.ODFA11Y_GITLEAKS_PACKAGE }}
       - name: Validate workflow syntax and shell commands
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+        run: go run "$ODFA11Y_ACTIONLINT_PACKAGE"
       - name: Scan Git history for secrets
-        run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --ignore-gitleaks-allow --log-opts=--all
+        run: go run "$ODFA11Y_GITLEAKS_PACKAGE" git --redact --no-banner --ignore-gitleaks-allow --log-opts=--all
+      - name: Save pinned Go analysis tools on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.go-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.go-cache.outputs.modules }}
+            ${{ steps.go-cache.outputs.build }}
+          key: ${{ steps.go-cache-restore.outputs.cache-primary-key }}
   test:
     name: Quality (${{ matrix.os }})
     timeout-minutes: 20
@@ -91,6 +107,11 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
+          cache-dependency-glob: |
+            uv.lock
+            .python-version
+          restore-cache: ${{ github.event_name != 'workflow_dispatch' || !inputs.release }}
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Restore locked Python environment
         run: uv sync --locked
       - name: Unit tests with coverage on Linux
@@ -170,6 +191,11 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
+          cache-dependency-glob: |
+            uv.lock
+            .python-version
+          restore-cache: ${{ github.event_name != 'workflow_dispatch' || !inputs.release }}
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Restore locked Python environment
         run: uv sync --locked
       - name: Install LibreOffice on Linux
@@ -258,6 +284,7 @@ jobs:
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
+          enable-cache: false
       - name: Restore release metadata environment
         run: uv sync --locked
       - name: Download the exact tested distributions

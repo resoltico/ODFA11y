@@ -1,6 +1,6 @@
 source_roots = ["src"]
 exclude = ["tests", "tools", "**/__pycache__"]
-root_module = "ignore"
+root_module = "forbid"
 forbid_circular_dependencies = true
 exact = true
 
@@ -92,6 +92,7 @@ depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.o
 [[modules]]
 path = "odfa11y.families"
 depends_on = [
+  "odfa11y.errors",
   "odfa11y.adapter",
   "odfa11y.families.chart",
   "odfa11y.families.database",
@@ -154,6 +155,8 @@ depends_on = [
 [[modules]]
 path = "odfa11y.pipeline"
 depends_on = [
+  "odfa11y",
+  "odfa11y.external_tools",
   "odfa11y.content",
   "odfa11y.audit",
   "odfa11y.errors",
@@ -173,7 +176,7 @@ depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.e
 [[modules]]
 path = "odfa11y.cli"
 depends_on = [
-  "odfa11y.content",
+  "odfa11y",
   "odfa11y.batch",
   "odfa11y.audit",
   "odfa11y.config",
@@ -181,10 +184,6 @@ depends_on = [
   "odfa11y.evidence",
   "odfa11y.external_tools",
   "odfa11y.families",
-  "odfa11y.families.text",
-  "odfa11y.fidelity",
-  "odfa11y.odf",
-  "odfa11y.pdf",
   "odfa11y.pipeline",
   "odfa11y.remediation",
   "odfa11y.report",
@@ -218,3 +217,17 @@ from = [
   "odfa11y.report",
 ]
 expose = ["[^.]+"]
+
+# Version metadata is a leaf; unregistered package files inherit this boundary.
+[[modules]]
+path = "odfa11y"
+depends_on = []
+
+# The Python module entry point is the only package-level caller of the CLI.
+[[modules]]
+path = "odfa11y.__main__"
+depends_on = ["odfa11y.cli"]
+
+[[interfaces]]
+from = ["odfa11y"]
+expose = ["__version__"]

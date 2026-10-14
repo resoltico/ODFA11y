@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 import pytest
 from pypdf.generic import EncodedStreamObject, NameObject, StreamObject
 
-from odfa11y.cli import commands, main
-from odfa11y.cli.audit import is_pdf
+from odfa11y.cli import main
+from odfa11y.pipeline import is_pdf
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import register, tagged_writer, text_pdf
@@ -56,7 +56,10 @@ def test_fifo_refuses_before_deadline(tmp_path: Path, operand: str) -> None:
     assert result.returncode == 3
     assert "regular file" in result.stderr
     assert "Traceback" not in result.stderr
-    assert not result.stdout
+    if operand == "audit":
+        assert "Command: failed (exit 3" in result.stdout
+    else:
+        assert not result.stdout
     assert not diff.exists()
     assert regular.read_bytes() == before
 
@@ -74,13 +77,14 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
     )
     output = capsys.readouterr()
     assert str(missing) in output.err
-    assert "Command gate (--strict): FAIL (exit 3)" in output.err
     if output_format == "json":
+        assert "Command gate (--strict): FAIL (exit 3)" in output.err
         reports = json.loads(output.out)
         assert [report["subject"] for report in reports] == [str(first), str(last)]
         assert reports[0]["passed"]
         assert not reports[1]["passed"]
     else:
+        assert "Command: failed (exit 3" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
         assert "TXT010" in output.out
@@ -142,7 +146,9 @@ def test_compare_preflight_rejects_candidate_before_export(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     calls = []
-    monkeypatch.setattr(commands, "export_pdfua", lambda *args: calls.append(args))
+    monkeypatch.setattr(
+        "odfa11y.pipeline.comparison.export_pdfua", lambda *args: calls.append(args)
+    )
     assert main(["compare", str(source), str(tmp_path / "missing")]) == 3
     assert not calls
 

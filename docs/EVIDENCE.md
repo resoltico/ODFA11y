@@ -19,6 +19,11 @@ published with one rename, so it is never half-written; a failed run still publi
 evidence. Artifacts are retained for stages that completed, including the remediated
 document when remediation passed even if a later gate failed.
 
+`REVIEW.md` labels its outcome as automated gates under the selected profile,
+separately from human review. It distinguishes veraPDF that did not run from a
+validator or validation that failed. `check-evidence` verifies recorded files and
+hashes; integrity does not establish accessibility, authenticity or review quality.
+
 ## run.json
 
 Format 2. Sorted keys, no timestamps and no local directories in diagnostic values:

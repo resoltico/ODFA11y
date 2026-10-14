@@ -82,9 +82,15 @@ Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
 
 ## Library use
 
-Each package exposes its API through its `__init__`: for example
-`odfa11y.audit.audit_odf`, `odfa11y.remediation.remediate` with the operation classes,
-`odfa11y.pdf.export_pdfua` and `odfa11y.pipeline.run_pipeline`. See
+The CLI is a presentation layer over public core operations. Libraries can call
+`odfa11y.pipeline.audit_document`, `export_document`, `compare_documents`,
+`inspect_tools` and `run_pipeline` directly, with `NativeOptions` for standalone
+tool settings or `PipelineOptions` for assurance runs. Inspection yields reports
+incrementally, preserving completed checks if a later validator fails.
+`odfa11y.audit.prepare_template` prepares reviewed configuration decisions, and
+`odfa11y.remediation.remediate` applies explicit operation objects. Low-level
+`odfa11y.pdf.export_pdfua` remains available; its callers own native preflight.
+Each package exposes its API through its `__init__`. See
 [Architecture](docs/ARCHITECTURE.md).
 
 ## Documentation

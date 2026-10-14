@@ -14,12 +14,14 @@ from typing import TYPE_CHECKING, Any
 
 from odfa11y import __version__
 from odfa11y.odf import provenance
-from odfa11y.pdf import EXPORT_OPTIONS
+from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
 from odfa11y.report import exit_status
 
 from .profiles import DEFAULT_PROFILE, profile_named
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from odfa11y.remediation import RemediationResult
     from odfa11y.report import Report
 
@@ -159,12 +161,17 @@ def _library_versions() -> dict[str, str]:
 
 @dataclass(frozen=True, slots=True)
 class PipelineOptions:
-    """Tool locations, the time limit and the assurance profile."""
+    """Tool locations, time limit, assurance profile and optional progress observer.
+
+    The observer receives fixed stage/status fields, must not raise, and is excluded
+    from evidence serialization and execution identity.
+    """
 
     profile: str = DEFAULT_PROFILE
     soffice: str | None = None
     verapdf_path: str | None = None
-    timeout: int = 120
+    timeout: int = DEFAULT_TIMEOUT_SECONDS
+    on_progress: Callable[[str, str], None] | None = field(default=None, repr=False, compare=False)
 
     @property
     def assurance(self) -> Profile:

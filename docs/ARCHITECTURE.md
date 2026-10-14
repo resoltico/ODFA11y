@@ -4,8 +4,9 @@
 > documents mean. Families own semantic decisions. Shared ODF vocabulary lives in `content`; orchestration
 > does not select family XML or contain family rules.**
 
-A run parses a document once, checks or edits that one shared document, emits typed
-findings from one rule registry, and records everything in one run record.
+An audit or remediation shares parsed trees within its document model. A workflow
+runs those core operations in stages, emits typed findings from one rule registry,
+and records the stages and their results in one run record.
 
 ```mermaid
 flowchart LR
@@ -44,16 +45,16 @@ flowchart LR
 | `adapter` | The contract between the core and families: `FamilyAdapter`, `Operation`, `Outcome`. |
 | `families.text` | Everything specific to text documents: audit rules, operations, styles, plan table. |
 | `families.spreadsheet` | Everything specific to spreadsheets: audit rules, operations, snapshot, plan table. |
-| `families` | The registry: which adapter serves which kind; the generic adapter for the rest. |
+| `families` | Family selection and supported style inspection; the generic adapter for unimplemented kinds. |
 | `batch` | Strict manifests and independent pipelines with atomic aggregate evidence. |
-| `audit` | The read-only audit engine: common checks, then the family's. |
+| `audit` | Read-only ODF checks and family-aware template preparation with shared readability policy. |
 | `remediation` | The executor and the operations common to every family. |
 | `pdf` | LibreOffice export, structural PDF audit, link correlation, veraPDF. |
 | `fidelity` | PDF text, link and rendered-ink comparison. |
 | `evidence` | Manifests, redaction, the review sheet and atomic bundle publication. |
 | `config` | The TOML file → operations and fidelity policy. |
-| `pipeline` | Assurance profiles, the ordered stages and the run record. |
-| `cli` | Argument parsing and command output. |
+| `pipeline` | Core document inspection, guarded native export, ODF/PDF comparison, tool diagnostics, assurance stages and evidence publication. |
+| `cli` | Argument/configuration translation, rendering, terminal progress and recovery guidance. |
 
 Dependencies point one way: `cli` → `pipeline`, `config` → `audit`, `remediation`, `pdf`,
 `fidelity`, `evidence` → `families` → `families.<family>` → `content`, `adapter` → `odf` → the leaves.
@@ -61,7 +62,16 @@ The five engines never import each other, and **families never import each other
 does anything below the registry import a family. [tach.toml](../tach.toml) is the
 authority: `tach check` rejects an undeclared dependency, a cycle, or an import that
 bypasses a package's public interface (a package's public API is exactly what its
-`__init__.py` re-exports). A quality gate adds the part tach cannot see: it fails when a
+`__init__.py` re-exports). The CLI depends on core public operations and report rendering;
+it cannot import family implementations, the document-storage layer or the PDF engine. The package root
+is a leaf exposing only `__version__`; `odfa11y.__main__` is the explicit entry point
+allowed to call the CLI. Unregistered files inside `odfa11y` inherit the root leaf's
+empty dependency list; unregistered top-level source files cannot import project modules.
+`exact = true` also rejects unused dependency declarations so retired edges cannot keep
+permitting coupling. Tests challenge these rules using the installed Tach CLI on isolated
+source copies, including deliberately permitted circular dependencies. Files with no
+imports do not violate a dependency boundary; Tach does not require a separate declaration
+for every file. A quality gate adds the part tach cannot see: it fails when a
 core package directly names family content through qualified-name calls (including ordinary
 import aliases, qualified calls and keyword prefixes) or XPath literals. Shared `content`
 primitives may use that vocabulary; structural namespace declarations and normative schema
@@ -79,6 +89,15 @@ combine unrelated responsibilities, and dynamic imports or computed XML names ca
 coupling from static checks. Design review and a separate challenge pass must assess
 responsibility, state ownership and downstream effects; passing size/lint/boundary checks
 alone does not prove that a design is cohesive or free of a god object.
+
+The CLI does not own document dispatch, export filters, native-resource preflight,
+comparison scratch lifetimes, named-link probes or template eligibility. Its handlers
+call public core entrypoints and render their reports, paths or diagnostic results.
+`NativeOptions` supplies tool settings for standalone operations; `PipelineOptions`
+also selects an assurance profile. Optional observers receive labels and statuses,
+carry no document payloads, and must not raise. They do not change persisted records,
+options identity or plan hashes. Publication progress completes only after the atomic
+bundle write succeeds; failure and interruption remain failures.
 
 ## The document model
 

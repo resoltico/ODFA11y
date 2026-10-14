@@ -68,7 +68,7 @@ def test_audit_text_exit_status_and_strict_mode(
     failing = make_minimal_odt(tmp_path / "bad.odt", features={"with_image_without_alt": True})
     assert main(["audit", str(failing)]) == FINDINGS
     output = capsys.readouterr().out
-    assert "Result: FAIL" in output
+    assert "Check: errors found" in output
     assert "remedy: text.graphics" in output
     warned = make_minimal_odt(tmp_path / "warn.odt", features={"with_plain_email": True})
     assert main(["audit", str(warned)]) == 0
@@ -113,7 +113,7 @@ def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
     arguments = ["remediate", str(source), str(destination), "--config", str(config(tmp_path))]
     assert main([*arguments, "--dry-run"]) == 0
     dry = capsys.readouterr().out
-    assert "Dry run; nothing written." in dry
+    assert "Dry run; proposed changes only. Nothing written." in dry
     assert not destination.exists()
     assert main(arguments) == 0
     output = capsys.readouterr().out

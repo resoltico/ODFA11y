@@ -98,7 +98,7 @@ def test_check_triggers_cover_prs_main_tags_and_manual_branch_runs() -> None:
 
 def test_tag_and_manual_release_runs_cannot_restore_go_analysis_caches() -> None:
     cache = re.search(
-        r"- name: Cache pinned Go analysis tools\n((?: {8}.*\n)+)",
+        r"- name: Restore pinned Go analysis tools\n((?: {8}.*\n)+)",
         WORKFLOW,
     )
     assert cache is not None
@@ -112,3 +112,31 @@ def test_parallel_native_tests_still_require_tools_and_reject_worker_crashes() -
     assert 'ODFA11Y_REQUIRE_INTEGRATION: "1"' in integration
     assert "pytest -m integration -n 2 --max-worker-restart=0" in integration
     assert "os: [ubuntu-latest, macos-latest, windows-latest]" in integration
+
+
+def test_go_cache_identity_uses_the_same_pins_as_the_scanner_commands() -> None:
+    static = job_block("static")
+    for package in ("ODFA11Y_ACTIONLINT_PACKAGE", "ODFA11Y_GITLEAKS_PACKAGE"):
+        assert f"${{{{ env.{package} }}}}" in static
+        assert f'go run "${package}"' in static
+        assert re.search(rf"^  {package}: \".+@v[0-9.]+\"$", WORKFLOW, re.MULTILINE)
+    assert "hashFiles('.github/workflows/checks.yml')" not in static
+    assert "actions/cache/restore@" in static
+    assert "actions/cache/save@" in static
+    assert "restore-keys:" not in static
+
+
+def test_dependency_caches_are_saved_only_from_main_and_release_caches_are_bypassed() -> None:
+    main_push = "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    for job in ("static", "test", "integration"):
+        block = job_block(job)
+        assert f"save-cache: ${{{{ {main_push} }}}}" in block
+        assert "cache-dependency-glob: |\n            uv.lock\n            .python-version" in block
+        assert (
+            "restore-cache: ${{ github.event_name != 'workflow_dispatch' || !inputs.release }}"
+            in block
+        )
+    assert f"if: {main_push} && steps.go-cache-restore.outputs.cache-hit != 'true'" in job_block(
+        "static"
+    )
+    assert "enable-cache: false" in job_block("draft")
