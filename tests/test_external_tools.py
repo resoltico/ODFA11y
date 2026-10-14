@@ -167,7 +167,12 @@ def _native_command(
             original_wait = process.wait
 
             def wait(timeout: float | None = None) -> int:
-                if "--convert-to" in command and "/second-input/" in command[-1]:
+                # Cleanup reaps without a timeout; an interrupted Event.set must not be reentered.
+                if (
+                    timeout is not None
+                    and "--convert-to" in command
+                    and "/second-input/" in command[-1]
+                ):
                     Path(marker).write_text(str(process.pid), encoding="utf-8")
                     ready.set()
                 return original_wait(timeout)
@@ -178,10 +183,45 @@ def _native_command(
         return start
 
     patch.setattr(external_tools.subprocess, "Popen", observe(external_tools.subprocess.Popen))
-    if mode == "standalone":
-        sys.exit(main(["export", source, output, "--soffice", tool]))
-    result = run_batch(source, output, PipelineOptions(soffice=tool))
-    sys.exit(result.exit_status)
+    try:
+        if mode == "standalone":
+            sys.exit(main(["export", source, output, "--soffice", tool]))
+        result = run_batch(source, output, PipelineOptions(soffice=tool))
+        sys.exit(result.exit_status)
+    finally:
+        patch.undo()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="checks the POSIX process group")
+def test_interrupted_native_readiness_does_not_reenter_the_event_during_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ready = multiprocessing.get_context("spawn").Event()
+    marker = tmp_path / "native.pid"
+    announcements = 0
+
+    def interrupt_readiness() -> None:
+        nonlocal announcements
+        announcements += 1
+        assert announcements == 1, "cleanup must not reenter an interrupted readiness event"
+        raise KeyboardInterrupt
+
+    def export(_arguments: list[str]) -> int:
+        with pytest.raises(KeyboardInterrupt):
+            run_bounded(
+                [PYTHON, "-c", "import time; time.sleep(60)", "--convert-to", "/second-input/x"],
+                timeout=30,
+            )
+        return 3
+
+    monkeypatch.setattr(ready, "set", interrupt_readiness)
+    monkeypatch.setattr(sys.modules[__name__], "main", export)
+    with pytest.raises(SystemExit) as stopped:
+        _native_command(("source", "output"), PYTHON, str(marker), ready, "standalone")
+    assert stopped.value.code == 3
+    assert announcements == 1
+    with pytest.raises(ProcessLookupError):
+        os.killpg(int(marker.read_text()), 0)
 
 
 @pytest.mark.integration
