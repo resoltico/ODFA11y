@@ -206,7 +206,7 @@ CELL/INFO queries are classified; dynamic or unsupported queries refuse.
 
 Classification is bounded to 32,768 characters, 4,096 lexical tokens and depth 64 per
 expression; named dependencies are inspected iteratively to avoid multiplying parser
-recursion by the declaration graph. Named work is capped at 4,096 resolutions/depth 64, declaration
+recursion by the declaration graph. Named dependency expansions are capped at 4,096/depth 64, declaration
 inspection at 100,000 per tree, and embedded object traversal at 64 directories, within
 the existing XML/package budgets. Budget exhaustion is an incomplete-context refusal.
 Reports reuse `ODF012`/`ODF013`, recording declaration/origin/incomplete counts without
