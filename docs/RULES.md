@@ -46,6 +46,7 @@ Also common to every family. `ODF009` says that a document's family has no seman
 | `META001` | Error | Document title metadata is missing. | `document.title` |
 | `META002` | Error | Document language is not declared. | `document.language` |
 | `META003` | Warning | Metadata and default style languages disagree. | `document.language` |
+| `META004` | Warning | Document language syntax or default-style target is unresolved. |  |
 
 ## Text documents
 
@@ -53,13 +54,13 @@ Owned by the text family (`TXT`). A document of another family never produces th
 
 | ID | Severity | Finding | Remedy |
 | --- | --- | --- | --- |
-| `TXT001` | Error | Heading has no valid outline level. |  |
-| `TXT002` | Error | Heading hierarchy starts too deep or skips a level. |  |
+| `TXT001` | Error | Heading has no valid outline level. | `text.heading_levels` |
+| `TXT002` | Error | Heading hierarchy starts too deep or skips a level. | `text.heading_levels` |
 | `TXT003` | Warning | Heading text resembles manually typed numbering. |  |
 | `TXT004` | Info | No structural headings were found. |  |
 | `TXT005` | Warning | Footnotes or endnotes need reading-order review. |  |
 | `TXT010` | Error | Graphic has neither accessible title nor description. | `text.graphics` |
-| `TXT020` | Error | Table has merged or split cells. |  |
+| `TXT020` | Warning | Merged table cells need header-relationship review. |  |
 | `TXT022` | Error | Table grid or header bands cannot be resolved safely. |  |
 | `TXT021` | Warning | Data-like table has no semantic headers. | `text.table_headers` |
 | `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.remediation.linkify_plain_addresses` |
@@ -93,7 +94,7 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `PRES006` | Warning | Page has no explicit navigation order. | `presentation.pages` |
 | `PRES007` | Warning | Hidden content needs review. |  |
 | `PRES008` | Info | Notes or annotations need relationship and reading-order review. |  |
-| `PRES009` | Error | Hyperlink has no readable purpose. |  |
+| `PRES009` | Error | Hyperlink has no readable purpose. | `presentation.links` |
 
 ## Drawings
 
@@ -107,7 +108,7 @@ Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat 
 | `DRAW006` | Warning | Page has no explicit navigation order. | `drawing.pages` |
 | `DRAW007` | Warning | Hidden content needs review. |  |
 | `DRAW008` | Info | Notes or annotations need relationship and reading-order review. |  |
-| `DRAW009` | Error | Hyperlink has no readable purpose. |  |
+| `DRAW009` | Error | Hyperlink has no readable purpose. | `drawing.links` |
 
 ## Formula
 
@@ -244,3 +245,20 @@ missing or conflicting metadata field. `styles` covers style definitions whereve
 stored, `package/mimetype` is the ZIP `mimetype` member, and `document` is a flat file or
 a schema or parse defect in one. The text report prints `path` followed by the member in
 parentheses, for example `manifest (META-INF/manifest.xml)`.
+
+## Source protection, contexts and explicit descriptions
+
+Shared graphic rules (`GRAPHIC`) apply in each graphic-bearing family. Context and package
+findings keep incomplete inspection and human scope decisions visible.
+
+| ID | Severity | Finding | Remedy |
+| --- | --- | --- | --- |
+| `PKG008` | Warning | Declared signatures are unverified. |  |
+| `PKG009` | Error | Manifest encryption prevents complete inspection. |  |
+| `TXT060` | Warning | Tracked revision scope requires review. |  |
+| `TXT061` | Warning | Hidden or conditional content requires visibility review. |  |
+| `TXT062` | Warning | Paragraph style scope or properties are unresolved. |  |
+| `GRAPHIC001` | Warning | Graphic decorative role is unresolved or unsafe. |  |
+| `GRAPHIC002` | Warning | Decorative graphic retains authored alternative metadata. |  |
+| `TXT031` | Error | Hyperlink has no readable source purpose. | `text.links` |
+| `SHEET014` | Error | Hyperlink has no readable source purpose. | `spreadsheet.links` |

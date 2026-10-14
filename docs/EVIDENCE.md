@@ -23,15 +23,18 @@ document when remediation passed even if a later gate failed.
 separately from human review. It distinguishes veraPDF that did not run from a
 validator or validation that failed. `check-evidence` verifies recorded files and
 hashes; integrity does not establish accessibility, authenticity or review quality.
+The bundle and its ancestor directory namespace must remain stable throughout verification.
+Static unsafe paths and symbolic links are rejected; concurrent hostile directory replacement
+is outside the verifier's contract.
 
 ## run.json
 
-Format 2. Sorted keys, no timestamps and no local directories in diagnostic values:
+Format 2 (embedded reports use report format 5). Sorted keys, no timestamps and no local directories in diagnostic values:
 
 - `odfa11y`, `python`, `platform`, `libraries` and the locale `environment`;
 - `toolchain`: LibreOffice and veraPDF names and reported version numbers.
-  Text exports also record `pdfua_link_descriptions`, measured with an explicitly named
-  synthetic link. The probe runs once at the first export; its files are excluded.
+  Text exports also record `pdfua_link_descriptions`, measured with an explicitly titled
+  synthetic link (`office:title`). The probe runs once at the first export; its files are excluded.
   Inspect-only profiles and adapters without a probe do not measure it;
 - `schemas`: SHA-256 of each bundled ODF schema;
 - `export_options`: the exact LibreOffice PDF export options;

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from odfa11y.content import eligible_text_node
 from odfa11y.odf import qn
 
 if TYPE_CHECKING:
@@ -12,17 +13,8 @@ if TYPE_CHECKING:
 
     from lxml import etree
 
-#: Content inside these is not prose of the enclosing paragraph: link text is already a
-#: link, annotations and graphic descriptions are metadata, and nested paragraphs are
-#: walked as paragraphs of their own.
-EXCLUDED_TAGS = frozenset({
-    qn("text", "a"),
-    qn("office", "annotation"),
-    qn("svg", "title"),
-    qn("svg", "desc"),
-    qn("text", "p"),
-    qn("text", "h"),
-})
+# Only text spans extend a paragraph's address prose. Nested contexts are walked as
+# blocks of their own; authored fields and visibility/revision declarations stay exact.
 
 
 def prose_slots(block: etree._Element) -> Iterator[tuple[etree._Element, str]]:
@@ -48,10 +40,29 @@ def prose_slots(block: etree._Element) -> Iterator[tuple[etree._Element, str]]:
             if parent is not block and parent.tail:
                 yield parent, "tail"
             continue
-        descend = isinstance(child.tag, str) and child.tag not in EXCLUDED_TAGS
+        descend = child.tag == qn("text", "span") and eligible_text_node(child)
         if descend and child.text:
             yield child, "text"
         if descend:
             stack.append((child, iter(child)))
         elif child.tail:
             yield child, "tail"
+
+
+def address_wrapper_scope(node: etree._Element) -> bool:
+    """Whether a new wrapper belongs to the exact prose vocabulary we may linkify.
+
+    Returns
+    -------
+    bool
+        True for current-flow paragraph/heading text through text:span wrappers only.
+
+    """
+    parent = node.getparent()
+    while parent is not None and parent.tag == qn("text", "span"):
+        parent = parent.getparent()
+    return (
+        parent is not None
+        and parent.tag in {qn("text", "p"), qn("text", "h")}
+        and eligible_text_node(node)
+    )

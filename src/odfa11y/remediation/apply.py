@@ -50,22 +50,26 @@ def remediate(
     source, destination = Path(source), Path(destination)
     _require_distinct(source, destination)
     document = OdfDocument.open(source)
+    if (
+        document.protection.signatures
+        or document.protection.encrypted
+        or document.protection.malformed_manifest
+    ):
+        msg = "Protected or malformed package cannot be remediated; nothing was written."
+        raise RemediationError(msg)
     if document.kind is None:
         msg = f"{source.name} is not a recognised OpenDocument document; nothing was written."
         raise RemediationError(msg)
     _require_consistent_kind(document, source)
     adapter = adapter_for(document.kind)
     _require_matching_family(document, adapter, operations)
+    if adapter.preflight is not None:
+        adapter.preflight(document, operations)
     snapshot_before = adapter.snapshot(document)
     payloads_before = opaque_payloads(document)
     schema_before = validate(document)
 
-    outcomes: list[Outcome] = []
-    for operation in operations:
-        edits_before = document.edit_count
-        produced = operation.apply(document)
-        _check_edit_accounting(operation, produced, document.edit_count - edits_before)
-        outcomes.extend(produced)
+    outcomes = _apply_operations(document, adapter, operations)
     failures = [o for o in outcomes if o.status is Status.FAILED]
     if failures:
         lines = [f"{o.operation}{f' [{o.key}]' if o.key else ''}: {o.message}" for o in failures]
@@ -165,3 +169,19 @@ def _schema_check(before: SchemaResult, after: SchemaResult) -> str:
         raise RemediationError(msg)
     unlocated = f", {after.unlocated} unlocated" if after.unlocated else ""
     return f"no new violations against ODF {after.version} ({before.count} pre-existing{unlocated})"
+
+
+def _apply_operations(
+    document: OdfDocument, adapter: FamilyAdapter, operations: Sequence[Operation]
+) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    for operation in operations:
+        protected = adapter.protect_edit(document, operation) if adapter.protect_edit else None
+        edits_before = document.edit_count
+        produced = operation.apply(document)
+        _check_edit_accounting(operation, produced, document.edit_count - edits_before)
+        outcomes.extend(produced)
+        if protected is not None and not protected():
+            msg = "Protected document content changed during remediation; nothing was written."
+            raise RemediationError(msg)
+    return outcomes

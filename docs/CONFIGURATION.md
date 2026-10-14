@@ -71,13 +71,15 @@ A test extracts this block and loads it through the real reader.
 | `document.odf_version` | `"1.3"` or `"1.4"` (versions with a bundled schema). | The declared version is kept. |
 | `document.title` | Nonblank string; stripped before use. | Existing title kept. |
 | `document.description` | Nonblank string; stripped before use. | Existing description kept. |
-| `document.language` | Language tag such as `"en-GB"`; sets metadata and, for families that keep a default language in their styles, that default too. | Existing languages kept. |
+| `document.language` | Well-formed BCP 47 tag, including scripts, numeric regions, variants, extensions, private use and grandfathered syntax; sets metadata and all three default script channels where supported. Named, automatic and direct content overrides are retained. Separators/casing are normalized without registry lookup or alias rewriting. | Existing languages kept. |
 | `text.remediation.linkify_plain_addresses` | Boolean. | `false`. |
 | `text.remediation.remove_empty_spacers` | Boolean; see [spacer removal](ACCESSIBILITY.md#spacer-removal). | `false`. |
 | `text.table_headers.TABLE_NAME` | Structured decision `{ rows = N, columns = M, fingerprint = "…" }`; at least one positive leading logical count. Repeats are counted; an omitted axis stays unchanged. | No change. |
 | `text.heading_levels."TARGET"` | `{ level = N, fingerprint = "…" }`, level 1–10. Use the exact logical target from the report. Ordinal targets require a reviewed fingerprint. | No change. |
-| `text.graphics.KEY.title`, `.description` | String. | Existing text kept. |
-| `text.graphics.KEY.fingerprint` | The fingerprint of the addressed graphic(s). | Not checked. |
+| `text.graphics.KEY.title`, `.description` | Nonblank string. | Existing text kept. |
+| `text.graphics.KEY.fingerprint` | The reviewed identity of the addressed graphic(s); required for explicit roles. | Optional for alternative text. |
+| `<family>.graphics.KEY.decorative` | Optional boolean for Text, Spreadsheet, Presentation, Drawing and Image; requires ODF 1.4 and reviewed fingerprint. | Existing role kept. |
+| `<family>.links."TARGET"` | `{ description = "…", fingerprint = "…" }` for Text, Spreadsheet, Presentation and Drawing. Both strings must be nonblank. | Existing `office:title` kept. |
 | `text.spacing.reference_text` | Text contained in the reference paragraph (required with `[text.spacing]`). | — |
 | `text.spacing.target_styles` | Non-empty list of paragraph style names (required with `[text.spacing]`). | — |
 | `text.spacing.exact_reference`, `text.spacing.include_headings` | Boolean. | `false`. |
@@ -97,7 +99,16 @@ Unknown keys, wrong types, non-table sections and non-positive counts are reject
 the offending key named. TOML booleans are `true`/`false`, not strings. An empty file is
 valid and requests no change. Operations run in a fixed order (version, metadata, then the
 family's operations: for text, linkify, spacer removal, graphics, heading levels, table headers, spacing; for
-spreadsheets, sheet names, then graphics), so a configuration always means the same thing.
+spreadsheets, sheet names, then graphics; supplied link descriptions follow the family operations), so a configuration always means the same thing.
+
+Language remediation preserves the requested source tag, without inferring exporter
+aliases. Native reload experiments with LibreOffice 26.8.1.1 show that `sr-Latn-RS`, `es-419`,
+`de-1996`, `en-u-ca-buddhist` and private-use tags survive across all three default
+channels, with authored named-language overrides retained. Native reload also changes
+`zh-Hant-TW` to `zh-TW`, `i-klingon` to `tlh`, and `zh-cmn-Hans-CN` to `cmn-Hans-CN`.
+Exact native tag preservation for these cases remains an exporter limitation; source
+semantics, native behavior and the exported PDF's language require separate review.
+
 
 ## Every selector must match, and mean what you reviewed
 
@@ -167,7 +178,7 @@ anywhere in the content document. No identity or reading order is guessed. If id
 are missing, set explicit navigation in the native application first and save the document.
 Templates leave every choice commented out.
 
-`[presentation.graphics]` and `[drawing.graphics]` describe frames and vector shapes.
+The existing family `graphics` tables describe frames and eligible vector shapes.
 Descriptions are inserted in the standard order appropriate to their element. An empty
 native notes placeholder or a generated page thumbnail does not need an invented graphic
 alternative. Notes, annotations, hidden slides/layers, group relationships and visual
@@ -176,6 +187,41 @@ meaning still need the adapter's human review.
 Page metadata is a source semantic decision; it does not create visible heading text or
 claim a PDF heading role. Complete native integration independently checks figure
 alternatives, PDF/UA validation, fidelity and evidence.
+
+## Graphic roles and link descriptions
+
+`GraphicAlternative` and family `SetGraphicAlternatives` operations accept optional title,
+description, decorative role and fingerprint fields. Omitting a field preserves it.
+Blank supplied alternatives refuse. `decorative = true` requires an explicit human decision;
+it cannot be combined with a supplied title or description, including overlapping selectors.
+An existing authored alternative remains and produces `GRAPHIC002` for review. `false`
+restores meaningful status and the ordinary alternative requirement. Either explicit role
+requires ODF 1.4 and a reviewed fingerprint; use `document.odf_version = "1.4"` in the plan
+when relabeling a valid 1.3 source. Existing schema gates still apply.
+
+The role is stored as standard `draw:decorative` on `style:graphic-properties`. Target-specific
+automatic styles retain visual properties and legal common-style parents. Ordered class
+lists remain; a proven final derivation supplies the requested role. Shared authored styles
+and unrelated objects remain intact. Reapplication reuses a proven isolated derivation.
+Missing references, ambiguous same-scope styles, inheritance cycles, invalid role values
+and mixed graphic/presentation precedence refuse. Absence of optional style declarations
+resolves to the standard meaningful default. Text, controls, actions, hyperlink contexts
+and explicit group role edits refuse decorative intent. Existing group roles require review
+and never suppress child alternatives or payload checks.
+
+`LinkDescription` and family `SetLinkDescriptions` edit only native `office:title` on
+eligible `text:a` or `draw:a`. Use the exact target and fingerprint from the report: legal
+Draw link IDs are percent encoded as `content/link[id=…]`; other links use one-based
+ordinals, with note/text-box context prefixes where applicable. Writer links have no native
+XML ID slot. Repeated or ambiguous logical link targets refuse. Hrefs, labels, target Names,
+geometry and incoming references are preserved. ODFA11y never derives a description from
+a URL or authors `office:name` as an accessibility workaround.
+
+Ordinal link descriptions cannot be combined with address linkification or table-header
+operations that can change enumeration. Finish structural editing, regenerate the template,
+and review a separate link-description plan. Page, graphic and link metadata decisions
+compose and reapply. Source descriptions and roles do not certify PDF export behavior;
+see [the measured exporter limitations](ACCESSIBILITY.md#graphic-roles).
 
 ## Spacing
 
@@ -215,3 +261,54 @@ Base have no native PDF export contract; `production` fails at that assurance bo
 
 When native packages omit optional `meta.xml`, explicit document metadata creates the
 standard part and its manifest entry, using the declared supported ODF version.
+
+## Graphic roles and native link descriptions
+
+The Python decision is `GraphicAlternative` and each graphic-bearing family exposes
+`SetGraphicAlternatives`; serialized operation names are `set_graphic_alternatives`.
+The previous description names have no aliases. Regenerate templates and reviewed
+fingerprints after upgrading: report format 5 distinguishes current body/note/text-box
+contexts, excludes history/annotations/conditional branches, and strengthens protected facts.
+
+`<family>.graphics.KEY.decorative` accepts only a boolean: `true` explicitly declares a
+noninteractive leaf decorative, `false` restores meaningful status, and omission leaves
+its role untouched. Any supplied boolean requires an explicitly selected ODF 1.4 source.
+A role decision requires its reviewed fingerprint. New nonblank title/description values
+cannot be combined with `true`, including overlapping selectors. Blank supplied text,
+text-bearing/action/control contexts, groups and unresolved styles refuse before edits.
+Existing authored alternative metadata is retained; a decorative conflict produces a
+review warning and fails production strict gates. Target-specific derived styles preserve
+visual properties, legal parents and class overlays; repeated decisions do not add styles.
+Mixed graphic/presentation precedence remains an explicit unsupported context.
+
+`<family>.links."TARGET"` is supported for `text`, `spreadsheet`, `presentation` and
+`drawing`. Each entry requires a nonblank `description` and reviewed `fingerprint`.
+`SetLinkDescriptions` writes only normative `office:title`, retaining the href, visible
+label, child geometry and authored `office:name` target name. Legal draw:a IDs use
+percent-encoded `content/link[id=...]`; text:a uses one-based ordinals, with note/text-box
+context prefixes where applicable. No XML IDs are invented for text:a.
+
+```text
+# [text.links."content/link[1]"]
+# description = "Annual report downloads"
+# fingerprint = "COPY_FROM_THE_CURRENT_TEMPLATE"
+```
+
+An ordinal description plan cannot also linkify addresses or change table headers.
+Apply the structural plan first, regenerate the template, review it, and apply the link
+plan separately. Page, graphic and link metadata decisions compose without shifting
+protected target identity. Source descriptions/decorative roles do not establish PDF
+behavior: measured LibreOffice 26.8.1.1 exports still fail PDF019 for office:title-only
+links and PDF007/veraPDF for unlabelled decorative figures. Resolve publication failures
+in the native source/exporter and retain strict validation; no automatic Name rewrite or
+PDF tag repair is provided.
+
+Text templates address named graphics and tables by their current context, for example
+`content/frame[name=Logo]`, `content/note[1]/frame[name=Logo]` and
+`content/note[1]/table[name=Data]`. Logical names/hrefs are percent-encoded where needed.
+Existing authored graphic-name/image-reference/file-name selectors remain explicit group
+selectors, and an unambiguous table name still selects that table. Qualified targets let
+notes and main flow receive separate decisions. Unnamed table ordinals require a reviewed
+fingerprint. A graphic without an authored name or image reference requires native identity
+editing; templates do not invent an identity or a description. Header/footer notes in styles
+are excluded from current-body target enumeration in both package and flat layouts.

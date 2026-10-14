@@ -4,16 +4,24 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import re
 from typing import TYPE_CHECKING
 
 from lxml import etree
 
+from odfa11y.content import protected_xml
 from odfa11y.odf import NS, qn
 
 from .style_properties import SPACING_ATTRIBUTES, attr_from_display
 
 if TYPE_CHECKING:
     from .styles import StyleCatalog
+
+
+NO_STYLE = "(none)"
+SAFE_NAME_LENGTH = 32
+NAME_DIGEST_LENGTH = 8
 
 
 def derive_paragraph_style(
@@ -34,7 +42,7 @@ def derive_paragraph_style(
     if base is not None:
         derived = copy.deepcopy(base)
     else:
-        derived = etree.Element(qn("style", "style"))
+        derived = etree.Element(qn("style", "style"), nsmap=catalog.content_tree.getroot().nsmap)
         if base_style_name:
             derived.set(qn("style", "parent-style-name"), base_style_name)
     derived.set(qn("style", "name"), new_style_name)
@@ -62,12 +70,16 @@ def is_generated_from(
 
     """
     parent = existing.getparent()
-    if parent is None or parent.tag != qn("office", "automatic-styles"):
+    if (
+        parent is None
+        or parent.tag != qn("office", "automatic-styles")
+        or parent.getparent() is not catalog.content_tree.getroot()
+    ):
         return False
     if parent.getroottree().getroot() is not catalog.content_tree.getroot():
         return False
     expected = derive_paragraph_style(catalog, base_style_name, new_style_name, {})
-    return _canonical(existing) == _canonical(expected)
+    return _style_fingerprint(existing) == _style_fingerprint(expected)
 
 
 def adopt_style(catalog: StyleCatalog, style: etree._Element) -> None:
@@ -87,7 +99,10 @@ def set_spacing(style: etree._Element, spacing: dict[str, str]) -> None:
     """Replace the spacing attributes a style declares itself."""
     props = style.find(qn("style", "paragraph-properties"))
     if props is None:
-        props = etree.SubElement(style, qn("style", "paragraph-properties"))
+        props = etree.Element(qn("style", "paragraph-properties"))
+        text_props = style.find(qn("style", "text-properties"))
+        position = style.index(text_props) if text_props is not None else 0
+        style.insert(position, props)
     for key in SPACING_ATTRIBUTES:
         props.attrib.pop(key, None)
     for display_name, value in spacing.items():
@@ -96,13 +111,13 @@ def set_spacing(style: etree._Element, spacing: dict[str, str]) -> None:
             props.set(key, value)
 
 
-def _canonical(style: etree._Element) -> bytes:
-    """Serialize a style without its spacing attributes, for equivalence checks.
+def _style_fingerprint(style: etree._Element) -> str:
+    """Fingerprint a style outside spacing, retaining referenced namespace bindings.
 
     Returns
     -------
-    bytes
-        Canonical XML of a copy that carries no spacing.
+    str
+        Protected XML digest of a copy that carries no spacing.
 
     """
     clone = copy.deepcopy(style)
@@ -110,4 +125,21 @@ def _canonical(style: etree._Element) -> bytes:
     if props is not None:
         for key in SPACING_ATTRIBUTES:
             props.attrib.pop(key, None)
-    return etree.tostring(clone, method="c14n", exclusive=True)
+    return protected_xml(clone)
+
+
+def derived_style_name(base: str) -> str:
+    """Name the derived style that carries normalized spacing for a base style.
+
+    The digest of the full base name keeps two bases that sanitise to the same text apart
+    and keeps the name out of the way of styles an author is likely to choose.
+
+    Returns
+    -------
+    str
+        A deterministic style name containing only letters, digits and underscores.
+
+    """
+    safe = re.sub(r"[^A-Za-z0-9_]+", "_", base).strip("_")[:SAFE_NAME_LENGTH] or "Body"
+    digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:NAME_DIGEST_LENGTH]
+    return f"A11ySpacing_{safe}_{digest}"

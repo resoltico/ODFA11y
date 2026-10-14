@@ -97,18 +97,18 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
     source = with_body(tmp_path, ANNOTATED)
     audited = [f for f in audit_odf(source).findings if f.rule_id == "TXT030"]
     assert sorted(f.details["text"] for f in audited) == [
-        "https://example.test/note",
         "https://example.test/real",
         "qa@example.test",
     ]
     document = OdfDocument.open(source)
     (outcome,) = LinkifyAddresses().apply(document)
-    assert (outcome.status, outcome.count) == (Status.APPLIED, 3)
+    assert (outcome.status, outcome.count) == (Status.APPLIED, 2)
     content = document.tree(Part.CONTENT)
-    assert not select_elements(content, "//svg:desc/text:a | //dc:creator/text:a")
+    assert not select_elements(
+        content, "//svg:desc/text:a | //dc:creator/text:a | //office:annotation//text:a"
+    )
     links = select_elements(content, "//text:a")
     assert sorted(link.text or "" for link in links) == [
-        "https://example.test/note",
         "https://example.test/real",
         "qa@example.test",
     ]

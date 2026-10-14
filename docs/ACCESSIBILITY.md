@@ -48,22 +48,46 @@ not pixel visibility, reading order or PDF/UA conformance.
 ## Link descriptions
 
 LibreOffice **26.8 or newer** is required. Older installations and versions that cannot
-be identified are rejected before conversion. There is one supported export contract:
-Writer hyperlinks need a meaningful **Name**, stored in ODF as `text:a/@office:name`.
-`office:title` alone does not supply the description in the tested 26.8 exporter. Check
-references before changing an existing name; ODFA11y does not invent names or descriptions.
+be identified are rejected before conversion. Source link purpose comes from visible
+labels, graphic alternatives and native `office:title`; `office:name` is a target name
+and alone does not establish source purpose. Explicit link-description decisions set
+`office:title`, preserve existing Names and never invent link purpose.
 
-`odfa11y doctor` exports an explicitly named synthetic link and checks that its PDF/UA-1
-description survives. Text pipeline exports run the same self-test once and record
+`odfa11y doctor` exports a synthetic link with `office:title` and checks whether its PDF/UA-1
+description survives. Text pipeline exports run this self-test once and record
 `pdfua_link_descriptions: supported | unsupported` under `toolchain.LibreOffice` in
-`run.json`. Probe files are excluded. An execution failure fails the export stage.
+`run.json`. Probe files are excluded. Execution failures fail the export stage.
 
-The [unnamed-link reproduction](../tests/reproductions/unnamed-link.odt) must produce
-`PDF019` and veraPDF 7.18.1-2 and 7.18.5-2 failures; an explicitly named control must pass
-both tools and the pipeline. `PDF019` remains an error. Upstream
-[bug 161583](https://bugs.documentfoundation.org/show_bug.cgi?id=161583#c17) explains the
-Name-based description contract. Integration tests enforce this contract on supported
-runtimes, rather than accepting older exporter behavior.
+The controlled LibreOffice 26.8.1.1 experiment exported both a supplied `office:title` and
+an independent missing-title control without the PDF link alternative. Both retained
+`PDF019` and failed veraPDF validation. The source decision remains valid; the actual PDF
+failure remains an error. Existing meaningful Names can affect Writer's PDF export, as
+shown by the [unnamed-link reproduction](../tests/reproductions/unnamed-link.odt) and its
+named control, but changing Names can affect references and is outside automatic remediation.
+[Bug 161583](https://bugs.documentfoundation.org/show_bug.cgi?id=161583#c17) records that
+exporter limitation. A capability verdict measures the native title field, not every
+possible authored link or a waiver of document-level PDF checks.
+
+## Graphic roles
+
+Effective decorative roles are resolved from ODF defaults, common and automatic styles,
+legal parent inheritance and ordered class overlays. Broken, ambiguous or unsupported
+contexts produce `GRAPHIC001` and role edits refuse. An explicit role is stored using
+ODF 1.4 `draw:decorative` on `style:graphic-properties`; no extension namespace or silent
+upgrade is used. Each changed target receives an isolated, proven style derivation.
+Decorative declarations remove only the missing-alternative requirement. They do not
+hide external resources, missing or malformed payloads, scripts, interactivity or page
+navigation completeness. Existing group declarations require review and do not suppress
+child findings. Preserved authored alternatives on a decorative object produce `GRAPHIC002`.
+A standalone all-decorative image does not establish meaningful PDF content.
+
+The controlled LibreOffice 26.8.1.1 mixed-image experiment retained meaningful text, the
+described image and decoded pixels. With explicitly established visual styles, raster,
+text and link fidelity passed. The native standard decorative property still exported as
+an undescribed Figure: `PDF007` and veraPDF failures remained. The missing-role control
+independently failed. Source role correctness therefore does not establish strict PDF/UA
+success on that runtime. The production checks retain those failures; successful native
+export of standard decorative roles remains an unresolved exporter condition.
 
 ## Document families
 
@@ -133,13 +157,33 @@ numbering. Table and link heuristics can produce false positives; review the fin
 context.
 
 Only members an operation edits are re-serialized; every other member, and any foreign
-markup, comments and processing instructions inside edited ones, is carried over. The text
-guard compares, for text documents, the sequence of paragraph and heading strings after
-collapsing whitespace and treating non-breaking spaces as spaces (graphic title and
-description are excluded); for spreadsheets, the sheets in order and the text and position
-of every non-empty cell (sheet names may differ, since renaming them is the operation);
-and, for other families, the whole body text. It detects wording changes but is not a byte comparison, a rendering comparison or proof of
-unchanged pagination: that is what [fidelity comparison](FIDELITY.md) adds.
+markup, comments and processing instructions inside edited ones, is protected. Text editing
+checks ordered normalized words (ODF spaces, tabs and line breaks retain word boundaries),
+logical table grids and operation-specific protected XML facts. Existing destinations,
+anchors, fields, geometry, payload references, excluded history/annotation/note content and
+unrelated styles cannot disappear because visible words happen to match. Only the requested
+metadata, proven style derivation, exact permitted address wrappers, reviewed heading/header
+changes and counted inert-spacer removal normalize for the applicable operation.
+
+Other families protect their meaning-specific XML facts: spreadsheet values/formulas/grids,
+page shapes and navigation, MathML expressions, chart data and database bindings/settings.
+Opaque payloads remain protected separately. These guards are not byte or rendering
+comparisons; [fidelity comparison](FIDELITY.md) checks the publication's appearance.
+
+Declared signatures (`PKG008`) remain unverified: no signature structure/reference,
+cryptographic or trust validation is performed. Every guarded remediation, including dry
+runs and empty/no-op plans, refuses signed packages. Original native export remains subject
+to its ordinary guard and makes no signature claim; neither exported PDF nor evidence is
+signed by a source signature. Manifest encryption (`PKG009`) blocks complete inspection,
+template planning, remediation and guarded native export before ciphertext is parsed as
+body XML. Malformed manifests remain malformed, never assumed unsigned/unencrypted.
+
+Tracked declarations/markers permit only title/description metadata edits. Language,
+version and other operations refuse before the first edit. The main outline and spacing/
+spacer edits exclude notes, text boxes, annotation/history and hidden/conditional branches.
+Graphic/link/table decisions and address linkification include current note bodies and
+text boxes, with context-qualified locations, but exclude annotation/history/conditional
+branches. `TXT060`/`TXT061` keep scope uncertainty visible for human review.
 
 ## Threat model
 
@@ -221,3 +265,14 @@ native environment to retain actual PDFs, decoded-pixel hashes, options and tool
 Linux/Windows observations require their own execution before cross-platform resource claims.
 Neither the `production` assurance profile nor this URI preflight is an offline/confidential
 sandbox. Native tools must run under caller-controlled isolation for untrusted inputs.
+
+Native execution uses a finite positive per-invocation timeout. Core and CLI work options,
+`audit_document` and `check_pdfua` default to 120 seconds and apply the selected value to
+both LibreOffice export/capability probes and veraPDF validation. Direct `validate_pdfua`
+retains its 180-second default. CLI `--timeout` accepts whole seconds; library boundaries
+also accept fractional `int`/`float` seconds, excluding booleans and nonfinite values. The
+portable maximum is `(2**32 - 2) / 1000` seconds, excluding Windows' infinite-wait
+sentinel. Invalid values fail before outputs or process launch. Identity probes use a
+separate fixed 20-second bound. These limits are not whole-workflow deadlines: process
+cleanup may add bounded grace, and forced termination cannot recover descendants that
+escape the process group.

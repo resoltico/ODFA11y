@@ -10,10 +10,10 @@ import pytest
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import ConfigError, RemediationError
-from odfa11y.families.spreadsheet import SetGraphicDescriptions, SetSheetNames
-from odfa11y.families.text import SetGraphicDescriptions as TextGraphicDescriptions
+from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
+from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, Part, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
@@ -67,7 +67,7 @@ def test_the_configuration_reads_the_spreadsheet_table_in_canonical_order(tmp_pa
     )
     first, second = config.operations
     assert first == SetSheetNames({"Sheet1": "Budget"})
-    assert second == SetGraphicDescriptions({"Logo": GraphicDescription("Logo", None, "abc")})
+    assert second == SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", None, "abc")})
 
 
 @pytest.mark.parametrize(
@@ -103,7 +103,7 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     plan = [
         SetSheetNames({"Sheet1": "Budget"}),
-        SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "The company logo")}),
+        SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "The company logo")}),
     ]
     assert {"SHEET002", "SHEET005"} <= ids(source)
     output = tmp_path / f"out{source.suffix}"
@@ -159,7 +159,7 @@ def test_a_text_plan_is_refused_for_a_spreadsheet(tmp_path: Path, layout: str) -
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / "out"
     with pytest.raises(RemediationError, match="do not apply to a spreadsheet document"):
-        remediate(source, output, [TextGraphicDescriptions({"Logo": GraphicDescription("x")})])
+        remediate(source, output, [TextGraphicAlternatives({"Logo": GraphicAlternative("x")})])
     assert not output.exists()
 
 
@@ -169,7 +169,7 @@ def test_a_spreadsheet_plan_is_refused_for_a_text_document(tmp_path: Path, layou
     output = tmp_path / "out"
     for operation in (
         SetSheetNames({"Sheet1": "Budget"}),
-        SetGraphicDescriptions({"Logo": GraphicDescription("x")}),
+        SetGraphicAlternatives({"Logo": GraphicAlternative("x")}),
     ):
         with pytest.raises(RemediationError, match="do not apply to a text document"):
             remediate(source, output, [operation])
@@ -183,7 +183,7 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
     options = PipelineOptions(soffice=str(tmp_path / "no-such-soffice"))
     plan = [
         SetSheetNames({"Sheet1": "Budget"}),
-        SetGraphicDescriptions({"Logo": GraphicDescription("Logo")}),
+        SetGraphicAlternatives({"Logo": GraphicAlternative("Logo")}),
     ]
     record = run_pipeline(source, plan, FidelityPolicy(), tmp_path / "out", options)
     statuses = {stage.name: stage.status for stage in record.stages}

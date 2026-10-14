@@ -10,9 +10,9 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import GraphicDescription, protected_xml
+from odfa11y.content import GraphicAlternative, protected_xml
 from odfa11y.errors import RemediationError
-from odfa11y.families.text import SetGraphicDescriptions
+from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
 from odfa11y.remediation import remediate
 
@@ -76,7 +76,7 @@ def test_flat_embedded_binary_damage_is_rejected(tmp_path: Path) -> None:
     )
     source = make_flat(tmp_path, "text", Variant(body=body))
     destination = tmp_path / "out.fodt"
-    with pytest.raises(RemediationError, match="Opaque document resources changed"):
+    with pytest.raises(RemediationError, match="Protected document content changed"):
         remediate(source, destination, [DamagePayload()])
     assert not destination.exists()
 
@@ -96,7 +96,7 @@ def test_direct_graphic_api_rejects_nonstring_metadata_before_any_edit(
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
 
     doc = OdfDocument.open(source)
-    operation = SetGraphicDescriptions({"Logo": GraphicDescription(description=cast("str", value))})
+    operation = SetGraphicAlternatives({"Logo": GraphicAlternative(description=cast("str", value))})
     assert operation.apply(doc)[0].status is Status.FAILED
     assert doc.edit_count == 0
 

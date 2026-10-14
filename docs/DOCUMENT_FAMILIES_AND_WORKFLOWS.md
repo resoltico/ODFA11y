@@ -4,7 +4,8 @@ Implementation status: these family, batch and SARIF contracts shipped in
 [PR 32](https://github.com/resoltico/ODFA11y/pull/32) and
 [0.5.0](https://github.com/resoltico/ODFA11y/releases/tag/v0.5.0). The design/challenge and
 implementation-QA sections below retain their historical rationale; they are not a pending
-implementation plan. GitHub issues and pull requests remain the current roadmap.
+implementation plan. The [roadmap to v1.0.0](ROADMAP.md) scopes current and future releases;
+GitHub issues and pull requests track its execution.
 
 ## Scope and constraints
 
@@ -220,7 +221,7 @@ an isolated profile; it did not alter production code or a user profile.
 The reviewed implementation is a hard API/configuration/report evolution. Replace the
 row-only table decision with one structured `TableHeaders(rows, columns, fingerprint)`
 and `MarkTableHeaders`; each entry is a table object, not an integer shorthand. Shared
-`GraphicDescription` and protected-content helpers replace duplicated metadata types and
+`GraphicAlternative` and protected-content helpers replace duplicated metadata types and
 mechanisms. No deprecated import, TOML spelling or serialized location format is accepted
 as a migration path. Keep legitimate published records and fixture provenance.
 

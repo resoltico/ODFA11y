@@ -17,6 +17,7 @@ BREAK_ATTRIBUTES = (
     qn("fo", "break-before"),
     qn("fo", "break-after"),
     qn("style", "master-page-name"),
+    qn("style", "page-number"),
 )
 
 

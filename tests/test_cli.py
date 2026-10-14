@@ -102,7 +102,7 @@ def test_template_prints_a_loadable_commented_configuration(
     source = make_minimal_odt(tmp_path / "a.odt", features={"with_image_without_alt": True})
     assert main(["template", str(source)]) == 0
     output = capsys.readouterr().out
-    assert '# [text.graphics."Logo"]' in output
+    assert '# [text.graphics."content/frame[name=Logo]"]' in output
 
 
 def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(

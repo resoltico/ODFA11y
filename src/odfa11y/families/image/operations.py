@@ -14,16 +14,16 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from odfa11y.adapter import Outcome
-    from odfa11y.content import GraphicDescription
+    from odfa11y.content import GraphicAlternative
     from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)
-class SetGraphicDescriptions(Operation):
+class SetGraphicAlternatives(Operation):
     """Describe image frames without rewriting their payload, dimensions or references."""
 
-    entries: Mapping[str, GraphicDescription]
-    name: ClassVar[str] = "set_graphic_descriptions"
+    entries: Mapping[str, GraphicAlternative]
+    name: ClassVar[str] = "set_graphic_alternatives"
     family: ClassVar[Family | None] = Family.IMAGE
 
     @override

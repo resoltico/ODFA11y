@@ -7,11 +7,14 @@ import hashlib
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 from odfa11y.odf import NS, qn, select_elements
 
+from .graphic_style_identity import graphic_style_fingerprint, normalized_graphic_tree
 from .resources import ResourceIdentity
 from .tables import AXES, declarations, repeated
+from .text import text_context_path
 from .xml import protected_xml
 
 if TYPE_CHECKING:
@@ -36,8 +39,28 @@ def graphic_keys(frame: etree._Element) -> set[str]:
     href = image.get(qn("xlink", "href")) if image is not None else None
     if href:
         keys |= {href, Path(href).name}
+    if selector := graphic_selector(frame):
+        keys.add(selector)
     keys.discard("")
     return keys
+
+
+def graphic_selector(frame: etree._Element) -> str | None:
+    """Qualify an authored graphic name or image reference by current text context.
+
+    Returns
+    -------
+    str | None
+        A canonical logical selector, or None when native identity must be established.
+
+    """
+    context = text_context_path(frame)
+    if name := frame.get(qn("draw", "name")):
+        return f"{context}/frame[name={quote(name, safe='')}]"
+    image = frame.find("draw:image", NS)
+    if image is not None and (href := image.get(qn("xlink", "href"))):
+        return f"{context}/frame[href={quote(href, safe='')}]"
+    return None
 
 
 class GraphicIdentity:
@@ -49,6 +72,7 @@ class GraphicIdentity:
         for frame in frames:
             for key in graphic_keys(frame):
                 grouped.setdefault(key, []).append(frame)
+        self._document = document
         self._groups = {key: tuple(group) for key, group in grouped.items()}
         self._registered = {id(group) for group in self._groups.values()}
         self._resources = ResourceIdentity(document.storage)
@@ -93,13 +117,28 @@ class GraphicIdentity:
                 for node in select_elements(frame, ".//*[@xlink:href]")
             ]
             self._facts[frame] = [
-                self._position(frame),
-                protected_xml(frame, omitted_elements=(qn("svg", "title"), qn("svg", "desc"))),
+                self.logical_position(frame),
+                graphic_style_fingerprint(self._document, frame),
+                protected_xml(
+                    normalized_graphic_tree(self._document, frame),
+                    omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
+                    omitted_element_attributes={
+                        qn(ns, "a"): (qn("office", "title"),) for ns in ("draw", "text")
+                    },
+                ),
                 payloads,
             ]
         return self._facts[frame]
 
-    def _position(self, node: etree._Element) -> list[tuple[str, int]]:
+    def logical_position(self, node: etree._Element) -> list[tuple[str, int]]:
+        """Bind source order independently of storage and reviewed header wrappers.
+
+        Returns
+        -------
+        list[tuple[str, int]]
+            Qualified XML steps and logical ordinals, ending at the current body.
+
+        """
         path = []
         while node.getparent() is not None and node.tag != qn("office", "body"):
             parent = node.getparent()

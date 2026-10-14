@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from odfa11y.adapter import config_tables
+from odfa11y.content import normalize_language
 from odfa11y.errors import ConfigError
 from odfa11y.families import config_tables as family_tables
 from odfa11y.fidelity import FidelityPolicy
@@ -62,6 +63,11 @@ def _document(table: dict[str, object]) -> list[Operation]:
     config_tables.known(table, {"title", "description", "language", "odf_version"}, "document")
     texts = config_tables.typed(table, str, "document")
     operations: list[Operation] = []
+    if "language" in texts:
+        try:
+            texts["language"] = normalize_language(texts["language"])
+        except ValueError as exc:
+            raise ConfigError(str(exc)) from exc
     version = texts.get("odf_version")
     if version is not None:
         if version not in SUPPORTED_VERSIONS:

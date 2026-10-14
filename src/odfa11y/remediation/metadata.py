@@ -3,20 +3,18 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.content import normalize_language
 from odfa11y.families import adapter_for
 from odfa11y.odf import NS, Part, ensure_metadata_part, qn
 
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
-
-LANGUAGE_TAG_RE = re.compile(r"(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|x(?:-[A-Za-z0-9]{1,8})+)")
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,13 +50,13 @@ class SetMetadata(Operation):
         if blank:
             message = f"Document {' and '.join(blank)} must not be blank."
             return (Outcome(self.name, Status.FAILED, message, key=blank[0]),)
-        language = self.language.strip().replace("_", "-") if self.language is not None else None
-        if language is not None and not LANGUAGE_TAG_RE.fullmatch(language):
-            return (
-                Outcome(
-                    self.name, Status.FAILED, f"Invalid language tag: {language!r}", key="language"
-                ),
-            )
+        try:
+            language = normalize_language(self.language) if self.language is not None else None
+            if language is not None:
+                # Establish the family's unique target before changing any metadata.
+                adapter_for(document.kind).default_language(document)
+        except ValueError as exc:
+            return (Outcome(self.name, Status.FAILED, str(exc), key="language"),)
         for key, tag, value in (
             ("title", qn("dc", "title"), self.title),
             ("description", qn("dc", "description"), self.description),

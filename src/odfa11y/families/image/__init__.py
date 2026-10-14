@@ -2,6 +2,6 @@
 """Standard image semantics and explicit source-only decisions."""
 
 from .adapter import ADAPTER
-from .operations import SetGraphicDescriptions
+from .operations import SetGraphicAlternatives
 
-__all__ = ["ADAPTER", "SetGraphicDescriptions"]
+__all__ = ["ADAPTER", "SetGraphicAlternatives"]

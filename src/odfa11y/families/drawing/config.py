@@ -6,9 +6,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.adapter import config_tables
-from odfa11y.content import graphic_descriptions, page_decisions
+from odfa11y.content import graphic_alternatives, link_descriptions, page_decisions
 
-from .operations import SetGraphicDescriptions, SetPageSemantics
+from .operations import SetGraphicAlternatives, SetLinkDescriptions, SetPageSemantics
 
 if TYPE_CHECKING:
     from odfa11y.adapter import Operation
@@ -23,12 +23,15 @@ def parse_table(data: dict[str, object]) -> list[Operation]:
         Page semantics followed by graphic descriptions.
 
     """
-    config_tables.known(data, {"pages", "graphics"}, "drawing")
+    config_tables.known(data, {"pages", "graphics", "links"}, "drawing")
     operations: list[Operation] = []
     pages = page_decisions(config_tables.table(data, "pages"), "drawing.pages")
-    graphics = graphic_descriptions(config_tables.table(data, "graphics"), "drawing.graphics")
+    graphics = graphic_alternatives(config_tables.table(data, "graphics"), "drawing.graphics")
     if pages:
         operations.append(SetPageSemantics(pages))
     if graphics:
-        operations.append(SetGraphicDescriptions(graphics))
+        operations.append(SetGraphicAlternatives(graphics))
+    links = link_descriptions(config_tables.table(data, "links"), "drawing.links")
+    if links:
+        operations.append(SetLinkDescriptions(links))
     return operations

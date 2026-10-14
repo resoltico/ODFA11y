@@ -102,8 +102,8 @@ uv run --no-sync odfa11y audit reviewed.pdf --verapdf --strict
 
 Before relying on a LibreOffice installation for documents with hyperlinks, run
 `uv run --no-sync odfa11y doctor`. Its `pdfua_link_descriptions` line says whether that
-LibreOffice exports link descriptions (`supported`) or whether every hyperlink will be
-reported as `PDF019` (`unsupported`); see [Accessibility](ACCESSIBILITY.md).
+LibreOffice exports the native `office:title` description (`supported`) or ignores that
+field in the self-test (`unsupported`); see [Accessibility](ACCESSIBILITY.md).
 
 The exporter uses a temporary LibreOffice profile, requests PDF/UA-1 and tagged PDF, and
 publishes the PDF atomically. The built-in PDF audit is a fast smoke test of metadata,
@@ -112,8 +112,8 @@ the authoritative PDF/UA-1 validator and reports each failed rule with its claus
 test number. If veraPDF cannot be found the report contains the warning `VERA000`;
 `--strict` makes that fail.
 
-Writer hyperlinks require an explicit meaningful **Name** (`office:name`). The doctor
-self-test checks a named link; an unnamed link fails PDF/UA-1 validation. See
+Native source link-description plans author `office:title` and preserve target Names.
+The tested Writer exporter ignores that title; strict PDF failures remain visible. See
 [link descriptions](ACCESSIBILITY.md#link-descriptions).
 
 ## 4. Compare the renders
@@ -170,7 +170,7 @@ For several reports the highest status wins. Informational findings never fail a
 | `remediate` lists failed targets | Fix the named table, graphic key or header count; a selector that matches nothing is an error. |
 | "Remediation introduced ODF schema violations" | The operation produced markup the ODF schema rejects; the message lists the violations. |
 | `PDF019` | Give the Writer hyperlink a meaningful Name before export; check existing references before renaming it. |
-| `pdfua_link_descriptions: unsupported` | The supported runtime failed its named-link self-test; inspect the exporter installation. |
+| `pdfua_link_descriptions: unsupported` | The native `office:title` self-test lacks PDF alternate text; source descriptions do not waive `PDF019`. |
 | LibreOffice version rejected | Install LibreOffice 26.8 or newer; unidentifiable versions are also rejected. |
 | LibreOffice executable not found | Install LibreOffice and expose its CLI on `PATH`, or pass `--soffice`. |
 | `FID005` after spacing or spacer changes | Content moved. Review the diff images; if the movement is intended set `fidelity.pagination = "may-change"`. |
@@ -180,3 +180,35 @@ Missing veraPDF in a profile that requires it is an execution failure: failed st
 `audit --verapdf` absence remains `VERA000` warning behavior (status 0 ordinarily, 1 with
 `--strict`). Native dependency/captured-identity limits and capture failures are described
 in [Evidence](EVIDENCE.md#no-local-paths); source-only inspection remains available.
+
+## Formula declarations at native export
+
+Guarded export and comparison inspect `style:condition`, `table:condition`,
+`table:expression`, `table:formula` and `text:formula`, named expression/range declarations,
+base/source range addresses, and reachable embedded ODF content/styles. They classify dependencies without evaluating
+formulas or trusting cached results. Standard OpenFormula namespace prefixes (including
+aliases) and unprefixed expressions are equivalent. The supported lexical subset includes
+literals, ordinary operators/nested calls, bracketed local cell/range references and scoped
+simple names; unsupported condition grammars such as `cell-content()` and other syntax
+refuse explicitly. Names are case-insensitive and missing, ambiguous or cyclic declarations
+cannot establish a clean context.
+
+The function-name/query table is derived from ODF 1.4 Part 4, using the authoritative
+source and digest recorded in the bundled `content/formula_data/functions.toml`; its 393
+function names were independently compared with the standard's HTML headings. Runtime
+processing never downloads this table. Unknown functions/namespaces and dynamic reference
+construction (`INDIRECT`) refuse. Explicit external references and `DDE` are loading
+limitations even inside branches that appear unreachable. `HYPERLINK` is navigation;
+its nested arguments are still inspected. Function words inside quoted strings are inert.
+`CELL("FILENAME")` and `INFO("directory")` depend on captured identity; direct original
+export retains that identity, while pipeline captures refuse. Other standard literal
+CELL/INFO queries are classified; dynamic or unsupported queries refuse.
+
+Classification is bounded to 32,768 characters, 4,096 lexical tokens and depth 64 per
+expression; named dependency work is capped at 4,096 resolutions/depth 64, declaration
+inspection at 100,000 per tree, and embedded object traversal at 64 directories, within
+the existing XML/package budgets. Budget exhaustion is an incomplete-context refusal.
+Reports reuse `ODF012`/`ODF013`, recording declaration/origin/incomplete counts without
+formula literals or credentials. Auditing and source-only preservation remain available.
+These declaration checks do not sandbox native tools or inspect opaque embedded internals;
+callers retain responsibility for process isolation.

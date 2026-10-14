@@ -12,7 +12,7 @@ from lxml import etree
 from odfa11y.adapter import Status
 from odfa11y.content import (
     SHAPE_TAGS,
-    GraphicDescription,
+    GraphicAlternative,
     GraphicEditor,
     PageDecision,
     PageEditor,
@@ -65,7 +65,7 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
     assert editor.apply(doc)[0].status is Status.APPLIED
     assert editor.apply(doc)[0].status is Status.UNCHANGED
     graphics = GraphicEditor(
-        {"Counts": GraphicDescription("Counts", "Three apples and four pears")},
+        {"Counts": GraphicAlternative("Counts", "Three apples and four pears")},
         "set_graphics",
         SHAPE_TAGS,
     )

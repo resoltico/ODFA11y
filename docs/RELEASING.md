@@ -2,7 +2,7 @@
 
 The package version is declared once in `[project].version` in `pyproject.toml`. Record
 notable net outcomes in the Unreleased section of `CHANGELOG.md` as work lands; at release,
-rename that section to the new version and date and update the project version. Runtime
+retain Unreleased, move completed outcomes into a dated version section, and update the project version. Runtime
 reporting reads installed distribution metadata. After changing the version in a checkout,
 run `uv lock` and `uv sync --locked` to refresh the lockfile and editable installation.
 
@@ -58,12 +58,16 @@ release logic reuses the same gates on the same commit:
 1. Run policy, lint, type and boundary checks, tests (including real LibreOffice and
    veraPDF integration), known-dependency advisories, workflow security and a redacted
    history secret scan; the `CI gate` job summarises them.
-2. Build a wheel from the source archive and test its isolated installation.
+2. Build a wheel from the source archive and test its isolated installation. Restore the
+   extracted source archive with `uv sync --locked` and run its contributor checks without
+   importing modules from the original checkout or requiring `.git`.
 3. Preserve the tested Linux wheel and source archive as an immutable workflow artifact.
 4. Download those exact assets into the release job; do not rebuild after testing.
 5. Derive the tag `v<version>` from the package and fail if that tag or any release (draft
-   included) already exists. Verify package metadata and bundled license with
-   `tools/check_release.py`.
+   included) already exists. `tools.github_release absent` requires successful authenticated,
+   paginated exact-state inspection; transport, authentication, server and parse failures
+   abort rather than imply absence. Verify package metadata, licenses, schemas and the
+   complete tracked contributor inventory with `tools/check_release.py` in a clean release checkout.
 6. Extract the matching version section from the checked-out `CHANGELOG.md`.
    Include its heading/date and retain all internal wording and Markdown; only outer
    whitespace is trimmed. Missing or duplicate version sections fail the release.
@@ -72,6 +76,8 @@ release logic reuses the same gates on the same commit:
 8. Create a **draft** GitHub release containing the wheel, source archive, `SHA256SUMS` and those
    exact changelog notes, targeting the tested commit. The tag does not exist yet; GitHub creates it
    at that commit when the draft is published. Unreleased and adjacent release sections are excluded.
+   Re-query the created draft, require the exact target SHA/notes/asset inventory, and
+   download every asset to compare its bytes with the preserved tested files.
 
 CI also rebuilds the distributions and requires byte-identical results, so the assets can be
 reproduced from the released source with `uv build`. Consumers can verify a downloaded asset with
@@ -90,11 +96,29 @@ not a long-lived personal token. Only a manual run of the workflow on `main` wit
 
 ## Publish the reviewed draft
 
-Review the assets and the changelog-derived notes, then publish the draft through
-GitHub. The changelog in the released commit is the notes authority; the workflow
-neither populates it nor generates separate prose from commit history. Prepare each
-release's section before starting the release. If notes need correction, correct the changelog and start a new run instead of maintaining
-a second independently edited copy in GitHub.
+Publication requires separate maintainer authorization. The changelog in the tested
+commit is the notes authority; the workflow does not generate prose from commit history.
+Immediately before an authorized publication, recheck the draft with the preserved
+artifacts, checksums and notes, substituting the tested full commit SHA:
+
+```bash
+uv run --no-sync python -m tools.github_release draft OWNER/REPO vVERSION \
+  --target TESTED_COMMIT_SHA --directory /path/to/preserved-dist \
+  --checksums /path/to/SHA256SUMS --notes /path/to/release-notes.md
+```
+
+Only after that succeeds and publication is authorized, publish through GitHub. Run the
+same command with `published` afterwards: it requires the exact assets/notes and a
+lightweight or peeled annotated tag pointing to the tested commit. A successful draft
+verification does not establish publication; failed queries/downloads leave it unverified.
+
+For a correction to an **unpublished** draft, first verify its draft status and target.
+With explicit authorization, delete that draft and any unpublished tag created for it,
+then commit the correction and rerun the full workflow. Its uniqueness gate deliberately
+refuses existing drafts; a second run does not silently overwrite one. Do not edit notes
+independently in GitHub or alter a published tag, release, asset or historical attribution.
+Published corrections require a new version. Settings changes, draft deletion and public
+publication each require corresponding authorization.
 
 No PyPI publication is configured. GitHub release assets can be installed locally,
 for example with `python -m pip install /path/to/odfa11y-VERSION-py3-none-any.whl` using

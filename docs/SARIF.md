@@ -13,7 +13,7 @@ severity, categories and configuration remedies. Informational findings use SARI
 so duplicate basenames remain distinct. ROOT itself is never serialized. Symbolic links
 are resolved before containment is checked; a link leaving ROOT is rejected. Comparisons
 carry candidate and original artifact identities explicitly, independently of their
-display label. Report format 4's internal `sources` references do not appear in JSON.
+display label. Report format 5's internal `sources` references do not appear in JSON.
 
 ODF findings use logical document locations rather than invented XML line numbers.
 Package members are diagnostic metadata, not separate source artifacts. Equivalent

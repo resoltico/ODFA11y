@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.content import require_native_context
 from odfa11y.errors import UnsupportedKindError
+from odfa11y.external_tools import validate_timeout
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, ExportSettings, export_pdfua
@@ -26,14 +27,18 @@ class NativeOptions:
     """
 
     soffice: str | Path | None = None
-    timeout: int = DEFAULT_TIMEOUT_SECONDS
+    timeout: int | float = DEFAULT_TIMEOUT_SECONDS
     on_progress: Callable[[str, str], None] | None = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """Reject an invalid duration before native work or output creation."""
+        validate_timeout(self.timeout)
 
 
 def native_export_settings(
     document: OdfDocument,
     soffice: str | Path | None,
-    timeout: int,
+    timeout: float,
     profile_dir: str | Path | None = None,
     *,
     captured_identity: bool = False,
@@ -51,6 +56,11 @@ def native_export_settings(
         The family has no native PDF export.
 
     """
+    validate_timeout(timeout)
+    protection = document.protection
+    if protection.encrypted or protection.malformed_manifest:
+        msg = "Encrypted or malformed package cannot establish native inspection."
+        raise UnsupportedKindError(msg)
     pdf_filter = adapter_for(document.kind).pdf_filter
     if pdf_filter is None:
         kind = document.kind.name if document.kind is not None else "unrecognised"

@@ -253,7 +253,7 @@ environment. Contributors do not need the Hatch application or a `setup.py`.
 Build selection is centralized under `[tool.hatch.build.targets]`:
 
 - The source archive (`sdist`, `.tar.gz`) includes the package sources, docs, tests,
-  policy tools, workflow, lockfile, boundary rules and interpreter selection. Hatchling also
+  policy tools, workflow, lockfile, boundary rules, `.gitignore` and interpreter selection. Hatchling also
   includes the declared README/license and project configuration.
 - The wheel (`.whl`) contains the importable `odfa11y` packages, `py.typed`, CLI entry
   point, metadata and license. Repository docs and tests are not runtime package files.
@@ -263,6 +263,17 @@ Runtime reporting uses installed distribution metadata. Run `uv lock` and `uv sy
 after a version change to refresh the lockfile and editable installation. Build after
 moving files or changing inclusion rules, inspect both archives, and verify an isolated wheel installation. A successful source-tree test
 run alone does not prove that packaging included the required modules.
+
+To check a source archive as a contributor, extract it into a new directory outside the
+checkout, enter its top-level directory, run `uv sync --locked`, then run the ordinary
+required policy, lint, types, boundary and unit checks above. No Git metadata is needed.
+Native integration still needs the stated real tools. CI performs this extracted flow on
+all three platforms. Release inspection compares the archive's regular-file names and
+bytes with Git's tracked source inventory in the release checkout; only root `PKG-INFO`
+and directory entries are generated packaging additions. Missing/altered contributor docs,
+native corpus binaries, tools or configuration, duplicates, unsafe names and unexpected
+authored files fail. In an extracted archive the checker derives contributor files locally,
+excluding only documented generated development outputs.
 
 ## Contribution invariants
 

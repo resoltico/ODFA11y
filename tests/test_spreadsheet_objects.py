@@ -10,9 +10,9 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.families.spreadsheet import (
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     SetSheetNames,
     sheet_snapshot,
     sheets_preserved,
@@ -52,7 +52,7 @@ def test_alt_text_is_applied_once_then_unchanged_and_stays_schema_valid(
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     before = validate(document)
-    operation = SetGraphicDescriptions({"Logo": GraphicDescription("Logo", "The company logo")})
+    operation = SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "The company logo")})
     assert statuses(operation, document) == (Status.APPLIED,)
     assert frame_text(document, "Logo") == [
         ("image", None),
@@ -69,10 +69,10 @@ def test_a_frame_is_addressed_by_its_name_its_image_path_or_its_file_name(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    operation = SetGraphicDescriptions({
-        "Logo": GraphicDescription("by name"),
-        "Pictures/seal.png": GraphicDescription("by path"),
-        "badge.png": GraphicDescription("by file"),
+    operation = SetGraphicAlternatives({
+        "Logo": GraphicAlternative("by name"),
+        "Pictures/seal.png": GraphicAlternative("by path"),
+        "badge.png": GraphicAlternative("by file"),
     })
     assert statuses(operation, document) == (Status.APPLIED,) * 3
     assert frame_text(document, "Seal")[1] == ("title", "by path")
@@ -84,8 +84,8 @@ def test_changed_text_is_applied_and_an_unset_field_is_left_alone(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    SetGraphicDescriptions({"Logo": GraphicDescription("Old", "Described")}).apply(document)
-    assert statuses(SetGraphicDescriptions({"Logo": GraphicDescription("New")}), document) == (
+    SetGraphicAlternatives({"Logo": GraphicAlternative("Old", "Described")}).apply(document)
+    assert statuses(SetGraphicAlternatives({"Logo": GraphicAlternative("New")}), document) == (
         Status.APPLIED,
     )
     assert frame_text(document, "Logo")[1:] == [("title", "New"), ("desc", "Described")]
@@ -96,9 +96,9 @@ def test_a_selector_that_matches_nothing_fails_everything_before_any_edit(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    operation = SetGraphicDescriptions({
-        "Logo": GraphicDescription("Fine"),
-        "Nowhere": GraphicDescription("x"),
+    operation = SetGraphicAlternatives({
+        "Logo": GraphicAlternative("Fine"),
+        "Nowhere": GraphicAlternative("x"),
     })
     outcomes = operation.apply(document)
     assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Nowhere")]
@@ -112,8 +112,8 @@ def test_a_fingerprint_binds_the_entry_to_the_frame_that_was_reviewed(
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     fingerprint = _audited_fingerprint(tmp_path, layout, "Logo")
-    right = SetGraphicDescriptions({"Logo": GraphicDescription("Logo", fingerprint=fingerprint)})
-    wrong = SetGraphicDescriptions({"Logo": GraphicDescription("Logo", fingerprint="0" * 12)})
+    right = SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", fingerprint=fingerprint)})
+    wrong = SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", fingerprint="0" * 12)})
     [outcome] = wrong.apply(document)
     assert outcome.status is Status.FAILED
     assert "no longer the object" in outcome.message
@@ -134,15 +134,15 @@ def test_a_fingerprint_survives_a_sheet_rename_in_the_same_plan(tmp_path: Path) 
     document = open_sheets(tmp_path, "package", *SHEETS)
     fingerprint = _audited_fingerprint(tmp_path, "package", "Badge")
     assert statuses(SetSheetNames({"Other": "Badges"}), document) == (Status.APPLIED,)
-    entry = GraphicDescription("Badge", fingerprint=fingerprint)
-    assert statuses(SetGraphicDescriptions({"Badge": entry}), document) == (Status.APPLIED,)
+    entry = GraphicAlternative("Badge", fingerprint=fingerprint)
+    assert statuses(SetGraphicAlternatives({"Badge": entry}), document) == (Status.APPLIED,)
 
 
 def test_the_same_name_on_a_moved_sheet_is_not_the_reviewed_frame(tmp_path: Path) -> None:
     fingerprint = _audited_fingerprint(tmp_path, "package", "Badge")
     moved = open_sheets(tmp_path, "flat", SHEETS[1], SHEETS[0])
-    [outcome] = SetGraphicDescriptions({
-        "Badge": GraphicDescription("x", fingerprint=fingerprint)
+    [outcome] = SetGraphicAlternatives({
+        "Badge": GraphicAlternative("x", fingerprint=fingerprint)
     }).apply(moved)
     assert outcome.status is Status.FAILED
 
@@ -152,26 +152,28 @@ def test_two_selectors_setting_different_text_on_one_frame_both_fail(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    conflicting = SetGraphicDescriptions({
-        "Logo": GraphicDescription("One"),
-        "logo.png": GraphicDescription("Two"),
+    conflicting = SetGraphicAlternatives({
+        "Logo": GraphicAlternative("One"),
+        "logo.png": GraphicAlternative("Two"),
     })
     outcomes = conflicting.apply(document)
     assert {o.key for o in outcomes} == {"Logo", "logo.png"}
     assert {o.status for o in outcomes} == {Status.FAILED}
-    agreeing = SetGraphicDescriptions({
-        "Logo": GraphicDescription("Same"),
-        "logo.png": GraphicDescription("Same", "Extra"),
+    agreeing = SetGraphicAlternatives({
+        "Logo": GraphicAlternative("Same"),
+        "logo.png": GraphicAlternative("Same", "Extra"),
     })
     assert statuses(agreeing, document) == (Status.APPLIED, Status.APPLIED)
     assert frame_text(document, "Logo")[1:] == [("title", "Same"), ("desc", "Extra")]
 
 
 def test_the_operation_describes_itself_with_its_entries() -> None:
-    operation = SetGraphicDescriptions({"Logo": GraphicDescription("T", None, "abc")})
+    operation = SetGraphicAlternatives({"Logo": GraphicAlternative("T", None, "abc")})
     assert operation.as_dict() == {
-        "operation": "set_graphic_descriptions",
-        "entries": {"Logo": {"title": "T", "description": None, "fingerprint": "abc"}},
+        "operation": "set_graphic_alternatives",
+        "entries": {
+            "Logo": {"title": "T", "description": None, "fingerprint": "abc", "decorative": None}
+        },
     }
 
 
@@ -199,7 +201,7 @@ def test_the_snapshot_binds_sheet_data_and_repeated_cell_positions(
 def test_alt_text_never_changes_the_snapshot(tmp_path: Path, layout: str) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     before = sheet_snapshot(document)
-    SetGraphicDescriptions({"Logo": GraphicDescription("Title", "Description")}).apply(document)
+    SetGraphicAlternatives({"Logo": GraphicAlternative("Title", "Description")}).apply(document)
     assert sheet_snapshot(document) == before
 
 

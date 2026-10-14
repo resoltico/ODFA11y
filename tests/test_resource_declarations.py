@@ -121,7 +121,12 @@ def test_embedded_object_contract_accepts_subdocument_folders_and_separate_files
 ) -> None:
     source = declaration(tmp_path, "object", href)
     document = OdfDocument.open(source)
-    document.storage.write_member("Object1/content.xml", b"opaque subdocument bytes")
+    document.storage.write_member(
+        "Object1/content.xml",
+        b"<office:document-content "
+        b'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0">'
+        b"<office:body/></office:document-content>",
+    )
     document.storage.write_member("object.odt", b"opaque package bytes")
     document.save(source)
     reopened = OdfDocument.open(source)

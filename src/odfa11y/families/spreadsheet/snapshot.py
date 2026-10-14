@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.content import protected_xml
+from odfa11y.content import normalized_graphic_tree, protected_xml
 from odfa11y.odf import Part, qn
 
 from .sheets import sheet_name, sheets
@@ -32,9 +32,12 @@ def sheet_snapshot(document: OdfDocument) -> tuple[str, ...]:
             f"{SHEET_TAG}{sheet_name(sheet)}",
             "content\t"
             + protected_xml(
-                sheet,
+                normalized_graphic_tree(document, sheet),
                 omitted_root_attributes=(qn("table", "name"),),
                 omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
+                omitted_element_attributes={
+                    qn(ns, "a"): (qn("office", "title"),) for ns in ("draw", "text")
+                },
             ),
         ))
     return tuple(entries)

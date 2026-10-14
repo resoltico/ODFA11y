@@ -6,7 +6,17 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from odfa11y.content import GraphicIdentity
+from odfa11y.content import (
+    SHAPE_TAGS,
+    GraphicIdentity,
+    audit_graphic_role,
+    document_links,
+    eligible_text_node,
+    link_fingerprint,
+    link_has_description,
+    link_location,
+    visible_words,
+)
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import Location, rules
 
@@ -40,6 +50,13 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     _audit_data_sheets(all_sheets, report)
     _audit_graphics(document, report)
     _audit_links(all_sheets, report)
+    for index, link in enumerate(document_links(document), 1):
+        if not link_has_description(link):
+            report.add(
+                rules.SHEET014,
+                location=link_location(link, index),
+                details={"fingerprint": link_fingerprint(document, link)},
+            )
     _audit_trailing_empty_sheets(all_sheets, report)
     _audit_hidden(content, all_sheets, report)
 
@@ -94,12 +111,22 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
 
 def _audit_graphics(document: OdfDocument, report: Report) -> None:
     content = document.tree(Part.CONTENT)
-    frames = select_elements(
-        content, "//office:body//draw:frame[draw:image or draw:object or draw:object-ole]"
-    )
+    frames = [
+        node
+        for node in select_elements(content, "//office:body//*")
+        if node.tag in SHAPE_TAGS and node.tag != qn("draw", "g") and eligible_text_node(node)
+    ]
     report.metadata["graphic_object_count"] = len(frames)
-    identity = GraphicIdentity(document, select_elements(content, "//office:body//draw:frame"))
+    for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
+        audit_graphic_role(document, group, report)
+    identity = GraphicIdentity(document, frames)
     for index, frame in enumerate(frames, start=1):
+        if audit_graphic_role(document, frame, report):
+            continue
+        if visible_words(frame) and not select_elements(
+            frame, "./draw:image | ./draw:object | ./draw:object-ole"
+        ):
+            continue
         title = frame.findtext("svg:title", namespaces=NS)
         desc = frame.findtext("svg:desc", namespaces=NS)
         if (title and title.strip()) or (desc and desc.strip()):
@@ -129,7 +156,7 @@ def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         for link in select_elements(sheet, ".//text:a"):
             text = cell_text(link)
-            if RAW_URL.fullmatch(text):
+            if RAW_URL.fullmatch(text) and not link.get(qn("office", "title"), "").strip():
                 report.add(
                     rules.SHEET006,
                     "Hyperlink text is a raw address instead of a description of its target.",

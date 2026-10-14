@@ -4,20 +4,20 @@
 from __future__ import annotations
 
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, ClassVar, override
 
 import pytest
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import OutputError, RemediationError
 from odfa11y.families.text import (
     ADAPTER,
     LinkifyAddresses,
     MarkTableHeaders,
     RemoveEmptySpacers,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
@@ -71,7 +71,7 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     )
     operations = [
         SetMetadata(title="New title", language="en-GB"),
-        SetGraphicDescriptions({"Logo": GraphicDescription("Example logo", "Sample")}),
+        SetGraphicAlternatives({"Logo": GraphicAlternative("Example logo", "Sample")}),
         MarkTableHeaders({"Data": TableHeaders(1)}),
         LinkifyAddresses(),
     ]
@@ -80,7 +80,7 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     assert result.destination == destination
     assert result.changed
     assert result.schema_check.startswith("no new violations against ODF 1.4")
-    assert {o.status for o in result.outcomes} == {Status.APPLIED, Status.UNCHANGED}
+    assert {o.status for o in result.outcomes} == {Status.APPLIED}
     again = remediate(destination, tmp_path / "again.odt", operations)
     assert not again.changed
     for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
@@ -96,7 +96,7 @@ def test_failed_outcomes_abort_the_run_listing_every_failure_and_write_nothing(
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing")
     operations = [
-        SetGraphicDescriptions({"A": GraphicDescription("x"), "B": GraphicDescription("y")}),
+        SetGraphicAlternatives({"A": GraphicAlternative("x"), "B": GraphicAlternative("y")}),
         MarkTableHeaders({"C": TableHeaders(1)}),
     ]
     with pytest.raises(RemediationError) as raised:
@@ -142,7 +142,13 @@ def test_text_changes_are_rejected_before_publication(tmp_path: Path) -> None:
     assert not destination.exists()
 
 
-def test_new_schema_violations_are_rejected_before_publication(tmp_path: Path) -> None:
+def test_new_schema_violations_are_rejected_before_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Isolate the schema regression check from the stronger protected-XML check.
+    monkeypatch.setattr(
+        "odfa11y.remediation.apply.adapter_for", lambda _kind: replace(ADAPTER, protect_edit=None)
+    )
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     with pytest.raises(RemediationError, match="schema violations"):
@@ -213,7 +219,7 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
     remediate(
         marked,
         tmp_path / "out2.odt",
-        [LinkifyAddresses(), SetGraphicDescriptions({"Logo": GraphicDescription("T")})],
+        [LinkifyAddresses(), SetGraphicAlternatives({"Logo": GraphicAlternative("T")})],
     )
     content_after = PackageStorage(tmp_path / "out2.odt").read("content.xml")
     assert b"keep me" in content_after

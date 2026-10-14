@@ -12,10 +12,10 @@ import pytest
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
-from odfa11y.content import GraphicDescription, GraphicIdentity
+from odfa11y.content import GraphicAlternative, GraphicIdentity
 from odfa11y.errors import ConfigError, RemediationError
 from odfa11y.families import adapter_for
-from odfa11y.families.image import SetGraphicDescriptions
+from odfa11y.families.image import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pipeline import PipelineOptions, run_pipeline
@@ -32,8 +32,8 @@ def _plan() -> list[Operation]:
     identity = GraphicIdentity(document, [frame])
     return [
         SetMetadata(language="en-US"),
-        SetGraphicDescriptions({
-            "Fruit illustration": GraphicDescription(
+        SetGraphicAlternatives({
+            "Fruit illustration": GraphicAlternative(
                 "Fruit", "A red apple and a green pear", identity.fingerprint([frame])
             )
         }),
@@ -135,7 +135,7 @@ def test_image_external_reference_is_not_fetched_or_echoed(tmp_path: Path) -> No
 def test_image_configuration_is_family_bound_and_strict(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
     plan.write_text('[image.graphics."Fruit illustration"]\ndescription = "Fruit"\n')
-    assert isinstance(load_config(plan).operations[0], SetGraphicDescriptions)
+    assert isinstance(load_config(plan).operations[0], SetGraphicAlternatives)
     plan.write_text('[image]\nalt_text = "Fruit"\n')
     with pytest.raises(ConfigError):
         load_config(plan)
@@ -196,7 +196,7 @@ def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
     remediate(
         source,
         destination,
-        [SetGraphicDescriptions({"Picture": GraphicDescription(description="One black pixel")})],
+        [SetGraphicAlternatives({"Picture": GraphicAlternative(description="One black pixel")})],
     )
     after = OdfDocument.open(destination)
     assert select_elements(after.tree(Part.CONTENT), "//office:binary-data")[0].text == binary

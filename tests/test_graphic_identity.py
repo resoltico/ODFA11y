@@ -11,13 +11,13 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.content import (
-    GraphicDescription,
+    GraphicAlternative,
     GraphicIdentity,
     graphic_identity,
     graphics_fingerprint,
     local_resource_path,
 )
-from odfa11y.families.text import SetGraphicDescriptions
+from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.families.text.semantics import audit_images
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.report import Report
@@ -99,8 +99,8 @@ def test_payload_drift_is_detected_before_any_graphic_edit(
     reviewed = graphics_fingerprint(document, [frame])
     document.storage.write_member(member, b"changed resource")
     assert graphics_fingerprint(document, [frame]) != reviewed
-    result = SetGraphicDescriptions({
-        "Logo": GraphicDescription("Title", fingerprint=reviewed)
+    result = SetGraphicAlternatives({
+        "Logo": GraphicAlternative("Title", fingerprint=reviewed)
     }).apply(document)
     assert result[0].status is Status.FAILED
     assert document.edit_count == 0
@@ -143,9 +143,18 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     read = document.storage.read
     dump = graphic_identity.json.dumps
 
-    def observe_hash(node: etree._Element, *, omitted_elements: tuple[str, ...]) -> str:
+    def observe_hash(
+        node: etree._Element,
+        *,
+        omitted_elements: tuple[str, ...],
+        omitted_element_attributes: dict[str, tuple[str, ...]],
+    ) -> str:
         hash_calls.append(node)
-        return protected(node, omitted_elements=omitted_elements)
+        return protected(
+            node,
+            omitted_elements=omitted_elements,
+            omitted_element_attributes=omitted_element_attributes,
+        )
 
     def observe_dump(value: object, *, sort_keys: bool) -> str:
         if isinstance(value, list) and value and isinstance(value[0], list):
@@ -163,7 +172,7 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     audit_images(document, report)
     assert len(report.findings) == count
     assert len(hash_calls) == count
-    assert read_calls == ["Pictures/logo.svg"]
+    assert read_calls == ["styles.xml", "Pictures/logo.svg"]
     assert len(group_hashes) == (1 if duplicate_names else count)
     if duplicate_names:
         assert len({finding.details["fingerprint"] for finding in report.findings}) == 1

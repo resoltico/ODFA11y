@@ -8,8 +8,8 @@ from pathlib import Path
 
 from lxml import etree
 
-from odfa11y.content import GraphicDescription, PageDecision
-from odfa11y.families.drawing import SetGraphicDescriptions, SetPageSemantics
+from odfa11y.content import GraphicAlternative, PageDecision
+from odfa11y.families.drawing import SetGraphicAlternatives, SetPageSemantics
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.remediation import SetMetadata
 
@@ -30,8 +30,8 @@ def declaration(directory: Path, kind: str, href: str | None, *, active: bool = 
     document = OdfDocument.open(DRAWING)
     for operation in [
         SetMetadata(language="en-GB"),
-        SetGraphicDescriptions({
-            "Fruit illustration": GraphicDescription(description="Fruit drawing")
+        SetGraphicAlternatives({
+            "Fruit illustration": GraphicAlternative(description="Fruit drawing")
         }),
         SetPageSemantics({"Fruit overview": PageDecision(title="Fruit overview")}),
     ]:

@@ -2,6 +2,6 @@
 """Family-bound semantic audit, configuration and operations."""
 
 from .adapter import ADAPTER
-from .operations import SetGraphicDescriptions, SetPageSemantics
+from .operations import SetGraphicAlternatives, SetLinkDescriptions, SetPageSemantics
 
-__all__ = ["ADAPTER", "SetGraphicDescriptions", "SetPageSemantics"]
+__all__ = ["ADAPTER", "SetGraphicAlternatives", "SetLinkDescriptions", "SetPageSemantics"]

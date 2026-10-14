@@ -5,17 +5,21 @@ from __future__ import annotations
 
 from itertools import starmap
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
-from odfa11y.errors import ToolFailedError
-from odfa11y.odf import Part, qn
+from odfa11y.errors import PackageError, ToolFailedError
+from odfa11y.odf import PackageStorage, Part, qn
 
-from .resources import ResourceIdentity
+from .formula_context import FormulaContext
+from .formula_syntax import FormulaFacts
+from .resources import ResourceIdentity, local_resource_path
 
 if TYPE_CHECKING:
     from lxml import etree
 
     from odfa11y.odf import OdfDocument
 
+MAX_EMBEDDED_OBJECTS = 64
 XML_BASE = "{http://www.w3.org/XML/1998/namespace}base"
 # Attribute and addressing contract from ODF Part 3; navigation is deliberately absent.
 # Unestablished dynamic import/execution declarations are refused even for internal URIs.
@@ -107,7 +111,14 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
     """
     resources = ResourceIdentity(document.storage)
     dependencies = fields = 0
-    for tree in document.distinct_trees(Part.CONTENT, Part.STYLES, Part.META):
+    formulas = FormulaFacts()
+    inspected = origins = 0
+    trees, incomplete = _reachable_trees(document)
+    for prefix, tree in trees:
+        context = FormulaContext(tree.getroot())
+        formulas += context.inspect()
+        inspected += context.inspected
+        origins += bool(context.inspected)
         for node in tree.iter():
             fields += node.tag == qn("text", "file-name")
             target = RESOURCE_TARGETS.get(node.tag)
@@ -115,7 +126,10 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
                 attribute, shape = target
                 href = node.get(attribute, "..") if shape == "chart" else node.get(attribute)
                 if href is not None:
-                    dependencies += _unresolved(node, href, shape, resources)
+                    local_href = (
+                        _relative_href(prefix, href) if shape != "chart" or href != "." else href
+                    )
+                    dependencies += _unresolved(node, local_href, shape, resources)
             # Applet code/archive attributes are not single resource IRIs.
             if (
                 node.tag == qn("draw", "applet")
@@ -125,7 +139,66 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
                 and node.get(qn("xlink", "href")) is None
             ):
                 dependencies += 1
-    return {"rendering_dependencies": dependencies, "location_fields": fields}
+    limits = {
+        "rendering_dependencies": dependencies
+        + formulas.loading
+        + formulas.incomplete
+        + incomplete,
+        "location_fields": fields + formulas.identity,
+    }
+    if inspected or incomplete:
+        limits.update(
+            formula_declarations=inspected,
+            formula_origins=origins,
+            formula_incomplete=formulas.incomplete + incomplete,
+        )
+    return limits
+
+
+def _reachable_trees(
+    document: OdfDocument,
+) -> tuple[list[tuple[str, etree._ElementTree]], int]:
+    """Follow package-local embedded ODF declarations under fixed traversal budgets.
+
+    Returns
+    -------
+    tuple[list[tuple[str, etree._ElementTree]], int]
+        Original parsed trees with member prefixes and incomplete inspection count.
+
+    """
+    trees = [("", tree) for tree in document.distinct_trees(Part.CONTENT, Part.STYLES, Part.META)]
+    if not isinstance(document.storage, PackageStorage):
+        return trees, 0
+    seen: set[str] = set()
+    incomplete = 0
+    cursor = 0
+    while cursor < len(trees):
+        prefix, tree = trees[cursor]
+        cursor += 1
+        for node in tree.iter(qn("draw", "object")):
+            path = local_resource_path(_relative_href(prefix, node.get(qn("xlink", "href"), "")))
+            if path is None or path in seen:
+                continue
+            seen.add(path)
+            if len(seen) > MAX_EMBEDDED_OBJECTS:
+                return trees, incomplete + 1
+            for part in ("content.xml", "styles.xml"):
+                member = path + "/" + part
+                if not document.storage.has(member):
+                    continue
+                try:
+                    trees.append((path + "/", document.storage.parse_xml(member)))
+                except PackageError:
+                    incomplete += 1
+    return trees, incomplete
+
+
+def _relative_href(prefix: str, href: str) -> str:
+    try:
+        uri = urlsplit(href)
+    except ValueError:
+        return href
+    return href if uri.scheme or uri.netloc or href.startswith("/") else prefix + href
 
 
 def _unresolved(node: etree._Element, href: str, shape: str, resources: ResourceIdentity) -> bool:
@@ -162,7 +235,8 @@ def require_native_context(document: OdfDocument, *, captured_identity: bool = F
     limits = native_export_limitations(document)
     if limits["rendering_dependencies"]:
         msg = (
-            "Native export refuses external or unresolved rendering dependencies; "
+            "Native export refuses external or unresolved rendering dependencies "
+            "or formula context; "
             "use source-only inspect and embed/review required resources in the native application"
         )
         raise ToolFailedError(msg)

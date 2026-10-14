@@ -9,12 +9,12 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
     RemoveEmptySpacers,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, Part, validate
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 # Writer names the first picture and the first table of these documents "Image1" and "Table1".
 PLAN_EXTRAS: dict[str, Operation] = {
-    "images-undescribed": SetGraphicDescriptions({"Image1": GraphicDescription("Red square")}),
+    "images-undescribed": SetGraphicAlternatives({"Image1": GraphicAlternative("Red square")}),
     "table-no-header-row": MarkTableHeaders({"Table1": TableHeaders(1)}),
 }
 

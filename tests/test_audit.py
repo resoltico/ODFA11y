@@ -139,8 +139,8 @@ def test_template_comments_out_every_open_decision(tmp_path: Path) -> None:
         },
     )
     text = render_template(audit_odf(source), ADAPTER)
-    assert '[text.graphics."Logo"]' in text
-    assert '"Data" = { rows = 1, fingerprint = ' in text
+    assert '[text.graphics."content/frame[name=Logo]"]' in text
+    assert '"content/table[name=Data]" = { rows = 1, fingerprint = ' in text
     assert "linkify_plain_addresses" in text
     assert "fingerprint = " in text
     assert all(line.startswith("#") or not line.strip() for line in text.splitlines())

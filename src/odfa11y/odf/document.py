@@ -11,6 +11,7 @@ from odfa11y.errors import MissingMemberError
 
 from .detect import detect
 from .opening import open_storage
+from .protection import inspect_protection
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -30,8 +31,9 @@ class OdfDocument:
     """
 
     def __init__(self, storage: OdfStorage) -> None:
-        """Wrap a loaded storage; XML members are parsed on first use."""
+        """Wrap storage, inspect protection, and parse semantic XML parts on first use."""
         self.storage = storage
+        self.protection = inspect_protection(storage)
         self._trees: dict[str, etree._ElementTree] = {}
         self._dirty: set[str] = set()
         self._edits = 0
@@ -45,7 +47,7 @@ class OdfDocument:
         Returns
         -------
         OdfDocument
-            The document with no member parsed yet.
+            The document with manifest protection inspected and semantic parts parsed lazily.
 
         """
         return cls(open_storage(source))

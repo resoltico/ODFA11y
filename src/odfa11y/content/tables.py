@@ -3,18 +3,15 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import RemediationError
-from odfa11y.odf import NS, qn, select_elements
-
-from .xml import attribute_bindings
+from odfa11y.odf import qn, select_elements
 
 if TYPE_CHECKING:
     from lxml import etree
+
 
 AXES = {
     "rows": ("table-row", "table-header-rows", "number-rows-repeated"),
@@ -168,80 +165,6 @@ def require_safe_boundary(table: etree._Element, rows: int | None, columns: int 
                 raise RemediationError(msg)
             column_position += repeated(cell, "number-columns-repeated")
         row_position += row_repeat
-
-
-def table_fingerprint(table: etree._Element) -> str:
-    """Fingerprint full table data without header-wrapper or description metadata.
-
-    Returns
-    -------
-    str
-        The reviewed table identity and all protected rows/cell attributes and words.
-
-    """
-    return _fingerprint(table, include_styles=True)
-
-
-def table_content_fingerprint(table: etree._Element) -> str:
-    """Fingerprint logical data independently of generated style names.
-
-    Returns
-    -------
-    str
-        Protected words, values, formulas and grid structure.
-
-    """
-    return _fingerprint(table, include_styles=False)
-
-
-def _attributes(node: etree._Element, repeat: str, *, include_styles: bool) -> dict[str, str]:
-    excluded = {qn("table", repeat)}
-    if not include_styles:
-        excluded.add(qn("table", "style-name"))
-    return {k: v for k, v in node.attrib.items() if k not in excluded}
-
-
-def _fingerprint(table: etree._Element, *, include_styles: bool) -> str:
-    columns = []
-    for column in declarations(table, "columns"):
-        count = repeated(column, "number-columns-repeated")
-        attributes = _attributes(column, "number-columns-repeated", include_styles=include_styles)
-        if columns and columns[-1][0] == attributes:
-            columns[-1] = (attributes, columns[-1][1] + count)
-        else:
-            columns.append((attributes, count))
-    facts = [table.get(qn("table", "name")), columns]
-    runs: list[tuple[object, int]] = []
-    for row in declarations(table, "rows"):
-        cells = []
-        for cell in select_elements(row, "./table:table-cell | ./table:covered-table-cell"):
-            words = cell.xpath(
-                "descendant::text()[not(ancestor::svg:title or ancestor::svg:desc "
-                "or ancestor::office:binary-data)]",
-                namespaces=NS,
-            )
-            cells.append([
-                cell.tag,
-                attribute_bindings(
-                    cell,
-                    omitted_attributes=() if include_styles else (qn("table", "style-name"),),
-                ),
-                _attributes(cell, "unused", include_styles=include_styles),
-                " ".join("".join(str(word) for word in words).split()),
-            ])
-        attributes = _attributes(row, "number-rows-repeated", include_styles=include_styles)
-        value = [
-            attributes,
-            attribute_bindings(row, omitted_attributes=(qn("table", "number-rows-repeated"),)),
-            cells,
-        ]
-        count = repeated(row, "number-rows-repeated")
-        if runs and runs[-1][0] == value:
-            runs[-1] = (value, runs[-1][1] + count)
-        else:
-            runs.append((value, count))
-    facts.extend(runs)
-    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
 
 
 def _crosses(position: int, count: int, span: int, boundary: int | None) -> bool:

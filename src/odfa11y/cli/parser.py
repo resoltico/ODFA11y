@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Never
 
 from odfa11y import __version__
+from odfa11y.errors import ConfigError
+from odfa11y.external_tools import validate_timeout
 from odfa11y.pipeline import DEFAULT_PROFILE, DEFAULT_TIMEOUT_SECONDS, PROFILES
 from odfa11y.report import FORMATS, terminal_text
 
@@ -65,6 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--schema", action="store_true", help="Validate ODF files against the ODF schema."
     )
     _add_verapdf(p, "Validate PDF files with veraPDF (PDF/UA-1).")
+    _add_timeout(p)
     _add_report_options(p)
 
     p = _command(
@@ -191,12 +194,29 @@ def _add_report_options(parser: argparse.ArgumentParser) -> None:
 
 def _add_tool_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--soffice", type=Path, help="LibreOffice executable.")
+    _add_timeout(parser)
+
+
+def _add_timeout(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--timeout",
-        type=int,
+        type=_timeout_seconds,
         default=DEFAULT_TIMEOUT_SECONDS,
         help=f"Native tool timeout in seconds (default: {DEFAULT_TIMEOUT_SECONDS}).",
     )
+
+
+def _timeout_seconds(value: str) -> int:
+    try:
+        seconds = int(value)
+        validate_timeout(seconds)
+    except (ValueError, ConfigError) as exc:
+        msg = (
+            f"Invalid timeout: {value!r}; "
+            "use positive whole seconds within the portable wait range."
+        )
+        raise argparse.ArgumentTypeError(msg) from exc
+    return seconds
 
 
 def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:

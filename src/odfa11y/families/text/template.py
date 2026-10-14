@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from odfa11y.content import link_template
+
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -37,6 +39,7 @@ def text_template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
                 "",
             ]
     lines += _alt_text(by_remedy.get("text.graphics", ()))
+    lines += link_template(by_remedy.get("text.links", ()), "text")
     return lines
 
 
@@ -57,7 +60,7 @@ def _remediation(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
 def _tables(findings: Sequence[Finding]) -> list[str]:
     seen: dict[str, str] = {}
     for finding in findings:
-        name = finding.details.get("table")
+        name = finding.details.get("target") or finding.details.get("table")
         if name:
             seen.setdefault(str(name), str(finding.details.get("fingerprint", "")))
     return [
@@ -73,13 +76,18 @@ def _alt_text(findings: Sequence[Finding]) -> list[str]:
     lines: list[str] = []
     seen: set[str] = set()
     for finding in findings:
-        key = finding.details.get("frame") or finding.details.get("href")
+        key = (
+            finding.details.get("selector")
+            or finding.details.get("frame")
+            or finding.details.get("href")
+        )
         if not key or key in seen:
             continue
         seen.add(str(key))
         lines += [
             f"# [text.graphics.{json.dumps(str(key))}]",
             '# title = ""',
+            "# decorative = false  # optional explicit role; requires ODF 1.4 and review",
             f'# description = ""  # {finding.rule_id}: describe what the graphic conveys',
             (
                 f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}"

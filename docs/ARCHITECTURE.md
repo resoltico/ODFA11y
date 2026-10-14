@@ -127,7 +127,7 @@ kind; a mismatch is a finding. An unrecognised media type ends the audit with `O
 
 A family implements a [FamilyAdapter](../src/odfa11y/adapter/family.py): its audit, its
 default language (a family's styles decide where one lives), an optional hyperlink-probe document for exporter capability evidence, the content snapshot the
-executor compares, the plan table it reads, its template lines, its review checklist and,
+executor compares, optional whole-plan preflight and operation-specific protected-edit checks, the plan table it reads, its template lines, its review checklist and,
 if LibreOffice can export it to PDF, the export filter. Kinds without an implementation get
 the **generic adapter**: the common checks run, an `ODF009` finding says that no semantic
 audit exists, and the body text must not change.
@@ -136,10 +136,9 @@ Eight families are implemented, and none imports another:
 
 - `text` (text, templates, master and web documents) owns the `TXT` rules, explicit semantic operations
   and the `[text]` configuration table.
-- `spreadsheet` (`.ods`, `.ots`, flat `.fods`) owns the `SHEET` rules, two operations
-  (`SetSheetNames`, `SetGraphicDescriptions`), the `[spreadsheet]` table, the `calc_pdf_Export`
+- `spreadsheet` (`.ods`, `.ots`, flat `.fods`) owns the `SHEET` rules, explicit sheet-name, graphic-alternative and link-description operations, the `[spreadsheet]` table, the `calc_pdf_Export`
   filter and a snapshot of protected sheet XML whose `preserved` rule lets only
-  sheet names and graphic descriptions change. It shows that the contract needs nothing from the core about
+  sheet names, supplied alternatives/roles and link descriptions change. It shows that the contract needs nothing from the core about
   spreadsheets: the default language lives on a different style, the snapshot is not
   paragraphs, and the operations resolve sheets and frames instead of paragraphs and
   tables. Both families bind the shared graphic editor to their own operation contract. The common
@@ -181,7 +180,7 @@ Every finding references a [registered rule](../src/odfa11y/report/rules.py) wit
 severity, category and *remedy*, the configuration key that holds the decision. The id's
 prefix names its owner: `PKG`, `XML`, `ODF`, `META` (core), `TXT` (text family), `SHEET` (spreadsheet family), `PDF`,
 `VERA`, `FID` (outputs). Reports serialize as
-`{"format": 4, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
+`{"format": 5, "kind", "subject", "passed", "summary", "metadata", "findings"}`. A finding's
 `location` is `{"path", "member"}` or null: a storage-neutral logical path, and the package
 member only where it helps ([locations](RULES.md#locations)).
 

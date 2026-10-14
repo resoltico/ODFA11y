@@ -11,10 +11,10 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.content import GraphicDescription
+from odfa11y.content import GraphicAlternative
 from odfa11y.errors import RemediationError
 from odfa11y.families import REGISTRY, adapter_for
-from odfa11y.families.text import SetGraphicDescriptions
+from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
@@ -103,7 +103,7 @@ def test_a_text_plan_is_refused_for_every_other_family(
 ) -> None:
     source = make(tmp_path, "presentation")
     destination = tmp_path / "out"
-    plan = [SetGraphicDescriptions({"Logo": GraphicDescription("x")})]
+    plan = [SetGraphicAlternatives({"Logo": GraphicAlternative("x")})]
     with pytest.raises(RemediationError, match="do not apply to a presentation document"):
         remediate(source, destination, plan)
     assert not destination.exists()

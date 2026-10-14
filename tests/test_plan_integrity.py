@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Unpack
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.content import GraphicDescription, graphics_fingerprint, table_fingerprint
+from odfa11y.content import GraphicAlternative, graphics_fingerprint, table_fingerprint
 from odfa11y.families.text import (
     MarkTableHeaders,
     NormalizeSpacing,
-    SetGraphicDescriptions,
+    SetGraphicAlternatives,
     TableHeaders,
     derived_style_name,
 )
@@ -57,10 +57,10 @@ def statuses(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
 def test_conflicting_alt_text_for_one_graphic_fails_every_involved_entry(tmp_path: Path) -> None:
     document = open_document(tmp_path, with_image_without_alt=True)
     entries = {
-        "Logo": GraphicDescription(description="A"),
-        "logo.svg": GraphicDescription(description="B"),
+        "Logo": GraphicAlternative(description="A"),
+        "logo.svg": GraphicAlternative(description="B"),
     }
-    outcomes = SetGraphicDescriptions(entries).apply(document)
+    outcomes = SetGraphicAlternatives(entries).apply(document)
     assert {outcome.key for outcome in outcomes} == {"Logo", "logo.svg"}
     assert all(outcome.status is Status.FAILED for outcome in outcomes)
     assert all("different description" in outcome.message for outcome in outcomes)
@@ -70,15 +70,15 @@ def test_conflicting_alt_text_for_one_graphic_fails_every_involved_entry(tmp_pat
 def test_entries_that_set_different_fields_or_equal_values_combine(tmp_path: Path) -> None:
     document = open_document(tmp_path, with_image_without_alt=True)
     different = {
-        "Logo": GraphicDescription(title="T"),
-        "logo.svg": GraphicDescription(description="D"),
+        "Logo": GraphicAlternative(title="T"),
+        "logo.svg": GraphicAlternative(description="D"),
     }
-    assert statuses(SetGraphicDescriptions(different), document) == (Status.APPLIED, Status.APPLIED)
+    assert statuses(SetGraphicAlternatives(different), document) == (Status.APPLIED, Status.APPLIED)
     same = {
-        "Logo": GraphicDescription(description="D"),
-        "logo.svg": GraphicDescription(description="D"),
+        "Logo": GraphicAlternative(description="D"),
+        "logo.svg": GraphicAlternative(description="D"),
     }
-    assert statuses(SetGraphicDescriptions(same), document) == (Status.UNCHANGED, Status.UNCHANGED)
+    assert statuses(SetGraphicAlternatives(same), document) == (Status.UNCHANGED, Status.UNCHANGED)
 
 
 def test_a_fingerprint_binds_alt_text_to_the_reviewed_graphic_and_survives_the_edit(
@@ -87,14 +87,14 @@ def test_a_fingerprint_binds_alt_text_to_the_reviewed_graphic_and_survives_the_e
     document = open_document(tmp_path, with_image_without_alt=True)
     frames = select_elements(document.tree(Part.CONTENT), "//draw:frame")
     fingerprint = graphics_fingerprint(document, frames)
-    entry = {"Logo": GraphicDescription("Title", "Description", fingerprint)}
-    assert statuses(SetGraphicDescriptions(entry), document) == (Status.APPLIED,)
+    entry = {"Logo": GraphicAlternative("Title", "Description", fingerprint)}
+    assert statuses(SetGraphicAlternatives(entry), document) == (Status.APPLIED,)
     assert (
         graphics_fingerprint(document, frames) == fingerprint
     )  # setting alt text does not change it
-    assert statuses(SetGraphicDescriptions(entry), document) == (Status.UNCHANGED,)
-    stale = {"Logo": GraphicDescription("Other", fingerprint=WRONG)}
-    (outcome,) = SetGraphicDescriptions(stale).apply(document)
+    assert statuses(SetGraphicAlternatives(entry), document) == (Status.UNCHANGED,)
+    stale = {"Logo": GraphicAlternative("Other", fingerprint=WRONG)}
+    (outcome,) = SetGraphicAlternatives(stale).apply(document)
     assert outcome.status is Status.FAILED
     assert "no longer the object" in outcome.message
 
@@ -128,8 +128,8 @@ def test_marking_headers_keeps_a_reviewed_graphic_in_that_row_addressable(tmp_pa
     cell_paragraph = select_elements(document.tree(Part.CONTENT), "//table:table-cell/text:p")[0]
     cell_paragraph.append(frame)
     fingerprint = graphics_fingerprint(document, [frame])
-    graphics = SetGraphicDescriptions({
-        "Logo": GraphicDescription("A logo", fingerprint=fingerprint)
+    graphics = SetGraphicAlternatives({
+        "Logo": GraphicAlternative("A logo", fingerprint=fingerprint)
     })
     assert statuses(graphics, document) == (Status.APPLIED,)
     assert statuses(MarkTableHeaders({"Data": TableHeaders(rows=1)}), document) == (Status.APPLIED,)

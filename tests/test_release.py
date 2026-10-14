@@ -17,6 +17,7 @@ import odfa11y
 from odfa11y import __version__
 from tools import check_release as release_checks
 from tools.check_release import check_release
+from tools.source_inventory import source_files
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTICE = "src/odfa11y/odf/schemas/NOTICE.txt"
@@ -48,7 +49,10 @@ def _distributions(directory: Path, variant: Variant | None = None) -> None:
         if path.is_file() and "__pycache__" not in path.parts
     }
     files["odfa11y.dist-info/METADATA"] = metadata.encode()
-    members: dict[str, bytes | None] = {f"src/{name}": data for name, data in files.items()}
+    members: dict[str, bytes | None] = dict(source_files(ROOT))
+    members.update({
+        f"src/{name}": data for name, data in files.items() if name.startswith("odfa11y/")
+    })
     for relative in PROJECT["license-files"]:
         files[f"odfa11y.dist-info/licenses/{relative}"] = (ROOT / relative).read_bytes()
         members[relative] = (ROOT / relative).read_bytes()

@@ -65,7 +65,9 @@ def check_bundle(directory: str | Path) -> list[str]:
     """Verify a bundle against its manifest without trusting either.
 
     Manifest names are untrusted input: each is validated, then walked component by
-    component without following symbolic links, so no read can leave the bundle.
+    component to reject static symbolic links and unsafe paths. The bundle and its ancestor
+    directory namespace must remain stable throughout verification; concurrent hostile
+    replacement is outside this contract.
 
     Returns
     -------

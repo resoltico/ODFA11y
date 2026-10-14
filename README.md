@@ -110,8 +110,9 @@ Each package exposes its API through its `__init__`. See
 
 ## Status and roadmap
 
-Current work and planned features are tracked in [GitHub issues](https://github.com/resoltico/ODFA11y/issues)
-and [pull requests](https://github.com/resoltico/ODFA11y/pulls).
+The [roadmap to v1.0.0](docs/ROADMAP.md) scopes v0.7.0, v0.8.0, v0.9.0 and the stable
+release, with completion criteria. [GitHub issues](https://github.com/resoltico/ODFA11y/issues)
+and [pull requests](https://github.com/resoltico/ODFA11y/pulls) track its execution.
 
 ## License
 
@@ -126,3 +127,7 @@ LibreOffice, veraPDF and OpenDocument are names of their respective owners; the 
 only invokes the first two as external applications and does not redistribute them.
 
 The normative MathML 3.0 grammar is bundled unmodified under the [W3C software notice](src/odfa11y/odf/schemas/mathml/NOTICE.txt); schema source URLs and digests share [the provenance record](src/odfa11y/odf/schemas/PROVENANCE.toml).
+
+The [public library contract](docs/API.md) describes input/output ownership, incremental
+results and executable installed-package examples. Normative formula classifications retain
+their [OASIS notice](src/odfa11y/content/formula_data/NOTICE.txt) and pinned provenance.

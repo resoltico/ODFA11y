@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from .rules import Rule
 
-REPORT_FORMAT = 4
+REPORT_FORMAT = 5
 
 
 @dataclass(frozen=True, slots=True)

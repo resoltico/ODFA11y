@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 import shutil
@@ -20,13 +21,47 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from types import FrameType
 
-from odfa11y.errors import ToolNotFoundError
+from odfa11y.errors import ConfigError, ToolNotFoundError
 
 IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
 READ_CHUNK_BYTES = 64 * 1024
 READER_JOIN_SECONDS = 3
 VERSION_RE = re.compile(r"\d+(?:\.\d+)+")
+
+# Windows reserves 0xffffffff milliseconds for an infinite wait.
+MAX_TIMEOUT_SECONDS = (2**32 - 2) / 1000
+
+
+def validate_timeout(timeout: float) -> float:
+    """Require finite positive numeric seconds within the portable native wait range.
+
+    Returns
+    -------
+    float
+        Seconds preserving fractional input.
+
+    Raises
+    ------
+    ConfigError
+        The input is not a supported finite, positive duration.
+    """
+    message = f"Timeout must be finite positive numeric seconds, at most {MAX_TIMEOUT_SECONDS}."
+    if type(timeout) not in {int, float}:
+        raise ConfigError(message)
+    try:
+        seconds = float(timeout)
+    except OverflowError as exc:
+        raise ConfigError(message) from exc
+    if (
+        not math.isfinite(seconds)
+        or seconds <= 0
+        or timeout > MAX_TIMEOUT_SECONDS
+        or seconds > MAX_TIMEOUT_SECONDS
+        or math.ceil(seconds * 1000) > 2**32 - 2
+    ):
+        raise ConfigError(message)
+    return seconds
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,20 +85,17 @@ def run_bounded(
 ) -> ToolRun:
     """Run a program with a time limit and bounded output capture.
 
-    Each output stream keeps only its first ``max_output`` bytes and the rest is drained and
-    discarded, so a chatty or hostile program cannot exhaust memory. On timeout, and on any
-    interruption such as Ctrl-C, the whole process tree is killed where the platform allows
-    it. A descendant that outlives the program while holding its output open cannot delay the
-    return: after a short grace period it is killed (or, if it escaped the process group,
-    abandoned to finish by itself). A program that outlives ``timeout`` is killed and
-    ``subprocess.TimeoutExpired`` propagates.
+    Capture each stream's first ``max_output`` bytes; drain and discard the rest. Timeout
+    or interruption kills the process tree where supported; ``subprocess.TimeoutExpired``
+    propagates after cleanup. Descendants holding pipes open get bounded cleanup grace,
+    then termination; descendants that escape the process group may remain running.
 
     Returns
     -------
     ToolRun
         The exit status and the captured heads of stdout and stderr.
-
     """
+    timeout = validate_timeout(timeout)
     process = subprocess.Popen(
         command,
         stdin=subprocess.DEVNULL,
@@ -156,7 +188,6 @@ class ToolIdentity:
         -------
         dict[str, str]
             The tool name and version.
-
         """
         return {"name": self.name, "version": self.version}
 
@@ -173,7 +204,6 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
     ------
     ToolNotFoundError
         The requested executable, or every candidate, cannot be found.
-
     """
     if requested is not None:
         path = Path(requested)
@@ -202,7 +232,6 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
     -------
     ToolIdentity
         The reported version number, or ``unknown`` when it cannot be determined.
-
     """
     try:
         completed = run_bounded([executable, *version_args], timeout=IDENTIFY_TIMEOUT_SECONDS)
@@ -215,14 +244,12 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
 def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
     """Read an executable's product version from its file metadata, without running it.
 
-    For applications whose ``--version`` does not return on Windows (LibreOffice's
-    ``soffice.exe`` starts a session and never prints). Failure yields ``unknown``.
+    LibreOffice's Windows ``--version`` starts a session without returning.
 
     Returns
     -------
     ToolIdentity
         The product version, or ``unknown`` when it cannot be read.
-
     """
     quoted = executable.replace("'", "''")
     script = f"(Get-Item -LiteralPath '{quoted}').VersionInfo.ProductVersion"
@@ -238,13 +265,12 @@ def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
 def identify_running_or_by_file(
     name: str, executable: str, version_args: tuple[str, ...]
 ) -> ToolIdentity:
-    """Identify an application by running it, or by its file version on Windows.
+    """Identify via runtime version, or Windows file metadata.
 
     Returns
     -------
     ToolIdentity
-        The reported version, or ``unknown``.
-
+        The reported version, or ``unknown`` on failure.
     """
     if sys.platform == "win32":
         return identify_by_file_version(name, executable)
@@ -263,7 +289,6 @@ def termination_interrupt() -> Generator[None]:
     ------
     None
         A scope whose original signal handler is restored on exit.
-
     """
     if threading.current_thread() is not threading.main_thread():
         yield
