@@ -88,6 +88,8 @@ strict = true
 filterwarnings = ["error"]
 faulthandler_timeout = 300
 testpaths = ["tests"]
+# Remove successful tmp_path outputs; retain pytest's three-session failed-call history.
+tmp_path_retention_policy = "failed"
 markers = [
   "integration: tests that invoke an external application such as LibreOffice",
 ]
@@ -183,6 +185,8 @@ max-file-lines = 300
 "src/odfa11y/odf/flat.py" = ["no-self-use"]
 # Same reason for the ZIP layout.
 "src/odfa11y/odf/package.py" = ["no-self-use"]
+# Architecture negative controls run installed Tach with explicit arguments and no shell.
+"tests/test_architecture.py" = ["suspicious-subprocess-import"]
 # Deadline tests run the real CLI with explicit arguments and no shell.
 "tests/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
 # The tests exercise the subprocess wrapper and name the exception it raises on timeout.

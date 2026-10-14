@@ -32,10 +32,28 @@ SARIF instead preflights all identities and confinement before inspection; an ex
 failure emits no partial SARIF log. Audit/compare accept regular files and ordinary file
 aliases; nonregular inputs are refused without waiting for FIFO data.
 
-With `--strict`, stderr shows `Command gate (--strict): PASS/FAIL (exit N)` for audit and
-compare. Report `passed` and text `Result` continue to mean no error findings; warnings
-can therefore pass a report while failing the strict command gate. JSON and SARIF payloads
-keep their existing contracts.
+Text audit and comparison output starts with the actual command outcome, exit status
+and gate policy. Individual reports say `Check: no errors` or `Check: errors found`;
+warnings remain visible and fail the command when `--strict` is enabled. Findings
+precede metadata, and text wraps at 80 columns without splitting paths or identifiers.
+Terminal controls in filenames, document fields and tool diagnostics appear as visible
+escapes. JSON report `passed` still means no error findings. For JSON and SARIF,
+`--strict` retains `Command gate (--strict): PASS/FAIL (exit N)` on stderr; machine
+payloads and exit statuses are unchanged.
+
+Every `COMMAND --help` includes examples. Running `odfa11y` without a command prints
+the workflow help on stderr and exits 2; close command typos receive a suggestion
+without executing it. Readable ODF reports with open decisions suggest a print-only
+template command. Examples and copied command suggestions use POSIX shell quoting;
+control-bearing filenames are displayed safely without a copyable command suggestion.
+Configuration errors identify the existing plan and suggest editing it, rather than
+overwriting reviewed decisions.
+
+For text commands with interactive stderr, append-only progress lines show active
+core stages, native work and evidence publication. Redirected stderr receives no
+progress. JSON/SARIF commands never receive progress, even with interactive stderr;
+redirecting stdout alone does not suppress text progress on interactive stderr.
+A disconnected progress stream disables progress without stopping document work.
 
 Open the original in Writer and identify its intended heading hierarchy, language,
 data-table headers, meaningful graphic descriptions and intentional page breaks. These
@@ -66,6 +84,9 @@ violation the source did not already have; for a spreadsheet the guard compares 
 name's position and every non-empty cell's text, so only sheet names may differ. A plan
 written for another family (a `[text]` table applied to a spreadsheet, a `[spreadsheet]`
 table applied to a text document) is refused outright. Publication is atomic.
+
+Dry runs label outcomes as proposed and write nothing. An empty plan explicitly says
+that no operations were configured; uncomment only decisions you have reviewed.
 
 ## 3. Export and check the PDF
 

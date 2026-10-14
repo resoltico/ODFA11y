@@ -4,44 +4,25 @@
 from __future__ import annotations
 
 import json
-import platform
 import sys
-import tempfile
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-import PIL
-import pypdf
-import pypdfium2
-from lxml import etree
-
-from odfa11y import __version__
-from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf, render_template
+from odfa11y.audit import prepare_template
 from odfa11y.config import Config, load_config
-from odfa11y.content import require_native_context
-from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
+from odfa11y.errors import ConfigError, OdfA11yError
 from odfa11y.evidence import check_bundle
-from odfa11y.external_tools import identify, termination_interrupt
-from odfa11y.families import adapter_for
-from odfa11y.families.text import ADAPTER as TEXT_ADAPTER
-from odfa11y.families.text import write_link_probe
-from odfa11y.fidelity import compare_pdfs
-from odfa11y.odf import SUPPORTED_VERSIONS, OdfDocument
-from odfa11y.pdf import (
-    ExportSettings,
-    export_pdfua,
-    find_soffice,
-    find_verapdf,
-    identify_soffice,
-    link_descriptions_supported,
-)
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.external_tools import termination_interrupt
+from odfa11y.pipeline import NativeOptions, compare_documents, export_document, inspect_tools
 from odfa11y.remediation import remediate
-from odfa11y.report import Report, exit_status, render_reports
+from odfa11y.report import Report, exit_status, render_reports, terminal_text
 
-from .audit import audit_command, command_gate, is_pdf
+from .audit import audit_command, command_gate
 from .batch import batch_command
+from .guidance import error_hint
 from .parser import build_parser
+from .pipeline import pipeline_command
+from .progress import progress_callback
+from .styles import styles_command
 
 if TYPE_CHECKING:
     import argparse
@@ -59,7 +40,12 @@ def main(argv: list[str] | None = None) -> int:
         Zero on success, 1 for strict warnings, 2 for findings, or 3 for execution failure.
 
     """
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    arguments = sys.argv[1:] if argv is None else argv
+    if not arguments:
+        parser.print_help(file=sys.stderr)
+        parser.exit(2)
+    args = parser.parse_args(arguments)
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": audit_command,
         "batch": batch_command,
@@ -67,8 +53,8 @@ def main(argv: list[str] | None = None) -> int:
         "remediate": _remediate,
         "export": _export,
         "compare": _compare,
-        "pipeline": _pipeline,
-        "styles": _styles,
+        "pipeline": pipeline_command,
+        "styles": styles_command,
         "check-evidence": _check_evidence,
         "doctor": _doctor,
     }
@@ -94,10 +80,14 @@ def main(argv: list[str] | None = None) -> int:
                 "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
             )
             return EXECUTION_FAILURE
-        print(f"error: {exc}", file=sys.stderr)
+        print(f"error: {terminal_text(exc)}", file=sys.stderr)
+        if isinstance(exc, ConfigError) and getattr(args, "config", None):
+            print(f"Configuration: {terminal_text(args.config)}", file=sys.stderr)
         details = getattr(exc, "details", "")
         if details:
-            print(details, file=sys.stderr)
+            print(terminal_text(details), file=sys.stderr)
+        if hint := error_hint(args, exc):
+            print(hint, file=sys.stderr)
         return EXECUTION_FAILURE
 
 
@@ -108,15 +98,12 @@ def _preflight_sarif(args: argparse.Namespace) -> None:
 
 
 def _template(args: argparse.Namespace) -> int:
-    report = audit_odf(args.source)
-    blocking = Report(kind=report.kind, subject=report.subject)
-    blocking.findings = [f for f in report.findings if f.rule_id in BLOCKING_RULE_IDS]
-    if blocking.findings:
+    report, template = prepare_template(args.source)
+    if template is None:
         print("No template: the document cannot be read well enough to plan.", file=sys.stderr)
-        print(render_reports([blocking]), file=sys.stderr)
-        return exit_status([blocking])
-    adapter = adapter_for(OdfDocument.open(args.source).kind)
-    print(render_template(report, adapter), end="")
+        print(render_reports([report]), file=sys.stderr)
+        return exit_status([report])
+    print(template, end="")
     return 0
 
 
@@ -126,153 +113,80 @@ def _remediate(args: argparse.Namespace) -> int:
     if args.format == "json":
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
         return 0
-    print("Dry run; nothing written." if args.dry_run else f"Wrote: {result.destination}")
+    print(
+        "Dry run; proposed changes only. Nothing written."
+        if args.dry_run
+        else f"Wrote: {terminal_text(result.destination)}"
+    )
     for outcome in result.outcomes:
-        key = f" [{outcome.key}]" if outcome.key else ""
-        print(f"- {outcome.status.value:9} {outcome.operation}{key}: {outcome.message}")
+        key = f" [{terminal_text(outcome.key)}]" if outcome.key else ""
+        print(
+            f"- {outcome.status.value:9} {terminal_text(outcome.operation)}{key}: "
+            f"{terminal_text(outcome.message)}"
+        )
     if not result.outcomes:
-        print("- No operations were configured.")
-    print(f"Schema: {result.schema_check}")
+        print("- No operations were configured. Enable reviewed decisions in your TOML plan.")
+    print(f"Schema: {terminal_text(result.schema_check)}")
     return 0
 
 
 def _export(args: argparse.Namespace) -> int:
-    settings = ExportSettings(_pdf_filter(args.source), args.soffice, args.timeout)
-    print(export_pdfua(args.source, args.destination, settings))
+    output = export_document(args.source, args.destination, _native_options(args))
+    print(f"Wrote PDF: {terminal_text(output)}")
+    print("Next: audit the PDF with --verapdf --strict and review its accessibility.")
     return 0
-
-
-def _pdf_filter(path: Path) -> str:
-    document = OdfDocument.open(path)
-    pdf_filter = adapter_for(document.kind).pdf_filter
-    if pdf_filter is None:
-        kind = document.kind.name if document.kind is not None else "unrecognised"
-        msg = f"No PDF export is defined for {kind} documents."
-        raise UnsupportedKindError(msg)
-    require_native_context(document)
-    return pdf_filter
 
 
 def _compare(args: argparse.Namespace) -> int:
     policy = (load_config(args.config) if args.config else Config()).fidelity
-    source_pdf, candidate_pdf = is_pdf(args.source), is_pdf(args.candidate)
-    with tempfile.TemporaryDirectory(prefix="odfa11y-compare-") as scratch:
-        work = Path(scratch)
-        left = _as_pdf(args.source, work / "source.pdf", args, work / "profile", is_pdf=source_pdf)
-        right = _as_pdf(
-            args.candidate, work / "candidate.pdf", args, work / "profile", is_pdf=candidate_pdf
-        )
-        report = compare_pdfs(left, right, policy, diff_dir=args.diff_dir)
-    report.subject = f"{args.candidate.name} vs {args.source.name}"
-    report.sources = (args.candidate, args.source)
-    print(render_reports([report], output_format=args.format, source_root=args.source_root))
+    report = compare_documents(
+        args.source, args.candidate, policy, args.diff_dir, _native_options(args)
+    )
     status = exit_status([report], strict=args.strict)
-    command_gate(args, status)
+    command_gate(args, status, scope="fidelity checks under the selected policy.")
+    print(render_reports([report], output_format=args.format, source_root=args.source_root))
     return status
 
 
-def _as_pdf(
-    path: Path, rendered: Path, args: argparse.Namespace, profile: Path, *, is_pdf: bool
-) -> Path:
-    if is_pdf:
-        return path
-    settings = ExportSettings(_pdf_filter(path), args.soffice, args.timeout, profile)
-    return export_pdfua(path, rendered, settings)
-
-
-def _pipeline(args: argparse.Namespace) -> int:
-    config = load_config(args.config)
-    options = PipelineOptions(
-        profile=args.profile,
-        soffice=str(args.soffice) if args.soffice else None,
-        verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
+def _native_options(args: argparse.Namespace) -> NativeOptions:
+    return NativeOptions(
+        soffice=args.soffice,
         timeout=args.timeout,
+        on_progress=progress_callback(getattr(args, "format", "text")),
     )
-    record = run_pipeline(args.source, config.operations, config.fidelity, args.output_dir, options)
-    if args.format == "json":
-        print(json.dumps(record.as_dict(), indent=2, sort_keys=True))
-    else:
-        print(f"Evidence: {args.output_dir}")
-        for stage in record.stages:
-            detail = f" ({stage.reason})" if stage.reason else ""
-            print(f"- {stage.status:7} {stage.name}{detail}")
-        reports = [s.report for s in record.stages if s.gate and s.report and not s.report.passed]
-        if reports:
-            print()
-            print(render_reports(reports))
-    return record.exit_status
-
-
-def _styles(args: argparse.Namespace) -> int:
-    document = OdfDocument.open(args.source)
-    style_report = adapter_for(document.kind).style_report
-    if style_report is None:
-        kind = document.kind.name if document.kind is not None else "unrecognised"
-        msg = f"A style report is not defined for {kind} documents."
-        raise UnsupportedKindError(msg)
-    rows = style_report(document)
-    if args.format == "json":
-        print(json.dumps(rows, indent=2, ensure_ascii=False, sort_keys=True))
-        return 0
-    print(f"Paragraph styles in {args.source}:")
-    for row in rows:
-        print(
-            f"- {row['style']}: {row['count']} use(s); parent={row['parent']!r}; "
-            f"spacing={row['spacing']}"
-        )
-    return 0
 
 
 def _check_evidence(args: argparse.Namespace) -> int:
     problems = check_bundle(args.directory)
     for problem in problems:
-        print(problem)
-    print("Evidence bundle is intact." if not problems else f"{len(problems)} problem(s) found.")
+        print(terminal_text(problem))
+    print(
+        "Evidence integrity: verified against the recorded manifest."
+        if not problems
+        else f"Evidence integrity: failed ({len(problems)} problem(s))."
+    )
+    print("This checks recorded files and hashes. It does not establish accessibility or review.")
     return 2 if problems else 0
 
 
 def _doctor(args: argparse.Namespace) -> int:
-    info: dict[str, object] = {
-        "odfa11y": __version__,
-        "python": sys.version.split()[0],
-        "platform": platform.platform(),
-        "lxml": etree.__version__,
-        "pypdf": pypdf.__version__,
-        "pypdfium2": pypdfium2.version.PYPDFIUM_INFO.version,
-        "pillow": PIL.__version__,
-        "odf_schemas": list(SUPPORTED_VERSIONS),
-        "LibreOffice": _tool(lambda: identify_soffice(find_soffice(args.soffice)).version),
-        "veraPDF": _tool(lambda: identify("veraPDF", find_verapdf(), ("--version",)).version),
-    }
-    status = 0
-    try:
-        info["pdfua_link_descriptions"] = _link_descriptions(args)
-    except OdfA11yError as exc:
-        info["pdfua_link_descriptions"] = None
-        print(f"error: {exc}", file=sys.stderr)
-        status = EXECUTION_FAILURE
+    info, error = inspect_tools(_native_options(args))
+    status = EXECUTION_FAILURE if error else 0
+    if error:
+        print(f"error: {terminal_text(error)}", file=sys.stderr)
+        if details := getattr(error, "details", ""):
+            print(terminal_text(details), file=sys.stderr)
+        if args.format == "text" and (hint := error_hint(args, error)):
+            print(hint, file=sys.stderr)
     if args.format == "json":
         print(json.dumps(info, indent=2, sort_keys=True))
     else:
         for key, value in info.items():
-            print(f"{key}: {value or 'not found'}")
+            missing = (
+                "not tested (probe unavailable or failed)"
+                if key == "pdfua_link_descriptions"
+                else "not found"
+            )
+            print(f"{key}: {terminal_text(value) if value is not None else missing}")
+        print("Scope: dependency identities and a named-link export probe; no conformance verdict.")
     return status
-
-
-def _link_descriptions(args: argparse.Namespace) -> str:
-    pdf_filter = TEXT_ADAPTER.pdf_filter
-    if pdf_filter is None:
-        msg = "No PDF export is defined for text documents."
-        raise UnsupportedKindError(msg)
-    settings = ExportSettings(pdf_filter, args.soffice, args.timeout)
-    with tempfile.TemporaryDirectory(prefix="odfa11y-doctor-") as scratch:
-        probe = Path(scratch) / "probe.odt"
-        write_link_probe(probe)
-        return "supported" if link_descriptions_supported(probe, settings) else "unsupported"
-
-
-def _tool(probe: Callable[[], str]) -> str | None:
-    try:
-        return probe()
-    except ToolNotFoundError:
-        return None

@@ -27,12 +27,13 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
     lines = render_reports([_report()]).splitlines()
     assert lines[:3] == [
         "Subject: sample.odt (odf)",
-        "Result: PASS",
+        "Check: no errors",
         "Findings: 0 error(s), 1 warning(s), 0 info",
     ]
     assert "  title: T" in lines
     assert "  styles: 2 record(s)" in lines
-    assert any("TXT030 at content/paragraph[2]: Needs review" in line for line in lines)
+    assert "  WARNING TXT030: Needs review" in lines
+    assert "    location: content/paragraph[2]" in lines
     assert any(line.strip() == "remedy: text.remediation.linkify_plain_addresses" for line in lines)
     assert any(line.strip() == "count: 2" for line in lines)
 

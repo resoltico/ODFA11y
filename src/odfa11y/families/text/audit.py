@@ -17,6 +17,7 @@ from .styles import catalog_of
 if TYPE_CHECKING:
     from lxml import etree
 
+    from odfa11y.adapter import StyleUsage
     from odfa11y.odf import OdfDocument
     from odfa11y.report import Report
 
@@ -108,12 +109,12 @@ def _audit_style_summary(document: OdfDocument, report: Report) -> None:
     report.metadata["paragraph_styles"] = style_summary(document)
 
 
-def style_summary(document: OdfDocument) -> list[dict[str, object]]:
+def style_summary(document: OdfDocument) -> list[StyleUsage]:
     """Summarize paragraph-style usage and effective spacing.
 
     Returns
     -------
-    list[dict[str, object]]
+    list[StyleUsage]
         One row per paragraph style in use, most used first.
 
     """

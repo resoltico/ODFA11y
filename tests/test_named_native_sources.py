@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.cli import commands, main
+from odfa11y.cli import main
 from odfa11y.content import native_export_limitations, require_native_context
 from odfa11y.errors import ToolFailedError
 from odfa11y.odf import OdfDocument, validate
@@ -106,7 +106,7 @@ def _assert_binding(source: Path, monkeypatch: pytest.MonkeyPatch, *, expected: 
         def refuse_launch(_source: Path, _destination: Path, _settings: ExportSettings) -> Path:
             pytest.fail("named source bypassed preflight and reached native application export")
 
-        monkeypatch.setattr(commands, "export_pdfua", refuse_launch)
+        monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", refuse_launch)
         assert (
             main([
                 "export",

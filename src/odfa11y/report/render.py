@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import json
+import textwrap
 from typing import TYPE_CHECKING
 
 from .sarif import sarif_log
+from .terminal import terminal_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -70,29 +72,42 @@ def exit_status(reports: Iterable[Report], *, strict: bool = False) -> int:
 
 def _render_text(report: Report) -> str:
     lines = [
-        f"Subject: {report.subject} ({report.kind})",
-        f"Result: {'PASS' if report.passed else 'FAIL'}",
+        *_field("Subject: ", f"{report.subject} ({report.kind})"),
+        f"Check: {'errors found' if report.error_count else 'no errors'}",
         (
             f"Findings: {report.error_count} error(s), "
             f"{report.warning_count} warning(s), {report.info_count} info"
         ),
     ]
-    if report.metadata:
-        lines.append("Metadata:")
-        lines.extend(
-            f"  {key}: {_summarize(report.metadata[key])}" for key in sorted(report.metadata)
-        )
     if report.findings:
         lines.append("Findings:")
         for finding in report.findings:
-            where = f" at {finding.location.label}" if finding.location else ""
-            lines.append(
-                f"  {finding.severity.value.upper():7} {finding.rule_id}{where}: {finding.message}"
+            lines.extend(
+                _field(f"  {finding.severity.value.upper()} {finding.rule_id}: ", finding.message)
             )
+            if finding.location:
+                lines.extend(_field("    location: ", finding.location.label))
             if finding.remedy:
-                lines.append(f"           remedy: {finding.remedy}")
-            lines.extend(f"           {key}: {value}" for key, value in finding.details.items())
+                lines.extend(_field("    remedy: ", finding.remedy))
+            for key, value in finding.details.items():
+                lines.extend(_field(f"    {terminal_text(key)}: ", value))
+    if report.metadata:
+        lines.append("Metadata:")
+        for key in sorted(report.metadata):
+            lines.extend(_field(f"  {terminal_text(key)}: ", _summarize(report.metadata[key])))
     return "\n".join(lines)
+
+
+def _field(label: str, value: object) -> list[str]:
+    label = terminal_text(label)
+    return textwrap.wrap(
+        terminal_text(value),
+        width=80,
+        initial_indent=label,
+        subsequent_indent=" " * min(len(label), 12),
+        break_long_words=False,
+        break_on_hyphens=False,
+    ) or [label.rstrip()]
 
 
 def _summarize(value: object) -> str:

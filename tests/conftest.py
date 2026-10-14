@@ -20,6 +20,7 @@ settings.register_profile(
     derandomize=True,
     suppress_health_check=[HealthCheck.too_slow],
 )
+settings.register_profile("smoke", parent=settings.get_profile("default"), max_examples=5)
 settings.load_profile("default")
 
 

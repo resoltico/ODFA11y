@@ -4,6 +4,27 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Breaking
+
+- Human-readable CLI reports replace `Result: PASS/FAIL` with check findings and the actual command gate outcome, put findings before metadata, wrap text and visibly escape terminal controls. Consumers parsing text should use JSON or SARIF instead; their formats and exit statuses are unchanged.
+
+### Added
+
+- CLI help includes workflow examples and typo suggestions; text commands offer recovery guidance and interactive progress without adding output to JSON/SARIF. Dry runs distinguish proposed changes, and evidence integrity checks distinguish recorded-file verification from accessibility review.
+- Public core entrypoints support document inspection, guarded native export, ODF/PDF comparison, tool diagnostics, template preparation and style inspection without invoking the CLI. Native-resource guards and comparison input identity remain enforced in core operations.
+
+### Fixed
+
+- Pipeline output shows warning-only strict failures, successful gate warnings and retained tool diagnostics. Review sheets no longer say veraPDF did not run when validation or validator execution failed.
+
+### Internal
+
+- Native interruption checks keep readiness notifications out of cleanup waits, retaining the termination deadline and process-tree assertions.
+- Windows CI retries bounded installer downloads and caps installation at 15 minutes while retaining the pinned checksum and installer exit checks.
+- Tach enforces explicit package-root and module-entry-point dependencies, removes obsolete CLI access to domain engines, and rejects boundary/interface/cycle violations through real negative controls.
+- CI reuses Go analysis caches by their actual tool pins and limits dependency/tool cache saves to main, avoiding PR copies and invalidation by unrelated workflow edits. Manual release checks bypass dependency-cache restoration.
+- Passing pytest temporary outputs are cleaned promptly; failed-call output retains the default three-session history. A five-example Hypothesis smoke profile supports short development checks; required checks retain 200 examples. See [Development](docs/DEVELOPING.md#types-boundaries-and-properties) for bounds and cleanup limits.
+
 ## [0.6.0] - 2026-10-09
 
 ### Breaking

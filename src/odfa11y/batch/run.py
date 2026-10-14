@@ -16,15 +16,22 @@ from .manifest import load_manifest, preflight
 from .record import BatchRecord
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
     from .manifest import BatchItem
 
 
 def run_batch(
-    manifest: str | Path, output_dir: str | Path, options: PipelineOptions | None = None
+    manifest: str | Path,
+    output_dir: str | Path,
+    options: PipelineOptions | None = None,
+    *,
+    on_item: Callable[[str, str], None] | None = None,
 ) -> BatchRecord:
     """Run every item, keeping completed evidence through ordinary failures and interruption.
+
+    Progress observers receive item IDs/statuses only and must not raise.
 
     Returns
     -------
@@ -53,20 +60,36 @@ def run_batch(
     record.publish(output)
     with termination_interrupt():
         try:
-            for item, progress in zip(items, record.items, strict=True):
-                progress["status"] = "running"
-                record.publish(output)
-                _advance_item(item, progress, output / item.id, options)
-                record.publish(output)
+            _run_items(items, record, output, options, on_item)
         except KeyboardInterrupt:
             for progress in record.items:
                 if progress["status"] == "running":
                     progress.update(status="interrupted", exit_status=3)
+                    if on_item is not None:
+                        on_item(progress["id"], "interrupted")
             record.status = "interrupted"
         else:
             record.status = "failed" if record.exit_status else "completed"
         record.publish(output)
     return record
+
+
+def _run_items(
+    items: tuple[BatchItem, ...],
+    record: BatchRecord,
+    output: Path,
+    options: PipelineOptions,
+    on_item: Callable[[str, str], None] | None,
+) -> None:
+    for item, progress in zip(items, record.items, strict=True):
+        progress["status"] = "running"
+        record.publish(output)
+        if on_item is not None:
+            on_item(item.id, "running")
+        _advance_item(item, progress, output / item.id, options)
+        record.publish(output)
+        if on_item is not None:
+            on_item(item.id, progress["status"])
 
 
 def _advance_item(

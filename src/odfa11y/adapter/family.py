@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -22,6 +22,15 @@ class ReviewItem:
 
     key: str
     text: str
+
+
+class StyleUsage(TypedDict):
+    """A style's usage count, parent and effective spacing in an adapter report."""
+
+    style: str
+    count: int
+    parent: str | None
+    spacing: dict[str, str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,5 +53,5 @@ class FamilyAdapter:
     template: Callable[[Mapping[str, Sequence[Finding]]], list[str]]
     review_items: tuple[ReviewItem, ...]
     pdf_filter: str | None = None
-    style_report: Callable[[OdfDocument], list[dict[str, object]]] | None = None
+    style_report: Callable[[OdfDocument], list[StyleUsage]] | None = None
     link_probe: Callable[[Path], Path] | None = None

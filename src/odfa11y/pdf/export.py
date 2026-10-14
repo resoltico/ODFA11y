@@ -18,6 +18,7 @@ from odfa11y.staging import staging_sibling
 if TYPE_CHECKING:
     from odfa11y.external_tools import ToolIdentity
 
+DEFAULT_TIMEOUT_SECONDS = 120
 MINIMUM_LIBREOFFICE_VERSION = (26, 8)
 
 EXPORT_OPTIONS: dict[str, dict[str, str]] = {
@@ -79,7 +80,7 @@ class ExportSettings:
 
     pdf_filter: str
     soffice: str | Path | None = None
-    timeout: int = 120
+    timeout: int = DEFAULT_TIMEOUT_SECONDS
     profile_dir: str | Path | None = None
 
 
@@ -87,7 +88,8 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
     """Export a document with the fixed PDF/UA options, publishing the PDF atomically.
 
     This is the raw application boundary and does not perform ODF resource preflight.
-    Guarded CLI export/ODF comparison and pipeline own that policy; direct library callers
+    Guarded ``export_document``/``compare_documents`` and the pipeline own that policy;
+    direct raw-boundary library callers
     must establish their resource contract and isolate native processing themselves.
 
     Returns

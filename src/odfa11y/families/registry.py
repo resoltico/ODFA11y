@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.odf import Family
+from odfa11y.errors import UnsupportedKindError
+from odfa11y.odf import Family, OdfDocument
 
 from .chart import ADAPTER as CHART_ADAPTER
 from .database import ADAPTER as DATABASE_ADAPTER
@@ -19,8 +20,9 @@ from .text import ADAPTER as TEXT_ADAPTER
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
-    from odfa11y.adapter import FamilyAdapter, Operation
+    from odfa11y.adapter import FamilyAdapter, Operation, StyleUsage
     from odfa11y.odf import DocumentKind
 
 REGISTRY: dict[Family, FamilyAdapter] = {
@@ -61,3 +63,26 @@ def config_tables() -> dict[str, Callable[[dict[str, object]], list[Operation]]]
         for adapter in REGISTRY.values()
         for name, parse in adapter.config_tables.items()
     }
+
+
+def style_usage(source: str | Path) -> list[StyleUsage]:
+    """Inspect paragraph styles through the source document family's supported hook.
+
+    Returns
+    -------
+    list[StyleUsage]
+        Style names, usage counts, parents and effective spacing.
+
+    Raises
+    ------
+    UnsupportedKindError
+        The family has no paragraph-style report.
+
+    """
+    document = OdfDocument.open(source)
+    style_report = adapter_for(document.kind).style_report
+    if style_report is None:
+        kind = document.kind.name if document.kind is not None else "unrecognised"
+        msg = f"A style report is not defined for {kind} documents."
+        raise UnsupportedKindError(msg)
+    return style_report(document)

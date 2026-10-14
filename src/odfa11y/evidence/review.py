@@ -23,7 +23,7 @@ def render_review(record: dict[str, Any]) -> str:
     lines = [
         f"# Review sheet: {record['document']['name']}",
         "",
-        f"Result: **{record['status'].upper()}**"
+        f"Automated gates: **{record['status'].upper()}**"
         + (f" (failed at `{record['failed_stage']}`)" if record["failed_stage"] else ""),
         "",
         "## Gates",
@@ -34,6 +34,9 @@ def render_review(record: dict[str, Any]) -> str:
     for stage in stages:
         detail = _cell(stage.get("reason") or _summary(stage))
         lines.append(f"| `{stage['name']}` | {stage['status']} | {detail} |")
+    profile = record.get("profile")
+    if profile:
+        lines += ["", f"Assurance profile: `{profile['name']}`"]
     lines += ["", "## Machine-established facts", ""]
     lines += _facts(stages) or ["- No stage produced facts."]
     attention = _attention(stages)
@@ -41,7 +44,13 @@ def render_review(record: dict[str, Any]) -> str:
         lines += ["", "## Findings that need attention", "", *attention]
     verapdf = next((s for s in stages if s["name"] == "verapdf"), None)
     if verapdf is None or verapdf["status"] != "passed":
-        lines += ["", f"> {NOT_VALIDATION}"]
+        caveat = NOT_VALIDATION
+        if verapdf is not None and verapdf["status"] == "failed":
+            caveat = (
+                "veraPDF did not pass: PDF/UA conformance was not established. "
+                "Review the validator findings or execution failure above."
+            )
+        lines += ["", f"> {caveat}"]
     lines += ["", "## Human review still required", ""]
     lines += [f"- [ ] {item['text']}" for item in record["human_review"]]
     return "\n".join(lines) + "\n"

@@ -5,12 +5,19 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Never
 
 from odfa11y import __version__
-from odfa11y.pipeline import DEFAULT_PROFILE, PROFILES
-from odfa11y.report import FORMATS
+from odfa11y.pipeline import DEFAULT_PROFILE, DEFAULT_TIMEOUT_SECONDS, PROFILES
+from odfa11y.report import FORMATS, terminal_text
 
-DEFAULT_TIMEOUT_SECONDS = 120
+
+class TerminalParser(argparse.ArgumentParser):
+    """Keep native help and suggestions while escaping untrusted error messages."""
+
+    def error(self, message: str) -> Never:
+        """Print a terminal-safe parse error and exit with argparse's status two."""
+        super().error(terminal_text(message))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,14 +29,37 @@ def build_parser() -> argparse.ArgumentParser:
         The parser for all supported CLI commands.
 
     """
-    parser = argparse.ArgumentParser(
+    parser = TerminalParser(
         prog="odfa11y",
         description="Audit, remediate and verify ODF documents for accessible PDF/UA.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        suggest_on_error=True,
+        color=False,
+        epilog=(
+            "Workflow (review decisions before changing a document):\n"
+            "  odfa11y audit original.odt\n"
+            "  odfa11y template original.odt > document.toml\n"
+            "  # Edit document.toml: uncomment only reviewed decisions.\n"
+            "  odfa11y remediate original.odt reviewed.odt --config document.toml --dry-run\n"
+            "  odfa11y pipeline original.odt --config document.toml \\\n"
+            "    --output-dir evidence --profile production\n"
+            "  odfa11y check-evidence evidence\n\n"
+            "Use a new configuration filename and evidence directory.\n"
+            "Exit statuses: 0 success; 1 gated warnings;\n"
+            "  2 findings/arguments; 3 execution failure.\n"
+            "A successful automated check still requires human accessibility review.\n"
+            "Use odfa11y COMMAND --help for examples and options."
+        ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("audit", help="Audit ODF or PDF files without changing them.")
+    p = _command(
+        sub,
+        "audit",
+        examples=("  odfa11y audit source.odt\n  odfa11y audit exported.pdf --verapdf --strict"),
+        description="Audit ODF or PDF files without changing them.",
+    )
     p.add_argument("sources", nargs="+", type=Path)
     p.add_argument(
         "--schema", action="store_true", help="Validate ODF files against the ODF schema."
@@ -37,24 +67,54 @@ def build_parser() -> argparse.ArgumentParser:
     _add_verapdf(p, "Validate PDF files with veraPDF (PDF/UA-1).")
     _add_report_options(p)
 
-    p = sub.add_parser(
-        "template", help="Print a commented configuration template for an ODF document."
+    p = _command(
+        sub,
+        "template",
+        examples=(
+            "  odfa11y template source.odt\n"
+            "  odfa11y template source.odt > plan.toml\n"
+            "  # Use a new filename; edit and review the commented decisions."
+        ),
+        description="Print a commented configuration template for an ODF document.",
     )
     p.add_argument("source", type=Path)
 
-    p = sub.add_parser("remediate", help="Apply the configured operations to an ODF document.")
+    p = _command(
+        sub,
+        "remediate",
+        examples=(
+            "  odfa11y remediate source.odt reviewed.odt --config plan.toml --dry-run\n"
+            "  odfa11y remediate source.odt reviewed.odt --config plan.toml"
+        ),
+        description="Apply the configured operations to an ODF document.",
+    )
     p.add_argument("source", type=Path)
     p.add_argument("destination", type=Path)
     p.add_argument("--config", type=Path, required=True, help="TOML configuration file.")
     p.add_argument("--dry-run", action="store_true", help="Report outcomes without writing.")
     p.add_argument("--format", choices=("text", "json"), default="text")
 
-    p = sub.add_parser("export", help="Export an ODF document to PDF/UA with LibreOffice.")
+    p = _command(
+        sub,
+        "export",
+        examples=(
+            "  odfa11y export reviewed.odt reviewed.pdf\n  odfa11y audit reviewed.pdf --verapdf"
+        ),
+        description="Export an ODF document to PDF/UA with LibreOffice.",
+    )
     p.add_argument("source", type=Path)
     p.add_argument("destination", type=Path)
     _add_tool_options(p)
 
-    p = sub.add_parser("compare", help="Compare two ODF or PDF files for fidelity.")
+    p = _command(
+        sub,
+        "compare",
+        examples=(
+            "  odfa11y compare source.odt reviewed.odt --diff-dir differences\n"
+            "  odfa11y compare original.pdf reviewed.pdf --strict"
+        ),
+        description="Compare two ODF or PDF files for fidelity.",
+    )
     p.add_argument("source", type=Path)
     p.add_argument("candidate", type=Path)
     p.add_argument("--config", type=Path, help="TOML file whose [fidelity] table sets the policy.")
@@ -62,7 +122,17 @@ def build_parser() -> argparse.ArgumentParser:
     _add_tool_options(p)
     _add_report_options(p)
 
-    p = sub.add_parser("pipeline", help="Remediate, export, validate, compare and keep evidence.")
+    p = _command(
+        sub,
+        "pipeline",
+        examples=(
+            "  odfa11y pipeline source.odt --config plan.toml --output-dir evidence\n"
+            "  odfa11y pipeline source.odt --config plan.toml \\\n"
+            "    --output-dir production --profile production\n"
+            "  # Review evidence/REVIEW.md; automated gates do not certify accessibility."
+        ),
+        description="Remediate, export, validate, compare and keep evidence.",
+    )
     p.add_argument("source", type=Path)
     p.add_argument("--config", type=Path, required=True, help="TOML configuration file.")
     p.add_argument("--output-dir", type=Path, required=True, help="Evidence directory to create.")
@@ -80,15 +150,31 @@ def build_parser() -> argparse.ArgumentParser:
 
     _add_batch(sub)
 
-    p = sub.add_parser("styles", help="Report paragraph-style usage and effective spacing.")
+    p = _command(
+        sub,
+        "styles",
+        examples=("  odfa11y styles source.odt\n  odfa11y styles source.odt --format json"),
+        description="Report paragraph-style usage and effective spacing.",
+    )
     p.add_argument("source", type=Path)
     p.add_argument("--format", choices=("text", "json"), default="text")
 
-    p = sub.add_parser("check-evidence", help="Verify an evidence directory against its manifest.")
+    p = _command(
+        sub,
+        "check-evidence",
+        examples=(
+            "  odfa11y check-evidence evidence\n"
+            "  # Checks file integrity; read evidence/REVIEW.md for human review."
+        ),
+        description="Verify an evidence directory against its manifest.",
+    )
     p.add_argument("directory", type=Path)
 
-    p = sub.add_parser(
-        "doctor", help="Show tool and dependency versions and what the PDF export supports."
+    p = _command(
+        sub,
+        "doctor",
+        examples=("  odfa11y doctor\n  odfa11y doctor --soffice /path/to/soffice --format json"),
+        description="Show tool and dependency versions and what the PDF export supports.",
     )
     _add_tool_options(p)
     p.add_argument("--format", choices=("text", "json"), default="text")
@@ -121,8 +207,14 @@ def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:
 
 
 def _add_batch(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser(
-        "batch", help="Run independent manifest items and retain aggregate evidence."
+    p = _command(
+        sub,
+        "batch",
+        examples=(
+            "  odfa11y batch manifest.toml --output-dir batch-evidence\n"
+            "  odfa11y batch manifest.toml --output-dir production --profile production"
+        ),
+        description="Run independent manifest items and retain aggregate evidence.",
     )
     p.add_argument("manifest", type=Path)
     p.add_argument("--output-dir", type=Path, required=True)
@@ -139,4 +231,26 @@ def _profile_help() -> str:
         f"Assurance profile (default: {DEFAULT_PROFILE}): inspect checks source/remediation; "
         "verify adds PDF diagnostics and fidelity; production also requires veraPDF "
         "and gates warnings."
+    )
+
+
+def _command(
+    sub: argparse._SubParsersAction, name: str, *, description: str, examples: str
+) -> argparse.ArgumentParser:
+    """Keep command descriptions and practical examples in native argparse help.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The command parser with plain, suggestion-enabled help.
+
+    """
+    return sub.add_parser(
+        name,
+        help=description,
+        description=description,
+        epilog=f"Examples:\n{examples}",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        suggest_on_error=True,
+        color=False,
     )

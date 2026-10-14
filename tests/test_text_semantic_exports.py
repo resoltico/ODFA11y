@@ -86,5 +86,9 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
         tmp_path / "evidence",
         PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
     )
-    assert record.failed_stage == "audit-pdf", [stage.as_dict() for stage in record.stages]
+    assert record.failed_stage == "audit-pdf", "\n".join(
+        f"{stage.name}: {stage.reason}\n{stage.details or ''}"
+        for stage in record.stages
+        if stage.status == "failed"
+    )
     assert not record.passed

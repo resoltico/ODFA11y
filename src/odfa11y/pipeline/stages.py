@@ -17,7 +17,13 @@ if TYPE_CHECKING:
 DETAIL_CHARS = 2048
 
 
-def run_stage(name: str, step: Callable[[], StageResult], record: RunRecord) -> StageResult:
+def run_stage(
+    name: str,
+    step: Callable[[], StageResult],
+    record: RunRecord,
+    *,
+    on_progress: Callable[[str, str], None] | None = None,
+) -> StageResult:
     """Execute an eligible stage, retaining controlled failure details.
 
     Returns
@@ -31,6 +37,8 @@ def run_stage(name: str, step: Callable[[], StageResult], record: RunRecord) -> 
         return StageResult(name, "skipped", reason, gate=False)
     if record.failed_stage:
         return StageResult(name, "skipped", f"not run: {record.failed_stage} failed", gate=False)
+    if on_progress is not None:
+        on_progress(name, "running")
     try:
         return step()
     except (OdfA11yError, OSError) as exc:

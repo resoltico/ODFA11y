@@ -123,9 +123,37 @@ lists every step.
 splitting, text-preserving linkification, package round trips, rejection of arbitrary or
 corrupted archives and configuration with `PackageError`/`ConfigError` only, and that any
 applicable subset of operations keeps a schema-valid document schema-valid and is
-idempotent. The profile
-in `tests/conftest.py` is deterministic and bounded; a failure is reproducible by
-rerunning pytest, and a found counterexample belongs in an `@example` beside a fix.
+idempotent. The default profile in `tests/conftest.py` uses 200 deterministic examples;
+a failure is reproducible by rerunning pytest, and a found counterexample belongs
+in an `@example` beside a fix. For a short development check, use:
+
+```bash
+uv run --no-sync pytest tests/test_properties.py --hypothesis-profile=smoke
+```
+
+The smoke profile generates up to five passing examples per property and retains
+explicit regression examples. It does not replace the default profile in required
+checks or CI. Neither profile imposes a per-example deadline; shrinking, rejected
+draws and regression examples mean `max_examples` is not a total invocation limit.
+GitHub job timeouts bound the overall CI runtime.
+
+There is no mutation runner or dedicated fuzz campaign in this repository. Generated
+file-based properties clean one `TemporaryDirectory` per example, so completed
+examples do not accumulate files. Strategies limit arbitrary archive/config inputs
+to 256/128 bytes and package additions to six members of at most 64 bytes each.
+The operation-subset property retains its source and two results only for the
+current example. These small synthetic inputs need no growing campaign corpus or
+multi-gigabyte campaign reservation; the caps exercise malformed inputs and package
+invariants without generating large documents. Reducing them removes tested input
+shapes rather than fixing storage accumulation.
+
+Passing `tmp_path` fixture outputs are removed after their test call; failed-call
+outputs retain pytest's default three-session history. A later teardown failure can
+therefore lose a passing call's output. Cleanup is best effort; explicit `--basetemp`
+leaves session-root cleanup to the caller. These policies bound retention, not bytes:
+filesystem allocation, native-tool scratch, failure evidence, caches and abrupt
+termination prevent a defensible maximum for total local disk use. Use an isolated
+filesystem with a quota when a hard process/workspace limit is required.
 Coverage uses branch measurement with the floor in `pyproject.toml`; raise the floor
 when coverage rises, never lower it to pass.
 
@@ -190,11 +218,26 @@ manual runs. Push checks run on `main` and version tags; every open pull request
 including a draft or a web edit, runs checks on its merge commit. This avoids running
 the same gates twice for each pull-request update. A branch without a pull request
 can use a manual workflow run. Authoritative checks still run after merge and for
-release tags. The Go build and module cache reuses pinned scanner dependencies;
-the scanners still execute on every run, and manual release checks bypass that cache.
+release tags. The Go build and module cache is keyed by the scanner package pins
+used by the commands and the runner's Go identity; unrelated workflow edits do not
+invalidate it. uv caches depend on the lockfile and interpreter selection. Only
+main pushes save these caches; the scheduled dependency audit can also save uv's
+cache on main. PRs restore shared caches without saving isolated duplicate copies.
+A dependency change available only in a PR may therefore require repeat downloads
+until it reaches main. Both scanners still execute on every run. Go tag checks and
+manual release checks bypass restoration; manual release checks also bypass uv
+restoration, and the draft release job disables uv caching. New tool versions,
+lockfiles or runner identities can still leave superseded cache entries: these
+save restrictions reduce duplication but do not impose a repository storage quota.
 Runner images and macOS LibreOffice follow their current stable distribution;
 Linux/Windows LibreOffice installers are checksum-pinned. The lockfile does not freeze
 the complete operating system.
+
+Windows uses the runner's `curl.exe` for installer downloads, with transport retries,
+a 30-second connection limit and a three-minute limit per transfer. The Windows
+installation step has a 15-minute ceiling, including MSI installation; the retry
+budget is not a hard total download deadline. The downloaded installer must still
+match the pinned checksum before it can run.
 
 veraPDF is a separately installed Java CLI used when an operator explicitly requests
 `--verapdf`. CI validates a LibreOffice export with the exact stable veraPDF 1.30.3 release; update

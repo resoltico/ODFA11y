@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import json
 import sys
+import textwrap
 from typing import TYPE_CHECKING
 
 from odfa11y.batch import run_batch
 from odfa11y.pipeline import PipelineOptions
+from odfa11y.report import terminal_text
+
+from .progress import progress_callback
 
 if TYPE_CHECKING:
     import argparse
@@ -29,16 +33,30 @@ def batch_command(args: argparse.Namespace) -> int:
         verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
         timeout=args.timeout,
     )
-    record = run_batch(args.manifest, args.output_dir, options)
+    record = run_batch(
+        args.manifest, args.output_dir, options, on_item=progress_callback(args.format)
+    )
     if args.format == "json":
         text = json.dumps(record.as_dict(), indent=2, sort_keys=True)
     else:
-        lines = [f"Batch: {record.status}"]
+        lines = [
+            f"Batch: {record.status}",
+            f"Profile: {options.profile}; exit {record.exit_status}",
+        ]
         lines.extend(
             f"- {item['id']}: {item['status']}; exit={item['exit_status']}; "
-            f"evidence={item['evidence']}"
+            f"failed_stage={item['failed_stage']}; evidence={item['evidence']}"
             for item in record.items
         )
-        text = "\n".join(lines)
+        text = "\n".join(
+            textwrap.fill(
+                terminal_text(line),
+                width=80,
+                subsequent_indent="  ",
+                break_long_words=False,
+                break_on_hyphens=False,
+            )
+            for line in lines
+        )
     sys.stdout.write(text + "\n")
     return record.exit_status

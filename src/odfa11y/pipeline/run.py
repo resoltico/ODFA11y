@@ -9,10 +9,9 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import BLOCKING_RULE_IDS, audit_odf
-from odfa11y.content import require_native_context
+from odfa11y.audit import audit_odf, template_blockers
 from odfa11y.errors import PackageError
-from odfa11y.evidence import Redactor, require_free_directory, sha256_file, write_bundle
+from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.fidelity import compare_pdfs
 from odfa11y.odf import OdfDocument, declared_version
@@ -29,7 +28,9 @@ from odfa11y.pdf import (
 from odfa11y.remediation import remediate
 from odfa11y.report import exit_status
 
+from .native import native_export_settings
 from .profiles import STAGE_NAMES
+from .publication import publish_evidence
 from .record import PipelineOptions, RunRecord, StageResult
 from .source import capture_source
 from .stages import run_stage
@@ -85,7 +86,7 @@ class _Run:
     def audit_source(self) -> StageResult:
         report = audit_odf(self.captured or self.source, schema=True)
         report.subject = self.source.name
-        blocked = any(f.rule_id in BLOCKING_RULE_IDS for f in report.findings)
+        blocked = template_blockers(report) is not None
         return StageResult(
             "audit-source",
             "failed" if blocked else "passed",
@@ -111,7 +112,12 @@ class _Run:
     def export_remediated(self) -> StageResult:
         if not self._exportable:
             return self._no_pdf("export-remediated")
-        require_native_context(OdfDocument.open(self.remediated), captured_identity=True)
+        native_export_settings(
+            OdfDocument.open(self.remediated),
+            self.options.soffice,
+            self.options.timeout,
+            captured_identity=True,
+        )
         with capture_source(
             self.remediated, directory=(self.captured or self.source).parent
         ) as staged:
@@ -181,7 +187,13 @@ class _Run:
     def _export(self, name: str, document: Path, pdf_name: str) -> StageResult:
         if self.adapter.pdf_filter is None:
             return self._no_pdf(name)
-        require_native_context(OdfDocument.open(document), captured_identity=True)
+        settings = native_export_settings(
+            OdfDocument.open(document),
+            self.executable or self.options.soffice,
+            self.options.timeout,
+            self.work / "profile",
+            captured_identity=True,
+        )
         if self.executable is None:
             self.executable = find_soffice(self.options.soffice)
             self.record.toolchain["LibreOffice"] = identify_soffice(self.executable).as_dict()
@@ -203,12 +215,7 @@ class _Run:
         export_pdfua(
             document,
             self.work / pdf_name,
-            ExportSettings(
-                self.adapter.pdf_filter,
-                soffice=self.executable,
-                timeout=self.options.timeout,
-                profile_dir=self.work / "profile",
-            ),
+            replace(settings, soffice=self.executable),
         )
         return StageResult(name, "passed", gate=False)
 
@@ -237,7 +244,8 @@ def run_pipeline(
     Stages run in a fixed order, only those the assurance profile and the document kind call
     for, and stop at the first failed gate; later stages are recorded as skipped. Once the
     output directory is acceptable, the bundle is published whether the run passed or failed,
-    even when the source cannot be read.
+    even when the source cannot be read. Progress observers receive fixed stage/status
+    fields and must not raise; they do not alter the evidence record.
 
     Returns
     -------
@@ -246,6 +254,7 @@ def run_pipeline(
 
     """
     options = options or PipelineOptions()
+    on_progress = options.on_progress
     profile = options.assurance
     source, target = Path(source), Path(output_dir)
     require_free_directory(target)
@@ -271,19 +280,9 @@ def run_pipeline(
             "fidelity": run.fidelity,
         }
         for name in STAGE_NAMES:
-            record.stages.append(run_stage(name, steps[name], record))
-        artifacts = {
-            path.relative_to(work).as_posix(): path
-            for path in sorted(work.rglob("*"))
-            if path.is_file() and path.relative_to(work).parts[0] != "profile"
-        }
-        redactor = Redactor.for_locations({
-            "profile": work / "profile",
-            "work": work,
-            "source": source.parent,
-            "output": target,
-        })
-        record.outputs = write_bundle(
-            target, record.as_dict(), artifacts, redactor, diagnostics={"verapdf.xml"}
-        )
+            stage = run_stage(name, steps[name], record, on_progress=on_progress)
+            record.stages.append(stage)
+            if on_progress is not None:
+                on_progress(name, stage.status)
+        publish_evidence(source, target, work, record, on_progress)
     return record

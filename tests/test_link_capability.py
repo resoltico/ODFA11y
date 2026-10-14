@@ -68,14 +68,16 @@ def probe(tmp_path: Path) -> Path:
 @pytest.fixture
 def reported_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     """Supply explicit identities for doctor output tests without launching native tools."""
-    monkeypatch.setattr("odfa11y.cli.commands.find_soffice", lambda _requested: "test-soffice")
     monkeypatch.setattr(
-        "odfa11y.cli.commands.identify_soffice",
+        "odfa11y.pipeline.diagnostics.find_soffice", lambda _requested: "test-soffice"
+    )
+    monkeypatch.setattr(
+        "odfa11y.pipeline.diagnostics.identify_soffice",
         lambda _executable: ToolIdentity("LibreOffice", "26.8.0.3"),
     )
-    monkeypatch.setattr("odfa11y.cli.commands.find_verapdf", lambda: "test-verapdf")
+    monkeypatch.setattr("odfa11y.pipeline.diagnostics.find_verapdf", lambda: "test-verapdf")
     monkeypatch.setattr(
-        "odfa11y.cli.commands.identify",
+        "odfa11y.pipeline.diagnostics.identify",
         lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.3"),
     )
 
@@ -128,7 +130,8 @@ def test_doctor_reports_the_capability(
     expected: str,
 ) -> None:
     monkeypatch.setattr(
-        "odfa11y.cli.commands.link_descriptions_supported", lambda _probe, _settings: supported
+        "odfa11y.pipeline.diagnostics.link_descriptions_supported",
+        lambda _probe, _settings: supported,
     )
     assert main(["doctor", "--format", "json"]) == 0
     assert json.loads(capsys.readouterr().out)["pdfua_link_descriptions"] == expected
@@ -152,7 +155,7 @@ def test_doctor_reports_selected_tool_versions(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(
-        "odfa11y.cli.commands.link_descriptions_supported", lambda _probe, _settings: True
+        "odfa11y.pipeline.diagnostics.link_descriptions_supported", lambda _probe, _settings: True
     )
     assert main(["doctor", "--format", "json"]) == 0
     info = json.loads(capsys.readouterr().out)
@@ -169,7 +172,7 @@ def test_module_entry_point_runs_the_cli(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(
-        "odfa11y.cli.commands.link_descriptions_supported", lambda _probe, _settings: True
+        "odfa11y.pipeline.diagnostics.link_descriptions_supported", lambda _probe, _settings: True
     )
     monkeypatch.setattr(sys, "argv", ["odfa11y", "doctor", "--format", "json"])
     with pytest.raises(SystemExit) as exit_info:

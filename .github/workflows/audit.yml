@@ -25,6 +25,10 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
+          cache-dependency-glob: |
+            uv.lock
+            .python-version
+          save-cache: ${{ github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
       - name: Restore locked Python environment
         run: uv sync --locked --group audit
       - name: Audit locked dependencies
