@@ -76,10 +76,10 @@ def test_explicit_loading_is_detected_even_in_unreachable_branches(expression: s
         "of:=1 2",
         "of:=#VENDOR!",
         "of:=cell-content()>1",
-        "of:=" + "(" * 100 + "1" + ")" * 100,
-        "of:=" + "-" * 100 + "1",
-        "of:=" + "1+" * 3000 + "1",
-        'of:="' + "x" * MAX_CHARACTERS + '"',
+        pytest.param("of:=" + "(" * 100 + "1" + ")" * 100, id="nesting-depth-budget"),
+        pytest.param("of:=" + "-" * 100 + "1", id="unary-depth-budget"),
+        pytest.param("of:=" + "1+" * 3000 + "1", id="token-budget"),
+        pytest.param('of:="' + "x" * MAX_CHARACTERS + '"', id="character-budget"),
     ],
 )
 def test_unestablished_syntax_or_dynamic_context_cannot_pass_clean(expression: str) -> None:
