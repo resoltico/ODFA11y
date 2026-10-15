@@ -4,9 +4,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
-## [0.7.0] - 2026-10-14
-
-Release candidate prepared on this date; public publication is pending.
+## [0.7.0] - 2026-10-16
 
 ### Breaking
 
