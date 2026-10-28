@@ -10,12 +10,14 @@ from odfa11y.outcomes import StageName, StageStatus
 if TYPE_CHECKING:
     from odfa11y.pipeline.record import RunRecord, StageResult
 
+    from .redact import Redactor
+
 NOT_VALIDATION = (
     "veraPDF did not run: the built-in PDF checks are a smoke test, not PDF/UA validation."
 )
 
 
-def render_review(record: RunRecord) -> str:
+def render_review(record: RunRecord, *, redactor: Redactor | None = None) -> str:
     """Render REVIEW.md without interpreting serialized dictionary keys.
 
     Returns
@@ -36,7 +38,10 @@ def render_review(record: RunRecord) -> str:
         "| --- | --- | --- |",
     ]
     for stage in record.stages:
-        detail = _cell(stage.reason or _summary(stage))
+        detail = stage.reason or _summary(stage)
+        if redactor is not None:
+            detail = redactor.text(detail)
+        detail = _cell(detail)
         lines.append(f"| `{stage.name}` | {stage.status} | {detail} |")
     lines += ["", f"Assurance profile: `{record.profile.name}`"]
     lines += ["", "## Machine-established facts", ""]
