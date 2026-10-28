@@ -1,0 +1,15 @@
+{
+  "documents": {
+    "lists-negative.odt": {
+      "schema_violations": 6,
+      "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
+      "source_sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315"
+    },
+    "lists-positive.odt": {
+      "schema_violations": 11,
+      "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
+      "source_sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75"
+    }
+  },
+  "producer": "26.8.1.1"
+}

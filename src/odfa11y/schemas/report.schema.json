@@ -842,6 +842,18 @@
           "description": "Structural headings in current reading contexts.",
           "type": "integer"
         },
+        "text.list_continuation_count": {
+          "description": "Resolved list continuation relationships.",
+          "type": "integer"
+        },
+        "text.list_count": {
+          "description": "Lists in established current reading contexts.",
+          "type": "integer"
+        },
+        "text.list_max_level": {
+          "description": "Deepest counter level, resetting at cells and text boxes.",
+          "type": "integer"
+        },
         "text.paragraph_styles": {
           "description": "Paragraph style usage and effective spacing.",
           "items": {
@@ -849,6 +861,10 @@
             "type": "object"
           },
           "type": "array"
+        },
+        "text.simulated_list_count": {
+          "description": "Paragraphs resembling typed list markers; review only.",
+          "type": "integer"
         },
         "text.table_count": {
           "description": "Tables in current reading contexts.",

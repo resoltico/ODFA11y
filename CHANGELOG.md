@@ -4,6 +4,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+- Audit Writer list structure, continuation relationships and typed marker candidates without rewriting content.
+
 ### Breaking
 
 - Call the root application API with `Tools` and `Profile` values; results own effective exit statuses. Use `verify` and profile `source`; paragraph styles appear in `audit` output.

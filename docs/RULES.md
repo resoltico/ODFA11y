@@ -44,6 +44,10 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `LINK001` | Warning | Visible URL or email address is not a hyperlink. | `text.linkify_addresses` |
 | `LINK002` | Warning | Hyperlink text is a raw address. |  |
 | `LINK003` | Error | Hyperlink has no readable purpose. | `link.description` |
+| `LIST001` | Error | List membership or nesting is structurally invalid. |  |
+| `LIST002` | Error | List continuation target is broken, ambiguous or cyclic. |  |
+| `LIST003` | Warning | List counter continuation requires native review. |  |
+| `LIST004` | Warning | Paragraph resembles a manually simulated list. |  |
 | `MATH001` | Error | Native mathematical expression is missing or unsupported. |  |
 | `MATH002` | Error | Formula has no spoken alternative. | `formula.alternative` |
 | `MATH003` | Warning | Formula references external content requiring review. |  |
