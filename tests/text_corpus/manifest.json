@@ -9,6 +9,16 @@
       "schema_violations": 11,
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "source_sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75"
+    },
+    "references-negative.odt": {
+      "schema_violations": 8,
+      "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
+      "source_sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035"
+    },
+    "references-positive.odt": {
+      "schema_violations": 8,
+      "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
+      "source_sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5"
     }
   },
   "producer": "26.8.1.1"

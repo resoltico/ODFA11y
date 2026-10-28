@@ -24,6 +24,24 @@ LIST_STYLE = (
     '<text:list-level-style-number text:level="2" style:num-format="a"/></text:list-style>'
 )
 CASES = {
+    "references-positive": (
+        (
+            '<office:text><text:p><text:bookmark text:name="fruit"/>Fruit destination.</text:p>'
+            '<text:p><text:a xlink:href="#fruit">Visit fruit</text:a> '
+            '<text:note text:id="fruit-note" text:note-class="footnote">'
+            "<text:note-citation>1</text:note-citation><text:note-body>"
+            "<text:p>Fruit grows on trees.</text:p></text:note-body></text:note></text:p>"
+            "</office:text>"
+        ),
+        "",
+    ),
+    "references-negative": (
+        (
+            '<office:text><text:p><text:a xlink:href="#missing">Visit fruit</text:a>'
+            "</text:p></office:text>"
+        ),
+        "",
+    ),
     "lists-positive": (
         (
             '<office:text><text:list text:style-name="FruitList" xml:id="fruit-first">'

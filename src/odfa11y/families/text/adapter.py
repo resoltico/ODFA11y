@@ -41,8 +41,12 @@ REVIEW_ITEMS = (
         "Whether table header cells describe the data relationships correctly.",
     ),
     ReviewItem(
+        ReviewTopic.LISTS,
+        "Whether real lists, nesting and continued counters express the intended grouping.",
+    ),
+    ReviewItem(
         ReviewTopic.LINK_PURPOSE,
-        "Whether each link's purpose is understandable from its text and context.",
+        "Whether link purposes and internal destinations match their wording and context.",
     ),
     ReviewItem(
         ReviewTopic.COLOUR,

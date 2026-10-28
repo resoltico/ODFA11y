@@ -178,6 +178,7 @@ class ReviewTopic(StrEnum):
     LAYERS_AND_ANNOTATIONS = "layers-and-annotations"
     LAYOUT = "layout"
     LINK_PURPOSE = "link-purpose"
+    LISTS = "lists"
     MATHEMATICS = "mathematics"
     PAGE_TITLES = "page-titles"
     PRIVACY_AND_EXECUTION = "privacy-and-execution"
