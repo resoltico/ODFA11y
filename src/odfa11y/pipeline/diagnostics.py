@@ -27,16 +27,19 @@ from odfa11y.pdf import (
     identify_soffice,
     link_descriptions_supported,
 )
+from odfa11y.records import DoctorRecord, Toolchain
 
 from .native import NativeOptions
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from odfa11y.external_tools import ToolIdentity
+
 
 def inspect_tools(
     options: NativeOptions | None = None,
-) -> tuple[dict[str, object], OdfA11yError | None]:
+) -> tuple[DoctorRecord, OdfA11yError | None]:
     """Collect identities and test link-description export, retaining facts if the probe fails.
 
     Missing tool identities are ``None``. Unsupported tool versions still fail identity
@@ -45,31 +48,35 @@ def inspect_tools(
 
     Returns
     -------
-    tuple[dict[str, object], OdfA11yError | None]
+    tuple[DoctorRecord, OdfA11yError | None]
         Dependency and tool facts, plus the link-description probe error if it could not complete.
 
     """
     options = options or NativeOptions()
     if options.on_progress:
         options.on_progress(ProgressEvent(StepName.PROBE_TOOLCHAIN, StepState.RUNNING))
-    info: dict[str, object] = {
-        "odfa11y": __version__,
-        "python": sys.version.split()[0],
-        "platform": platform.platform(),
-        "lxml": etree.__version__,
-        "pypdf": pypdf.__version__,
-        "pypdfium2": pypdfium2.version.PYPDFIUM_INFO.version,
-        "pillow": PIL.__version__,
-        "odf_schemas": list(SUPPORTED_VERSIONS),
-        "LibreOffice": _tool(lambda: identify_soffice(find_soffice(options.soffice)).version),
-        "veraPDF": _tool(lambda: identify("veraPDF", find_verapdf(), ("--version",)).version),
-    }
+    info = DoctorRecord(
+        odfa11y=__version__,
+        python=sys.version.split()[0],
+        platform=platform.platform(),
+        libraries={
+            "lxml": etree.__version__,
+            "pypdf": pypdf.__version__,
+            "pypdfium2": pypdfium2.version.PYPDFIUM_INFO.version,
+            "pillow": PIL.__version__,
+        },
+        schema_versions=tuple(SUPPORTED_VERSIONS),
+        toolchain=Toolchain(
+            libreoffice=_tool(lambda: identify_soffice(find_soffice(options.soffice))),
+            verapdf=_tool(lambda: identify("veraPDF", find_verapdf(), ("--version",))),
+        ),
+    )
     try:
         if options.on_progress:
             options.on_progress(ProgressEvent(StepName.PROBE_CAPABILITIES, StepState.RUNNING))
-        info["pdfua_link_descriptions"] = _link_descriptions(options)
+        info.capabilities["pdfua_link_descriptions"] = _link_descriptions(options)
     except OdfA11yError as exc:
-        info["pdfua_link_descriptions"] = None
+        info.capabilities["pdfua_link_descriptions"] = None
         return info, exc
     return info, None
 
@@ -98,13 +105,13 @@ def _link_descriptions(options: NativeOptions) -> str:
         return "supported" if link_descriptions_supported(probe, settings) else "unsupported"
 
 
-def _tool(probe: Callable[[], str]) -> str | None:
+def _tool(probe: Callable[[], ToolIdentity]) -> ToolIdentity | None:
     """Inspect one tool identity without treating a missing tool as a version.
 
     Returns
     -------
-    str | None
-        The tool version, or None when its executable is missing.
+    ToolIdentity | None
+        The tool identity, or None when its executable is missing.
 
     """
     try:

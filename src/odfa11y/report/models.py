@@ -4,14 +4,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal
 from urllib.parse import quote
+lazy from collections.abc import Mapping
+
+from odfa11y.serialization import JsonProperty, record_dict
 
 from .facts import FactSet
 from .rules import Severity
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from odfa11y.serialization import JsonObject
 
     from .rules import Rule
 
@@ -59,16 +64,16 @@ class Location:
         """The path, followed by the member in parentheses when there is one."""
         return self.path if self.member is None else f"{self.path} ({self.member})"
 
-    def as_dict(self) -> dict[str, str | None]:
-        """Serialize this location into JSON-compatible values.
+    def as_dict(self) -> JsonObject:
+        """Serialize the typed record.
 
         Returns
         -------
-        dict[str, str | None]
-            The logical path and the member, or None without one.
+        JsonObject
+            The published JSON fields.
 
         """
-        return {"path": self.path, "member": self.member}
+        return record_dict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,27 +85,28 @@ class Finding:
     category: str
     message: str
     location: Location | None = None
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Mapping[str, object] = field(default_factory=dict)
     remedy: str | None = None
 
-    def as_dict(self) -> dict[str, Any]:
-        """Serialize this finding into JSON-compatible values.
+    def as_dict(self) -> JsonObject:
+        """Serialize the typed record.
 
         Returns
         -------
-        dict[str, Any]
-            The finding with its severity as a string.
+        JsonObject
+            The published JSON fields.
 
         """
-        return {
-            "rule_id": self.rule_id,
-            "severity": self.severity.value,
-            "category": self.category,
-            "message": self.message,
-            "location": None if self.location is None else self.location.as_dict(),
-            "details": self.details,
-            "remedy": self.remedy,
-        }
+        return record_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class FindingCounts:
+    """Counts of errors, warnings and information findings."""
+
+    errors: int
+    warnings: int
+    info: int
 
 
 @dataclass(slots=True)
@@ -111,7 +117,9 @@ class Report:
     subject: str
     findings: list[Finding] = field(default_factory=list)
     facts: FactSet = field(default_factory=FactSet)
-    sources: tuple[Path, ...] = ()  # physical identity is internal and never serialized
+    sources: tuple[Path, ...] = field(
+        default=(), metadata={"serialize": False}
+    )  # physical identity is internal and never serialized
 
     def add(
         self,
@@ -119,7 +127,7 @@ class Report:
         message: str | None = None,
         *,
         location: Location | None = None,
-        details: dict[str, Any] | None = None,
+        details: Mapping[str, object] | None = None,
     ) -> None:
         """Append a finding for a rule, defaulting the message to the rule title."""
         self.findings.append(
@@ -129,7 +137,7 @@ class Report:
                 category=rule.category.value,
                 message=message or rule.title,
                 location=location,
-                details=details or {},
+                details=record_dict(details) if details else {},
                 remedy=rule.remedy,
             )
         )
@@ -149,30 +157,28 @@ class Report:
         """The number of informational findings."""
         return sum(f.severity is Severity.INFO for f in self.findings)
 
-    @property
+    @JsonProperty
     def passed(self) -> bool:
         """Whether the report contains no errors."""
         return self.error_count == 0
 
-    def as_dict(self) -> dict[str, Any]:
-        """Serialize this report into JSON-compatible values.
+    @JsonProperty
+    def format(self) -> Literal[6]:
+        """The report's published schema version."""
+        return REPORT_FORMAT
+
+    @JsonProperty
+    def summary(self) -> FindingCounts:
+        """Counts for the three registered finding severities."""
+        return FindingCounts(self.error_count, self.warning_count, self.info_count)
+
+    def as_dict(self) -> JsonObject:
+        """Serialize the typed record.
 
         Returns
         -------
-        dict[str, Any]
-            The versioned report record.
+        JsonObject
+            The published JSON fields.
 
         """
-        return {
-            "format": REPORT_FORMAT,
-            "kind": self.kind,
-            "subject": self.subject,
-            "passed": self.passed,
-            "summary": {
-                "errors": self.error_count,
-                "warnings": self.warning_count,
-                "info": self.info_count,
-            },
-            "facts": self.facts.as_dict(),
-            "findings": [f.as_dict() for f in self.findings],
-        }
+        return record_dict(self)

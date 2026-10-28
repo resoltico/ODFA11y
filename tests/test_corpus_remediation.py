@@ -18,6 +18,7 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, Part, validate
+from odfa11y.outcomes import StageStatus
 from odfa11y.remediation import SetMetadata, remediate
 
 from .corpus_manifest import DOCUMENT_IDS, DOCUMENTS, visible_text
@@ -60,7 +61,8 @@ def test_a_plan_is_idempotent_and_keeps_text_and_schema_validity(
     once, twice = tmp_path / f"once{suffix}", tmp_path / f"twice{suffix}"
     first = remediate(document.path, once, _plan(document))
     assert first.changed
-    assert "no new violations" in first.schema_check
+    assert first.schema.status == StageStatus.PASSED
+    assert first.schema.new_count == 0
     assert visible_text(once) == visible_text(document.path)
     second = remediate(once, twice, _plan(document))
     assert not second.changed

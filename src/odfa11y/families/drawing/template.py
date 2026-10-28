@@ -37,7 +37,11 @@ def template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
             f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}",
         ]
         identities = finding.details.get("shape_identities", [])
-        if identities and all(isinstance(identity, str) for identity in identities):
+        if (
+            isinstance(identities, list)
+            and identities
+            and all(isinstance(identity, str) for identity in identities)
+        ):
             lines.append(f"# navigation = {json.dumps(identities)}  # review the complete order")
         else:
             lines.append("# Set native navigation first when shape identities are missing.")

@@ -20,11 +20,11 @@ unsafe destinations/publication failures can prevent evidence publication.
 
 ## run.json
 
-The run record uses format 2; embedded reports use format 5. Published JSON has sorted keys,
+The run record uses format 3; embedded reports use format 6. Published JSON has sorted keys,
 no timestamps and redacted diagnostic paths. Fields include:
 
 - `odfa11y`, `python`, `platform`, `libraries` and locale `environment`.
-- `toolchain`: selected applications/reported versions; text export's
+- `toolchain`: typed `libreoffice`/`verapdf` identities and `capabilities`; text export's
   `pdfua_link_descriptions` capability verdict. Its synthetic probe runs once at first
   export; files are excluded. Inspect-only/adapters without that probe do not measure it.
 - `schemas`: bundled schema SHA-256 values; `export_options`: requested native options.
@@ -38,7 +38,12 @@ no timestamps and redacted diagnostic paths. Fields include:
   with reason, bounded diagnostic details and applicable reports/outcomes.
 - `fonts`: source/candidate PDF fonts and embedding; `human_review`: family checklist.
 - `outputs`: digests of retained stage artifacts, excluding generated `run.json`,
-  `REVIEW.md` and `manifest.json`; `status` and `failed_stage` describe the run.
+  `REVIEW.md` and `manifest.json`; `status`, `failed_stage` and `exit_status` describe the run.
+
+Reports expose registered, typed, namespaced `facts`, not arbitrary metadata. Unknown
+identity fields are explicitly null. Remediation records carry a structured `schema`
+status/version and before/after/new violation counts. Draft 2020-12 contracts ship
+offline in [the package schema resources](../src/odfa11y/schemas).
 
 The manifest separately hashes **every other published file**, including `run.json` and
 `REVIEW.md`. The two inventories avoid hashing a record through its own output digest.

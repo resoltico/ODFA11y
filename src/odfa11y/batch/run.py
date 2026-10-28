@@ -10,6 +10,7 @@ from odfa11y.config import load_config
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
 from odfa11y.external_tools import termination_interrupt
+from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import (
     BatchStatus,
     ExitStatus,
@@ -21,13 +22,12 @@ from odfa11y.outcomes import (
     failure_status,
 )
 from odfa11y.pipeline import PipelineOptions, RunRecord, StageResult, run_pipeline
+from odfa11y.records import DocumentIdentity
 
 from .manifest import load_manifest, preflight
-from .record import BatchRecord
+from .record import BatchItemResult, BatchRecord
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from odfa11y.outcomes import (
         ProgressObserver,
     )
@@ -57,18 +57,7 @@ def run_batch(
     _ = options.assurance  # Validate the profile before effects.
     items = load_manifest(manifest)
     preflight(manifest, output, items)
-    record = BatchRecord(
-        items=[
-            {
-                "id": item.id,
-                "status": BatchStatus.PENDING,
-                "exit_status": None,
-                "failed_stage": None,
-                "evidence": None,
-            }
-            for item in items
-        ]
-    )
+    record = BatchRecord(items=[BatchItemResult(item.id) for item in items])
     output.mkdir(parents=True)
     record.publish(output)
     with termination_interrupt():
@@ -76,10 +65,9 @@ def run_batch(
             _run_items(items, record, output, options, on_progress)
         except KeyboardInterrupt:
             for progress in record.items:
-                if progress["status"] == BatchStatus.RUNNING:
-                    progress.update(
-                        status=BatchStatus.INTERRUPTED, exit_status=ExitStatus.EXECUTION_FAILURE
-                    )
+                if progress.status == BatchStatus.RUNNING:
+                    progress.status = BatchStatus.INTERRUPTED
+                    progress.exit_status = ExitStatus.EXECUTION_FAILURE
                     if on_progress is not None:
                         on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.FAILED))
             record.status = BatchStatus.INTERRUPTED
@@ -97,7 +85,7 @@ def _run_items(
     on_progress: ProgressObserver | None,
 ) -> None:
     for item, progress in zip(items, record.items, strict=True):
-        progress["status"] = BatchStatus.RUNNING
+        progress.status = BatchStatus.RUNNING
         record.publish(output)
         if on_progress is not None:
             on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.RUNNING))
@@ -108,30 +96,26 @@ def _run_items(
                 ProgressEvent(
                     StepName.BATCH_ITEM,
                     StepState.PASSED
-                    if progress["status"] == BatchStatus.COMPLETED
+                    if progress.status == BatchStatus.COMPLETED
                     else StepState.FAILED,
                 )
             )
 
 
 def _advance_item(
-    item: BatchItem, progress: dict[str, Any], target: Path, options: PipelineOptions
+    item: BatchItem, progress: BatchItemResult, target: Path, options: PipelineOptions
 ) -> None:
     try:
         result = _run_item(item, target, options)
     except (OdfA11yError, OSError) as exc:
-        progress.update(
-            status=BatchStatus.FAILED,
-            exit_status=failure_status(exc),
-            failed_stage=StageName.PUBLISH_EVIDENCE,
-        )
+        progress.status = BatchStatus.FAILED
+        progress.exit_status = failure_status(exc)
+        progress.failed_stage = StageName.PUBLISH_EVIDENCE
         return
-    progress.update(
-        status=BatchStatus.COMPLETED if result.passed else BatchStatus.FAILED,
-        exit_status=result.exit_status,
-        failed_stage=result.failed_stage,
-        evidence=item.id,
-    )
+    progress.status = BatchStatus.COMPLETED if result.passed else BatchStatus.FAILED
+    progress.exit_status = result.exit_status
+    progress.failed_stage = result.failed_stage
+    progress.evidence = item.id
 
 
 def _run_item(item: BatchItem, target: Path, options: PipelineOptions) -> RunRecord:
@@ -153,9 +137,9 @@ def _failure(
     exc: OdfA11yError | OSError,
 ) -> RunRecord:
     record = RunRecord(
-        document={"name": item.id, "sha256": None},
+        document=DocumentIdentity(item.id),
         operations=(),
-        policy={},
+        policy=FidelityPolicy(),
         profile=options.assurance,
     )
     reason = str(exc) if isinstance(exc, OdfA11yError) else "Item execution could not complete"
@@ -170,5 +154,5 @@ def _failure(
         "source": item.source.parent,
         "output": target,
     })
-    write_bundle(target, record.as_dict(), {}, redactor)
+    write_bundle(target, record, {}, redactor)
     return record

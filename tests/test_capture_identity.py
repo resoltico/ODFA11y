@@ -102,8 +102,8 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
         ],
     )
     result = run_batch(manifest, tmp_path / "batch", PipelineOptions(profile="inspect"))
-    assert [r["exit_status"] for r in result.items] == [3, 0]
-    assert result.items[0]["failed_stage"] == "identify-source"
+    assert [r.exit_status for r in result.items] == [3, 0]
+    assert result.items[0].failed_stage == "identify-source"
     for name in ["changed", "valid"]:
         assert check_bundle(tmp_path / "batch" / name) == []
     assert not list(tmp_path.glob(".odfa11y-source-*"))

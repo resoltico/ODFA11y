@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import tempfile
 import zipfile
 from pathlib import Path
@@ -152,7 +153,7 @@ def test_report_counts_partition_findings(rule_ids: list[str]) -> None:
         report.add(RULES[rule_id])
     assert report.error_count + report.warning_count + report.info_count == len(rule_ids)
     assert report.passed is (report.error_count == 0)
-    assert report.as_dict()["summary"]["errors"] == report.error_count
+    assert json.loads(json.dumps(report.as_dict()))["summary"]["errors"] == report.error_count
 
 
 FEATURE_FLAGS = st.fixed_dictionaries({

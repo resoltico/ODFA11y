@@ -37,7 +37,7 @@ def test_source_replacement_uses_captured_bytes(
     target = tmp_path / "bundle"
     result = run_pipeline(source, [], FidelityPolicy(), target, PipelineOptions(profile="inspect"))
     assert result.passed
-    assert result.document["sha256"] == digest
+    assert result.document.sha256 == digest
     assert (target / "remediated.odt").read_bytes() == original
     assert b"Body paragraph" in PackageStorage(target / "remediated.odt").read("content.xml")
     assert not list(tmp_path.glob(".odfa11y-source-*"))

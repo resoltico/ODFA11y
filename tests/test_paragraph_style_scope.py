@@ -16,6 +16,7 @@ from odfa11y.errors import RemediationError
 from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.families.text.styles import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
+from odfa11y.outcomes import StageStatus
 from odfa11y.remediation import remediate
 from odfa11y.report import FactKeys
 
@@ -217,7 +218,8 @@ def test_inherited_page_number_reset_protects_empty_paragraphs(
         reloaded.tree(part), f"//style:paragraph-properties[@style:page-number='{number}']"
     )
     assert len(declarations) == 1
-    assert result.schema_check.startswith("no new violations")
+    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.new_count == 0
 
 
 @pytest.mark.parametrize("missing", [False, True])

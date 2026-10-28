@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -11,13 +12,15 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
+from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import StageName, StageStatus
 from odfa11y.pipeline import RunRecord, StageResult
 from odfa11y.pipeline.profiles import PROFILES
+from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report, rules
 
 from .fixtures import make_minimal_odt
-from .test_evidence import record
+from .record_fixtures import record
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -73,7 +76,7 @@ def test_production_warning_failure_preserves_findings_and_schema(
     output = capsys.readouterr()
     stored = json.loads((evidence / "run.json").read_text(encoding="utf-8"))
     assert stored["failed_stage"] == "audit-remediated"
-    assert stored["format"] == 2
+    assert stored["format"] == 3
     if output_format == "json":
         assert json.loads(output.out)["failed_stage"] == "audit-remediated"
     else:
@@ -113,8 +116,8 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
 @pytest.mark.parametrize("failure", ["validation failed", "executable unavailable"])
 def test_review_does_not_claim_a_failed_validator_was_not_run(failure: str) -> None:
     data = record(status="failed", failed_stage="validate-pdf")
-    data["profile"] = {"name": "production"}
-    data["stages"][1].update(status="failed", reason=failure)
+    data.profile = PROFILES["production"]
+    data.stages[1] = replace(data.stages[1], status=StageStatus.FAILED, reason=failure)
     text = render_review(data)
     assert "Automated gates: **FAILED**" in text
     assert "Assurance profile: `production`" in text
@@ -128,7 +131,12 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
 ) -> None:
     source = Report(kind="odf", subject="source.odt")
     source.add(rules.TXT030)
-    data = RunRecord(document={}, operations=(), policy={}, profile=PROFILES["inspect"])
+    data = RunRecord(
+        document=DocumentIdentity("doc.odt"),
+        operations=(),
+        policy=FidelityPolicy(),
+        profile=PROFILES["inspect"],
+    )
     data.stages = [
         StageResult(StageName.AUDIT_SOURCE, StageStatus.PASSED, report=source, gate=False),
         StageResult(

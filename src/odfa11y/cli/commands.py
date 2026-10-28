@@ -125,7 +125,11 @@ def _remediate(args: argparse.Namespace) -> int:
         )
     if not result.outcomes:
         print("- No operations were configured. Enable reviewed decisions in your TOML plan.")  # noqa: T201  CLI output is the command interface.
-    print(f"Schema: {terminal_text(result.schema_check)}")  # noqa: T201  CLI output is the command interface.
+    print(  # noqa: T201  CLI output is the command interface.
+        f"Schema: {terminal_text(result.schema.status)}; ODF {result.schema.version}; "
+        f"{result.schema.before_count} before, {result.schema.after_count} after, "
+        f"{result.schema.new_count} new"
+    )
     return 0
 
 
@@ -178,15 +182,25 @@ def _doctor(args: argparse.Namespace) -> int:
         if args.format == "text" and (hint := error_hint(args, error)):
             print(hint, file=sys.stderr)  # noqa: T201  CLI output is the command interface.
     if args.format == "json":
-        print(json.dumps(info, indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
+        print(json.dumps(info.as_dict(), indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
     else:
-        for key, value in info.items():
-            missing = (
-                "not tested (probe unavailable or failed)"
-                if key == "pdfua_link_descriptions"
-                else "not found"
-            )
-            print(f"{key}: {terminal_text(value) if value is not None else missing}")  # noqa: T201  CLI output is the command interface.
+        values = {
+            "odfa11y": info.odfa11y,
+            "python": info.python,
+            "platform": info.platform,
+            **info.libraries,
+            "odf_schemas": ", ".join(info.schema_versions),
+            "LibreOffice": info.toolchain.libreoffice.version
+            if info.toolchain.libreoffice
+            else "not found",
+            "veraPDF": info.toolchain.verapdf.version if info.toolchain.verapdf else "not found",
+            **{
+                key: value if value is not None else "not tested (probe unavailable or failed)"
+                for key, value in info.capabilities.items()
+            },
+        }
+        for key, value in values.items():
+            print(f"{key}: {terminal_text(value)}")  # noqa: T201  CLI output is the command interface.
         print(  # noqa: T201  CLI output is the command interface.
             "Scope: dependency identities and a link-description export probe; "
             "no conformance verdict."

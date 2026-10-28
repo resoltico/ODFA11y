@@ -175,7 +175,9 @@ def test_one_mapped_link_among_many_annotations_is_not_a_pass(tmp_path: Path) ->
     report = audit(tmp_path, writer)
     finding = next(f for f in report.findings if f.rule_id == "PDF016")
     assert finding.details["count"] == 19
-    assert len(finding.details["annotations"]) == 19
+    annotations = finding.details["annotations"]
+    assert isinstance(annotations, list)
+    assert len(annotations) == 19
 
 
 def test_a_link_element_without_any_annotation_reference_is_reported(tmp_path: Path) -> None:

@@ -135,9 +135,9 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     assert record.exit_status == 0
     assert check_bundle(tmp_path / "out") == []
     run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert run["toolchain"]["LibreOffice"]["version"] != "unknown"
-    assert run["toolchain"]["veraPDF"]["name"] == "veraPDF"
-    assert run["format"] == 2
+    assert run["toolchain"]["libreoffice"]["version"] != "unknown"
+    assert run["toolchain"]["verapdf"]["name"] == "veraPDF"
+    assert run["format"] == 3
     assert run["profile"]["name"] == "production"
     assert run["document"]["kind"] == "text"
     assert run["document"]["layout"] == "package"
@@ -207,7 +207,16 @@ def test_an_unreadable_source_still_yields_an_evidence_bundle(tmp_path: Path) ->
     assert statuses(record)["identify-source"] == "failed"
     assert record.exit_status == 3
     run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert run["document"] == {"name": "absent.odt", "sha256": None}
+    assert run["document"] == {
+        "name": "absent.odt",
+        "sha256": None,
+        "kind": None,
+        "media_type": None,
+        "layout": None,
+        "family": None,
+        "adapter": None,
+        "odf_version": None,
+    }
     assert (run["status"], run["failed_stage"]) == ("failed", "identify-source")
     assert check_bundle(tmp_path / "out") == []
     assert "absent.odt" in (tmp_path / "out" / "REVIEW.md").read_text()

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -31,7 +31,7 @@ class Outcome:
     message: str
     key: str | None = None
     count: int = 0
-    removed_blocks: int = 0  # empty body blocks this outcome deleted; the snapshot may shrink by it
+    removed_blocks: int = field(default=0, metadata={"serialize": False})
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize this outcome into JSON-compatible values.
