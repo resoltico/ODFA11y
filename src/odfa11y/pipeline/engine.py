@@ -59,7 +59,7 @@ class _Run:
     adapter: FamilyAdapter = GENERIC
     executable: str | None = None
 
-    # Stage methods raise OdfA11yError or OSError on execution failure; run_pipeline turns
+    # Stage methods raise OdfA11yError or OSError on execution failure; execute turns
     # either into a failed stage, so no failure can prevent the evidence from being written.
 
     @property

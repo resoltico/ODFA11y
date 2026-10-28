@@ -1,6 +1,6 @@
 # Roadmap to v1.0.0
 
-ODFA11y helps people inspect sources, make explicit decisions and verify publications.
+ODFA11y helps people audit sources, make explicit decisions and verify publications.
 Keep source validity, semantics, native capability, PDF machine checks, fidelity and human
 acceptance separate. Prefer preservation and explicit refusal over guessing. Replace a
 mechanism when evidence supports a simpler complete solution.
