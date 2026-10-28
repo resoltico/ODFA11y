@@ -1,0 +1,61 @@
+[
+  {
+    "repo": "actions/checkout",
+    "version": "v7.0.1",
+    "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "url": "https://github.com/actions/checkout/releases/tag/v7.0.1"
+  },
+  {
+    "repo": "astral-sh/setup-uv",
+    "version": "v10.3.2",
+    "sha": "07a047e608db84b3d8c06cd9a7c7dcc9c355c18e",
+    "url": "https://github.com/astral-sh/setup-uv/releases/tag/v10.3.2"
+  },
+  {
+    "repo": "actions/cache",
+    "version": "v6.1.0",
+    "sha": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    "url": "https://github.com/actions/cache/releases/tag/v6.1.0"
+  },
+  {
+    "repo": "actions/upload-artifact",
+    "version": "v7.0.2",
+    "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+    "url": "https://github.com/actions/upload-artifact/releases/tag/v7.0.2"
+  },
+  {
+    "repo": "actions/download-artifact",
+    "version": "v8.0.2",
+    "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+    "url": "https://github.com/actions/download-artifact/releases/tag/v8.0.2"
+  },
+  {
+    "repo": "actions/attest-build-provenance",
+    "version": "v4.2.2",
+    "sha": "4d101475d8b20a2381f78447822ac1eab6504dd8",
+    "url": "https://github.com/actions/attest-build-provenance/releases/tag/v4.2.2"
+  },
+  {
+    "repo": "rhysd/actionlint",
+    "version": "v1.7.12",
+    "sha": "914e7df21a07ef503a81201c76d2b11c789d3fca",
+    "url": "https://github.com/rhysd/actionlint/releases/tag/v1.7.12"
+  },
+  {
+    "repo": "gitleaks/gitleaks",
+    "version": "v8.30.1",
+    "sha": "83d9cd684c87d95d656c1458ef04895a7f1cbd8e",
+    "url": "https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1"
+  },
+  {
+    "repo": "veraPDF/veraPDF-library",
+    "version": "v1.30.3",
+    "sha": "df51e09dece1d6c11c360edd3b8b0635ef966c47",
+    "url": "https://github.com/veraPDF/veraPDF-library/releases/tag/v1.30.3"
+  },
+  {
+    "repo": "actions/setup-go",
+    "version": "v7.0.0",
+    "sha": "b7ad1dad31e06c5925ef5d2fc7ad053ef454303e"
+  }
+]
