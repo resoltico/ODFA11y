@@ -3,11 +3,10 @@
 
 from __future__ import annotations
 
-import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from odfa11y.errors import PlanError
+from odfa11y.decisions import validate_answer
 
 MAX_CHANNEL_VALUE = 255
 PAGINATION_MODES = ("same", "may-change")
@@ -25,37 +24,50 @@ class FidelityPolicy:
     This comparison does not establish logical reading order or accessibility.
     """
 
-    pagination: str = "same"
-    raster_tolerance: float = 0.15
-    ink_threshold: int = 200
-    dpi: int = 72
+    pagination: str = field(
+        default="same",
+        metadata={
+            "schema": {
+                "enum": list(PAGINATION_MODES),
+                "description": "Require fixed pagination or allow page-layout changes.",
+            },
+            "error": "must be one of " + ", ".join(PAGINATION_MODES),
+        },
+    )
+    raster_tolerance: float = field(
+        default=0.15,
+        metadata={
+            "schema": {"minimum": 0, "description": "Largest permitted changed-pixel ratio."},
+            "error": "must be a finite non-negative number",
+        },
+    )
+    ink_threshold: int = field(
+        default=200,
+        metadata={
+            "schema": {
+                "minimum": 0,
+                "maximum": MAX_CHANNEL_VALUE,
+                "description": "Luminance below which a pixel is ink.",
+            },
+            "error": f"must be an integer 0-{MAX_CHANNEL_VALUE}",
+        },
+    )
+    dpi: int = field(
+        default=72,
+        metadata={
+            "schema": {"minimum": 1, "description": "Raster comparison resolution."},
+            "error": "must be a positive integer",
+        },
+    )
 
     def __post_init__(self) -> None:
-        """Validate policy before any comparison work.
+        """Validate direct callers through the same declarative contract as plan parsing.
 
-        Raises
-        ------
-        PlanError
-            A field has an unsupported type, range or nonfinite value.
+        Unsupported fields raise PlanError from the shared answer validator.
 
         """
-        if self.pagination not in PAGINATION_MODES:
-            msg = f"fidelity.pagination must be one of {', '.join(PAGINATION_MODES)}"
-            raise PlanError(msg)
-        tolerance = self.raster_tolerance
-        try:
-            finite = isinstance(tolerance, (int, float)) and math.isfinite(tolerance)
-        except OverflowError:
-            finite = False
-        if isinstance(tolerance, bool) or not finite or tolerance < 0:
-            msg = "fidelity.raster_tolerance must be a finite non-negative number"
-            raise PlanError(msg)
-        if type(self.ink_threshold) is not int or not 0 <= self.ink_threshold <= MAX_CHANNEL_VALUE:
-            msg = "fidelity.ink_threshold must be an integer 0-255"
-            raise PlanError(msg)
-        if type(self.dpi) is not int or self.dpi < 1:
-            msg = "fidelity.dpi must be a positive integer"
-            raise PlanError(msg)
+        validate_answer(self, "fidelity")
+        object.__setattr__(self, "raster_tolerance", float(self.raster_tolerance))
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize the policy.

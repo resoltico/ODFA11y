@@ -150,15 +150,27 @@
       "additionalProperties": false,
       "properties": {
         "dpi": {
+          "description": "Raster comparison resolution.",
+          "minimum": 1,
           "type": "integer"
         },
         "ink_threshold": {
+          "description": "Luminance below which a pixel is ink.",
+          "maximum": 255,
+          "minimum": 0,
           "type": "integer"
         },
         "pagination": {
+          "description": "Require fixed pagination or allow page-layout changes.",
+          "enum": [
+            "same",
+            "may-change"
+          ],
           "type": "string"
         },
         "raster_tolerance": {
+          "description": "Largest permitted changed-pixel ratio.",
+          "minimum": 0,
           "type": "number"
         }
       },

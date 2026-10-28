@@ -1,0 +1,38 @@
+[
+  {
+    "failing": false,
+    "dry_run": false,
+    "observed_status": 0,
+    "published": true,
+    "source_unchanged": true,
+    "result_available": true,
+    "adopted_status": 0
+  },
+  {
+    "failing": false,
+    "dry_run": true,
+    "observed_status": 0,
+    "published": false,
+    "source_unchanged": true,
+    "result_available": true,
+    "adopted_status": 0
+  },
+  {
+    "failing": true,
+    "dry_run": false,
+    "observed_status": 3,
+    "published": false,
+    "source_unchanged": true,
+    "result_available": false,
+    "adopted_status": 2
+  },
+  {
+    "failing": true,
+    "dry_run": true,
+    "observed_status": 3,
+    "published": false,
+    "source_unchanged": true,
+    "result_available": false,
+    "adopted_status": 2
+  }
+]

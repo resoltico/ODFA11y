@@ -83,6 +83,8 @@ def _dataclass_dict(value: DataclassInstance) -> JsonObject:
             item = getattr(value, field.name)
             if field.metadata.get("basename") and item is not None:
                 item = item.name
+            if attribute := field.metadata.get("attribute"):
+                item = getattr(item, attribute)
             result[field.metadata.get("json_name", field.name)] = encode(item)
     for name, descriptor in vars(type(value)).items():
         if isinstance(descriptor, JsonProperty):
@@ -172,6 +174,7 @@ def _class_schema(
         field.metadata.get("json_name", field.name): schema_for(
             hints[field.name], namespace=namespace, overrides=overrides
         )
+        | field.metadata.get("schema", {})
         for field in dataclasses.fields(value_type)
         if field.metadata.get("serialize", True)
     }
