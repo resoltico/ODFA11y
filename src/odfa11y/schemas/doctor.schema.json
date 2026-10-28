@@ -3,19 +3,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
-    "capabilities": {
-      "additionalProperties": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ]
-      },
-      "type": "object"
-    },
     "format": {
       "enum": [
         1
@@ -46,17 +33,81 @@
       "additionalProperties": false,
       "properties": {
         "capabilities": {
-          "additionalProperties": {
-            "anyOf": [
-              {
-                "type": "string"
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "family": {
+                "enum": [
+                  "text",
+                  "spreadsheet",
+                  "presentation",
+                  "drawing",
+                  "formula",
+                  "chart",
+                  "image",
+                  "database"
+                ]
               },
-              {
-                "type": "null"
+              "id": {
+                "enum": [
+                  "link-descriptions",
+                  "decorative-graphic-role",
+                  "writer-header-columns",
+                  "math-tagging",
+                  "calc-pdfua"
+                ]
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "enum": [
+                  "supported",
+                  "unsupported",
+                  "not-tested"
+                ]
+              },
+              "tool": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "version"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
-            ]
+            },
+            "required": [
+              "id",
+              "family",
+              "status",
+              "tool",
+              "reason"
+            ],
+            "type": "object"
           },
-          "type": "object"
+          "type": "array"
         },
         "libreoffice": {
           "anyOf": [
@@ -120,7 +171,6 @@
     "libraries",
     "schema_versions",
     "toolchain",
-    "capabilities",
     "format"
   ],
   "type": "object"

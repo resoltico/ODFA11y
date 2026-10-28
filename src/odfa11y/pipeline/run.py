@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import tempfile
 from contextlib import ExitStack
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,8 +13,8 @@ from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
-from odfa11y.native.export import ExportSettings, export_pdfua, find_soffice, identify_soffice
-from odfa11y.native.link_capability import link_descriptions_supported
+from odfa11y.native.export import export_pdfua, find_soffice, identify_soffice
+from odfa11y.native.probes import ProbeCache
 from odfa11y.odf import OdfDocument, Use, declared_version
 from odfa11y.outcomes import (
     PIPELINE_STAGES,
@@ -53,6 +53,7 @@ class _Run:
     options: PipelineOptions
     lifetime: ExitStack
     rebind: bool = False
+    probe_cache: ProbeCache = field(default_factory=ProbeCache)
     captured: Path | None = None
     adapter: FamilyAdapter = GENERIC
     executable: str | None = None
@@ -221,21 +222,19 @@ class _Run:
         if self.executable is None:
             self.executable = find_soffice(self.options.soffice)
             self.record.toolchain.libreoffice = identify_soffice(self.executable)
-            with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
-                probe = self.adapter.link_probe(Path(scratch))
-                if probe is not None:
-                    supported = link_descriptions_supported(
-                        probe,
-                        ExportSettings(
-                            self.adapter.pdf_filter,
-                            self.executable,
-                            self.options.timeout,
-                            self.work / "profile",
-                        ),
-                    )
-                    self.record.toolchain.capabilities["pdfua_link_descriptions"] = (
-                        "supported" if supported else "unsupported"
-                    )
+            for probe in self.adapter.probes:
+                if not probe.relevant(self.adapter.family, self.plan.decisions):
+                    continue
+                execution = self.probe_cache.run(
+                    probe,
+                    self.record.toolchain.libreoffice,
+                    replace(settings, soffice=self.executable),
+                    verapdf_path=self.options.verapdf_path,
+                    observer=self.options.on_progress,
+                )
+                self.record.toolchain.capabilities += (execution.result,)
+                if execution.error is not None:
+                    raise execution.error
         export_pdfua(
             document,
             self.work / pdf_name,
@@ -251,6 +250,7 @@ def run_pipeline(
     options: PipelineOptions | None = None,
     *,
     rebind: bool = False,
+    probe_cache: ProbeCache | None = None,
 ) -> RunRecord:
     """Identify, audit, remediate, export, validate and compare, then publish evidence.
 
@@ -283,7 +283,16 @@ def run_pipeline(
     )
     with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
         work = Path(scratch)
-        run = _Run(source, work, plan, record, options, lifetime, rebind=rebind)
+        run = _Run(
+            source,
+            work,
+            plan,
+            record,
+            options,
+            lifetime,
+            rebind=rebind,
+            probe_cache=probe_cache or ProbeCache(),
+        )
         steps: dict[StageName, Callable[[], StageResult]] = {
             StageName.IDENTIFY_SOURCE: run.identify_source,
             StageName.AUDIT_SOURCE: run.audit_source,

@@ -202,8 +202,8 @@ def _doctor(args: argparse.Namespace) -> int:
             else "not found",
             "veraPDF": info.toolchain.verapdf.version if info.toolchain.verapdf else "not found",
             **{
-                key: value if value is not None else "not tested (probe unavailable or failed)"
-                for key, value in info.capabilities.items()
+                f"{result.family.value}.{result.id.value}": result.status.value
+                for result in info.toolchain.capabilities
             },
         }
         for key, value in values.items():

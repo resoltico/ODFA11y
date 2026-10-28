@@ -10,7 +10,9 @@ from pathlib import Path
 from odfa11y.adapter import Outcome, ReviewItem, Status
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
+from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeId
 from odfa11y.native.process import ToolIdentity
+from odfa11y.odf import Family
 from odfa11y.outcomes import (
     BatchStatus,
     ExitStatus,
@@ -49,6 +51,10 @@ TYPE_NAMESPACE = {
         BatchItemResult,
         BatchRecord,
         ToolIdentity,
+        CapabilityResult,
+        CapabilityStatus,
+        ProbeId,
+        Family,
         FidelityPolicy,
         BatchStatus,
         ExitStatus,

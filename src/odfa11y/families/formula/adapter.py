@@ -12,6 +12,7 @@ from odfa11y.outcomes import ReviewTopic
 from .audit import audit_formula
 from .decisions import DECISION_KINDS, operations
 from .expression import language, set_language, snapshot
+from .probes import PROBES
 
 
 class FormulaAdapter(FamilyAdapter):
@@ -23,6 +24,7 @@ class FormulaAdapter(FamilyAdapter):
     default_language = staticmethod(language)
     set_default_language = staticmethod(set_language)
     decision_kinds = DECISION_KINDS
+    probes = PROBES
     operations = staticmethod(operations)
     review_items = (
         ReviewItem(

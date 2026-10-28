@@ -114,7 +114,7 @@ def test_unused_dependencies_are_rejected(architecture_copy: Path) -> None:
     "module",
     [
         "odfa11y.pdf.fidelity",
-        "odfa11y.native.link_capability",
+        "odfa11y.native.probes",
         "odfa11y.content",
         "odfa11y.families.text.styles",
         "odfa11y.pipeline",

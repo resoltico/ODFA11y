@@ -14,6 +14,7 @@ from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
 from odfa11y.evidence import check_bundle
+from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
@@ -21,6 +22,7 @@ from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import register, tagged_writer
+from .probe_fixtures import conclusive_probe
 from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
@@ -110,7 +112,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
         "identify_soffice",
         lambda _: ToolIdentity("LibreOffice", "26.8.0.3"),
     )
-    monkeypatch.setattr(runner, "link_descriptions_supported", lambda *_args: True)
+    monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
     monkeypatch.setattr(runner, "export_pdfua", export)
     result = run_batch(manifest, tmp_path / "out", PipelineOptions())
     assert [item.exit_status for item in result.items] == [2, 0]

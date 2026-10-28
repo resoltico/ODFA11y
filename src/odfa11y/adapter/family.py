@@ -12,9 +12,9 @@ lazy from odfa11y.outcomes import ReviewTopic
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-    from pathlib import Path
 
     from odfa11y.decisions import Decision, DecisionKind
+    from odfa11y.native.probes import CapabilityProbe
     from odfa11y.odf import Family, OdfDocument
     from odfa11y.report import Report
 
@@ -53,6 +53,7 @@ class FamilyAdapter(ABC):
     review_items: tuple[ReviewItem, ...] = ()
     decision_kinds: tuple[DecisionKind, ...] = ()
     pdf_filter: str | None = None
+    probes: tuple[CapabilityProbe, ...] = ()
 
     @abstractmethod
     def audit(self, document: OdfDocument, report: Report) -> None:
@@ -145,19 +146,6 @@ class FamilyAdapter(ABC):
         kind = document.kind.name if document.kind is not None else "unrecognised"
         msg = f"A style report is not defined for {kind} documents."
         raise UnsupportedKindError(msg)
-
-    @staticmethod
-    def link_probe(directory: Path) -> Path | None:
-        """Prepare a link capability fixture when this family declares one.
-
-        Returns
-        -------
-        Path | None
-            The probe input, or None when no link probe is declared.
-
-        """
-        del directory
-        return None
 
     @staticmethod
     def preflight(document: OdfDocument, operations: Sequence[Operation]) -> None:
