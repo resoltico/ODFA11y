@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -130,3 +131,24 @@ def test_a_location_matches_whatever_separators_the_text_uses(tmp_path: Path) ->
     backslashed = posix.replace("/", "\\")
     for spelling in (posix, backslashed):
         assert redactor.record({"k": f"{spelling}/x.pdf"})["k"] == "<run>/x.pdf"
+
+
+@pytest.mark.parametrize(
+    "private_path",
+    [
+        r"C:\Users\zz-private-person-zz\Documents\no-such-soffice",
+        r"\\server\zz-private-person-zz\Documents\no-such-soffice",
+    ],
+)
+def test_review_redacts_paths_before_markdown_escaping(tmp_path: Path, private_path: str) -> None:
+    failed = record(status="failed", failed_stage="export-source")
+    failed.stages[-1] = replace(
+        failed.stages[-1], reason=f"Executable not found: {private_path} | failed"
+    )
+    target = tmp_path / "evidence"
+    write_bundle(target, failed, {}, Redactor(()))
+    review = (target / "REVIEW.md").read_text()
+    assert "zz-private-person-zz" not in review
+    assert "<path>/no-such-soffice" in review
+    assert r"\| failed" in review
+    assert check_bundle(target) == []

@@ -90,7 +90,9 @@ def write_bundle(
             json.dumps(safe_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
-        (staging / "REVIEW.md").write_text(redactor.text(render_review(record)), encoding="utf-8")
+        (staging / "REVIEW.md").write_text(
+            redactor.text(render_review(record, redactor=redactor)), encoding="utf-8"
+        )
         write_manifest(staging)
         if target.exists():
             target.rmdir()

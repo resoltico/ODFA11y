@@ -293,9 +293,7 @@ def capability_reference() -> str:
         A measured capability matrix, without running native tools during generation.
 
     """
-    record = json.loads(
-        (SCHEMA_DIRECTORY.parents[2] / "docs/measurements/doctor.json").read_text()
-    )
+    record = json.loads((SCHEMA_DIRECTORY.parents[2] / "docs/measurements/doctor.json").read_text())
     toolchain = record["toolchain"]
     lines = [
         "# Measured native capabilities",

@@ -18,6 +18,8 @@ Notable changes to this project are documented in this file. The format is based
 - Content checkpoints detect namespace-sensitive XML edits and refresh derived caches. Inspection and execution bind to the same captured bytes.
 - Flat drawing layers count once; graphic style cascades handle absent names. Contributor checks retain complexity and dependency boundaries without file/function size caps.
 
+- Redact Windows tool-failure paths before Markdown escaping so review sheets do not expose local directories.
+
 ## [0.7.0] - 2026-10-16
 
 ### Breaking
