@@ -10,6 +10,7 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
+from odfa11y.audit import audit_odf
 from odfa11y.content import (
     SHAPE_TAGS,
     GraphicAlternative,
@@ -45,7 +46,7 @@ def _body(family: str) -> str:
     )
 
 
-@pytest.mark.parametrize("family", ["presentation", "graphics"])
+@pytest.mark.parametrize("family", ["presentation", "drawing"])
 @pytest.mark.parametrize("make", [make_package, make_flat])
 def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempotent(
     tmp_path: Path, family: str, make: Callable[[Path, str, Variant], Path]
@@ -83,7 +84,7 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
 def test_partial_duplicate_unknown_or_malformed_navigation_is_rejected(
     tmp_path: Path, order: tuple[str, ...]
 ) -> None:
-    doc = OdfDocument.open(make_package(tmp_path, "graphics", Variant(body=_body("graphics"))))
+    doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=_body("drawing"))))
     original = etree.tostring(doc.tree(Part.CONTENT))
     editor = PageEditor(
         {"Overview": PageDecision(title="Must not be written", navigation=order)}, "set_pages"
@@ -94,7 +95,7 @@ def test_partial_duplicate_unknown_or_malformed_navigation_is_rejected(
 
 
 def test_a_duplicate_identity_on_another_page_is_rejected(tmp_path: Path) -> None:
-    doc = OdfDocument.open(make_package(tmp_path, "graphics", Variant(body=_body("graphics"))))
+    doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=_body("drawing"))))
     page = pages(doc)[0]
     second = deepcopy(page)
     second.set(qn("draw", "name"), "Other")
@@ -109,11 +110,11 @@ def test_a_duplicate_identity_on_another_page_is_rejected(tmp_path: Path) -> Non
 
 def test_hyperlink_wrapping_does_not_hide_a_top_level_shape(tmp_path: Path) -> None:
     body = (
-        _body("graphics")
+        _body("drawing")
         .replace("<draw:rect ", '<draw:a xlink:href="https://example.org"><draw:rect ')
         .replace("</draw:rect>", "</draw:rect></draw:a>")
     )
-    doc = OdfDocument.open(make_package(tmp_path, "graphics", Variant(body=body)))
+    doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=body)))
     assert len(page_shapes(pages(doc)[0])) == 2
     incomplete = PageEditor({"Overview": PageDecision(navigation=("title",))}, "set_pages")
     assert incomplete.apply(doc)[0].status is Status.FAILED
@@ -123,8 +124,34 @@ def test_hyperlink_wrapping_does_not_hide_a_top_level_shape(tmp_path: Path) -> N
 def test_protected_snapshot_detects_geometry_identity_and_reference_damage(
     tmp_path: Path, attribute: tuple[str, str]
 ) -> None:
-    doc = OdfDocument.open(make_package(tmp_path, "graphics", Variant(body=_body("graphics"))))
+    doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=_body("drawing"))))
     before = page_snapshot(doc)
     shape = select_elements(doc.tree(Part.CONTENT), "//draw:rect")[0]
     shape.set(qn(*attribute), "changed")
     assert page_snapshot(doc) != before
+
+
+@pytest.mark.parametrize("make", [make_package, make_flat])
+@pytest.mark.parametrize("display", ["always", "none", "printer"])
+def test_hidden_layer_declarations_are_counted_once_across_logical_views(
+    tmp_path: Path, make: Callable[[Path, str, Variant], Path], display: str
+) -> None:
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=_body("drawing"))))
+    layer_set = etree.Element(qn("draw", "layer-set"))
+    pages(document)[0].insert(0, layer_set)
+    etree.SubElement(
+        layer_set,
+        qn("draw", "layer"),
+        {
+            qn("draw", "name"): "Review layer",
+            qn("draw", "display"): display,
+        },
+    )
+    source = document.save(tmp_path / ("layers" + document.storage.source.suffix))
+    assert validate(OdfDocument.open(source)).count == 0
+    findings = [f for f in audit_odf(source).findings if f.rule_id == "DRAW007"]
+    if display == "always":
+        assert findings == []
+    else:
+        assert len(findings) == 1
+        assert findings[0].details == {"hidden_layer_declarations": 1}

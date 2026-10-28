@@ -37,7 +37,7 @@ class MarkTableHeaders(Operation):
 
     entries: Mapping[str, TableHeaders]
     name: ClassVar[str] = "mark_table_headers"
-    family: ClassVar[Family | None] = Family.TEXT
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

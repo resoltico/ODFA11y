@@ -55,12 +55,12 @@ class Operation(ABC):
 
     An operation changes live XML through :meth:`OdfDocument.tree`, reports
     ``APPLIED`` only when it changed something, and ``UNCHANGED`` when its postcondition
-    already held, so applying it twice never accumulates changes. ``family`` names the
-    document family the operation belongs to; None means any document.
+    already held, so applying it twice never accumulates changes. ``families`` names the
+    document families the operation supports; None means any document.
     """
 
     name: ClassVar[str]
-    family: ClassVar[Family | None] = None
+    families: ClassVar[frozenset[Family] | None] = None
 
     @abstractmethod
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

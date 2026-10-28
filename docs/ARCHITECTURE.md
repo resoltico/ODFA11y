@@ -110,8 +110,9 @@ and reported as deprecated by ODF.
 
 ## Document families
 
-A [FamilyAdapter](../src/odfa11y/adapter/family.py) supplies audit and language hooks,
-protected-content snapshots, operation-specific guards, optional whole-plan preflight,
+A [FamilyAdapter](../src/odfa11y/adapter/family.py) requires audit and typed preservation snapshots,
+with explicit methods for optional capabilities and language targets. It supplies
+operation-specific guards, whole-plan preflight,
 decision kinds, typed answer translation and human-review items. It also declares an optional PDF
 filter, style report and link-capability probe. The generic adapter performs common checks
 for an unimplemented kind and reports the absent semantic audit explicitly.
@@ -120,7 +121,7 @@ for an unimplemented kind and reports the absent semantic audit explicitly.
 | --- | --- |
 | `text` | Current reading contexts, headings, logical table headers, graphics, links, addresses, spacing and inert spacers; wording, references, excluded content and unrelated styles remain protected. |
 | `spreadsheet` | Sheet names, graphic decisions and link descriptions; sheet positions, values, formulas, grids and other sheet XML remain protected. |
-| `presentation`, `drawing` | Page descriptions, graphic decisions and explicit complete navigation order; page/shape identity, visible text, geometry, links and payloads remain protected. The drawing adapter serves ODF's `graphics` family. |
+| `pages` (presentation, drawing) | Page descriptions, graphic decisions and explicit complete navigation order; page/shape identity, visible text, geometry, links and payloads remain protected. The drawing adapter serves ODF's `graphics` family. |
 | `formula` | Spoken alternative and root language on packaged native MathML; expression structure, annotations, references and other attributes remain protected. An office-body Formula wrapper is outside this contract. |
 | `chart` | Labels, cached ranges/series and source consistency; its nonvisual alternative uses common document metadata. Chart body data, types, values and references remain protected. |
 | `image` | Graphic identity, supplied alternatives/roles and payload inspection; graphic content, geometry and resource identity remain protected. |
@@ -149,7 +150,7 @@ family-specific branches. Operations addressed to another family are refused.
 ## Operations and preservation
 
 An [Operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass with parameters,
-`apply(document)` and a serialized decision record. It returns per-target `applied`,
+`apply(document)` and a serialized operation record. It returns per-target `applied`,
 `unchanged` or `failed` outcomes. Repeating a supported reviewed decision is idempotent.
 A source-bound TOML plan carries answered decisions and a fidelity policy. Explicit rebind permits a different source digest while target identities and preservation guards still apply.
 

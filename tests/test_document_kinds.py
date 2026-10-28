@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.families import GENERIC, adapter_for
-from odfa11y.odf import KINDS, Family, OdfDocument, validate
+from odfa11y.odf import KINDS, OdfDocument, validate
 from odfa11y.report import FactKeys
 
 from .documents import KIND_SPECS, make_flat, make_package
@@ -43,7 +43,7 @@ SEMANTIC_PREFIXES = {
     "text": "TXT",
     "spreadsheet": "SHEET",
     "presentation": "PRES",
-    "graphics": "DRAW",
+    "drawing": "DRAW",
     "formula": "MATH",
     "chart": "CHART",
     "image": "IMAGE",
@@ -61,7 +61,7 @@ def test_every_kind_audits_without_errors_and_only_its_own_family_has_semantic_r
     family = KIND_SPECS[name].family
     assert report.facts[FactKeys.DOCUMENT_FAMILY] == family
     has_adapter = family in SEMANTIC_PREFIXES
-    expected_adapter = "drawing" if family == "graphics" else family
+    expected_adapter = family
     assert report.facts[FactKeys.DOCUMENT_ADAPTER] == (
         expected_adapter if has_adapter else "generic"
     )
@@ -84,9 +84,7 @@ def test_the_registry_serves_each_implemented_family_and_everything_else_generic
         adapter = adapter_for(kind)
         assert adapter is (adapter_for(kind))
         if kind.family.value in SEMANTIC_PREFIXES:
-            assert adapter.name == (
-                "drawing" if kind.family is Family.GRAPHICS else kind.family.value
-            )
+            assert adapter.name == (kind.family.value)
             assert adapter.family is kind.family
         else:
             assert adapter is GENERIC

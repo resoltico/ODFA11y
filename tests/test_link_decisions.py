@@ -19,7 +19,8 @@ from odfa11y.content import (
 )
 from odfa11y.content.links import link_fingerprint, link_location
 from odfa11y.errors import PlanError
-from odfa11y.families import drawing, image, presentation, spreadsheet, text
+from odfa11y.families import image, spreadsheet, text
+from odfa11y.families import pages as page_family
 from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans import load_plan
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.mark.parametrize("family", ["presentation", "graphics"])
+@pytest.mark.parametrize("family", ["presentation", "drawing"])
 def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
     tmp_path: Path, family: str
 ) -> None:
@@ -53,7 +54,7 @@ def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
     target = select_elements(document.tree(Part.CONTENT), "//draw:rect[@draw:name='Decoration']")[0]
     target.set(qn("draw", "style-name"), "Visual")
     document.save(source)
-    adapter = presentation if family == "presentation" else drawing
+    adapter = page_family
     page = pages(document)[0]
     link = select_elements(document.tree(Part.CONTENT), "//draw:a")[0]
     shape = select_elements(document.tree(Part.CONTENT), "//draw:rect[@draw:name='Diagram']")[0]
@@ -115,7 +116,7 @@ def test_link_identity_encoding_context_and_repeat_refusal(tmp_path: Path) -> No
 def test_family_link_configuration_requires_review_and_reaches_operations(
     tmp_path: Path, family: str
 ) -> None:
-    source = make_package(tmp_path, "graphics" if family == "drawing" else family)
+    source = make_package(tmp_path, family)
     header = plan_header(source)
     config = tmp_path / "links.toml"
     config.write_text(
@@ -129,8 +130,7 @@ def test_family_link_configuration_requires_review_and_reaches_operations(
         (
             text.SetLinkDescriptions,
             spreadsheet.SetLinkDescriptions,
-            presentation.SetLinkDescriptions,
-            drawing.SetLinkDescriptions,
+            page_family.SetLinkDescriptions,
         ),
     )
     assert operation.name == "set_link_descriptions"
@@ -153,7 +153,7 @@ def test_family_link_configuration_requires_review_and_reaches_operations(
 
 @pytest.mark.parametrize("family", ["text", "spreadsheet", "presentation", "drawing", "image"])
 def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: str) -> None:
-    source = make_package(tmp_path, "graphics" if family == "drawing" else family)
+    source = make_package(tmp_path, family)
     header = plan_header(source)
     config = tmp_path / "roles.toml"
     config.write_text(
@@ -171,8 +171,7 @@ def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: s
         (
             text.SetGraphicAlternatives,
             spreadsheet.SetGraphicAlternatives,
-            presentation.SetGraphicAlternatives,
-            drawing.SetGraphicAlternatives,
+            page_family.SetGraphicAlternatives,
             image.SetGraphicAlternatives,
         ),
     )

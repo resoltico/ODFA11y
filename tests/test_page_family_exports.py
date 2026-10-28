@@ -13,7 +13,7 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative, PageDecision
 from odfa11y.evidence import check_bundle
-from odfa11y.families import drawing, presentation
+from odfa11y.families import pages
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from odfa11y.adapter import Operation
 
 CORPUS = Path(__file__).parent / "family_corpus"
-FAMILIES = {"presentation": (".odp", presentation), "drawing": (".odg", drawing)}
+FAMILIES = {"presentation": (".odp", pages), "drawing": (".odg", pages)}
 
 
 def _plan(family: str) -> list[Operation]:
@@ -121,8 +121,8 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     root = tmp_path / "evidence"
     plan = [
         SetMetadata(language="en-US"),
-        drawing.SetPageSemantics({"Fruit overview": PageDecision("Fruit illustration")}),
-        drawing.SetGraphicAlternatives({
+        pages.SetPageSemantics({"Fruit overview": PageDecision("Fruit illustration")}),
+        pages.SetGraphicAlternatives({
             "Fruit illustration": GraphicAlternative(
                 "Fruit illustration", "A red apple and a green pear"
             )

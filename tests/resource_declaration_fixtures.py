@@ -9,7 +9,7 @@ from pathlib import Path
 from lxml import etree
 
 from odfa11y.content import GraphicAlternative, PageDecision
-from odfa11y.families.drawing import SetGraphicAlternatives, SetPageSemantics
+from odfa11y.families.pages import SetGraphicAlternatives, SetPageSemantics
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.remediation import SetMetadata
 

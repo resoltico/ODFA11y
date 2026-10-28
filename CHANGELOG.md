@@ -6,6 +6,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Presentation and drawing share `families.pages`; use `Family.DRAWING` and drawing names. Internal operations declare supported families. Standard ODF media types retain their `graphics` names.
+
 - Family implementations use an abstract contract and typed preservation snapshots; preservation consumes operation outcomes, and generic removed-block accounting is removed.
 
 - Replace configuration/templates with strict source-bound decision plans (`plan`, `--plan`, explicit `--rebind`). Audits expose typed questions; remediation retains structured refusals and publishes only passing candidates. Valid dry runs exit 0 without publication; refused runs exit 2.
@@ -16,6 +18,8 @@ Notable changes to this project are documented in this file. The format is based
 - Python 3.15 or newer is required; development and CI use 3.15.2. Recreate existing environments after upgrading.
 
 ### Fixed
+
+- Count flat drawing layer declarations once across logical views.
 
 - Updated all dependencies from primary sources, including Pillow 13 and patched PDF handling; graphic style cascades exclude absent style names.
 

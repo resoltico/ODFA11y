@@ -248,7 +248,11 @@ def _require_matching_family(
     document: OdfDocument, adapter: FamilyAdapter, operations: Sequence[Operation]
 ) -> None:
     kind = document.kind.name if document.kind is not None else "unrecognised"
-    wrong = sorted({op.name for op in operations if op.family not in {None, adapter.family}})
+    wrong = sorted({
+        op.name
+        for op in operations
+        if op.families is not None and adapter.family not in op.families
+    })
     if wrong:
         msg = (
             f"The plan configures {', '.join(wrong)}, which do not apply to a {kind} document "

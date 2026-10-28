@@ -22,7 +22,7 @@ class SetFormulaAlternative(Operation):
     text: str
     fingerprint: str | None = None
     name: ClassVar[str] = "set_formula_alternative"
-    family: ClassVar[Family | None] = Family.FORMULA
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.FORMULA})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

@@ -147,7 +147,7 @@ class SetObjectDescriptions(Operation):
 
     entries: Mapping[str, DatabaseDescription]
     name: ClassVar[str] = "set_object_descriptions"
-    family: ClassVar[Family | None] = Family.DATABASE
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.DATABASE})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

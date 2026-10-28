@@ -45,7 +45,7 @@ class NormalizeSpacing(Operation):
     exact_reference: bool = False
     include_headings: bool = False
     name: ClassVar[str] = "normalize_spacing"
-    family: ClassVar[Family | None] = Family.TEXT
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

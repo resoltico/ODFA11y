@@ -24,7 +24,7 @@ class SetGraphicAlternatives(Operation):
 
     entries: Mapping[str, GraphicAlternative]
     name: ClassVar[str] = "set_graphic_alternatives"
-    family: ClassVar[Family | None] = Family.IMAGE
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.IMAGE})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
