@@ -12,6 +12,7 @@ from odfa11y.outcomes import ReviewTopic
 from .audit import audit_spreadsheet
 from .decisions import DECISION_KINDS, operations
 from .language import default_language, set_default_language
+from .probes import PROBES
 from .snapshot import sheet_snapshot, sheets_preserved
 
 REVIEW_ITEMS = (
@@ -53,6 +54,7 @@ class SpreadsheetAdapter(FamilyAdapter):
     default_language = staticmethod(default_language)
     set_default_language = staticmethod(set_default_language)
     decision_kinds = DECISION_KINDS
+    probes = PROBES
     operations = staticmethod(operations)
     review_items = REVIEW_ITEMS
     pdf_filter = "calc_pdf_Export"

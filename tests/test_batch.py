@@ -24,6 +24,7 @@ from .fixtures import make_minimal_odt
 from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
+    from odfa11y.native.probes import ProbeCache
     from odfa11y.pipeline import RunRecord
     from odfa11y.plans import Plan
 
@@ -182,11 +183,12 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
         options: PipelineOptions | None = None,
         *,
         rebind: bool = False,
+        probe_cache: ProbeCache | None = None,
     ) -> RunRecord:
         if str(output_dir).endswith("broken"):
             msg = "PRIVATE /private/host/path"
             raise OSError(msg)
-        return original(source, plan, output_dir, options, rebind=rebind)
+        return original(source, plan, output_dir, options, rebind=rebind, probe_cache=probe_cache)
 
     monkeypatch.setattr(runner, "run_pipeline", failing_pipeline)
     record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))

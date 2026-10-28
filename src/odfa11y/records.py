@@ -10,6 +10,7 @@ from odfa11y.serialization import record_dict
 lazy from odfa11y.outcomes import StageStatus
 
 if TYPE_CHECKING:
+    from odfa11y.native.probes import CapabilityResult
     from odfa11y.native.process import ToolIdentity
     from odfa11y.serialization import JsonObject
 
@@ -34,7 +35,7 @@ class Toolchain:
 
     libreoffice: ToolIdentity | None = None
     verapdf: ToolIdentity | None = None
-    capabilities: dict[str, str | None] = field(default_factory=dict)
+    capabilities: tuple[CapabilityResult, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,7 +71,6 @@ class DoctorRecord:
     libraries: dict[str, str]
     schema_versions: tuple[str, ...]
     toolchain: Toolchain
-    capabilities: dict[str, str | None] = field(default_factory=dict)
     format: Literal[1] = field(default=1, init=False)
 
     def as_dict(self) -> JsonObject:

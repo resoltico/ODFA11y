@@ -11,12 +11,14 @@ import pytest
 
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
+from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import tagged_writer
+from .probe_fixtures import conclusive_probe
 from .reviewed_plans import plan_header, reviewed_plan
 from .test_batch import manifest_file
 
@@ -32,7 +34,7 @@ def successful_exports(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         runner, "identify_soffice", lambda _path: ToolIdentity("LibreOffice", "26.8.0.3")
     )
-    monkeypatch.setattr(runner, "link_descriptions_supported", lambda *_args: True)
+    monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
 
     def export(_source: Path, destination: Path, _settings: object) -> Path:
         tagged_writer(["H1"]).write(destination)
