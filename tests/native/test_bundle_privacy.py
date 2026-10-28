@@ -1,0 +1,170 @@
+# SPDX-License-Identifier: MPL-2.0
+"""Diagnostic evidence redacts local directories on successful and failed runs."""
+
+from __future__ import annotations
+
+import re
+import stat
+import sys
+from typing import TYPE_CHECKING
+
+import pytest
+from lxml import etree
+
+from odfa11y.content import GraphicAlternative
+from odfa11y.evidence import check_bundle
+from odfa11y.evidence.redact import ABSOLUTE_PATH
+from odfa11y.families.text import SetGraphicAlternatives
+from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
+from odfa11y.remediation import SetMetadata
+from odfa11y.tools import Tools
+from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.writer import make_minimal_odt
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+SENTINEL = "zz-private-person-zz"
+DIAGNOSTIC_NAMES = {"run.json", "REVIEW.md", "verapdf.xml", "manifest.json"}
+posix_only = pytest.mark.skipif(sys.platform == "win32", reason="uses shell-script stand-ins")
+
+
+def assert_path_free(bundle: Path, tmp_path: Path) -> None:
+    """Fail if a generated diagnostic mentions a local path or sentinel directory."""
+    assert check_bundle(bundle) == []
+    for path in bundle.rglob("*"):
+        if path.name not in DIAGNOSTIC_NAMES:
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert SENTINEL not in text, path.name
+        assert str(tmp_path) not in text, path.name
+        assert not ABSOLUTE_PATH.search(text), (path.name, ABSOLUTE_PATH.search(text))
+
+
+def workspace(tmp_path: Path) -> Path:
+    """Create a nested, identifiable directory to work in.
+
+    Returns
+    -------
+    Path
+        The directory.
+
+    """
+    directory = tmp_path / SENTINEL / "documents"
+    directory.mkdir(parents=True)
+    return directory
+
+
+def stand_in(directory: Path, body: str, name: str = "fake-soffice") -> Path:
+    """Write an executable shell script.
+
+    Returns
+    -------
+    Path
+        The script path.
+
+    """
+    path = directory / name
+    version = 'if [ "$1" = "--version" ]; then echo "LibreOffice 26.8.0.3"; exit 0; fi'
+    path.write_text(f"#!/bin/sh\n{version}\n{body}\n", encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
+
+
+def run(directory: Path, options: RunSettings, source: Path | None = None) -> Path:
+    """Run a pipeline whose paths all contain the sentinel and return its bundle.
+
+    Returns
+    -------
+    Path
+        The evidence directory.
+
+    """
+    source = source or make_minimal_odt(directory / "input.odt")
+    out = directory / "evidence"
+    execute(source, reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()), out, options)
+    return out
+
+
+def test_a_missing_tool_path_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    options = RunSettings(tools=Tools(soffice=str(directory / "no-such-soffice")))
+    assert_path_free(run(directory, options), tmp_path)
+
+
+@posix_only
+def test_a_non_executable_tool_path_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    plain = directory / "soffice"
+    plain.write_text("not a program", encoding="utf-8")
+    assert_path_free(run(directory, RunSettings(tools=Tools(soffice=str(plain)))), tmp_path)
+
+
+@posix_only
+def test_a_failing_tool_that_prints_every_argument_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    tool = stand_in(directory, 'echo "args: $@" >&2; echo "out: $@"; exit 1')
+    bundle = run(directory, RunSettings(tools=Tools(soffice=str(tool))))
+    assert_path_free(bundle, tmp_path)
+    stage = next(
+        s
+        for s in __import__("json").loads((bundle / "run.json").read_text())["stages"]
+        if s["name"] == "export-source"
+    )
+    assert "exit status 1" in stage["reason"]
+    assert "args:" in stage["details"]  # the diagnostic survives, minus the paths
+
+
+@posix_only
+def test_a_tool_that_succeeds_without_output_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    tool = stand_in(directory, "exit 0")
+    assert_path_free(run(directory, RunSettings(tools=Tools(soffice=str(tool)))), tmp_path)
+
+
+def test_an_unreadable_source_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    bundle = run(directory, RunSettings(), source=directory / "absent.odt")
+    assert_path_free(bundle, tmp_path)
+
+
+def test_a_damaged_source_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    broken = directory / "broken.odt"
+    broken.write_bytes(b"not a zip")
+    assert_path_free(run(directory, RunSettings(), source=broken), tmp_path)
+
+
+def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
+    directory = workspace(tmp_path)
+    source = make_minimal_odt(directory / "input.odt")
+    out = directory / "evidence"
+    plan = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
+    execute(source, reviewed_plan(source, plan, FidelityPolicy()), out, RunSettings())
+    assert_path_free(out, tmp_path)
+
+
+@pytest.mark.integration
+def test_raw_tool_reports_of_a_real_run_are_not_leaked(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    directory = workspace(tmp_path)
+    options = RunSettings(
+        tools=Tools(
+            soffice=external_tool("soffice", "libreoffice"), verapdf=external_tool("verapdf")
+        ),
+        profile=profile_named("production"),
+    )
+    bundle = run(directory, options)
+    assert_path_free(bundle, tmp_path)
+    root = etree.parse(bundle / "verapdf.xml").getroot()
+    report = " ".join(
+        value for node in root.iter() for value in [node.text or "", *node.attrib.values()]
+    )
+    # The tool echoes the path with the platform's separators; a spelling the redactor cannot
+    # know (a Windows 8.3 short name) collapses to <path> instead of <work>.
+    assert re.search(r"<(work|path)>[\\/]remediated\.pdf", report)

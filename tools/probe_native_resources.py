@@ -29,7 +29,7 @@ from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import Plan
 from odfa11y.source_audit import audit_odf
 from odfa11y.tools import Tools
-from tests.native_resource_fixtures import (
+from tests.fixtures.native_resources import (
     PIXELS,
     author_package,
     decoded_images,

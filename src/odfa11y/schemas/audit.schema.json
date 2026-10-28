@@ -64,10 +64,11 @@
                             "type": "object"
                           },
                           "fingerprint": {
-                            "type": "null"
+                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                            "type": "string"
                           },
                           "kind": {
-                            "const": "document.odf_version"
+                            "const": "database.description"
                           },
                           "rule_ids": {
                             "items": {
@@ -76,7 +77,27 @@
                             "type": "array"
                           },
                           "target": {
-                            "type": "null"
+                            "additionalProperties": false,
+                            "properties": {
+                              "member": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "path": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "member"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
@@ -129,7 +150,7 @@
                             "type": "null"
                           },
                           "kind": {
-                            "const": "text.linkify_addresses"
+                            "const": "document.odf_version"
                           },
                           "rule_ids": {
                             "items": {
@@ -160,7 +181,7 @@
                             "type": "null"
                           },
                           "kind": {
-                            "const": "text.remove_spacers"
+                            "const": "formula.alternative"
                           },
                           "rule_ids": {
                             "items": {
@@ -296,89 +317,6 @@
                             "type": "string"
                           },
                           "kind": {
-                            "const": "table.headers"
-                          },
-                          "rule_ids": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          },
-                          "target": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "path": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "path",
-                              "member"
-                            ],
-                            "type": "object"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "target",
-                          "fingerprint",
-                          "current",
-                          "rule_ids"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": false,
-                        "properties": {
-                          "current": {
-                            "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
-                          },
-                          "kind": {
-                            "const": "text.spacing"
-                          },
-                          "rule_ids": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          },
-                          "target": {
-                            "type": "null"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "target",
-                          "fingerprint",
-                          "current",
-                          "rule_ids"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": false,
-                        "properties": {
-                          "current": {
-                            "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
-                          },
-                          "kind": {
                             "const": "link.description"
                           },
                           "rule_ids": {
@@ -409,89 +347,6 @@
                               "member"
                             ],
                             "type": "object"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "target",
-                          "fingerprint",
-                          "current",
-                          "rule_ids"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": false,
-                        "properties": {
-                          "current": {
-                            "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
-                          },
-                          "kind": {
-                            "const": "database.description"
-                          },
-                          "rule_ids": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          },
-                          "target": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "path": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "path",
-                              "member"
-                            ],
-                            "type": "object"
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "target",
-                          "fingerprint",
-                          "current",
-                          "rule_ids"
-                        ],
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": false,
-                        "properties": {
-                          "current": {
-                            "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
-                          },
-                          "kind": {
-                            "const": "formula.alternative"
-                          },
-                          "rule_ids": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          },
-                          "target": {
-                            "type": "null"
                           }
                         },
                         "required": [
@@ -648,6 +503,151 @@
                               "member"
                             ],
                             "type": "object"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "fingerprint",
+                          "current",
+                          "rule_ids"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "current": {
+                            "type": "object"
+                          },
+                          "fingerprint": {
+                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "const": "table.headers"
+                          },
+                          "rule_ids": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "target": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "member": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "path": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "member"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "fingerprint",
+                          "current",
+                          "rule_ids"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "current": {
+                            "type": "object"
+                          },
+                          "fingerprint": {
+                            "type": "null"
+                          },
+                          "kind": {
+                            "const": "text.linkify_addresses"
+                          },
+                          "rule_ids": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "target": {
+                            "type": "null"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "fingerprint",
+                          "current",
+                          "rule_ids"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "current": {
+                            "type": "object"
+                          },
+                          "fingerprint": {
+                            "type": "null"
+                          },
+                          "kind": {
+                            "const": "text.remove_spacers"
+                          },
+                          "rule_ids": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "target": {
+                            "type": "null"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "fingerprint",
+                          "current",
+                          "rule_ids"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "current": {
+                            "type": "object"
+                          },
+                          "fingerprint": {
+                            "type": "null"
+                          },
+                          "kind": {
+                            "const": "text.spacing"
+                          },
+                          "rule_ids": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "target": {
+                            "type": "null"
                           }
                         },
                         "required": [

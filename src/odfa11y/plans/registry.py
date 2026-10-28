@@ -47,7 +47,7 @@ def registered_kinds() -> dict[str, DecisionKind]:
                 msg = f"Conflicting registrations for decision {kind.id}"
                 raise PlanError(msg)
             result[kind.id] = kind
-    return result
+    return dict(sorted(result.items()))
 
 
 def registered_formats() -> dict[str, Callable[[str], object]]:
