@@ -22,6 +22,7 @@ from odfa11y.source_audit import audit_odf
 from odfa11y.tools import Tools
 from tests.fixtures.corpus import CORPUS
 from tests.fixtures.operations import execute_operations
+from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 
@@ -70,9 +71,9 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
-    source = CORPUS / "table-no-header-row.odt"
+    source = TESTS / "text_corpus/tables-data-no-headers.odt"
     edited = tmp_path / "columns.odt"
-    execute_operations(source, edited, [MarkTableHeaders({"Table1": TableHeaders(columns=1)})])
+    execute_operations(source, edited, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
     assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
     assert "TABLE003" not in {f.rule_id for f in audit_odf(edited).findings}
     pdf = export_pdfua(

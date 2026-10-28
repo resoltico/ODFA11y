@@ -23,6 +23,7 @@ from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.spreadsheets import picture, reviewed_sheet_names, row, sheet, text_cell
+from tests.fixtures.table_formats import NUMERIC_STYLES
 from tests.native.test_spreadsheet_integration import (
     ALT,
     PNG,
@@ -41,8 +42,9 @@ CELL = '<table:table-cell office:value-type="string"><text:p>Label</text:p>{}</t
 TABLE = (
     '<table:table table:name="{}"><table:table-column/>'
     "<table:table-row>{}</table:table-row><table:table-row>"
-    + CELL.format("")
-    + "</table:table-row></table:table>"
+    '<table:table-cell table:style-name="Numeric" '
+    'office:value-type="float" office:value="3"><text:p>3</text:p>'
+    "</table:table-cell></table:table-row></table:table>"
 )
 GRAPHIC = (
     '<text:p><draw:frame draw:name="Logo" text:anchor-type="paragraph" '
@@ -71,7 +73,8 @@ def test_writer_nested_headers_graphic_and_named_link(
             + TABLE.format("Outer", CELL.format(TABLE.format("Inner", CELL.format(""))))
             + GRAPHIC
             + LINK
-            + "</office:text>"
+            + "</office:text>",
+            automatic_styles=NUMERIC_STYLES,
         ),
     )
     native = tmp_path / "native"

@@ -29,6 +29,21 @@
       "schema_violations": 8,
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "source_sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5"
+    },
+    "tables-data-no-headers.odt": {
+      "schema_violations": 6,
+      "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
+      "source_sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08"
+    },
+    "tables-negative.odt": {
+      "schema_violations": 6,
+      "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
+      "source_sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38"
+    },
+    "tables-positive.odt": {
+      "schema_violations": 6,
+      "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
+      "source_sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6"
     }
   },
   "producer": "26.8.1.1"

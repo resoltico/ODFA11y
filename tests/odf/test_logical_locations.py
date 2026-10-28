@@ -29,14 +29,16 @@ BODY = (
     "<table:table-row><table:table-cell><text:p>Item</text:p></table:table-cell>"
     "<table:table-cell><text:p>Amount</text:p></table:table-cell></table:table-row>"
     "<table:table-row><table:table-cell><text:p>A</text:p></table:table-cell>"
-    "<table:table-cell><text:p>10</text:p></table:table-cell></table:table-row>"
+    '<table:table-cell office:value-type="float" office:value="10">'
+    "<text:p>10</text:p></table:table-cell></table:table-row>"
     "</table:table>"
     "<table:table>"
     "<table:table-column/><table:table-column/>"
     "<table:table-row><table:table-cell><text:p>Key</text:p></table:table-cell>"
     "<table:table-cell><text:p>Value</text:p></table:table-cell></table:table-row>"
     "<table:table-row><table:table-cell><text:p>B</text:p></table:table-cell>"
-    "<table:table-cell><text:p>20</text:p></table:table-cell></table:table-row>"
+    '<table:table-cell office:value-type="float" office:value="20">'
+    "<text:p>20</text:p></table:table-cell></table:table-row>"
     "</table:table>"
     '<text:p><draw:frame draw:name="Logo"><draw:image xlink:href="Pictures/logo.svg"/>'
     "</draw:frame></text:p>"

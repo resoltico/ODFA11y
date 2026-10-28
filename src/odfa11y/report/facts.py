@@ -75,6 +75,13 @@ class FactKeys:
             "Paragraph style usage and effective spacing.",
         )
     )
+    TEXT_TABLE_CLASSIFICATIONS = _register(
+        FactKey[list[dict[str, object]]](
+            "text.table_classifications",
+            list[dict[str, object]],
+            "Per-table source-supported intent, grid and semantic header bands.",
+        )
+    )
     TEXT_EFFECTIVE_LANGUAGES = _register(
         FactKey[list[dict[str, object]]](
             "text.effective_languages",

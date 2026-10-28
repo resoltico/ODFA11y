@@ -11,10 +11,8 @@ from lxml import etree
 from odfa11y.content import GraphicAlternative
 from odfa11y.families.text import (
     LinkifyAddresses,
-    MarkTableHeaders,
     RemoveEmptySpacers,
     SetGraphicAlternatives,
-    TableHeaders,
 )
 from odfa11y.odf import OdfDocument, Part, validate
 from odfa11y.outcomes import StageStatus
@@ -32,7 +30,6 @@ if TYPE_CHECKING:
 # Writer names the first picture and the first table of these documents "Image1" and "Table1".
 PLAN_EXTRAS: dict[str, Operation] = {
     "images-undescribed": SetGraphicAlternatives({"Image1": GraphicAlternative("Red square")}),
-    "table-no-header-row": MarkTableHeaders({"Table1": TableHeaders(1)}),
 }
 
 

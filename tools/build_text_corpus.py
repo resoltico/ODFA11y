@@ -16,6 +16,7 @@ from odfa11y.native.export import find_soffice, identify_soffice
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.table_formats import NUMERIC_STYLES
 
 ROOT = Path(__file__).resolve().parents[1] / "tests/text_corpus"
 LIST_STYLE = (
@@ -24,6 +25,51 @@ LIST_STYLE = (
     '<text:list-level-style-number text:level="2" style:num-format="a"/></text:list-style>'
 )
 CASES = {
+    "tables-data-no-headers": (
+        (
+            '<office:text><table:table table:name="Data">'
+            '<table:table-column table:number-columns-repeated="2"/>'
+            "<table:table-row><table:table-cell><text:p>Fruit</text:p></table:table-cell>"
+            "<table:table-cell><text:p>Amount</text:p></table:table-cell></table:table-row>"
+            "<table:table-row><table:table-cell><text:p>Apples</text:p></table:table-cell>"
+            '<table:table-cell table:style-name="Numeric" '
+            'office:value-type="float" office:value="3"><text:p>3</text:p>'
+            "</table:table-cell></table:table-row></table:table></office:text>"
+        ),
+        NUMERIC_STYLES,
+    ),
+    "tables-positive": (
+        (
+            '<office:text><table:table table:name="Fruit">'
+            '<table:table-column table:number-columns-repeated="3"/>'
+            "<table:table-header-rows><table:table-row>"
+            '<table:table-cell table:number-columns-spanned="2"><text:p>Fruit categories</text:p>'
+            "</table:table-cell><table:covered-table-cell/>"
+            "<table:table-cell><text:p>Quantity</text:p></table:table-cell></table:table-row>"
+            "<table:table-row><table:table-cell><text:p>Name</text:p></table:table-cell>"
+            "<table:table-cell><text:p>Colour</text:p></table:table-cell>"
+            "<table:table-cell><text:p>Total</text:p></table:table-cell>"
+            "</table:table-row></table:table-header-rows><table:table-row>"
+            "<table:table-cell><text:p>Apples</text:p></table:table-cell>"
+            "<table:table-cell><text:p>Red</text:p></table:table-cell>"
+            '<table:table-cell table:style-name="Numeric" '
+            'office:value-type="float" office:value="3"><text:p>3</text:p>'
+            "</table:table-cell></table:table-row></table:table></office:text>"
+        ),
+        NUMERIC_STYLES,
+    ),
+    "tables-negative": (
+        (
+            '<office:text><table:table table:name="Intent">'
+            '<table:table-column table:number-columns-repeated="2"/>'
+            "<table:table-row><table:table-cell><text:p>Topic</text:p></table:table-cell>"
+            "<table:table-cell><text:p>Details</text:p></table:table-cell></table:table-row>"
+            "<table:table-row><table:table-cell><text:p>Fruit</text:p></table:table-cell>"
+            "<table:table-cell><text:p>Apples</text:p></table:table-cell>"
+            "</table:table-row></table:table></office:text>"
+        ),
+        "",
+    ),
     "language-positive": (
         (
             '<office:text><text:p text:style-name="English">English wording. '

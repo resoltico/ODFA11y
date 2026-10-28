@@ -10,22 +10,15 @@ from odfa11y.content import (
     SHAPE_TAGS,
     GraphicIdentity,
     audit_graphic_role,
-    axis_count,
-    declarations,
     eligible_text_node,
-    header_count,
-    repeated,
-    require_safe_boundary,
-    table_fingerprint,
     visible_words,
 )
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
-from .contexts import context_location, text_nodes
-from .decisions import HEADING_LEVEL, TABLE_HEADERS
+from .contexts import text_nodes
+from .decisions import HEADING_LEVEL
 from .headings import MAX_HEADING_LEVEL, heading_fingerprint, heading_location
 
 if TYPE_CHECKING:
@@ -37,8 +30,6 @@ if TYPE_CHECKING:
 MANUAL_NUMBER_RE = re.compile(r"^\s*(?P<num>\d+(?:\.\d+)*)(?P<punct>[.)])?\s+")
 
 
-MIN_DATA_TABLE_DIMENSION = 2
-MAX_DATA_HEADER_LENGTH = 80
 MAX_SIMPLE_HEADING_NUMBER = 99
 
 
@@ -157,68 +148,6 @@ def audit_images(document: OdfDocument, report: Report) -> None:
             report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
 
 
-def audit_tables(
-    tree: etree._ElementTree, report: Report, document: OdfDocument | None = None
-) -> None:
-    """Report table structure defects such as missing header rows."""
-    tables = text_nodes(tree, qn("table", "table"))
-    report.facts[FactKeys.TEXT_TABLE_COUNT] = len(tables)
-    for index, table in enumerate(tables, start=1):
-        declared_name = table.get(qn("table", "name"))
-        location = context_location(table, "table", index, declared_name)
-        merged = select_elements(
-            table,
-            (
-                ".//*[@table:number-columns-spanned or "
-                "@table:number-rows-spanned] | .//office:body//table:covered-table-cell"
-            ),
-        )
-        if merged:
-            report.add(
-                rules.TABLE001,
-                ("Merged table cells require human review of header relationships."),
-                location=location,
-                details={"merged_markers": len(merged)},
-            )
-
-        try:
-            row_count, headers, data_like, fingerprint = _table_facts(table, document)
-        except RemediationError as exc:
-            report.add(rules.TABLE002, str(exc), location=location)
-            continue
-        if not headers and data_like:
-            report.add(
-                rules.TABLE003,
-                "Table looks data-like but has no semantic header rows or columns.",
-                location=location,
-                details={
-                    "table": declared_name,
-                    "rows": row_count,
-                },
-            )
-            report.add_decision(
-                OpenDecision(
-                    TABLE_HEADERS, location, fingerprint, {"rows": headers}, (rules.TABLE003.id,)
-                )
-            )
-
-
-def _looks_like_data_table(rows: list[etree._Element], row_count: int) -> bool:
-    if row_count < MIN_DATA_TABLE_DIMENSION or not rows:
-        return False
-    first = select_elements(rows[0], "./table:table-cell")
-    cells = sum(repeated(cell, "number-columns-repeated") for cell in first)
-    if cells < MIN_DATA_TABLE_DIMENSION:
-        return False
-    first_text = [
-        (visible_words(cell), repeated(cell, "number-columns-repeated")) for cell in first
-    ]
-    if sum(count for text, count in first_text if text.strip()) < MIN_DATA_TABLE_DIMENSION:
-        return False
-    # Conservative: long narrative cells are more likely to belong to a layout table.
-    return all(len(text) <= MAX_DATA_HEADER_LENGTH for text, _ in first_text if text.strip())
-
-
 def _looks_manually_numbered_heading(text: str) -> bool:
     match = MANUAL_NUMBER_RE.match(text)
     if not match:
@@ -231,14 +160,3 @@ def _looks_manually_numbered_heading(text: str) -> bool:
         return int(number) <= MAX_SIMPLE_HEADING_NUMBER
     except ValueError:
         return False
-
-
-def _table_facts(table: etree._Element, document: OdfDocument | None) -> tuple[int, int, bool, str]:
-    require_safe_boundary(table, None, None)
-    row_count = axis_count(table, "rows")
-    return (
-        row_count,
-        header_count(table, "rows") + header_count(table, "columns"),
-        _looks_like_data_table(declarations(table, "rows"), row_count),
-        table_fingerprint(table, document),
-    )

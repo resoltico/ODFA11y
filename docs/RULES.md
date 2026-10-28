@@ -122,9 +122,9 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
 | `STYLE001` | Warning | Paragraph style scope or properties are unresolved. |  |
 | `STYLE002` | Error | Blinking text styling is declared. |  |
-| `TABLE001` | Warning | Merged table cells need header-relationship review. |  |
+| `TABLE001` | Warning | Table intent or header relationships require native review. |  |
 | `TABLE002` | Error | Table grid or header bands cannot be resolved safely. |  |
-| `TABLE003` | Warning | Data-like table has no semantic headers. | `table.headers` |
+| `TABLE003` | Warning | Declared data table has no semantic headers. | `table.headers` |
 | `TABLE004` | Warning | Data sheet marks no header rows. |  |
 | `TABLE005` | Warning | Data sheet merges cells. |  |
 | `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
