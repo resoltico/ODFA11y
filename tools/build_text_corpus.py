@@ -25,6 +25,32 @@ LIST_STYLE = (
     '<text:list-level-style-number text:level="2" style:num-format="a"/></text:list-style>'
 )
 CASES = {
+    "visibility-positive": (
+        "<office:text><text:p>Visible words.</text:p></office:text>",
+        "",
+    ),
+    "visibility-negative": (
+        (
+            '<office:text><text:tracked-changes><text:changed-region xml:id="deleted" '
+            'text:id="deleted"><text:deletion><office:change-info>'
+            "<dc:creator>Invented Author</dc:creator><dc:date>2026-10-28T12:00:00</dc:date>"
+            "</office:change-info><text:p>Deleted words.</text:p></text:deletion>"
+            "</text:changed-region></text:tracked-changes><text:p>Visible words."
+            '<text:change text:change-id="deleted"/>'
+            '<draw:frame draw:name="Floating" text:anchor-type="paragraph" '
+            'svg:width="4cm" svg:height="1cm"><draw:text-box>'
+            "<text:p>Floating words.</text:p></draw:text-box></draw:frame></text:p>"
+            '<text:section text:name="Hidden" text:display="none">'
+            "<text:p>Hidden words.</text:p></text:section>"
+            '<text:section text:name="Columns" text:style-name="Columns">'
+            "<text:p>Column words.</text:p></text:section></office:text>"
+        ),
+        (
+            '<style:style style:name="Columns" style:family="section">'
+            '<style:section-properties><style:columns fo:column-count="2" fo:column-gap="0.5cm"/>'
+            "</style:section-properties></style:style>"
+        ),
+    ),
     "tables-data-no-headers": (
         (
             '<office:text><table:table table:name="Data">'

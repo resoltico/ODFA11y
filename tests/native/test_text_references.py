@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 from pypdf import PdfReader
 
+from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pipeline.native import export_document
 from odfa11y.report import FactKeys
 from odfa11y.source_audit import audit_odf
@@ -30,6 +31,18 @@ def test_writer_reference_wording_and_source_scope(
     reader = PdfReader(output)
     text = "\n".join(page.extract_text() for page in reader.pages)
     assert "Visit fruit" in text
+    pdf_rules = {finding.rule_id for finding in audit_pdfua(output).findings}
+    validation = validate_pdfua(output, executable=external_tool("verapdf"))
+    if case == "positive":
+        assert pdf_rules == {"PDF008", "PDF019"}
+        assert not validation.compliant
+        assert {(failure.clause, failure.test_number) for failure in validation.failures} == {
+            ("7.18.1", "2"),
+            ("7.18.5", "2"),
+        }
+    else:
+        assert pdf_rules == {"PDF008", "PDF017"}
+        assert validation.compliant
     report = audit_odf(source)
     assert report.facts[FactKeys.TEXT_REFERENCE_COUNT] == 1
     if case == "positive":

@@ -21,6 +21,7 @@ EVERY_DOCUMENT = pytest.mark.parametrize("document", DOCUMENTS, ids=DOCUMENT_IDS
 CORPUS_RULES = {
     "HEADING002",
     "NOTE001",
+    "ORDER001",
     "GRAPHIC003",
     "TABLE001",
     "LINK001",

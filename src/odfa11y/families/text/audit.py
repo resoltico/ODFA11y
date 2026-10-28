@@ -17,7 +17,7 @@ from odfa11y.errors import RemediationError
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
-from .contexts import context_location, has_revisions, text_nodes
+from .contexts import context_location, text_nodes
 from .decisions import LINKIFY_ADDRESSES, REMOVE_SPACERS
 from .language.audit import audit_languages
 from .links import URI_RE, split_trailing_punctuation
@@ -29,6 +29,7 @@ from .spacers import spacer_candidates
 from .style_properties import paragraph_style_name
 from .styles import catalog_of
 from .tables.audit import audit_tables
+from .visibility import audit_visibility
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -41,16 +42,7 @@ if TYPE_CHECKING:
 def audit_text(document: OdfDocument, report: Report) -> None:
     """Report the accessibility findings that belong to text documents."""
     content = document.tree(Part.CONTENT)
-    if has_revisions(content):
-        report.add(rules.REVISION001)
-    if select_elements(
-        content,
-        (
-            "//text:hidden-text | //text:conditional-text | //text:hidden-paragraph | "
-            "//text:section[@text:condition or @text:display='none' or @text:display='condition']"
-        ),
-    ):
-        report.add(rules.HIDDEN001)
+    audit_visibility(document, report)
     audit_languages(document, report)
     audit_lists(document, report)
     audit_references(document, report)

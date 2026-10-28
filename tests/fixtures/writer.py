@@ -57,7 +57,7 @@ def make_minimal_odt(
     picture_member: tuple[str, bytes] | None = None
     if features.get("with_image_without_alt", False):
         frame = """
-        <draw:frame draw:name="Logo" text:anchor-type="paragraph" svg:width="1cm" svg:height="1cm">
+        <draw:frame draw:name="Logo" text:anchor-type="as-char" svg:width="1cm" svg:height="1cm">
           <draw:image xlink:href="Pictures/logo.svg" xlink:type="simple"
           xlink:show="embed" xlink:actuate="onLoad"/>
         </draw:frame>

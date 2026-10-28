@@ -54,7 +54,7 @@ def writer_resource(directory: Path, href: str | None = None) -> Path:
     )
     body = (
         '<office:text><text:h text:outline-level="1">Resource controls</text:h>'
-        '<text:p><draw:frame draw:name="Asset" text:anchor-type="paragraph" '
+        '<text:p><draw:frame draw:name="Asset" text:anchor-type="as-char" '
         'svg:width="2cm" svg:height="2cm">' + image + ALT + "</draw:frame></text:p>"
         '<text:p><text:a xlink:href="assets/nested/guide.html" xlink:type="simple" '
         'office:name="Read the guide">Read the guide</text:a></text:p></office:text>'

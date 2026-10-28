@@ -9,6 +9,7 @@ import pytest
 from pypdf import PdfReader
 
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
+from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pipeline.native import export_document
 from odfa11y.report import FactKeys
 from odfa11y.source_audit import audit_odf
@@ -64,6 +65,10 @@ def test_writer_table_classification_and_pdf_scope(
         assert not {"TABLE001", "TABLE002", "TABLE003"} & findings
     output = tmp_path / "table.pdf"
     export_document(source, output, Tools(soffice=external_tool("soffice", "libreoffice")))
+    assert {finding.rule_id for finding in audit_pdfua(output).findings} == (
+        {"PDF008", "PDF015"} if case == "negative" else {"PDF008"}
+    )
+    assert validate_pdfua(output, executable=external_tool("verapdf")).compliant
     reader = PdfReader(output)
     assert "Apples" in "\n".join(page.extract_text() for page in reader.pages)
     pending = [reader.root_object["/StructTreeRoot"]]

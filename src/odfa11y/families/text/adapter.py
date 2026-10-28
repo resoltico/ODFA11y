@@ -34,7 +34,7 @@ REVIEW_ITEMS = (
     ),
     ReviewItem(
         ReviewTopic.READING_ORDER,
-        "Whether the reading order, including footnotes and floating objects, is logical.",
+        "Whether columns, floating objects, sections and notes have a logical reading order.",
     ),
     ReviewItem(
         ReviewTopic.TABLE_HEADERS,
@@ -47,6 +47,10 @@ REVIEW_ITEMS = (
     ReviewItem(
         ReviewTopic.LINK_PURPOSE,
         "Whether link purposes and internal destinations match their wording and context.",
+    ),
+    ReviewItem(
+        ReviewTopic.HIDDEN_CONTENT,
+        "Whether revision history and hidden/conditional branches preserve the intended meaning.",
     ),
     ReviewItem(
         ReviewTopic.LANGUAGE,

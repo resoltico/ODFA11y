@@ -930,9 +930,23 @@
           },
           "type": "array"
         },
+        "text.reading_order_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Declared layout conditions needing native reading-order review.",
+          "type": "object"
+        },
         "text.reference_count": {
           "description": "Internal links and typed cross-reference fields.",
           "type": "integer"
+        },
+        "text.revision_relationships": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Tracked declarations, authored markers and unresolved relationships.",
+          "type": "object"
         },
         "text.simulated_list_count": {
           "description": "Paragraphs resembling typed list markers; review only.",
@@ -949,6 +963,14 @@
         "text.table_count": {
           "description": "Tables in current reading contexts.",
           "type": "integer"
+        },
+        "text.visibility_contexts": {
+          "description": "Visibility conditions and cached states, without evaluation.",
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
         },
         "verapdf.identity": {
           "additionalProperties": {
