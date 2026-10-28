@@ -12,28 +12,47 @@
               "answer": {
                 "additionalProperties": false,
                 "properties": {
-                  "version": {
-                    "description": "ODF version whose result must satisfy schema guards.",
-                    "enum": [
-                      "1.3",
-                      "1.4"
-                    ],
+                  "text": {
+                    "description": "Explain the declared object without changing SQL or bindings.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
                     "type": "string"
                   }
                 },
                 "required": [
-                  "version"
+                  "text"
                 ],
                 "type": "object"
               },
               "fingerprint": {
-                "type": "null"
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
               },
               "kind": {
-                "const": "document.odf_version"
+                "const": "database.description"
               },
               "target": {
-                "type": "null"
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
               }
             },
             "required": [
@@ -121,13 +140,17 @@
               "answer": {
                 "additionalProperties": false,
                 "properties": {
-                  "enabled": {
-                    "description": "Enable only after reviewing all affected content.",
-                    "type": "boolean"
+                  "version": {
+                    "description": "ODF version whose result must satisfy schema guards.",
+                    "enum": [
+                      "1.3",
+                      "1.4"
+                    ],
+                    "type": "string"
                   }
                 },
                 "required": [
-                  "enabled"
+                  "version"
                 ],
                 "type": "object"
               },
@@ -135,7 +158,7 @@
                 "type": "null"
               },
               "kind": {
-                "const": "text.linkify_addresses"
+                "const": "document.odf_version"
               },
               "target": {
                 "type": "null"
@@ -155,13 +178,15 @@
               "answer": {
                 "additionalProperties": false,
                 "properties": {
-                  "enabled": {
-                    "description": "Enable only after reviewing all affected content.",
-                    "type": "boolean"
+                  "alternative": {
+                    "description": "Write the formula's spoken meaning in its intended language.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
                   }
                 },
                 "required": [
-                  "enabled"
+                  "alternative"
                 ],
                 "type": "object"
               },
@@ -169,7 +194,7 @@
                 "type": "null"
               },
               "kind": {
-                "const": "text.remove_spacers"
+                "const": "formula.alternative"
               },
               "target": {
                 "type": "null"
@@ -334,137 +359,6 @@
               "answer": {
                 "additionalProperties": false,
                 "properties": {
-                  "columns": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Number of leading logical header columns.",
-                    "minimum": 1
-                  },
-                  "rows": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Number of leading logical header rows.",
-                    "minimum": 1
-                  }
-                },
-                "required": [
-                  "rows",
-                  "columns"
-                ],
-                "type": "object"
-              },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "kind": {
-                "const": "table.headers"
-              },
-              "target": {
-                "additionalProperties": false,
-                "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "path": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "path",
-                  "member"
-                ],
-                "type": "object"
-              }
-            },
-            "required": [
-              "kind",
-              "target",
-              "fingerprint",
-              "answer"
-            ],
-            "type": "object"
-          },
-          {
-            "additionalProperties": false,
-            "properties": {
-              "answer": {
-                "additionalProperties": false,
-                "properties": {
-                  "exact_reference": {
-                    "description": "Match the entire reference paragraph.",
-                    "type": "boolean"
-                  },
-                  "include_headings": {
-                    "description": "Also apply to headings using the selected styles.",
-                    "type": "boolean"
-                  },
-                  "reference_text": {
-                    "description": "Authored text identifying the reference paragraph.",
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  "target_styles": {
-                    "description": "Existing paragraph styles selected for spacing normalization.",
-                    "items": {
-                      "pattern": "\\S",
-                      "type": "string"
-                    },
-                    "minItems": 1,
-                    "type": "array"
-                  }
-                },
-                "required": [
-                  "reference_text",
-                  "target_styles",
-                  "exact_reference",
-                  "include_headings"
-                ],
-                "type": "object"
-              },
-              "fingerprint": {
-                "type": "null"
-              },
-              "kind": {
-                "const": "text.spacing"
-              },
-              "target": {
-                "type": "null"
-              }
-            },
-            "required": [
-              "kind",
-              "target",
-              "fingerprint",
-              "answer"
-            ],
-            "type": "object"
-          },
-          {
-            "additionalProperties": false,
-            "properties": {
-              "answer": {
-                "additionalProperties": false,
-                "properties": {
                   "description": {
                     "description": "Explain the link's purpose in its reading context.",
                     "format": "odfa11y-xml-text",
@@ -506,99 +400,6 @@
                   "member"
                 ],
                 "type": "object"
-              }
-            },
-            "required": [
-              "kind",
-              "target",
-              "fingerprint",
-              "answer"
-            ],
-            "type": "object"
-          },
-          {
-            "additionalProperties": false,
-            "properties": {
-              "answer": {
-                "additionalProperties": false,
-                "properties": {
-                  "text": {
-                    "description": "Explain the declared object without changing SQL or bindings.",
-                    "format": "odfa11y-xml-text",
-                    "pattern": "\\S",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "text"
-                ],
-                "type": "object"
-              },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "kind": {
-                "const": "database.description"
-              },
-              "target": {
-                "additionalProperties": false,
-                "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "path": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "path",
-                  "member"
-                ],
-                "type": "object"
-              }
-            },
-            "required": [
-              "kind",
-              "target",
-              "fingerprint",
-              "answer"
-            ],
-            "type": "object"
-          },
-          {
-            "additionalProperties": false,
-            "properties": {
-              "answer": {
-                "additionalProperties": false,
-                "properties": {
-                  "alternative": {
-                    "description": "Write the formula's spoken meaning in its intended language.",
-                    "format": "odfa11y-xml-text",
-                    "pattern": "\\S",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "alternative"
-                ],
-                "type": "object"
-              },
-              "fingerprint": {
-                "type": "null"
-              },
-              "kind": {
-                "const": "formula.alternative"
-              },
-              "target": {
-                "type": "null"
               }
             },
             "required": [
@@ -791,6 +592,205 @@
                   "member"
                 ],
                 "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "columns": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Number of leading logical header columns.",
+                    "minimum": 1
+                  },
+                  "rows": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Number of leading logical header rows.",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "rows",
+                  "columns"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "table.headers"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "description": "Enable only after reviewing all affected content.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "text.linkify_addresses"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "description": "Enable only after reviewing all affected content.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "text.remove_spacers"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "exact_reference": {
+                    "description": "Match the entire reference paragraph.",
+                    "type": "boolean"
+                  },
+                  "include_headings": {
+                    "description": "Also apply to headings using the selected styles.",
+                    "type": "boolean"
+                  },
+                  "reference_text": {
+                    "description": "Authored text identifying the reference paragraph.",
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "target_styles": {
+                    "description": "Existing paragraph styles selected for spacing normalization.",
+                    "items": {
+                      "pattern": "\\S",
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "reference_text",
+                  "target_styles",
+                  "exact_reference",
+                  "include_headings"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "text.spacing"
+              },
+              "target": {
+                "type": "null"
               }
             },
             "required": [
@@ -1453,10 +1453,11 @@
                               "type": "object"
                             },
                             "fingerprint": {
-                              "type": "null"
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
                             },
                             "kind": {
-                              "const": "document.odf_version"
+                              "const": "database.description"
                             },
                             "rule_ids": {
                               "items": {
@@ -1465,7 +1466,27 @@
                               "type": "array"
                             },
                             "target": {
-                              "type": "null"
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
                             }
                           },
                           "required": [
@@ -1518,7 +1539,7 @@
                               "type": "null"
                             },
                             "kind": {
-                              "const": "text.linkify_addresses"
+                              "const": "document.odf_version"
                             },
                             "rule_ids": {
                               "items": {
@@ -1549,7 +1570,7 @@
                               "type": "null"
                             },
                             "kind": {
-                              "const": "text.remove_spacers"
+                              "const": "formula.alternative"
                             },
                             "rule_ids": {
                               "items": {
@@ -1685,89 +1706,6 @@
                               "type": "string"
                             },
                             "kind": {
-                              "const": "table.headers"
-                            },
-                            "rule_ids": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "target": {
-                              "additionalProperties": false,
-                              "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
-                                },
-                                "path": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "path",
-                                "member"
-                              ],
-                              "type": "object"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "target",
-                            "fingerprint",
-                            "current",
-                            "rule_ids"
-                          ],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "current": {
-                              "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
-                            },
-                            "kind": {
-                              "const": "text.spacing"
-                            },
-                            "rule_ids": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "target": {
-                              "type": "null"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "target",
-                            "fingerprint",
-                            "current",
-                            "rule_ids"
-                          ],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "current": {
-                              "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
-                            },
-                            "kind": {
                               "const": "link.description"
                             },
                             "rule_ids": {
@@ -1798,89 +1736,6 @@
                                 "member"
                               ],
                               "type": "object"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "target",
-                            "fingerprint",
-                            "current",
-                            "rule_ids"
-                          ],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "current": {
-                              "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
-                            },
-                            "kind": {
-                              "const": "database.description"
-                            },
-                            "rule_ids": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "target": {
-                              "additionalProperties": false,
-                              "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
-                                },
-                                "path": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "path",
-                                "member"
-                              ],
-                              "type": "object"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "target",
-                            "fingerprint",
-                            "current",
-                            "rule_ids"
-                          ],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "current": {
-                              "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
-                            },
-                            "kind": {
-                              "const": "formula.alternative"
-                            },
-                            "rule_ids": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "target": {
-                              "type": "null"
                             }
                           },
                           "required": [
@@ -2037,6 +1892,151 @@
                                 "member"
                               ],
                               "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "table.headers"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "text.linkify_addresses"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "text.remove_spacers"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "text.spacing"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
                             }
                           },
                           "required": [

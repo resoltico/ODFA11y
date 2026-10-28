@@ -84,18 +84,18 @@ shared vocabulary belongs in `content`, family semantics in its adapter. See
 
 pytest enables strict options and treats warnings as errors. Tests use synthetic ODF/PDF
 fixtures and invented native documents, never customer material. Helpers in
-`tests/documents.py` create package/flat fixtures, including deliberately unsupported
+`tests/fixtures/documents.py` create package/flat fixtures, including deliberately unsupported
 representations used as rejection controls. A valid flat office-body Formula representation
 is not claimed. The [Configuration example](PLAN.md#example) is loaded directly
 by a test.
 
-[Hypothesis](https://hypothesis.readthedocs.io/) properties in `tests/test_properties.py`
+[Hypothesis](https://hypothesis.readthedocs.io/) properties in `tests/application/test_properties.py`
 cover address splitting, text-preserving linkification, package round trips, controlled
 errors for malformed inputs and schema-preserving/idempotent operation subsets.
 `tests/conftest.py` defines the deterministic required profile and a smaller smoke profile:
 
 ```bash
-uv run --no-sync pytest tests/test_properties.py --hypothesis-profile=smoke
+uv run --no-sync pytest tests/application/test_properties.py --hypothesis-profile=smoke
 ```
 
 Smoke does not replace required properties. Profiles have no per-example deadline;

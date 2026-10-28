@@ -159,8 +159,8 @@ min-file-size = 0
 # Pytest assertions, descriptive test names, literal expectations and exact render comparisons.
 "tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
 # Test subprocesses select local tools; pypdf fixtures require its private registration API.
-"tests/test_architecture.py" = ["suspicious-subprocess-import"]
-"tests/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-"tests/test_external_tools.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-"tests/test_pdf_inspection.py" = ["private-member-access"]
-"tests/pdf_fixtures.py" = ["private-member-access"]
+"tests/tools/test_architecture.py" = ["suspicious-subprocess-import"]
+"tests/cli/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
+"tests/native/test_external_tools.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
+"tests/pdf/test_pdf_inspection.py" = ["private-member-access"]
+"tests/fixtures/pdf.py" = ["private-member-access"]

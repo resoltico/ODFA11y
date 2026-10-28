@@ -42,25 +42,25 @@ candidate is not published and exits 2. A successful `--dry-run` exits 0 with
 <!-- generated decisions -->
 ## Registered decisions
 
-### `document.odf_version`
+### `database.description`
 
-Scope: document.
+Scope: target.
+
+Use the audit's canonical target and mandatory fingerprint.
 
 ```json
 {
   "type": "object",
   "properties": {
-    "version": {
+    "text": {
       "type": "string",
-      "enum": [
-        "1.3",
-        "1.4"
-      ],
-      "description": "ODF version whose result must satisfy schema guards."
+      "format": "odfa11y-xml-text",
+      "description": "Explain the declared object without changing SQL or bindings.",
+      "pattern": "\\S"
     }
   },
   "required": [
-    "version"
+    "text"
   ],
   "additionalProperties": false
 }
@@ -157,7 +157,7 @@ Scope: document.
 }
 ```
 
-### `text.linkify_addresses`
+### `document.odf_version`
 
 Scope: document.
 
@@ -165,19 +165,23 @@ Scope: document.
 {
   "type": "object",
   "properties": {
-    "enabled": {
-      "type": "boolean",
-      "description": "Enable only after reviewing all affected content."
+    "version": {
+      "type": "string",
+      "enum": [
+        "1.3",
+        "1.4"
+      ],
+      "description": "ODF version whose result must satisfy schema guards."
     }
   },
   "required": [
-    "enabled"
+    "version"
   ],
   "additionalProperties": false
 }
 ```
 
-### `text.remove_spacers`
+### `formula.alternative`
 
 Scope: document.
 
@@ -185,13 +189,15 @@ Scope: document.
 {
   "type": "object",
   "properties": {
-    "enabled": {
-      "type": "boolean",
-      "description": "Enable only after reviewing all affected content."
+    "alternative": {
+      "type": "string",
+      "format": "odfa11y-xml-text",
+      "description": "Write the formula's spoken meaning in its intended language.",
+      "pattern": "\\S"
     }
   },
   "required": [
-    "enabled"
+    "alternative"
   ],
   "additionalProperties": false
 }
@@ -310,111 +316,6 @@ Use the audit's canonical target and mandatory fingerprint.
 }
 ```
 
-### `table.headers`
-
-Scope: target.
-
-Use the audit's canonical target and mandatory fingerprint.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "rows": {
-      "anyOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "minimum": 1,
-      "description": "Number of leading logical header rows."
-    },
-    "columns": {
-      "anyOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "minimum": 1,
-      "description": "Number of leading logical header columns."
-    }
-  },
-  "required": [],
-  "additionalProperties": false,
-  "anyOf": [
-    {
-      "required": [
-        "rows"
-      ],
-      "properties": {
-        "rows": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "columns"
-      ],
-      "properties": {
-        "columns": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-### `text.spacing`
-
-Scope: document.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "reference_text": {
-      "type": "string",
-      "pattern": "\\S",
-      "description": "Authored text identifying the reference paragraph."
-    },
-    "target_styles": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "\\S"
-      },
-      "minItems": 1,
-      "description": "Existing paragraph styles selected for spacing normalization."
-    },
-    "exact_reference": {
-      "type": "boolean",
-      "description": "Match the entire reference paragraph."
-    },
-    "include_headings": {
-      "type": "boolean",
-      "description": "Also apply to headings using the selected styles."
-    }
-  },
-  "required": [
-    "reference_text",
-    "target_styles"
-  ],
-  "additionalProperties": false
-}
-```
-
 ### `link.description`
 
 Scope: target.
@@ -434,52 +335,6 @@ Use the audit's canonical target and mandatory fingerprint.
   },
   "required": [
     "description"
-  ],
-  "additionalProperties": false
-}
-```
-
-### `database.description`
-
-Scope: target.
-
-Use the audit's canonical target and mandatory fingerprint.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "text": {
-      "type": "string",
-      "format": "odfa11y-xml-text",
-      "description": "Explain the declared object without changing SQL or bindings.",
-      "pattern": "\\S"
-    }
-  },
-  "required": [
-    "text"
-  ],
-  "additionalProperties": false
-}
-```
-
-### `formula.alternative`
-
-Scope: document.
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "alternative": {
-      "type": "string",
-      "format": "odfa11y-xml-text",
-      "description": "Write the formula's spoken meaning in its intended language.",
-      "pattern": "\\S"
-    }
-  },
-  "required": [
-    "alternative"
   ],
   "additionalProperties": false
 }
@@ -596,6 +451,151 @@ Use the audit's canonical target and mandatory fingerprint.
   },
   "required": [
     "name"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `table.headers`
+
+Scope: target.
+
+Use the audit's canonical target and mandatory fingerprint.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "rows": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "minimum": 1,
+      "description": "Number of leading logical header rows."
+    },
+    "columns": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "minimum": 1,
+      "description": "Number of leading logical header columns."
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "rows"
+      ],
+      "properties": {
+        "rows": {
+          "not": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "required": [
+        "columns"
+      ],
+      "properties": {
+        "columns": {
+          "not": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+### `text.linkify_addresses`
+
+Scope: document.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable only after reviewing all affected content."
+    }
+  },
+  "required": [
+    "enabled"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `text.remove_spacers`
+
+Scope: document.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable only after reviewing all affected content."
+    }
+  },
+  "required": [
+    "enabled"
+  ],
+  "additionalProperties": false
+}
+```
+
+### `text.spacing`
+
+Scope: document.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "reference_text": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "Authored text identifying the reference paragraph."
+    },
+    "target_styles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "\\S"
+      },
+      "minItems": 1,
+      "description": "Existing paragraph styles selected for spacing normalization."
+    },
+    "exact_reference": {
+      "type": "boolean",
+      "description": "Match the entire reference paragraph."
+    },
+    "include_headings": {
+      "type": "boolean",
+      "description": "Also apply to headings using the selected styles."
+    }
+  },
+  "required": [
+    "reference_text",
+    "target_styles"
   ],
   "additionalProperties": false
 }

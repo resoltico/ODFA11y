@@ -196,7 +196,7 @@ jobs:
           parser = etree.XMLParser(resolve_entities=False, no_network=True)
           etree.RelaxNG(etree.parse(str(schemas / "mathml/mathml3.rng"), parser))
           from tools.core_examples import inspect_source
-          from tests.documents import make_flat, make_package
+          from tests.fixtures.documents import make_flat, make_package
           with TemporaryDirectory() as scratch:
               root = Path(scratch)
               for layout, author in (("flat", make_flat), ("package", make_package)):
