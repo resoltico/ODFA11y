@@ -64,11 +64,11 @@ def audit_headings(
             location,
             heading_fingerprint(heading, document),
             {"level": raw},
-            (rules.TXT002.id,),
+            (rules.HEADING002.id,),
         )
         if not 1 <= level <= MAX_HEADING_LEVEL:
             report.add(
-                rules.TXT001,
+                rules.HEADING001,
                 "Heading has no valid text:outline-level.",
                 location=location,
                 details=excerpt,
@@ -79,20 +79,20 @@ def audit_headings(
                     location,
                     decision.fingerprint,
                     decision.current,
-                    (rules.TXT001.id,),
+                    (rules.HEADING001.id,),
                 )
             )
             continue
         if previous_level is None and level > 1:
             report.add(
-                rules.TXT002,
+                rules.HEADING002,
                 f"Heading hierarchy starts at level {level}; expected level 1.",
                 location=location,
                 details=excerpt,
             )
         elif previous_level is not None and level > previous_level + 1:
             report.add(
-                rules.TXT002,
+                rules.HEADING002,
                 f"Heading hierarchy skips from level {previous_level} to {level}.",
                 location=location,
                 details=excerpt,
@@ -104,7 +104,7 @@ def audit_headings(
         previous_level = level
         if _looks_manually_numbered_heading(text):
             report.add(
-                rules.TXT003,
+                rules.HEADING003,
                 (
                     "Heading appears to use manually typed numbering; integrated "
                     "numbering is safer for accessible export."
@@ -114,7 +114,7 @@ def audit_headings(
             )
     if not headings:
         report.add(
-            rules.TXT004,
+            rules.HEADING004,
             "No structural headings were found. This may be legitimate for a very short document.",
             location=Location(Part.CONTENT.value),
         )
@@ -146,7 +146,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         href = image.get(qn("xlink", "href")) if image is not None else None
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.add(
-                rules.TXT010,
+                rules.GRAPHIC003,
                 "Graphic object has neither accessible title nor description.",
                 location=Location(identity.target(frame)),
                 details={
@@ -155,7 +155,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
                 },
             )
 
-            report.add_decision(identity.open_decision(frame, rules.TXT010.id))
+            report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
 
 
 def audit_tables(
@@ -176,7 +176,7 @@ def audit_tables(
         )
         if merged:
             report.add(
-                rules.TXT020,
+                rules.TABLE001,
                 ("Merged table cells require human review of header relationships."),
                 location=location,
                 details={"merged_markers": len(merged)},
@@ -185,11 +185,11 @@ def audit_tables(
         try:
             row_count, headers, data_like, fingerprint = _table_facts(table, document)
         except RemediationError as exc:
-            report.add(rules.TXT022, str(exc), location=location)
+            report.add(rules.TABLE002, str(exc), location=location)
             continue
         if not headers and data_like:
             report.add(
-                rules.TXT021,
+                rules.TABLE003,
                 "Table looks data-like but has no semantic header rows or columns.",
                 location=location,
                 details={
@@ -199,7 +199,7 @@ def audit_tables(
             )
             report.add_decision(
                 OpenDecision(
-                    TABLE_HEADERS, location, fingerprint, {"rows": headers}, (rules.TXT021.id,)
+                    TABLE_HEADERS, location, fingerprint, {"rows": headers}, (rules.TABLE003.id,)
                 )
             )
 

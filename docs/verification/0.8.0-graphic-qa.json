@@ -1,0 +1,125 @@
+{
+  "libreoffice": "26.8.1.1",
+  "observations": [
+    {
+      "family": "text",
+      "case": "none",
+      "source_sha256": "e3098c56ec6812bb6b9c73077469cc92c26e14ef9b0b2dd14c2a43a36a712855",
+      "source_schema_violations": 6,
+      "source_missing_alternative": true,
+      "figures": [
+        {
+          "alt": null,
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": true,
+      "baseline_schema_violations": 6
+    },
+    {
+      "family": "text",
+      "case": "title",
+      "source_sha256": "56b581cc2661dc24aa0aab840864b57bacd7521994dce2672a5aaf5dd6943a5d",
+      "source_schema_violations": 6,
+      "source_missing_alternative": false,
+      "figures": [
+        {
+          "alt": "Reviewed graphic title",
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": false,
+      "baseline_schema_violations": 6
+    },
+    {
+      "family": "text",
+      "case": "description",
+      "source_sha256": "3fc0212e02be0ee322ecd997f982848b2186fe1eb3e4495233669c68607c2b02",
+      "source_schema_violations": 6,
+      "source_missing_alternative": false,
+      "figures": [
+        {
+          "alt": "Reviewed graphic description",
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": false,
+      "baseline_schema_violations": 6
+    },
+    {
+      "family": "text",
+      "case": "both",
+      "source_sha256": "dc70bafb7c46852286e47e37ecb65b76eaa73c5e9541b3e13025fdec8bee5bc5",
+      "source_schema_violations": 6,
+      "source_missing_alternative": false,
+      "figures": [
+        {
+          "alt": "Reviewed graphic title - Reviewed graphic description",
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": false,
+      "baseline_schema_violations": 6
+    },
+    {
+      "family": "spreadsheet",
+      "case": "none",
+      "source_sha256": "0233a285e290e307d064a8c53d8c933fb0d87a92c640c13dea7d3719f024b8d4",
+      "source_schema_violations": 11,
+      "source_missing_alternative": true,
+      "figures": [
+        {
+          "alt": null,
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": true,
+      "baseline_schema_violations": 11
+    },
+    {
+      "family": "spreadsheet",
+      "case": "title",
+      "source_sha256": "3fedc6b1907a9abe14fca0ed1ce2ba15d530336e6b4a0a23bf00d179b8c5f041",
+      "source_schema_violations": 11,
+      "source_missing_alternative": false,
+      "figures": [
+        {
+          "alt": "Reviewed graphic title",
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": false,
+      "baseline_schema_violations": 11
+    },
+    {
+      "family": "spreadsheet",
+      "case": "description",
+      "source_sha256": "d7032e8b2491a7c5f5efe3c47ed9a99a6568f55615195fe9085f47b6f956868d",
+      "source_schema_violations": 11,
+      "source_missing_alternative": false,
+      "figures": [
+        {
+          "alt": "Reviewed graphic description",
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": false,
+      "baseline_schema_violations": 11
+    },
+    {
+      "family": "spreadsheet",
+      "case": "both",
+      "source_sha256": "04dba5f856b9426ef48bbe2f9abdc08dccd372eb4a7ce3aee5051def474ae512",
+      "source_schema_violations": 11,
+      "source_missing_alternative": false,
+      "figures": [
+        {
+          "alt": "Reviewed graphic title - Reviewed graphic description",
+          "actual_text": null
+        }
+      ],
+      "pdf_missing_figure_alt": false,
+      "baseline_schema_violations": 11
+    }
+  ]
+}

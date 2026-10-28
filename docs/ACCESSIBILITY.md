@@ -122,10 +122,10 @@ not assured for these cases; inspect the exported PDF language separately.
 
 Unmodified OASIS ODF 1.3/1.4 Relax NG schemas ship with source URLs/digests. Validation is
 offline. `audit --schema` validates recognized ODF XML parts against the declared version,
-not every arbitrary package member. Unsupported versions report `ODF905`. Native formula
+not every arbitrary package member. Unsupported versions report `SCHEMA002`. Native formula
 expressions additionally use the normative bundled W3C MathML 3 grammar.
 
-Producer documents can violate strict schemas, so `ODF900` is a warning. Where a bundled
+Producer documents can violate strict schemas, so `SCHEMA001` is a warning. Where a bundled
 schema is available, remediation's *differential* gate rejects violations absent from the source. It identifies a violation
 by message and failing-element fingerprint (tag, attributes, parent and neighboring tags),
 not position: fixing one cannot hide an equal violation introduced elsewhere. libxml2
@@ -160,15 +160,15 @@ opaque payloads have separate guards. These are not render comparisons; use
   edits refuse. Main outline, spacing and spacer removal exclude notes, text boxes,
   annotations/revisions and hidden/conditional branches. Graphics, links, tables and
   address linkification include eligible current notes/text boxes with qualified locations,
-  excluding annotation/revision/conditional branches. `TXT060`/`TXT061` retain review needs.
+  excluding annotation/revision/conditional branches. `REVISION001`/`HIDDEN001` retain review needs.
 
 ## Native document context and declared dependencies
 
 Guarded export/comparison/pipeline inspect known declarations without fetching resources.
-`ODF012` marks external, unresolved, wrongly addressed or unestablished rendering/execution
+`NATIVE001` marks external, unresolved, wrongly addressed or unestablished rendering/execution
 contexts; guarded native work refuses them. Inline data and exact package file/subdocument
 addresses can pass preflight, but presence never proves decoding or native loading.
-`ODF013` marks filename/path-sensitive fields: captured pipeline export refuses them,
+`NATIVE002` marks filename/path-sensitive fields: captured pipeline export refuses them,
 while direct export/comparison of original inputs can retain their logical identity.
 Source-only `inspect` and preservation remain available. See
 [evidence capture](EVIDENCE.md#source-capture) for private copies and stable directories.
@@ -225,8 +225,8 @@ does not download it.
 Each expression is bounded to 32,768 characters, 4,096 lexical tokens and depth 64.
 Named dependencies are traversed iteratively with expansion/work limit 4,096 and depth 64;
 inspection permits 100,000 declarations per tree and 64 embedded directories, within
-package/XML budgets. Exhaustion is incomplete-context refusal. Reports use `ODF012`/
-`ODF013` with declaration/origin/incomplete counts, excluding formula literals/credentials.
+package/XML budgets. Exhaustion is incomplete-context refusal. Reports use `NATIVE001`/
+`NATIVE002` with declaration/origin/incomplete counts, excluding formula literals/credentials.
 
 ## Native execution limits
 

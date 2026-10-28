@@ -99,7 +99,7 @@ def test_writer_nested_headers_graphic_and_named_link(
     execute_operations(source, output, plan)
     assert validate(OdfDocument.open(output)).count == validate(before).count
     assert not execute_operations(output, tmp_path / "again.odt", plan).changed
-    assert not {"TXT021", "TXT022"} & {f.rule_id for f in audit_odf(output).findings}
+    assert not {"TABLE003", "TABLE002"} & {f.rule_id for f in audit_odf(output).findings}
     pdf = export_pdfua(
         output, tmp_path / "writer.pdf", ExportSettings("writer_pdf_Export", soffice)
     )

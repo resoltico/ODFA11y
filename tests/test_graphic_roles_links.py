@@ -159,8 +159,8 @@ def test_authored_style_drift_invalidates_review_and_payload_remains_checked(
     image.set(qn("xlink", "href"), "https://example.test/missing.svg")
     document.save(tmp_path / "external.odt")
     report = audit_odf(tmp_path / "external.odt")
-    assert "TXT010" not in {f.rule_id for f in report.findings}
-    assert "ODF012" in {f.rule_id for f in report.findings}
+    assert "GRAPHIC003" not in {f.rule_id for f in report.findings}
+    assert "NATIVE001" in {f.rule_id for f in report.findings}
 
 
 def test_blank_alternatives_and_overlapping_roles_preflight_together(tmp_path: Path) -> None:
@@ -226,7 +226,7 @@ def test_group_role_refuses_and_does_not_hide_child_findings(tmp_path: Path, dec
     assert _decision(document, group, decorative=True).apply(document)[0].status == Status.FAILED
     source = document.save(tmp_path / "group.odt")
     ids = {finding.rule_id for finding in audit_odf(source).findings}
-    assert {"GRAPHIC001", "TXT010"} <= ids
+    assert {"GRAPHIC001", "GRAPHIC003"} <= ids
 
 
 def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> None:

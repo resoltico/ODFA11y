@@ -82,12 +82,25 @@ class Location:
 class Finding:
     """One observed condition, resolved from its rule at creation."""
 
-    rule_id: str
-    severity: Severity
-    category: str
+    rule: Rule = field(metadata={"serialize": False})
     message: str
     location: Location | None = None
     details: Mapping[str, object] = field(default_factory=dict)
+
+    @JsonProperty
+    def rule_id(self) -> str:
+        """The identity of the finding's authoritative rule."""
+        return self.rule.id
+
+    @JsonProperty
+    def severity(self) -> Severity:
+        """The rule's acceptance severity."""
+        return self.rule.severity
+
+    @JsonProperty
+    def category(self) -> str:
+        """The rule's concern category."""
+        return self.rule.category.value
 
     def as_dict(self) -> JsonObject:
         """Serialize the typed record.
@@ -136,9 +149,7 @@ class Report:
         """Append a finding for a rule, defaulting the message to the rule title."""
         self.findings.append(
             Finding(
-                rule_id=rule.id,
-                severity=rule.severity,
-                category=rule.category.value,
+                rule=rule,
                 message=message or rule.title,
                 location=location,
                 details=record_dict(details) if details else {},

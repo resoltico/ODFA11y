@@ -131,7 +131,7 @@ def test_every_standard_formula_attribute_reaches_the_native_guard(
     assert calls == []
     assert not (tmp_path / "destination.pdf").exists()
     report = audit_odf(source)
-    assert "ODF012" in {f.rule_id for f in report.findings}
+    assert "NATIVE001" in {f.rule_id for f in report.findings}
     assert "credentials" not in str(report.facts)
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_declarations"] == 1
     assert source.read_bytes() == original
@@ -143,7 +143,7 @@ def test_captured_identity_and_original_export_are_separate(tmp_path: Path) -> N
     require_native_context(document)
     with pytest.raises(ToolFailedError, match="filename/path fields"):
         require_native_context(document, captured_identity=True)
-    assert "ODF013" in {f.rule_id for f in audit_odf(source).findings}
+    assert "NATIVE002" in {f.rule_id for f in audit_odf(source).findings}
 
 
 @pytest.mark.parametrize("expression", ["of:=LocalTotal", "of:=Missing", "of:=Cycle"])

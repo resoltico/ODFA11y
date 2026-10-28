@@ -9,13 +9,11 @@ from typing import TYPE_CHECKING
 from odfa11y.adapter import ReviewItem
 from odfa11y.odf import Family, Part, qn, select_elements
 from odfa11y.outcomes import ReviewTopic
-from odfa11y.report import RULES
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from odfa11y.odf import OdfDocument
-    from odfa11y.report import Rule
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,21 +22,9 @@ class PageProfile:
 
     family: Family
     pdf_filter: str
-    rule_prefix: str
     skip_presentation_shapes: bool
     hidden_content: Callable[[OdfDocument], dict[str, int]]
     review_items: tuple[ReviewItem, ...]
-
-    def rule(self, number: int) -> Rule:
-        """Resolve a family's current rule identity.
-
-        Returns
-        -------
-        Rule
-            The registered page concept under this family's catalogue identity.
-
-        """
-        return RULES[f"{self.rule_prefix}{number:03}"]
 
 
 def hidden_pages(document: OdfDocument) -> dict[str, int]:
@@ -95,7 +81,6 @@ COMMON_REVIEW_ITEMS = (
 PRESENTATION_PROFILE = PageProfile(
     family=Family.PRESENTATION,
     pdf_filter="impress_pdf_Export",
-    rule_prefix="PRES",
     skip_presentation_shapes=True,
     hidden_content=hidden_pages,
     review_items=(
@@ -109,7 +94,6 @@ PRESENTATION_PROFILE = PageProfile(
 DRAWING_PROFILE = PageProfile(
     family=Family.DRAWING,
     pdf_filter="draw_pdf_Export",
-    rule_prefix="DRAW",
     skip_presentation_shapes=False,
     hidden_content=hidden_layers,
     review_items=(

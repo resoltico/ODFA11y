@@ -125,7 +125,7 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
     assert_refused(execute_operations(source, destination, [RemoveEmptySpacers()]))
     assert not destination.exists()
     report = audit_odf(source)
-    assert "TXT062" in {finding.rule_id for finding in report.findings}
+    assert "STYLE001" in {finding.rule_id for finding in report.findings}
     assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
     if problem not in {"default", "containers"}:
         assert any(row["style"] == "Body" for row in report.facts[FactKeys.TEXT_PARAGRAPH_STYLES])
@@ -249,4 +249,4 @@ def test_optional_styles_absence_is_distinct_from_an_unrecognized_styles_root(
             execute_operations(source, output, [RemoveEmptySpacers()]), match="unsupported root"
         )
         assert not output.exists()
-        assert "TXT062" in {finding.rule_id for finding in audit_odf(source).findings}
+        assert "STYLE001" in {finding.rule_id for finding in audit_odf(source).findings}

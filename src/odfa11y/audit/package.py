@@ -276,14 +276,14 @@ def audit_schema(document: OdfDocument, report: Report) -> None:
             if result.version
             else "The document declares no ODF version, so no schema applies."
         )
-        report.add(rules.ODF905, reason)
+        report.add(rules.SCHEMA002, reason)
         return
     report.facts[FactKeys.SCHEMA_VIOLATION_COUNT] = result.count
     report.facts[FactKeys.SCHEMA_UNLOCATED_VIOLATION_COUNT] = result.unlocated
     for member, messages in result.messages().items():
         location = storage_location(document, _part_of(document, member))
         report.add(
-            rules.ODF900,
+            rules.SCHEMA001,
             f"The {location.path} does not validate against the ODF {result.version} schema.",
             location=location,
             details={

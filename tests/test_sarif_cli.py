@@ -58,7 +58,9 @@ def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
         {"location": {"uri": "tagged.pdf"}},
     ]
     by_rule = {result["ruleId"]: result for result in run["results"]}
-    assert by_rule["TXT010"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 0
+    assert (
+        by_rule["GRAPHIC003"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 0
+    )
     assert by_rule["VERA000"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 1
     assert by_rule["VERA000"]["level"] == "warning"
 

@@ -61,8 +61,8 @@ def test_audit_detects_plain_email_and_data_table_header(tmp_path: Path) -> None
         tmp_path / "issues.odt", features={"with_plain_email": True, "with_data_table": True}
     )
     report = audit_odf(source)
-    assert {"TXT030", "TXT021"} <= ids(report)
-    table = next(f for f in report.findings if f.rule_id == "TXT021")
+    assert {"LINK001", "TABLE003"} <= ids(report)
+    table = next(f for f in report.findings if f.rule_id == "TABLE003")
     assert table.details["table"] == "Data"
     assert question_for(report, table).kind.id == "table.headers"
 
@@ -71,7 +71,7 @@ def test_audit_detects_missing_graphic_alt_text(tmp_path: Path) -> None:
     report = audit_odf(
         make_minimal_odt(tmp_path / "image.odt", features={"with_image_without_alt": True})
     )
-    finding = next(f for f in report.findings if f.rule_id == "TXT010")
+    finding = next(f for f in report.findings if f.rule_id == "GRAPHIC003")
     assert finding.severity is Severity.ERROR
     assert finding.details["frame"] == "Logo"
     assert question_for(report, finding).kind.id == "graphic.alternative"
@@ -107,7 +107,7 @@ def test_schema_audit_records_version_and_violations(tmp_path: Path) -> None:
     report = audit_odf(make_minimal_odt(tmp_path / "ok.odt"), schema=True)
     assert report.facts[FactKeys.SCHEMA_VERSION] == "1.4"
     assert report.facts[FactKeys.SCHEMA_VIOLATION_COUNT] == 0
-    assert "ODF900" not in ids(report)
+    assert "SCHEMA001" not in ids(report)
 
 
 def test_schema_audit_rejects_malformed_but_renderable_markup(tmp_path: Path) -> None:
@@ -118,7 +118,7 @@ def test_schema_audit_rejects_malformed_but_renderable_markup(tmp_path: Path) ->
     )
     package.save(tmp_path / "bad2.odt")
     report = audit_odf(tmp_path / "bad2.odt", schema=True)
-    finding = next(f for f in report.findings if f.rule_id == "ODF900")
+    finding = next(f for f in report.findings if f.rule_id == "SCHEMA001")
     assert finding.severity is Severity.WARNING
     assert finding.location == Location("content", "content.xml")
 
@@ -126,7 +126,7 @@ def test_schema_audit_rejects_malformed_but_renderable_markup(tmp_path: Path) ->
 def test_schema_audit_reports_unsupported_versions_as_unavailable(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "v.odt", version="1.2")
     report = audit_odf(source, schema=True)
-    assert "ODF905" in ids(report)
+    assert "SCHEMA002" in ids(report)
 
 
 def test_template_comments_out_every_open_decision(tmp_path: Path) -> None:

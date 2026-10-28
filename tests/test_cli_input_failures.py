@@ -86,7 +86,7 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
         assert "Command: failed (exit 3" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
-        assert "TXT010" in output.out
+        assert "GRAPHIC003" in output.out
 
 
 def test_sniff_regular_alias_and_directory(tmp_path: Path) -> None:

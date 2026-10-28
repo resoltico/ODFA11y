@@ -116,7 +116,7 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
     destination = tmp_path / "out.fodt"
     execute_operations(source, destination, [SetMetadata(title="Added")])
     assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "Added"
-    assert "ODF900" not in ids(audit_odf(destination, schema=True))
+    assert "SCHEMA001" not in ids(audit_odf(destination, schema=True))
 
 
 def test_a_blank_title_is_refused_rather_than_written_empty(tmp_path: Path) -> None:

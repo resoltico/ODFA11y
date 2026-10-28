@@ -57,10 +57,10 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     for index, link in enumerate(document_links(document), 1):
         if not link_has_description(link):
             report.add(
-                rules.SHEET014,
+                rules.LINK003,
                 location=link_location(link, index),
             )
-            report.add_decision(link_decision(document, link, index, rules.SHEET014.id))
+            report.add_decision(link_decision(document, link, index, rules.LINK003.id))
     _audit_trailing_empty_sheets(all_sheets, report)
     _audit_hidden(content, all_sheets, report)
 
@@ -113,7 +113,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
             continue
         if not select_elements(sheet, ".//table:table-header-rows"):
             report.add(
-                rules.SHEET003,
+                rules.TABLE004,
                 "Sheet looks like a table of data but marks no header rows to repeat.",
                 location=_location(index, sheet),
                 details={"sheet": sheet_name(sheet)},
@@ -121,7 +121,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
         merged = select_elements(sheet, MERGED_CELLS)
         if merged:
             report.add(
-                rules.SHEET004,
+                rules.TABLE005,
                 "Data sheet merges cells, which breaks row and column navigation.",
                 location=_location(index, sheet),
                 details={"sheet": sheet_name(sheet), "merged_cells": len(merged)},
@@ -154,7 +154,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
         report.add(
-            rules.SHEET005,
+            rules.GRAPHIC003,
             "Picture, chart or object has neither accessible title nor description.",
             location=Location(identity.target(frame)),
             details={
@@ -163,7 +163,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
             },
         )
 
-        report.add_decision(identity.open_decision(frame, rules.SHEET005.id))
+        report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
 
 
 def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
@@ -172,7 +172,7 @@ def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
             text = cell_text(link)
             if RAW_URL.fullmatch(text) and not link.get(qn("office", "title"), "").strip():
                 report.add(
-                    rules.SHEET006,
+                    rules.LINK002,
                     "Hyperlink text is a raw address instead of a description of its target.",
                     location=_location(index, sheet),
                     details={"text": text},
@@ -207,7 +207,7 @@ def _audit_hidden(
     columns = len(select_elements(content, HIDDEN_COLUMNS))
     if sheet_names or rows or columns:
         report.add(
-            rules.SHEET008,
+            rules.HIDDEN001,
             "Hidden sheets, rows or columns hold content that not every reader is told about.",
             location=Location(Part.CONTENT.value),
             details={"sheets": sheet_names, "rows": rows, "columns": columns},

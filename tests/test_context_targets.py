@@ -61,12 +61,12 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     note_graphic = next(
         f
         for f in report.findings
-        if f.rule_id == "TXT010" and f.location and "/note[1]/" in f.location.path
+        if f.rule_id == "GRAPHIC003" and f.location and "/note[1]/" in f.location.path
     )
     note_table = next(
         f
         for f in report.findings
-        if f.rule_id == "TXT021" and f.location and "/note[1]/" in f.location.path
+        if f.rule_id == "TABLE003" and f.location and "/note[1]/" in f.location.path
     )
     assert note_graphic.location is not None
     assert note_table.location is not None
@@ -120,7 +120,7 @@ def test_legal_id_link_plan_composes_with_address_linkification(tmp_path: Path) 
     assert execute_operations(source, output, plan).changed
     assert not execute_operations(output, tmp_path / "again.fodt", plan).changed
     report = audit_odf(output)
-    assert not any(f.rule_id == "TXT030" for f in report.findings)
+    assert not any(f.rule_id == "LINK001" for f in report.findings)
     edited = select_elements(OdfDocument.open(output).tree(Part.CONTENT), "//draw:a")[0]
     assert edited.get(qn("office", "title")) == "Read the guide"
     assert edited.get(qn("xlink", "href")) == "https://guide.example"
@@ -160,7 +160,7 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
         ),
     )
     report = audit_odf(source)
-    finding = next(f for f in report.findings if f.rule_id == "TXT021")
+    finding = next(f for f in report.findings if f.rule_id == "TABLE003")
     assert finding.location is not None
     document = OdfDocument.open(source)
     operation = MarkTableHeaders({finding.location.path: TableHeaders(rows=1)})

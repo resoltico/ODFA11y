@@ -98,7 +98,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
     tmp_path: Path,
 ) -> None:
     source = with_body(tmp_path, ANNOTATED)
-    audited = [f for f in audit_odf(source).findings if f.rule_id == "TXT030"]
+    audited = [f for f in audit_odf(source).findings if f.rule_id == "LINK001"]
     texts = []
     for finding in audited:
         value = finding.details["text"]
@@ -151,7 +151,7 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
         b'<text:list><text:list-item><text:p text:style-name="Body"/></text:list-item></text:list>'
     )
     source = with_body(tmp_path, listed)
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "TXT040")
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == "LAYOUT001")
     (outcome,) = RemoveEmptySpacers().apply(OdfDocument.open(source))
     assert finding.details["count"] == outcome.count == 1  # the list item's paragraph is neither
 

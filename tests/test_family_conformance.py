@@ -149,7 +149,7 @@ def test_sheet_and_graphic_questions_compose_and_rebind(tmp_path: Path) -> None:
     first, second = tmp_path / "first.ods", tmp_path / "second.ods"
     result = remediate(source, first, plan)
     assert result.published, result.as_dict()
-    assert not {"SHEET002", "SHEET005"} & {f.rule_id for f in audit_odf(first).findings}
+    assert not {"SHEET002", "GRAPHIC003"} & {f.rule_id for f in audit_odf(first).findings}
     result = remediate(first, second, plan, rebind=True)
     assert result.published, result.as_dict()
     assert not result.changed

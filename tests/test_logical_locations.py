@@ -45,14 +45,14 @@ BODY = (
 )
 
 EXPECTED = {
-    ("TXT002", "content/heading[1]"),
-    ("TXT002", "content/heading[2]"),
-    ("TXT003", "content/heading[1]"),
-    ("TXT010", "content/frame[name=Logo]"),
-    ("TXT021", "content/table[name=Data]"),
-    ("TXT021", "content/table[2]"),
-    ("TXT030", "content/paragraph[1]"),
-    ("TXT030", "content/paragraph[3]"),
+    ("HEADING002", "content/heading[1]"),
+    ("HEADING002", "content/heading[2]"),
+    ("HEADING003", "content/heading[1]"),
+    ("GRAPHIC003", "content/frame[name=Logo]"),
+    ("TABLE003", "content/table[name=Data]"),
+    ("TABLE003", "content/table[2]"),
+    ("LINK001", "content/paragraph[1]"),
+    ("LINK001", "content/paragraph[3]"),
 }
 
 
@@ -128,5 +128,5 @@ def test_json_report_serializes_the_path_and_the_member(
     report = json.loads(capsys.readouterr().out)
     locations = {f["rule_id"]: f["location"] for f in reversed(report["findings"])}
     assert report["format"] == 6
-    assert locations["TXT030"] == {"path": "content/paragraph[1]", "member": None}
+    assert locations["LINK001"] == {"path": "content/paragraph[1]", "member": None}
     assert locations["ODF004"] == {"path": "manifest", "member": "META-INF/manifest.xml"}

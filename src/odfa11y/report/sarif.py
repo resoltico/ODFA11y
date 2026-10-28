@@ -68,7 +68,11 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
                 artifact_records.append({"location": {"uri": uri}})
             source_indices[source] = artifacts[resolved]
     ids = sorted({finding.rule_id for report in items for finding in report.findings})
-    if any(rule_id not in RULES for rule_id in ids):
+    if any(
+        RULES.get(finding.rule_id) is not finding.rule
+        for report in items
+        for finding in report.findings
+    ):
         msg = "SARIF findings must reference registered rules."
         raise ReportError(msg)
     descriptors = [_descriptor(rule_id) for rule_id in ids]
@@ -105,7 +109,7 @@ def _descriptor(rule_id: str) -> dict[str, Any]:
 def _result(
     finding: Finding, report: Report, rule_index: int, artifacts: dict[Path, int]
 ) -> dict[str, Any]:
-    rule = RULES[finding.rule_id]
+    rule = finding.rule
     locations = []
     for source in report.sources:
         location: dict[str, Any] = {

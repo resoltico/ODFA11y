@@ -930,12 +930,12 @@
           }
         },
         "required": [
-          "rule_id",
-          "severity",
-          "category",
           "message",
           "location",
-          "details"
+          "details",
+          "rule_id",
+          "severity",
+          "category"
         ],
         "type": "object"
       },

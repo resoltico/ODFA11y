@@ -11,7 +11,7 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.odf import KINDS, OdfDocument, validate
-from odfa11y.report import FactKeys
+from odfa11y.report import RULES, FactKeys
 
 from .documents import KIND_SPECS, make_flat, make_package
 
@@ -39,20 +39,8 @@ def test_every_kind_is_detected_in_both_layouts(tmp_path: Path, name: str, layou
     assert document.detection.body_element == document.kind.body_element
 
 
-SEMANTIC_PREFIXES = {
-    "text": "TXT",
-    "spreadsheet": "SHEET",
-    "presentation": "PRES",
-    "drawing": "DRAW",
-    "formula": "MATH",
-    "chart": "CHART",
-    "image": "IMAGE",
-    "database": "BASE",
-}
-
-
 @pytest.mark.parametrize(("name", "layout"), CASES)
-def test_every_kind_audits_without_errors_and_only_its_own_family_has_semantic_rules(
+def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
     tmp_path: Path, name: str, layout: str
 ) -> None:
     report = audit_odf(LAYOUTS[layout](tmp_path, name), schema=True)
@@ -60,14 +48,12 @@ def test_every_kind_audits_without_errors_and_only_its_own_family_has_semantic_r
     assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
     family = KIND_SPECS[name].family
     assert report.facts[FactKeys.DOCUMENT_FAMILY] == family
-    has_adapter = family in SEMANTIC_PREFIXES
-    expected_adapter = family
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == (
-        expected_adapter if has_adapter else "generic"
-    )
-    assert ("ODF009" in ids(report)) is (not has_adapter)
-    foreign = set(SEMANTIC_PREFIXES.values()) - {SEMANTIC_PREFIXES.get(family)}
-    assert not {i for i in ids(report) if i.startswith(tuple(foreign))}
+    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == family
+    assert "ODF009" not in ids(report)
+    assert all(finding.rule is RULES[finding.rule_id] for finding in report.findings)
+    document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
+    assert document.kind is not None
+    assert all(document.kind.family in question.kind.families for question in report.decisions)
 
 
 @pytest.mark.parametrize(("name", "layout"), [c for c in CASES if KIND_SPECS[c[0]].schema_valid])
@@ -83,11 +69,8 @@ def test_the_registry_serves_each_implemented_family_and_everything_else_generic
     for kind in KINDS.values():
         adapter = adapter_for(kind)
         assert adapter is (adapter_for(kind))
-        if kind.family.value in SEMANTIC_PREFIXES:
-            assert adapter.name == (kind.family.value)
-            assert adapter.family is kind.family
-        else:
-            assert adapter is GENERIC
+        assert adapter.name == kind.family.value
+        assert adapter.family is kind.family
     assert adapter_for(None) is GENERIC
 
 

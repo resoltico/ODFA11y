@@ -148,6 +148,6 @@ def test_repeat_splitting_rejects_duplicate_structural_identity(
 def test_audit_reports_unresolvable_repeat_counts(tmp_path: Path, repeat: str) -> None:
     body = REPEATED.replace('number-rows-repeated="5"', f'number-rows-repeated="{repeat}"')
     source = make_package(tmp_path, "text", Variant(body=body))
-    findings = [f for f in audit_odf(source).findings if f.rule_id == "TXT022"]
+    findings = [f for f in audit_odf(source).findings if f.rule_id == "TABLE002"]
     assert len(findings) == 1
     assert findings[0].severity.value == "error"

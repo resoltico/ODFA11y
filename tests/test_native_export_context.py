@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, href: str) -> None:
     source = writer_resource(tmp_path, href)
     report = audit_odf(source)
-    assert "ODF012" in {finding.rule_id for finding in report.findings}
+    assert "NATIVE001" in {finding.rule_id for finding in report.findings}
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
     with pytest.raises(ToolFailedError, match="rendering dependencies"):
         require_native_context(OdfDocument.open(source))
@@ -88,7 +88,7 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
     field.set(qn("text", "display"), "full")
     field.text = "Authored cached field"
     document.save(source)
-    assert "ODF013" in {finding.rule_id for finding in audit_odf(source).findings}
+    assert "NATIVE002" in {finding.rule_id for finding in audit_odf(source).findings}
     require_native_context(OdfDocument.open(source))  # Direct original export is distinct.
     with pytest.raises(ToolFailedError, match="filename/path fields"):
         require_native_context(OdfDocument.open(source), captured_identity=True)

@@ -35,7 +35,7 @@ def test_strict_text_warning_has_one_authoritative_failed_outcome(
     output = capsys.readouterr()
     assert "Check: no errors" in output.out
     assert "Command: failed (exit 1; warnings rejected" in output.out
-    assert "TXT030" in output.out
+    assert "LINK001" in output.out
     assert "PASS" not in output.out
     assert not output.err
 
@@ -84,7 +84,7 @@ def test_production_warning_failure_preserves_findings_and_schema(
         assert "Pipeline profile: production" in output.out
         assert "Command: failed (exit 1" in output.out
         assert "Gate findings: audit-remediated" in output.out
-        assert "TXT030" in output.out
+        assert "LINK001" in output.out
         assert "REVIEW.md" in output.out
     assert not output.err
 
@@ -110,7 +110,7 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
     )
     output = capsys.readouterr().out
     assert "Command: completed (exit 0" in output
-    assert "TXT030" in output
+    assert "LINK001" in output
     assert "human review is still required" in output
 
 
@@ -131,7 +131,7 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = Report(kind="odf", subject="source.odt")
-    source.add(rules.TXT030)
+    source.add(rules.LINK001)
     data = RunRecord(
         document=DocumentIdentity("doc.odt"),
         operations=(),
@@ -154,7 +154,7 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     assert main(["pipeline", "source.odt", "--plan", str(config), "--output-dir", "evidence"]) == 3
     text = capsys.readouterr().out
     assert "Before remediation: audit-source" in text
-    assert "TXT030" in text
+    assert "LINK001" in text
     assert "Command: failed (exit 3" in text
     assert "Tool details:" in text
     assert "\x1b" not in text

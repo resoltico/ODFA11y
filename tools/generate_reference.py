@@ -27,7 +27,7 @@ from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.records import DoctorRecord, DocumentIdentity, SchemaCheck, Toolchain
 from odfa11y.remediation import RemediationResult, Violation
-from odfa11y.report import FACT_REGISTRY, FactSet, Finding, Location, Report
+from odfa11y.report import FACT_REGISTRY, RULES, FactSet, Finding, Location, Report, Rule
 from odfa11y.serialization import JsonObject, JsonValue, schema_for
 
 SCHEMA_DIRECTORY = Path(__file__).resolve().parents[1] / "src/odfa11y/schemas"
@@ -67,6 +67,7 @@ TYPE_NAMESPACE = {
         RemediationResult,
         FactSet,
         Finding,
+        Rule,
         Location,
         Report,
     )
@@ -118,6 +119,35 @@ def schemas() -> dict[str, JsonObject]:
     }
 
 
+def rule_reference() -> str:
+    """Render one catalogue row per authoritative rule.
+
+    Returns
+    -------
+    str
+        The generated Markdown rule reference.
+
+    """
+    lines = [
+        "# Rule reference",
+        "",
+        "Rules define each finding's identity, severity, category and possible decision kinds.",
+        "Findings reference these rules; open decisions carry the human questions.",
+        "The [registry](../src/odfa11y/report/rules.py) is authoritative.",
+        "",
+        "## Registered rules",
+        "",
+        "| ID | Severity | Finding | Decision kinds |",
+        "| --- | --- | --- | --- |",
+    ]
+    for rule in sorted(RULES.values(), key=lambda value: value.id):
+        decisions = ", ".join(f"`{kind}`" for kind in rule.decision_kinds)
+        lines.append(
+            f"| `{rule.id}` | {rule.severity.value.title()} | {rule.title} | {decisions} |"
+        )
+    return "\n".join(lines) + "\n\n"
+
+
 def main() -> int:
     """Write reference artifacts or fail when the committed copies are stale.
 
@@ -147,6 +177,9 @@ def main() -> int:
         + "\n\n<!-- generated decisions -->\n"
         + decision_reference(registered_kinds())
     )
+    rules_path = plan_path.with_name("RULES.md")
+    reading = rules_path.read_text(encoding="utf-8").split("## Reading findings", 1)[1]
+    artifacts[rules_path] = rule_reference() + "## Reading findings" + reading
     for path, expected in artifacts.items():
         if args.check:
             if not path.is_file() or path.read_text(encoding="utf-8") != expected:

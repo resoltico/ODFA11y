@@ -24,7 +24,15 @@ if TYPE_CHECKING:
     from .corpus_manifest import CorpusDocument
 
 EVERY_DOCUMENT = pytest.mark.parametrize("document", DOCUMENTS, ids=DOCUMENT_IDS)
-CORPUS_RULES = {"TXT002", "TXT005", "TXT010", "TXT020", "TXT021", "TXT030", "TXT040"}
+CORPUS_RULES = {
+    "HEADING002",
+    "NOTE001",
+    "GRAPHIC003",
+    "TABLE001",
+    "TABLE003",
+    "LINK001",
+    "LAYOUT001",
+}
 
 
 def _findings(document: CorpusDocument) -> set[str]:

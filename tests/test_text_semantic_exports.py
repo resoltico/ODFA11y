@@ -71,7 +71,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     edited = tmp_path / "columns.odt"
     execute_operations(source, edited, [MarkTableHeaders({"Table1": TableHeaders(columns=1)})])
     assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
-    assert "TXT021" not in {f.rule_id for f in audit_odf(edited).findings}
+    assert "TABLE003" not in {f.rule_id for f in audit_odf(edited).findings}
     pdf = export_pdfua(
         edited, tmp_path / "columns.pdf", ExportSettings("writer_pdf_Export", soffice)
     )

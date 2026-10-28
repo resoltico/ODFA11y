@@ -77,7 +77,7 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     document = OdfDocument.open(source)
     decoration = _mixed_graphics(document)
     control = document.save(tmp_path / "missing-role.fodt")
-    assert "TXT010" in {finding.rule_id for finding in audit_odf(control).findings}
+    assert "GRAPHIC003" in {finding.rule_id for finding in audit_odf(control).findings}
     settings = ExportSettings("writer_pdf_Export", soffice)
     control_pdf = export_pdfua(control, tmp_path / "missing-role.pdf", settings)
     assert "PDF007" in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
@@ -90,7 +90,7 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     assert operation.apply(document)[0].status == Status.APPLIED
     edited = document.save(tmp_path / "decorative-role.fodt")
     assert validate(document).count == 0
-    assert "TXT010" not in {finding.rule_id for finding in audit_odf(edited).findings}
+    assert "GRAPHIC003" not in {finding.rule_id for finding in audit_odf(edited).findings}
     assert operation.apply(document)[0].status == Status.UNCHANGED
     pdf = export_pdfua(edited, tmp_path / "decorative-role.pdf", settings)
     report = audit_pdfua(pdf)
@@ -178,7 +178,9 @@ def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
     etree.SubElement(style, qn("style", "graphic-properties"), {qn("draw", "decorative"): "true"})
     source = document.save(tmp_path / "nested-group.fodt")
     assert validate(document).count == 0
-    assert {"GRAPHIC001", "TXT010"} <= {finding.rule_id for finding in audit_odf(source).findings}
+    assert {"GRAPHIC001", "GRAPHIC003"} <= {
+        finding.rule_id for finding in audit_odf(source).findings
+    }
     operation = SetGraphicAlternatives({
         "Group": GraphicAlternative(
             decorative=False, fingerprint=graphics_fingerprint(document, [group])

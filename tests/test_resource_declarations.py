@@ -30,7 +30,7 @@ def test_schema_valid_declarations_are_reported_and_refused(
     document = OdfDocument.open(source)
     assert validate(document).count == 0
     report = audit_odf(source)
-    assert "ODF012" in {f.rule_id for f in report.findings}
+    assert "NATIVE001" in {f.rule_id for f in report.findings}
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
     with pytest.raises(ToolFailedError, match="rendering dependencies"):
         require_native_context(document)

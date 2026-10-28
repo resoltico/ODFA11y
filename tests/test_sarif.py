@@ -14,11 +14,13 @@ from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, ReportError
 from odfa11y.pdf import check_pdfua
 from odfa11y.report import (
+    Category,
     FactKeys,
     FactSet,
     Finding,
     Location,
     Report,
+    Rule,
     Severity,
     render_reports,
     rules,
@@ -54,15 +56,15 @@ def test_official_schema_identity_and_negative_control() -> None:
     assert not Draft7Validator(schema).is_valid({"version": "2.1.0", "runs": [], "secret": "x"})
 
 
-def test_registered_rules_levels_remedies_and_logical_locations(tmp_path: Path) -> None:
+def test_registered_rule_levels_and_logical_locations(tmp_path: Path) -> None:
     source = _source(tmp_path, "sample.odt")
     report = Report(kind="odf", subject="ignored display", sources=(source,))
     report.add(rules.META001, location=Location("metadata/title", "meta.xml"))
-    report.add(rules.TXT021, location=Location.named("content", "table", "north/south"))
-    report.add(rules.TXT004)
+    report.add(rules.TABLE003, location=Location.named("content", "table", "north/south"))
+    report.add(rules.HEADING004)
     run = _render([report], tmp_path)["runs"][0]
     descriptors = run["tool"]["driver"]["rules"]
-    assert [entry["id"] for entry in descriptors] == ["META001", "TXT004", "TXT021"]
+    assert [entry["id"] for entry in descriptors] == ["HEADING004", "META001", "TABLE003"]
     assert [item["level"] for item in run["results"]] == ["error", "warning", "note"]
     for result in run["results"]:
         assert descriptors[result["ruleIndex"]]["id"] == result["ruleId"]
@@ -115,7 +117,7 @@ def test_package_and_flat_findings_have_equivalent_logical_locations(tmp_path: P
         assert report.sources == (source,)
         reports.append(report)
     results = _render(reports, tmp_path)["runs"][0]["results"]
-    graphics = [result for result in results if result["ruleId"] == "TXT010"]
+    graphics = [result for result in results if result["ruleId"] == "GRAPHIC003"]
     assert len(graphics) == 2
     assert (
         graphics[0]["locations"][0]["logicalLocations"]
@@ -151,7 +153,7 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
 )
 def test_unsafe_logical_labels_are_rejected(tmp_path: Path, label: str) -> None:
     report = Report(kind="odf", subject="x", sources=(_source(tmp_path, "x.odt"),))
-    report.add(rules.TXT010, location=Location(label))
+    report.add(rules.GRAPHIC003, location=Location(label))
     with pytest.raises(ReportError, match="unsafe path or credential"):
         _render([report], tmp_path)
 
@@ -174,7 +176,7 @@ def test_missing_root_source_identity_and_unregistered_rules_are_rejected(tmp_pa
     with pytest.raises(ReportError, match="explicit source identities"):
         _render([Report(kind="odf", subject="sample.odt")], tmp_path)
     report = Report(kind="odf", subject="x", sources=(_source(tmp_path, "x.odt"),))
-    report.findings.append(Finding("UNKNOWN", Severity.ERROR, "x", "x"))
+    report.findings.append(Finding(Rule("UNKNOWN", Severity.ERROR, Category.SEMANTICS, "x"), "x"))
     with pytest.raises(ReportError, match="registered rules"):
         _render([report], tmp_path)
 
@@ -212,3 +214,12 @@ def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Pat
         location["physicalLocation"]["artifactLocation"]["index"] == 0
         for location in run["results"][0]["locations"]
     )
+
+
+def test_sarif_refuses_a_rule_impostor_with_a_registered_id(tmp_path: Path) -> None:
+    source = _source(tmp_path, "source.odt")
+    impostor = Rule("META001", Severity.INFO, Category.METADATA, "Impostor")
+    report = Report(kind="odf", subject=source.name, sources=(source,))
+    report.findings.append(Finding(impostor, "Untrusted severity"))
+    with pytest.raises(ReportError, match="registered rules"):
+        _render([report], tmp_path)

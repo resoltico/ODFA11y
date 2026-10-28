@@ -35,7 +35,7 @@ def _report() -> Report:
         }),
     )
     report.add(
-        rules.TXT030,
+        rules.LINK001,
         "Needs review",
         location=Location("content/paragraph[2]"),
         details={"count": 2},
@@ -46,13 +46,13 @@ def _report() -> Report:
             None,
             None,
             {"enabled": False},
-            ("TXT030",),
+            ("LINK001",),
         )
     )
     return report
 
 
-def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
+def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
     lines = render_reports([_report()]).splitlines()
     assert lines[:3] == [
         "Subject: sample.odt (odf)",
@@ -61,7 +61,7 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
     ]
     assert "  document.title: T" in lines
     assert "  fidelity.raster_changed_ratios: 2 record(s)" in lines
-    assert "  WARNING TXT030: Needs review" in lines
+    assert "  WARNING LINK001: Needs review" in lines
     assert "    location: content/paragraph[2]" in lines
     assert any("text.linkify_addresses" in line for line in lines)
     assert any(line.strip() == "count: 2" for line in lines)
@@ -74,7 +74,7 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]
     assert (finding["rule_id"], finding["severity"], finding["category"]) == (
-        "TXT030",
+        "LINK001",
         "warning",
         "links",
     )
@@ -118,7 +118,7 @@ def test_exit_status_follows_highest_severity(
 
 def test_exit_status_takes_the_worst_report() -> None:
     clean, warned, failed = (Report(kind="odf", subject=str(i)) for i in range(3))
-    warned.add(rules.TXT030)
+    warned.add(rules.LINK001)
     failed.add(rules.META001)
     assert exit_status([clean, warned], strict=True) == 1
     assert exit_status([clean, warned, failed], strict=True) == 2
@@ -146,3 +146,19 @@ def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_tit
         key: (rule.severity.value, rule.title, ", ".join(rule.decision_kinds))
         for key, rule in RULES.items()
     }
+
+
+def test_finding_references_one_rule_without_serializing_its_implementation() -> None:
+    report = Report(kind="odf", subject="source.odt")
+    report.add(rules.HEADING004, "A source-specific observation")
+    [finding] = report.findings
+    assert finding.rule is rules.HEADING004
+    findings = report.as_dict()["findings"]
+    assert isinstance(findings, list)
+    [payload] = findings
+    assert isinstance(payload, dict)
+    assert payload["rule_id"] == "HEADING004"
+    assert payload["severity"] == "info"
+    assert payload["category"] == "semantics"
+    assert payload["message"] == "A source-specific observation"
+    assert "rule" not in payload
