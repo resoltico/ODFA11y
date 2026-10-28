@@ -27,6 +27,8 @@ def render_reports(
 ) -> str:
     """Render one or more reports; JSON is a single object for one report, else an array.
 
+    Delegated SARIF path resolution raises PackageError for unavailable sources.
+
     Returns
     -------
     str
@@ -36,8 +38,6 @@ def render_reports(
     ------
     ReportError
         The requested format is unsupported or SARIF source identities are unsafe.
-    PackageError
-        A SARIF source path cannot be resolved.
 
     """
     items = list(reports)

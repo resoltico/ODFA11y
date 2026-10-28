@@ -30,6 +30,7 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
     Free-form messages, display subjects and metadata are intentionally excluded: they
     may contain source content, credentials or local paths. Logical locations are kept;
     filesystem locations never invent line numbers for document elements.
+    Delegated path resolution raises PackageError for unavailable source/root paths.
 
     Returns
     -------
@@ -40,8 +41,6 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
     ------
     ReportError
         A source is outside the root, or a finding has unsafe identity data.
-    PackageError
-        A source or source-root path cannot be resolved.
 
     """
     root = _resolved(source_root)
