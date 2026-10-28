@@ -77,12 +77,12 @@ KIND_SPECS = {
             "spreadsheet",
         ),
         KindSpec(
-            "graphics",
+            "drawing",
             OASIS + "graphics",
             ".odg",
             '<office:drawing><draw:page draw:name="page1" draw:master-page-name="Default"/>'
             "</office:drawing>",
-            "graphics",
+            "drawing",
             master=True,
         ),
         KindSpec(

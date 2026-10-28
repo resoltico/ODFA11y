@@ -59,7 +59,7 @@ class EditCell(Operation):
     """A test operation that, unlike every shipped one, changes what a sheet shows."""
 
     name: ClassVar[str] = "edit_cell"
-    family: ClassVar[Family | None] = Family.SPREADSHEET
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.SPREADSHEET})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

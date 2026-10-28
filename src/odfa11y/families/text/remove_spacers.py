@@ -26,7 +26,7 @@ class RemoveEmptySpacers(Operation):
     """Remove empty body paragraphs that carry no content, structure or break semantics."""
 
     name: ClassVar[str] = "remove_empty_spacers"
-    family: ClassVar[Family | None] = Family.TEXT
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

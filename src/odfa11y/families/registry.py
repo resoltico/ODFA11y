@@ -9,11 +9,10 @@ from odfa11y.odf import Family, OdfDocument, Use
 
 from .chart import ADAPTER as CHART_ADAPTER
 from .database import ADAPTER as DATABASE_ADAPTER
-from .drawing import ADAPTER as DRAWING_ADAPTER
 from .formula import ADAPTER as FORMULA_ADAPTER
 from .generic import GENERIC
 from .image import ADAPTER as IMAGE_ADAPTER
-from .presentation import ADAPTER as PRESENTATION_ADAPTER
+from .pages import DRAWING_ADAPTER, PRESENTATION_ADAPTER
 from .spreadsheet import ADAPTER as SPREADSHEET_ADAPTER
 from .text import ADAPTER as TEXT_ADAPTER
 
@@ -30,7 +29,7 @@ REGISTRY: dict[Family, FamilyAdapter] = {
     Family.CHART: CHART_ADAPTER,
     Family.FORMULA: FORMULA_ADAPTER,
     Family.PRESENTATION: PRESENTATION_ADAPTER,
-    Family.GRAPHICS: DRAWING_ADAPTER,
+    Family.DRAWING: DRAWING_ADAPTER,
     Family.SPREADSHEET: SPREADSHEET_ADAPTER,
 }
 

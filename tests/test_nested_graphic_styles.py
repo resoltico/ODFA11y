@@ -12,7 +12,7 @@ from odfa11y.adapter import Status
 from odfa11y.content import GraphicAlternative, LinkDescription, PageDecision, graphics_fingerprint
 from odfa11y.content.links import link_fingerprint, link_location
 from odfa11y.content.pages import page_fingerprint, pages
-from odfa11y.families.drawing import SetGraphicAlternatives, SetLinkDescriptions, SetPageSemantics
+from odfa11y.families.pages import SetGraphicAlternatives, SetLinkDescriptions, SetPageSemantics
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 
 from .documents import Variant, make_flat, make_package
@@ -38,7 +38,7 @@ BODY = (
 def test_nested_graphic_visual_drift_rejects_group_link_and_page_decisions(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
-    document = OdfDocument.open(make(tmp_path, "graphics", Variant(body=BODY)))
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=BODY)))
     visual = _style(document, "Visual")
     group = select_elements(document.tree(Part.CONTENT), "//draw:g[@draw:name='Group']")[0]
     link = select_elements(document.tree(Part.CONTENT), "//draw:a")[0]
@@ -73,7 +73,7 @@ def test_nested_graphic_visual_drift_rejects_group_link_and_page_decisions(
 def test_nested_graphic_metadata_and_proven_role_derivation_reapply(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
-    document = OdfDocument.open(make(tmp_path, "graphics", Variant(body=BODY)))
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=BODY)))
     _style(document, "Visual", role="true")
     group = select_elements(document.tree(Part.CONTENT), "//draw:g[@draw:name='Group']")[0]
     leaf = select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
@@ -110,7 +110,7 @@ def test_nested_graphic_metadata_and_proven_role_derivation_reapply(
 def test_page_visual_style_definition_is_also_bound(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
-    document = OdfDocument.open(make(tmp_path, "graphics", Variant(body=BODY)))
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=BODY)))
     _style(document, "Visual")
     page_style = _style(document, "PageVisual")
     page_style.set(qn("style", "family"), "drawing-page")
@@ -136,7 +136,7 @@ def test_page_visual_style_definition_is_also_bound(
 def test_valid_conditional_graphic_style_context_refuses_all_reviewed_metadata(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
-    document = OdfDocument.open(make(tmp_path, "graphics", Variant(body=BODY)))
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=BODY)))
     visual = _style(document, "Visual")
     alternate = _style(document, "Alternate")
     etree.SubElement(
@@ -190,7 +190,7 @@ def test_scene_review_binds_visual_styles_of_nested_three_dimensional_objects(
         'draw:name="Scene"><dr3d:cube draw:style-name="Visual"/>'
         "</dr3d:scene></draw:page></office:drawing>"
     )
-    document = OdfDocument.open(make(tmp_path, "graphics", Variant(body=body)))
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=body)))
     visual = _style(document, "Visual")
     scene = next(document.tree(Part.CONTENT).iter(qn("dr3d", "scene")))
     assert validate(document).count == 0
@@ -209,7 +209,7 @@ def test_scene_review_binds_visual_styles_of_nested_three_dimensional_objects(
 def test_page_style_conditional_mapping_refuses_reviewed_metadata(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
-    document = OdfDocument.open(make(tmp_path, "graphics", Variant(body=BODY)))
+    document = OdfDocument.open(make(tmp_path, "drawing", Variant(body=BODY)))
     _style(document, "Visual")
     page_style = _style(document, "PageVisual")
     page_style.set(qn("style", "family"), "drawing-page")

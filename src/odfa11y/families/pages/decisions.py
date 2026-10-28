@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Reviewed page, navigation, graphic and link answers for drawing documents."""
+"""Reviewed page, navigation, graphic and link answers for presentation and drawing documents."""
 
 from __future__ import annotations
 

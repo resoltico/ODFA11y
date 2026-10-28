@@ -219,7 +219,7 @@ def test_native_reload_measures_three_defaults_and_preserves_named_override(
     [
         ("text", "paragraph"),
         ("spreadsheet", "table-cell"),
-        ("graphics", "paragraph"),
+        ("drawing", "paragraph"),
         ("presentation", "paragraph"),
         ("image", "paragraph"),
     ],

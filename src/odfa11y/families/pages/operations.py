@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Explicit page and graphic decisions for presentation documents."""
+"""Explicit page and graphic decisions for presentation and drawing documents."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ class SetPageSemantics(Operation):
 
     entries: Mapping[str, PageDecision]
     name: ClassVar[str] = "set_page_semantics"
-    family: ClassVar[Family | None] = Family.PRESENTATION
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.PRESENTATION, Family.DRAWING})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
@@ -37,7 +37,7 @@ class SetGraphicAlternatives(Operation):
 
     entries: Mapping[str, GraphicAlternative]
     name: ClassVar[str] = "set_graphic_alternatives"
-    family: ClassVar[Family | None] = Family.PRESENTATION
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.PRESENTATION, Family.DRAWING})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
@@ -50,7 +50,7 @@ class SetLinkDescriptions(Operation):
 
     entries: Mapping[str, LinkDescription]
     name: ClassVar[str] = "set_link_descriptions"
-    family: ClassVar[Family | None] = Family.PRESENTATION
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.PRESENTATION, Family.DRAWING})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

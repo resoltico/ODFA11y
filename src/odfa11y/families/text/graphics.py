@@ -24,7 +24,7 @@ class SetGraphicAlternatives(Operation):
 
     entries: Mapping[str, GraphicAlternative]
     name: ClassVar[str] = "set_graphic_alternatives"
-    family: ClassVar[Family | None] = Family.TEXT
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
@@ -37,7 +37,7 @@ class SetLinkDescriptions(Operation):
 
     entries: Mapping[str, LinkDescription]
     name: ClassVar[str] = "set_link_descriptions"
-    family: ClassVar[Family | None] = Family.TEXT
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:

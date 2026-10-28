@@ -39,7 +39,7 @@ GRAPHIC_ALTERNATIVE = DecisionKind(
         Family.TEXT,
         Family.SPREADSHEET,
         Family.PRESENTATION,
-        Family.GRAPHICS,
+        Family.DRAWING,
         Family.IMAGE,
     }),
     "set_graphic_alternatives",
@@ -48,20 +48,20 @@ LINK_DESCRIPTION = DecisionKind(
     "link.description",
     DecisionScope.TARGET,
     LinkDescriptionAnswer,
-    frozenset({Family.TEXT, Family.SPREADSHEET, Family.PRESENTATION, Family.GRAPHICS}),
+    frozenset({Family.TEXT, Family.SPREADSHEET, Family.PRESENTATION, Family.DRAWING}),
     "set_link_descriptions",
 )
 PAGE_METADATA = DecisionKind(
     "page.metadata",
     DecisionScope.TARGET,
     PageMetadataAnswer,
-    frozenset({Family.PRESENTATION, Family.GRAPHICS}),
+    frozenset({Family.PRESENTATION, Family.DRAWING}),
     "set_page_semantics",
 )
 PAGE_NAVIGATION = DecisionKind(
     "page.navigation",
     DecisionScope.TARGET,
     PageNavigationAnswer,
-    frozenset({Family.PRESENTATION, Family.GRAPHICS}),
+    frozenset({Family.PRESENTATION, Family.DRAWING}),
     "set_page_semantics",
 )

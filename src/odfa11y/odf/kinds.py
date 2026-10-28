@@ -19,7 +19,7 @@ class Family(StrEnum):
     TEXT = "text"
     SPREADSHEET = "spreadsheet"
     PRESENTATION = "presentation"
-    GRAPHICS = "graphics"
+    DRAWING = "drawing"
     FORMULA = "formula"
     CHART = "chart"
     IMAGE = "image"
@@ -40,6 +40,8 @@ class DocumentKind:
     @property
     def name(self) -> str:
         """A short unique name, for example ``text-template`` or ``base``."""
+        if self.family == Family.DRAWING:
+            return "drawing-template" if self.template else "drawing"
         short = self.media_type.removeprefix(OASIS_PREFIX).removeprefix("application/vnd.")
         return short.replace(".", "-")
 
@@ -62,9 +64,9 @@ def _kinds() -> tuple[DocumentKind, ...]:
             "office:spreadsheet",
             template=True,
         ),
-        DocumentKind(oasis + "graphics", Family.GRAPHICS, ".odg", "office:drawing"),
+        DocumentKind(oasis + "graphics", Family.DRAWING, ".odg", "office:drawing"),
         DocumentKind(
-            oasis + "graphics-template", Family.GRAPHICS, ".otg", "office:drawing", template=True
+            oasis + "graphics-template", Family.DRAWING, ".otg", "office:drawing", template=True
         ),
         DocumentKind(oasis + "presentation", Family.PRESENTATION, ".odp", "office:presentation"),
         DocumentKind(

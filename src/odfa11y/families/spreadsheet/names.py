@@ -41,7 +41,7 @@ class SetSheetNames(Operation):
 
     entries: Mapping[str, SheetNameChange]
     name: ClassVar[str] = "set_sheet_names"
-    family: ClassVar[Family | None] = Family.SPREADSHEET
+    families: ClassVar[frozenset[Family] | None] = frozenset({Family.SPREADSHEET})
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
