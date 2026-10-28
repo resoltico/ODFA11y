@@ -132,7 +132,7 @@ sha256 = "76ea0681c0ab19dd091a2e2d0402eeee3736f2be5d72f0d6ee2eba2867e120aa"
 
 [[document]]
 file = "table-no-header-row.odt"
-rules = ["TABLE003", "LAYOUT001"]
-rules_after_plan = []
+rules = ["TABLE001", "LAYOUT001"]
+rules_after_plan = ["TABLE001"]
 schema_violations = 11
 sha256 = "083a68fb12b52d2a4835bc9325605944a0ce70fe208368b59fd4c73156047c3f"

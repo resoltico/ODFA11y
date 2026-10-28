@@ -8,6 +8,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Table audits classify declared data, layout candidates and valid complex grids. Ambiguous intent or header relationships require native review; merged cells alone no longer trigger a finding.
+
 - Call the root application API with `Tools` and `Profile` values; results own effective exit statuses. Use `verify` and profile `source`; paragraph styles appear in `audit` output.
 
 - Native process/export/preflight APIs live in `native`; PDF reading and fidelity live under `pdf`. Size-split graphic-style and Writer style/protection/spacing modules are consolidated, with no forwarding modules.

@@ -175,12 +175,14 @@ def _data_table(features: Features) -> str:
         row2 = """
         <table:table-row>
           <table:table-cell><text:p>A</text:p></table:table-cell>
-          <table:table-cell><text:p>10</text:p></table:table-cell>
+          <table:table-cell office:value-type="float" office:value="10">
+            <text:p>10</text:p></table:table-cell>
         </table:table-row>"""
         row3 = """
         <table:table-row>
           <table:table-cell><text:p>B</text:p></table:table-cell>
-          <table:table-cell><text:p>20</text:p></table:table-cell>
+          <table:table-cell office:value-type="float" office:value="20">
+            <text:p>20</text:p></table:table-cell>
         </table:table-row>"""
         columns = "<table:table-column/><table:table-column/>"
         if features.get("with_table_header", False):

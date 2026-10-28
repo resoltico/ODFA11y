@@ -23,7 +23,12 @@ BODY = (
     '<table:table-row table:number-rows-repeated="3"><table:table-cell>'
     '<text:p><text:a xlink:type="simple" xlink:href="https://example.test/">'
     "Inner value</text:a></text:p>"
-    "</table:table-cell></table:table-row></table:table>"
+    "</table:table-cell>"
+    '<table:table-cell table:number-columns-repeated="2" '
+    'office:value-type="float" office:value="7">'
+    "<text:p>7</text:p></table:table-cell></table:table-row></table:table>"
+    "</table:table-cell></table:table-row><table:table-row>"
+    '<table:table-cell office:value-type="float" office:value="7"><text:p>7</text:p>'
     "</table:table-cell></table:table-row></table:table></office:text>"
 )
 

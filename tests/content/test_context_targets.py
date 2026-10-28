@@ -35,7 +35,8 @@ TABLE = """<table:table table:name="Shared"><table:table-column table:number-col
 <table:table-row><table:table-cell><text:p>Item</text:p></table:table-cell>
 <table:table-cell><text:p>Amount</text:p></table:table-cell></table:table-row>
 <table:table-row><table:table-cell><text:p>Apple</text:p></table:table-cell>
-<table:table-cell><text:p>3</text:p></table:table-cell></table:table-row></table:table>"""
+<table:table-cell office:value-type="float" office:value="3">
+<text:p>3</text:p></table:table-cell></table:table-row></table:table>"""
 BODY = (
     "<office:text><text:p>"
     + FRAME

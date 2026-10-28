@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING, ClassVar, override
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.content import axis_count, header_count, require_safe_boundary, table_fingerprint
 from odfa11y.errors import RemediationError
+from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.odf import Family, Part, qn
 
-from .contexts import context_location, text_nodes
-from .table_edit import mark_axis
+from .classification import TableKind, classify
+from .edit import mark_axis
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -116,4 +117,7 @@ def _preflight(
         if header_count(table, axis) != count:
             changes[axis] = count
     require_safe_boundary(table, entry.rows, entry.columns)
+    if classify(table).kind in {TableKind.LAYOUT_CANDIDATE, TableKind.AMBIGUOUS}:
+        message = "Table intent or header relationships remain ambiguous; edit the table in Writer."
+        raise RemediationError(message)
     return changes

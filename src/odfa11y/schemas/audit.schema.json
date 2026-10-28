@@ -989,6 +989,14 @@
                       "description": "Paragraphs resembling typed list markers; review only.",
                       "type": "integer"
                     },
+                    "text.table_classifications": {
+                      "description": "Per-table source-supported intent, grid and semantic header bands.",
+                      "items": {
+                        "additionalProperties": {},
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "text.table_count": {
                       "description": "Tables in current reading contexts.",
                       "type": "integer"

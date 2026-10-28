@@ -147,10 +147,12 @@ GRAPHIC003 = _rule(
     "Graphic has neither accessible title nor description.",
     ("graphic.alternative",),
 )
-TABLE001 = _rule("TABLE001", WARNING, SEM, "Merged table cells need header-relationship review.")
+TABLE001 = _rule(
+    "TABLE001", WARNING, SEM, "Table intent or header relationships require native review."
+)
 TABLE002 = _rule("TABLE002", ERROR, SEM, "Table grid or header bands cannot be resolved safely.")
 TABLE003 = _rule(
-    "TABLE003", WARNING, SEM, "Data-like table has no semantic headers.", ("table.headers",)
+    "TABLE003", WARNING, SEM, "Declared data table has no semantic headers.", ("table.headers",)
 )
 LANG004 = _rule(
     "LANG004",

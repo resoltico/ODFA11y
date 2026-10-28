@@ -24,10 +24,11 @@ from .links import URI_RE, split_trailing_punctuation
 from .lists import audit_lists
 from .prose import prose_slots
 from .references import audit_references
-from .semantics import audit_headings, audit_images, audit_tables
+from .semantics import audit_headings, audit_images
 from .spacers import spacer_candidates
 from .style_properties import paragraph_style_name
 from .styles import catalog_of
+from .tables.audit import audit_tables
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -55,7 +56,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     audit_references(document, report)
     audit_headings(content, report, document)
     audit_images(document, report)
-    audit_tables(content, report, document)
+    audit_tables(document, report)
     _audit_links(content, report)
     for index, link in enumerate(document_links(document), 1):
         if not link_has_description(link):

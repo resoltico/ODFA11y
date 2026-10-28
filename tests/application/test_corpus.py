@@ -23,7 +23,6 @@ CORPUS_RULES = {
     "NOTE001",
     "GRAPHIC003",
     "TABLE001",
-    "TABLE003",
     "LINK001",
     "LAYOUT001",
 }
