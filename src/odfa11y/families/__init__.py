@@ -2,6 +2,6 @@
 """The registry of document families: which adapter serves which kind of document."""
 
 from .generic import GENERIC
-from .registry import REGISTRY, adapter_for, style_usage
+from .registry import REGISTRY, adapter_for
 
-__all__ = ["GENERIC", "REGISTRY", "adapter_for", "style_usage"]
+__all__ = ["GENERIC", "REGISTRY", "adapter_for"]

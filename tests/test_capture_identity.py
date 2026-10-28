@@ -13,7 +13,9 @@ from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 
 from .documents import make_flat
 from .reviewed_plans import plan_header, reviewed_plan
@@ -83,11 +85,11 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
 
     monkeypatch.setattr(capture.os, "open", exchange)
     output = tmp_path / "pipeline"
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         output,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert record.exit_status == 3
     assert record.failed_stage == "identify-source"
@@ -109,7 +111,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
             ("valid", valid.relative_to(tmp_path).as_posix(), "plan.toml"),
         ],
     )
-    result = run_batch(manifest, tmp_path / "batch", PipelineOptions(profile="inspect"))
+    result = run_batch(manifest, tmp_path / "batch", RunSettings(profile=profile_named("source")))
     assert [r.exit_status for r in result.items] == [3, 0]
     assert result.items[0].failed_stage == "identify-source"
     for name in ["changed", "valid"]:

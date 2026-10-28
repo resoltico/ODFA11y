@@ -12,7 +12,9 @@ import pytest
 
 from odfa11y.errors import PackageError, ToolFailedError
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import NativeOptions, compare_documents, export_document, is_pdf
+from odfa11y.pipeline.comparison import compare_documents, is_pdf
+from odfa11y.pipeline.native import export_document
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .native_resource_fixtures import writer_resource
@@ -60,7 +62,8 @@ def test_core_pdf_comparison_keeps_original_report_identity(tmp_path: Path) -> N
         source,
         candidate,
         FidelityPolicy(),
-        options=NativeOptions(on_progress=lambda event: events.append((event.step, event.state))),
+        tools=Tools(),
+        on_progress=lambda event: events.append((event.step, event.state)),
     )
     assert report.passed
     assert report.sources == (candidate, source)
@@ -102,7 +105,7 @@ def test_guarded_core_export_refuses_unresolved_resources_before_native_boundary
     calls: list[object] = []
     monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(ToolFailedError, match="rendering dependencies"):
-        export_document(source, tmp_path / "out.pdf", NativeOptions(soffice="missing-tool"))
+        export_document(source, tmp_path / "out.pdf", Tools(soffice="missing-tool"))
     assert not calls
     assert source.read_bytes() == before
     assert not (tmp_path / "out.pdf").exists()
@@ -116,7 +119,7 @@ def test_guarded_core_export_with_real_libreoffice(
     before = source.read_bytes()
     destination = tmp_path / "out.pdf"
     exported = export_document(
-        source, destination, NativeOptions(soffice=external_tool("soffice", "libreoffice"))
+        source, destination, Tools(soffice=external_tool("soffice", "libreoffice"))
     )
     assert exported == destination
     assert is_pdf(exported)

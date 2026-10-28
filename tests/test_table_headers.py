@@ -10,10 +10,10 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.audit import audit_odf
 from odfa11y.content import axis_count, header_count, table_fingerprint
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.source_audit import audit_odf
 
 from .documents import Variant, make_flat, make_package
 from .operation_execution import execute_operations

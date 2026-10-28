@@ -8,10 +8,8 @@ import sys
 from textwrap import fill
 from typing import TYPE_CHECKING
 
-from odfa11y.outcomes import StageName
-from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.plans import load_plan
-from odfa11y.report import render_reports, terminal_text
+import odfa11y as api
+from odfa11y import StageName, render_reports, terminal_text
 
 from .outcomes import render_command_outcome
 from .progress import progress_callback
@@ -19,7 +17,7 @@ from .progress import progress_callback
 if TYPE_CHECKING:
     import argparse
 
-    from odfa11y.pipeline import RunRecord
+    from odfa11y import RunRecord
 
 
 def pipeline_command(args: argparse.Namespace) -> int:
@@ -31,19 +29,13 @@ def pipeline_command(args: argparse.Namespace) -> int:
         The effective pipeline exit status.
 
     """
-    plan = load_plan(args.plan)
-    options = PipelineOptions(
-        profile=args.profile,
-        soffice=str(args.soffice) if args.soffice else None,
-        verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
-        timeout=args.timeout,
-        on_progress=progress_callback(args.format),
-    )
-    record = run_pipeline(
+    record = api.run(
         args.source,
-        plan,
+        args.plan,
         args.output_dir,
-        options,
+        tools=api.Tools(args.soffice, args.verapdf_path, args.timeout),
+        profile=args.profile,
+        observer=progress_callback(args.format),
         rebind=args.rebind,
     )
     if args.format == "json":

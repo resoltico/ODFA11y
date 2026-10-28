@@ -9,14 +9,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.errors import ToolFailedError
 from odfa11y.native.formula_syntax import OPENFORMULA, FormulaFacts, classify_formula
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.native import export_document
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
 
 from .documents import TABLE_BODY, Variant, make_flat
 from .reviewed_plans import reviewed_plan
@@ -70,11 +73,11 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(ToolFailedError, match="formula context"):
         export_document(source, tmp_path / "output.pdf")
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "evidence",
-        PipelineOptions(profile="verify"),
+        RunSettings(profile=profile_named("verify")),
     )
     assert record.failed_stage == "export-source"
     assert record.exit_status == 3

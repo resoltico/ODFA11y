@@ -6,14 +6,25 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Never
+from typing import TYPE_CHECKING, Never
 
-from odfa11y import __version__
-from odfa11y.errors import PlanError
-from odfa11y.native.process import validate_timeout
-from odfa11y.outcomes import ExitStatus
-from odfa11y.pipeline import DEFAULT_PROFILE, DEFAULT_TIMEOUT_SECONDS, PROFILES
-from odfa11y.report import FORMATS, terminal_text
+from odfa11y import (
+    DEFAULT_PROFILE,
+    DEFAULT_TIMEOUT_SECONDS,
+    FORMATS,
+    PROFILES,
+    ExitStatus,
+    PlanError,
+    __version__,
+    profile_named,
+    terminal_text,
+    validate_timeout,
+)
+
+if TYPE_CHECKING:
+    from odfa11y import (
+        Profile,
+    )
 
 
 class TerminalParser(argparse.ArgumentParser):
@@ -48,8 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  odfa11y remediate original.odt reviewed.odt --plan document.toml --dry-run\n"
             "  odfa11y pipeline original.odt --plan document.toml \\\n"
             "    --output-dir evidence --profile production\n"
-            "  odfa11y check-evidence evidence\n\n"
-            "Use a new configuration filename and evidence directory.\n"
+            "  odfa11y verify evidence\n\n"
+            "Use a new plan filename and evidence directory.\n"
             "Exit statuses: 0 success; 1 gated warnings;\n"
             "  2 error findings; 3 execution failure; 4 invalid arguments/plans.\n"
             "A successful automated check still requires human accessibility review.\n"
@@ -149,7 +160,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-dir", type=Path, required=True, help="Evidence directory to create.")
     p.add_argument(
         "--profile",
-        choices=tuple(PROFILES),
+        choices=tuple(PROFILES.values()),
+        type=_profile_value,
         default=DEFAULT_PROFILE,
         help=_profile_help(),
     )
@@ -167,18 +179,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = _command(
         sub,
-        "styles",
-        examples=("  odfa11y styles source.odt\n  odfa11y styles source.odt --format json"),
-        description="Report paragraph-style usage and effective spacing.",
-    )
-    p.add_argument("source", type=Path)
-    p.add_argument("--format", choices=("text", "json"), default="text")
-
-    p = _command(
-        sub,
-        "check-evidence",
+        "verify",
         examples=(
-            "  odfa11y check-evidence evidence\n"
+            "  odfa11y verify evidence\n"
             "  # Checks file integrity; read evidence/REVIEW.md for human review."
         ),
         description="Verify an evidence directory against its manifest.",
@@ -192,6 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Show tool and dependency versions and what the PDF export supports.",
     )
     _add_tool_options(p)
+    p.add_argument("--verapdf-path", type=Path, help="Selected veraPDF executable.")
     p.add_argument("--format", choices=("text", "json"), default="text")
     return parser
 
@@ -254,7 +258,11 @@ def _add_batch(sub: argparse._SubParsersAction) -> None:
     p.add_argument("manifest", type=Path)
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument(
-        "--profile", choices=tuple(PROFILES), default=DEFAULT_PROFILE, help=_profile_help()
+        "--profile",
+        choices=tuple(PROFILES.values()),
+        type=_profile_value,
+        default=DEFAULT_PROFILE,
+        help=_profile_help(),
     )
     p.add_argument("--verapdf-path", type=Path)
     _add_tool_options(p)
@@ -263,7 +271,7 @@ def _add_batch(sub: argparse._SubParsersAction) -> None:
 
 def _profile_help() -> str:
     return (
-        f"Assurance profile (default: {DEFAULT_PROFILE}): inspect checks source/remediation; "
+        f"Assurance profile (default: {DEFAULT_PROFILE}): source checks source/remediation; "
         "verify adds PDF diagnostics and fidelity; production also requires veraPDF "
         "and gates warnings."
     )
@@ -289,3 +297,23 @@ def _command(
         suggest_on_error=True,
         color=False,
     )
+
+
+def _profile_value(value: str) -> Profile:
+    """Parse a profile value using the core catalogue.
+
+    Returns
+    -------
+    Profile
+        The selected core profile.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        The core rejects the supplied profile name.
+
+    """
+    try:
+        return profile_named(value)
+    except PlanError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc

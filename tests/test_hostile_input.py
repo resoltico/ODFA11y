@@ -12,7 +12,6 @@ import pypdfium2
 import pytest
 
 from odfa11y.adapter import Status
-from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, ToolFailedError
 from odfa11y.families.text import (
     LinkifyAddresses,
@@ -24,8 +23,11 @@ from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.outcomes import StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity import compare as compare_module
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
 from odfa11y.remediation import SetMetadata, SetOdfVersion
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .operation_execution import assert_refused, execute_operations
@@ -202,11 +204,11 @@ def test_a_non_executable_soffice_fails_the_stage_and_still_publishes_evidence(
     fake = tmp_path / "soffice"
     fake.write_text("#!/bin/sh\n", encoding="utf-8")
     fake.chmod(0o600)
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "out",
-        PipelineOptions(soffice=str(fake)),
+        RunSettings(tools=Tools(soffice=str(fake))),
     )
     assert record.failed_stage == "export-source"
     assert (tmp_path / "out" / "run.json").is_file()
@@ -231,11 +233,11 @@ def test_published_outputs_honour_the_umask_instead_of_being_owner_only(tmp_path
     previous = os.umask(0o022)
     try:
         source = make_minimal_odt(tmp_path / "doc.odt")
-        record = run_pipeline(
+        record = execute(
             source,
             reviewed_plan(source, [], FidelityPolicy()),
             tmp_path / "out",
-            PipelineOptions(soffice="missing"),
+            RunSettings(tools=Tools(soffice="missing")),
         )
         remediated = tmp_path / "remediated.odt"
         execute_operations(source, remediated, [SetMetadata(title="Modes")])

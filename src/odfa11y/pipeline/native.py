@@ -3,38 +3,21 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import UnsupportedKindError
 from odfa11y.families import adapter_for
-from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS, ExportSettings, export_pdfua
+from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.export_context import require_native_context
 from odfa11y.native.process import validate_timeout
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
+from odfa11y.tools import Tools
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from odfa11y.outcomes import ProgressObserver
-
-
-@dataclass(frozen=True, slots=True)
-class NativeOptions:
-    """Native executable, per-tool time limit and an optional progress observer.
-
-    Observers receive typed ProgressEvent values and must not raise. They are presentation
-    hooks, excluded from options identity, and never persisted in reports or evidence.
-    """
-
-    soffice: str | Path | None = None
-    timeout: int | float = DEFAULT_TIMEOUT_SECONDS
-    on_progress: ProgressObserver | None = field(default=None, repr=False, compare=False)
-
-    def __post_init__(self) -> None:
-        """Reject an invalid duration before native work or output creation."""
-        validate_timeout(self.timeout)
 
 
 def native_export_settings(
@@ -70,7 +53,11 @@ def native_export_settings(
 
 
 def export_document(
-    source: str | Path, destination: str | Path, options: NativeOptions | None = None
+    source: str | Path,
+    destination: str | Path,
+    tools: Tools | None = None,
+    *,
+    on_progress: ProgressObserver | None = None,
 ) -> Path:
     """Export the original document after family selection and native preflight.
 
@@ -83,11 +70,11 @@ def export_document(
         The atomically published PDF path.
 
     """
-    options = options or NativeOptions()
-    settings = native_export_settings(OdfDocument.open(source), options.soffice, options.timeout)
-    if options.on_progress is not None:
-        options.on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.RUNNING))
+    tools = tools or Tools()
+    settings = native_export_settings(OdfDocument.open(source), tools.soffice, tools.timeout)
+    if on_progress is not None:
+        on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.RUNNING))
     result = export_pdfua(source, destination, settings)
-    if options.on_progress is not None:
-        options.on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.PASSED))
+    if on_progress is not None:
+        on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.PASSED))
     return result

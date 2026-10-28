@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import load_plan
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf, prepare_plan
 
 from .documents import make_package
 from .reviewed_plans import question_for

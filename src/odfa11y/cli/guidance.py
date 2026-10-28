@@ -6,15 +6,13 @@ from __future__ import annotations
 import shlex
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import plan_blockers
-from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
-from odfa11y.report import terminal_text
+from odfa11y import OutputError, PlanError, ToolNotFoundError, plan_blockers, terminal_text
 
 if TYPE_CHECKING:
     import argparse
     from collections.abc import Iterable
 
-    from odfa11y.report import Report
+    from odfa11y import Report
 
 
 def error_hint(args: argparse.Namespace, exc: Exception) -> str | None:

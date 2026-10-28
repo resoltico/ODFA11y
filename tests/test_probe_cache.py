@@ -17,7 +17,7 @@ from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument, PackageStorage
-from odfa11y.pipeline import PipelineOptions
+from odfa11y.pipeline.context import RunSettings
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import tagged_writer
@@ -115,9 +115,10 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
     manifest = manifest_file(
         tmp_path, [(name, "source.odt", plan.name) for name in ["one", "two", "three"]]
     )
-    monkeypatch.setattr("odfa11y.pipeline.run.find_soffice", lambda _: "controlled-soffice")
+    monkeypatch.setattr("odfa11y.pipeline.engine.find_soffice", lambda _: "controlled-soffice")
     monkeypatch.setattr(
-        "odfa11y.pipeline.run.identify_soffice", lambda _: ToolIdentity("LibreOffice", "26.8.1.1")
+        "odfa11y.pipeline.engine.identify_soffice",
+        lambda _: ToolIdentity("LibreOffice", "26.8.1.1"),
     )
     control = fake_export(ProbeId.LINK_DESCRIPTIONS, supported=True)
 
@@ -125,7 +126,7 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
         tagged_writer(["H1", "P"]).write(destination)
         return destination
 
-    monkeypatch.setattr("odfa11y.pipeline.run.export_pdfua", document_export)
+    monkeypatch.setattr("odfa11y.pipeline.engine.export_pdfua", document_export)
     calls = []
 
     def probe_export(source: Path, destination: Path, settings: ExportSettings) -> Path:
@@ -133,10 +134,10 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
         return control(source, destination, settings)
 
     monkeypatch.setattr("odfa11y.native.probes.export_pdfua", probe_export)
-    result = run_batch(manifest, tmp_path / "out", PipelineOptions())
+    result = run_batch(manifest, tmp_path / "out", RunSettings())
     assert result.exit_status == 0, result.as_dict()
     assert calls == ["link.odt"]
-    repeated_batch = run_batch(manifest, tmp_path / "second-out", PipelineOptions())
+    repeated_batch = run_batch(manifest, tmp_path / "second-out", RunSettings())
     assert repeated_batch.exit_status == 0, repeated_batch.as_dict()
     assert calls == ["link.odt", "link.odt"]
     for name in ["one", "two", "three"]:

@@ -9,7 +9,6 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
@@ -29,12 +28,14 @@ from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.records import DocumentIdentity
 from odfa11y.remediation import remediate
 from odfa11y.report import exit_status
+from odfa11y.source_audit import audit_odf, plan_blockers
 from odfa11y.source_capture import capture_source
 lazy from odfa11y.plans import Plan
 
+from .context import RunSettings
 from .native import native_export_settings
 from .publication import publish_evidence
-from .record import PipelineOptions, RunRecord, StageResult
+from .record import RunRecord, StageResult
 from .stages import run_stage
 
 if TYPE_CHECKING:
@@ -50,7 +51,7 @@ class _Run:
     work: Path
     plan: Plan
     record: RunRecord
-    options: PipelineOptions
+    options: RunSettings
     lifetime: ExitStack
     rebind: bool = False
     probe_cache: ProbeCache = field(default_factory=ProbeCache)
@@ -133,8 +134,8 @@ class _Run:
             return self._no_pdf(StageName.EXPORT_REMEDIATED)
         native_export_settings(
             OdfDocument.open(self.remediated),
-            self.options.soffice,
-            self.options.timeout,
+            self.options.tools.soffice,
+            self.options.tools.timeout,
             captured_identity=True,
         )
         with capture_source(
@@ -159,8 +160,8 @@ class _Run:
         report, result = check_pdfua(
             self.work / "remediated.pdf",
             subject="remediated.pdf",
-            executable=self.options.verapdf_path,
-            timeout=self.options.timeout,
+            executable=self.options.tools.verapdf,
+            timeout=self.options.tools.timeout,
         )
         if result is None:
             required = self.record.profile.verapdf_required
@@ -214,13 +215,13 @@ class _Run:
             return self._no_pdf(name)
         settings = native_export_settings(
             OdfDocument.open(document),
-            self.executable or self.options.soffice,
-            self.options.timeout,
+            self.executable or self.options.tools.soffice,
+            self.options.tools.timeout,
             self.work / "profile",
             captured_identity=True,
         )
         if self.executable is None:
-            self.executable = find_soffice(self.options.soffice)
+            self.executable = find_soffice(self.options.tools.soffice)
             self.record.toolchain.libreoffice = identify_soffice(self.executable)
             for probe in self.adapter.probes:
                 if not probe.relevant(self.adapter.family, self.plan.decisions):
@@ -229,7 +230,7 @@ class _Run:
                     probe,
                     self.record.toolchain.libreoffice,
                     replace(settings, soffice=self.executable),
-                    verapdf_path=self.options.verapdf_path,
+                    verapdf_path=self.options.tools.verapdf,
                     observer=self.options.on_progress,
                 )
                 self.record.toolchain.capabilities += (execution.result,)
@@ -243,11 +244,11 @@ class _Run:
         return StageResult(name, StageStatus.PASSED, gate=False)
 
 
-def run_pipeline(
+def execute(
     source: str | Path,
     plan: Plan,
     output_dir: str | Path,
-    options: PipelineOptions | None = None,
+    options: RunSettings | None = None,
     *,
     rebind: bool = False,
     probe_cache: ProbeCache | None = None,
@@ -266,9 +267,9 @@ def run_pipeline(
         The stage results; ``exit_status`` gives the command exit status.
 
     """
-    options = options or PipelineOptions()
+    options = options or RunSettings()
     on_progress = options.on_progress
-    profile = options.assurance
+    profile = options.profile
     source, target = Path(source), Path(output_dir)
     require_free_directory(target)
     record = RunRecord(

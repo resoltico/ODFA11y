@@ -14,7 +14,6 @@ from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from odfa11y.audit import audit_odf
 from odfa11y.evidence import require_free_directory
 from odfa11y.native.export import (
     EXPORT_OPTIONS,
@@ -24,8 +23,12 @@ from odfa11y.native.export import (
     identify_soffice,
 )
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import Plan
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 from tests.native_resource_fixtures import (
     PIXELS,
     author_package,
@@ -150,11 +153,11 @@ def _layouts(output: Path, soffice: str, port: int, requests: list[str]) -> list
             }
             requests.clear()
             evidence = directory / f"{label}-pipeline"
-            run = run_pipeline(
+            run = execute(
                 source,
                 Plan.for_source(source),
                 evidence,
-                PipelineOptions(profile="verify", soffice=soffice),
+                RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
             )
             item["pipeline"] = {
                 "exit_status": run.exit_status,

@@ -10,7 +10,8 @@ from pypdf import PdfReader
 
 from odfa11y.native.export_context import native_export_limitations
 from odfa11y.odf import OdfDocument
-from odfa11y.pipeline import NativeOptions, export_document
+from odfa11y.pipeline.native import export_document
+from odfa11y.tools import Tools
 
 from .documents import Variant, make_flat
 
@@ -43,7 +44,7 @@ def test_real_calc_accepts_local_nested_formulas_without_mutating_source(
     pdf = export_document(
         source,
         tmp_path / "formula.pdf",
-        NativeOptions(soffice=external_tool("soffice", "libreoffice")),
+        Tools(soffice=external_tool("soffice", "libreoffice")),
     )
     assert "42" in " ".join(page.extract_text() for page in PdfReader(pdf).pages)
     assert source.read_bytes() == original

@@ -14,8 +14,8 @@ from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
 from odfa11y.outcomes import StageName, StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import RunRecord, StageResult
 from odfa11y.pipeline.profiles import PROFILES
+from odfa11y.pipeline.record import RunRecord, StageResult
 from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report, rules
 
@@ -104,7 +104,7 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
             "--output-dir",
             str(tmp_path / "evidence"),
             "--profile",
-            "inspect",
+            "source",
         ])
         == 0
     )
@@ -136,7 +136,7 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
         document=DocumentIdentity("doc.odt"),
         operations=(),
         policy=FidelityPolicy(),
-        profile=PROFILES["inspect"],
+        profile=PROFILES["source"],
     )
     data.stages = [
         StageResult(StageName.AUDIT_SOURCE, StageStatus.PASSED, report=source, gate=False),
@@ -150,7 +150,7 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     ]
     config = tmp_path / "plan.toml"
     config.write_text(plan_header(tmp_path / "source.odt") + "", encoding="utf-8")
-    monkeypatch.setattr(cli_pipeline, "run_pipeline", lambda *_args, **_kwargs: data)
+    monkeypatch.setattr(cli_pipeline.api, "run", lambda *_args, **_kwargs: data)
     assert main(["pipeline", "source.odt", "--plan", str(config), "--output-dir", "evidence"]) == 3
     text = capsys.readouterr().out
     assert "Before remediation: audit-source" in text

@@ -16,8 +16,11 @@ from odfa11y.evidence import check_bundle
 from odfa11y.evidence.redact import ABSOLUTE_PATH
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.remediation import SetMetadata
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import reviewed_plan
@@ -73,7 +76,7 @@ def stand_in(directory: Path, body: str, name: str = "fake-soffice") -> Path:
     return path
 
 
-def run(directory: Path, options: PipelineOptions, source: Path | None = None) -> Path:
+def run(directory: Path, options: RunSettings, source: Path | None = None) -> Path:
     """Run a pipeline whose paths all contain the sentinel and return its bundle.
 
     Returns
@@ -84,15 +87,13 @@ def run(directory: Path, options: PipelineOptions, source: Path | None = None) -
     """
     source = source or make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
-    run_pipeline(
-        source, reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()), out, options
-    )
+    execute(source, reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()), out, options)
     return out
 
 
 def test_a_missing_tool_path_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
-    options = PipelineOptions(soffice=str(directory / "no-such-soffice"))
+    options = RunSettings(tools=Tools(soffice=str(directory / "no-such-soffice")))
     assert_path_free(run(directory, options), tmp_path)
 
 
@@ -101,14 +102,14 @@ def test_a_non_executable_tool_path_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     plain = directory / "soffice"
     plain.write_text("not a program", encoding="utf-8")
-    assert_path_free(run(directory, PipelineOptions(soffice=str(plain))), tmp_path)
+    assert_path_free(run(directory, RunSettings(tools=Tools(soffice=str(plain)))), tmp_path)
 
 
 @posix_only
 def test_a_failing_tool_that_prints_every_argument_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     tool = stand_in(directory, 'echo "args: $@" >&2; echo "out: $@"; exit 1')
-    bundle = run(directory, PipelineOptions(soffice=str(tool)))
+    bundle = run(directory, RunSettings(tools=Tools(soffice=str(tool))))
     assert_path_free(bundle, tmp_path)
     stage = next(
         s
@@ -123,12 +124,12 @@ def test_a_failing_tool_that_prints_every_argument_is_not_leaked(tmp_path: Path)
 def test_a_tool_that_succeeds_without_output_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     tool = stand_in(directory, "exit 0")
-    assert_path_free(run(directory, PipelineOptions(soffice=str(tool))), tmp_path)
+    assert_path_free(run(directory, RunSettings(tools=Tools(soffice=str(tool)))), tmp_path)
 
 
 def test_an_unreadable_source_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
-    bundle = run(directory, PipelineOptions(), source=directory / "absent.odt")
+    bundle = run(directory, RunSettings(), source=directory / "absent.odt")
     assert_path_free(bundle, tmp_path)
 
 
@@ -136,7 +137,7 @@ def test_a_damaged_source_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     broken = directory / "broken.odt"
     broken.write_bytes(b"not a zip")
-    assert_path_free(run(directory, PipelineOptions(), source=broken), tmp_path)
+    assert_path_free(run(directory, RunSettings(), source=broken), tmp_path)
 
 
 def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
@@ -144,7 +145,7 @@ def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
     source = make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
     plan = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
-    run_pipeline(source, reviewed_plan(source, plan, FidelityPolicy()), out, PipelineOptions())
+    execute(source, reviewed_plan(source, plan, FidelityPolicy()), out, RunSettings())
     assert_path_free(out, tmp_path)
 
 
@@ -153,10 +154,11 @@ def test_raw_tool_reports_of_a_real_run_are_not_leaked(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
     directory = workspace(tmp_path)
-    options = PipelineOptions(
-        profile="production",
-        soffice=external_tool("soffice", "libreoffice"),
-        verapdf_path=external_tool("verapdf"),
+    options = RunSettings(
+        tools=Tools(
+            soffice=external_tool("soffice", "libreoffice"), verapdf=external_tool("verapdf")
+        ),
+        profile=profile_named("production"),
     )
     bundle = run(directory, options)
     assert_path_free(bundle, tmp_path)

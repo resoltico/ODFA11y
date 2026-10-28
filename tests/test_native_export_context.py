@@ -9,14 +9,17 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.audit import audit_odf
 from odfa11y.errors import ToolFailedError
 from odfa11y.evidence import check_bundle
 from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .native_resource_fixtures import writer_resource
@@ -43,11 +46,11 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
     with pytest.raises(ToolFailedError, match="rendering dependencies"):
         require_native_context(OdfDocument.open(source))
     # Verify reaches the explicit native refusal even without any installed application.
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "evidence",
-        PipelineOptions(profile="verify", soffice="missing-tool"),
+        RunSettings(tools=Tools(soffice="missing-tool"), profile=profile_named("verify")),
     )
     assert result.failed_stage == "export-source"
     assert result.exit_status == 3
@@ -65,11 +68,11 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
         "location_fields": 0,
     }
     require_native_context(document, captured_identity=True)
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "evidence",
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.passed
     published = OdfDocument.open(tmp_path / "evidence" / "remediated.fodt")
@@ -93,11 +96,11 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
     with pytest.raises(ToolFailedError, match="filename/path fields"):
         require_native_context(OdfDocument.open(source), captured_identity=True)
     output = tmp_path / "evidence"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         output,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.passed
     assert (output / "remediated.fodt").read_bytes() == source.read_bytes()

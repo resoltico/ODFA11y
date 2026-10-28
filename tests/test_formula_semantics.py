@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, ClassVar, override
 import pytest
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.audit import audit_odf
 from odfa11y.errors import PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.formula import SetFormulaAlternative
@@ -19,10 +18,14 @@ from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import load_plan
 from odfa11y.remediation import SetMetadata
 from odfa11y.remediation.planning import compile_operations
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .documents import Variant, make_flat
 from .operation_execution import assert_refused, execute_operations
@@ -158,10 +161,10 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     assert not report.passed
     assert "PDF004" in {f.rule_id for f in report.findings}
     assert not validate_pdfua(pdf, executable=verapdf).compliant
-    record = run_pipeline(
+    record = execute(
         SOURCE,
         reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
         tmp_path / "evidence",
-        PipelineOptions(profile="verify", soffice=soffice),
+        RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
     )
     assert record.failed_stage == "audit-pdf", [stage.as_dict() for stage in record.stages]

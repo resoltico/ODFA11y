@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.content import GraphicAlternative
 from odfa11y.families import REGISTRY
@@ -16,9 +15,12 @@ from odfa11y.families.generic import GenericAdapter
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.remediation import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys, Location, Severity, rules
+from odfa11y.source_audit import audit_odf
 
 from .documents import OASIS, Variant, make_flat, make_package
 from .operation_execution import assert_refused, execute_operations
@@ -177,11 +179,11 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
         SourceOnlyPresentation(),
     )
     source = make_package(tmp_path, "presentation")
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
         tmp_path / "out",
-        PipelineOptions(),
+        RunSettings(),
     )
     statuses = {stage.name.value: stage.status for stage in record.stages}
     assert statuses["audit-remediated"] == "passed"
@@ -204,11 +206,11 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
         Family.PRESENTATION,
         SourceOnlyPresentation(),
     )
-    record = run_pipeline(
+    record = execute(
         make_package(tmp_path, "presentation"),
         reviewed_plan(make_package(tmp_path, "presentation"), [], FidelityPolicy()),
         tmp_path / "out",
-        PipelineOptions(profile="production"),
+        RunSettings(profile=profile_named("production")),
     )
     assert not record.passed
     failed = next(stage for stage in record.stages if stage.status == "failed")

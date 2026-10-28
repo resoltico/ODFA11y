@@ -10,8 +10,10 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.pipeline import run as pipeline_run
+from odfa11y.pipeline import engine as pipeline_engine
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 
 from .pdf_fixtures import text_pdf
 from .resource_declaration_fixtures import declaration
@@ -39,29 +41,29 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
 
     monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", export)
     monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", export)
-    monkeypatch.setattr(pipeline_run, "export_pdfua", export)
+    monkeypatch.setattr(pipeline_engine, "export_pdfua", export)
     assert main(["export", str(source), str(tmp_path / "export.pdf")]) == 3
     for left, right in [(source, safe), (safe, source)]:
         assert main(["compare", str(left), str(right), "--format", "json"]) == 3
     assert launched == [safe]
     output = tmp_path / "evidence"
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         output,
-        PipelineOptions(profile="verify"),
+        RunSettings(profile=profile_named("verify")),
     )
     assert record.failed_stage == "export-source"
     assert record.exit_status == 3
     assert (output / "remediated.odg").read_bytes() == source.read_bytes()
     assert not (output / "source.pdf").exists()
     assert check_bundle(output) == []
-    inspected = tmp_path / "inspect"
-    result = run_pipeline(
+    inspected = tmp_path / "source"
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         inspected,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.passed
     assert result.exit_status == 0

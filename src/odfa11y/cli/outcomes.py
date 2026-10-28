@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from odfa11y.outcomes import ExitStatus
+from odfa11y import ExitStatus
 
 
 def render_command_outcome(status: int, *, strict: bool = False) -> str:

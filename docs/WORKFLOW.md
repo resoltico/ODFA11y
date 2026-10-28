@@ -15,7 +15,7 @@ known native dependencies and require stable caller-controlled directories; see
 
 ```bash
 uv run --no-sync odfa11y audit original.odt --schema --format json > before.json
-uv run --no-sync odfa11y styles original.odt
+uv run --no-sync odfa11y audit original.odt
 ```
 
 Audit is read-only. Findings identify a rule, [logical location](RULES.md#locations) and,
@@ -111,7 +111,7 @@ A sheet rename can change Calc's printed header (`FID003`); see
 ```bash
 uv run --no-sync odfa11y pipeline original.odt --plan document.toml \
   --output-dir evidence --profile production
-uv run --no-sync odfa11y check-evidence evidence
+uv run --no-sync odfa11y verify evidence
 ```
 
 | Profile | Required work | Gate |
@@ -126,7 +126,7 @@ production fails when required PDF proof is unavailable. Source audit findings i
 remediation; the remediated-source audit gates its result.
 
 An [evidence bundle](EVIDENCE.md) retains completed artifacts and failures even for an
-unreadable source, provided the destination remains safely writable. `check-evidence`
+unreadable source, provided the destination remains safely writable. `verify`
 checks recorded bytes, not accessibility, authenticity or human acceptance. See
 [batch workflows](BATCH.md) for explicit independent document runs.
 

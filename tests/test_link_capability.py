@@ -32,7 +32,9 @@ from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import Family, OdfDocument, PackageStorage, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import annotation_references, dictionary, link_elements, map_link, tagged_writer
@@ -86,7 +88,9 @@ def reported_tools(monkeypatch: pytest.MonkeyPatch) -> None:
         "odfa11y.pipeline.diagnostics.identify_soffice",
         lambda _executable: ToolIdentity("LibreOffice", "26.8.0.3"),
     )
-    monkeypatch.setattr("odfa11y.pipeline.diagnostics.find_verapdf", lambda: "test-verapdf")
+    monkeypatch.setattr(
+        "odfa11y.pipeline.diagnostics.find_verapdf", lambda _requested=None: "test-verapdf"
+    )
     monkeypatch.setattr(
         "odfa11y.pipeline.diagnostics.identify",
         lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.3"),
@@ -257,7 +261,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     assert reported == expected_support
 
     document = OdfDocument.open(linked)
-    record = run_pipeline(
+    record = execute(
         linked,
         reviewed_plan(
             linked,
@@ -271,7 +275,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
             FidelityPolicy(),
         ),
         tmp_path / "evidence",
-        PipelineOptions(soffice=soffice),
+        RunSettings(tools=Tools(soffice=soffice)),
     )
     assert (
         next(
@@ -327,11 +331,11 @@ def test_the_one_link_reproduction_and_explicit_name_control(
     if named:
         assert report.passed
         assert result.compliant
-        record = run_pipeline(
+        record = execute(
             source,
             reviewed_plan(source, [], FidelityPolicy()),
             tmp_path / "named-evidence",
-            PipelineOptions(soffice=external_tool("soffice", "libreoffice")),
+            RunSettings(tools=Tools(soffice=external_tool("soffice", "libreoffice"))),
         )
         assert record.passed, record.as_dict()
         assert check_bundle(tmp_path / "named-evidence") == []

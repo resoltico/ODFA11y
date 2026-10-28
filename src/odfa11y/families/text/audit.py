@@ -152,25 +152,6 @@ def _audit_style_summary(document: OdfDocument, report: Report) -> None:
         )
 
 
-def style_summary(document: OdfDocument) -> list[StyleUsage]:
-    """Summarize established paragraph-style usage and effective spacing.
-
-    Returns
-    -------
-    list[StyleUsage]
-        Rows ordered by descending usage.
-
-    Raises
-    ------
-    RemediationError
-        Any used style's effective properties cannot be established.
-    """
-    rows, problems = _style_rows(document)
-    if problems:
-        raise RemediationError(" ".join(problems.values()))
-    return rows
-
-
 def _style_rows(document: OdfDocument) -> tuple[list[StyleUsage], dict[str, str]]:
     counts: Counter[str] = Counter()
     problems = {}

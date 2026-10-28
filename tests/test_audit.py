@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import PackageStorage
 from odfa11y.plans import load_plan
 from odfa11y.report import RULES, FactKeys, Location, Severity
+from odfa11y.source_audit import audit_odf, prepare_plan
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import question_for

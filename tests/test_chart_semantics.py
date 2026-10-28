@@ -11,15 +11,17 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.audit import audit_odf
 from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import load_plan
 from odfa11y.remediation import SetMetadata
+from odfa11y.source_audit import audit_odf
 
 from .operation_execution import assert_refused, execute_operations
 from .reviewed_plans import reviewed_plan
@@ -71,13 +73,13 @@ def test_chart_numeric_change_is_rejected_before_publication(tmp_path: Path) -> 
     assert not destination.exists()
 
 
-@pytest.mark.parametrize("profile", ["inspect", "verify"])
+@pytest.mark.parametrize("profile", ["source", "verify"])
 def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, profile: str) -> None:
-    record = run_pipeline(
+    record = execute(
         SOURCE,
         reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
         tmp_path / profile,
-        PipelineOptions(profile=profile),
+        RunSettings(profile=profile_named(profile)),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert not (tmp_path / profile / "remediated.pdf").exists()
@@ -86,11 +88,11 @@ def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, pr
 
 
 def test_chart_production_cannot_pass_without_pdf_assurance(tmp_path: Path) -> None:
-    record = run_pipeline(
+    record = execute(
         SOURCE,
         reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
         tmp_path / "production",
-        PipelineOptions(profile="production"),
+        RunSettings(profile=profile_named("production")),
     )
     assert not record.passed
     assert record.failed_stage == "export-source"

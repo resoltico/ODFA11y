@@ -12,9 +12,7 @@ from dataclasses import dataclass, field
 from importlib import metadata
 from typing import TYPE_CHECKING, Literal
 
-from odfa11y import __version__
-from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
-from odfa11y.native.process import validate_timeout
+from odfa11y.native.export import EXPORT_OPTIONS
 from odfa11y.odf import provenance
 from odfa11y.outcomes import (
     ExitStatus,
@@ -26,15 +24,13 @@ from odfa11y.plans import Plan
 from odfa11y.records import Toolchain
 from odfa11y.report import exit_status
 from odfa11y.serialization import JsonProperty, record_dict
+from odfa11y.version import __version__
 lazy from odfa11y.adapter import ReviewItem
 lazy from odfa11y.pdf.fidelity import FidelityPolicy
-
-from .profiles import DEFAULT_PROFILE, profile_named
 
 if TYPE_CHECKING:
     from odfa11y.decisions import Decision
     from odfa11y.outcomes import (
-        ProgressObserver,
         StageName,
     )
     from odfa11y.plans import PlanHeader
@@ -202,27 +198,3 @@ def _library_versions() -> dict[str, str]:
         except metadata.PackageNotFoundError:
             versions[name] = "unknown"
     return versions
-
-
-@dataclass(frozen=True, slots=True)
-class PipelineOptions:
-    """Tool locations, time limit, assurance profile and optional progress observer.
-
-    The observer receives typed ProgressEvent values, must not raise, and is excluded
-    from evidence serialization and execution identity.
-    """
-
-    profile: str = DEFAULT_PROFILE
-    soffice: str | None = None
-    verapdf_path: str | None = None
-    timeout: int | float = DEFAULT_TIMEOUT_SECONDS
-    on_progress: ProgressObserver | None = field(default=None, repr=False, compare=False)
-
-    def __post_init__(self) -> None:
-        """Reject an invalid duration before native work or output creation."""
-        validate_timeout(self.timeout)
-
-    @property
-    def assurance(self) -> Profile:
-        """The selected assurance profile."""
-        return profile_named(self.profile)

@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError
 from odfa11y.odf import PackageStorage
 from odfa11y.odf import archive as archive_limits
+from odfa11y.source_audit import audit_odf
 
 from .fixtures import TEXT_MEDIA_TYPE, make_minimal_odt
 

@@ -6,11 +6,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import audit_odf
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import validate_timeout
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf import audit_pdfua, check_pdfua
+from odfa11y.source_audit import audit_odf
 
 from .comparison import is_pdf
 

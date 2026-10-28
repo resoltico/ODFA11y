@@ -18,14 +18,15 @@ from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OutputError, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.outcomes import BatchStatus, ExitStatus
-from odfa11y.pipeline import PipelineOptions
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.profiles import profile_named
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
     from odfa11y.native.probes import ProbeCache
-    from odfa11y.pipeline import RunRecord
+    from odfa11y.pipeline.record import RunRecord
     from odfa11y.plans import Plan
 
 
@@ -65,7 +66,7 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
             ("valid", "doc.odt", "plan.toml"),
         ],
     )
-    record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
+    record = run_batch(manifest, tmp_path / "out", RunSettings(profile=profile_named("source")))
     assert record.status == "failed"
     assert record.exit_status == 3
     assert [item.exit_status for item in record.items] == [4, 3, 2, 0]
@@ -156,7 +157,7 @@ def test_repeated_sources_and_hardlinked_plans_are_read_only(tmp_path: Path) -> 
     manifest = manifest_file(
         tmp_path, [("one", "doc.odt", "plan.toml"), ("two", "doc.odt", "alias.toml")]
     )
-    record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
+    record = run_batch(manifest, tmp_path / "out", RunSettings(profile=profile_named("source")))
     assert record.exit_status == 0
     assert source.read_bytes() == before
     assert plan.read_bytes() == (tmp_path / "alias.toml").read_bytes()
@@ -166,7 +167,7 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     runner = importlib.import_module("odfa11y.batch.run")
-    original = runner.run_pipeline
+    original = runner.execute
     make_minimal_odt(tmp_path / "doc.odt")
     (tmp_path / "plan.toml").write_text(
         plan_header(tmp_path / "doc.odt")
@@ -180,7 +181,7 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
         source: str | Path,
         plan: Plan,
         output_dir: str | Path,
-        options: PipelineOptions | None = None,
+        options: RunSettings | None = None,
         *,
         rebind: bool = False,
         probe_cache: ProbeCache | None = None,
@@ -190,8 +191,8 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
             raise OSError(msg)
         return original(source, plan, output_dir, options, rebind=rebind, probe_cache=probe_cache)
 
-    monkeypatch.setattr(runner, "run_pipeline", failing_pipeline)
-    record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
+    monkeypatch.setattr(runner, "execute", failing_pipeline)
+    record = run_batch(manifest, tmp_path / "out", RunSettings(profile=profile_named("source")))
     assert [item.exit_status for item in record.items] == [3, 0]
     assert record.items[0].failed_stage == "pipeline"
     assert check_bundle(tmp_path / "out" / "broken") == []
@@ -243,7 +244,7 @@ def test_unpublishable_item_is_explicit_and_later_document_still_runs(
         raise OSError(msg)
 
     monkeypatch.setattr(runner, "write_bundle", unavailable_bundle)
-    record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
+    record = run_batch(manifest, tmp_path / "out", RunSettings(profile=profile_named("source")))
     assert asdict(record.items[0]) == {
         "id": "failed",
         "status": "failed",

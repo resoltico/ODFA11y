@@ -21,7 +21,8 @@ from odfa11y.evidence import check_bundle
 from odfa11y.native import process
 from odfa11y.native.process import ToolRun, identify, run_bounded
 from odfa11y.odf import PackageStorage
-from odfa11y.pipeline import PipelineOptions
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import plan_header
@@ -187,7 +188,7 @@ def _native_command(
     try:
         if mode == "standalone":
             sys.exit(main(["export", source, output, "--soffice", tool]))
-        result = run_batch(source, output, PipelineOptions(soffice=tool))
+        result = run_batch(source, output, RunSettings(tools=Tools(soffice=tool)))
         sys.exit(result.exit_status)
     finally:
         patch.undo()

@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import plan_blockers, prepare_plan
-from odfa11y.errors import UnsupportedKindError
-from odfa11y.families import REGISTRY, style_usage
+from odfa11y import audit
+from odfa11y.families import REGISTRY
 from odfa11y.odf import Family
 from odfa11y.report import FactKeys, Report, rules
+from odfa11y.source_audit import plan_blockers, prepare_plan
 
 from .documents import make_flat, make_package
 from .fixtures import make_minimal_odt
@@ -85,17 +85,18 @@ def test_generic_adapter_retains_common_metadata_decisions(
 
 def test_style_usage_api_reports_text_family_usage(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
-    rows = style_usage(source)
+    rows = audit(source).reports[0].facts[FactKeys.TEXT_PARAGRAPH_STYLES]
     body = next(row for row in rows if row["style"] == "Body")
-    assert body["count"] > 0
+    count = body["count"]
+    assert isinstance(count, int)
+    assert count > 0
     assert isinstance(body["spacing"], dict)
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
 def test_style_usage_api_rejects_unsupported_family(tmp_path: Path, layout: str) -> None:
     source = (make_package if layout == "package" else make_flat)(tmp_path, "spreadsheet")
-    with pytest.raises(UnsupportedKindError, match="spreadsheet"):
-        style_usage(source)
+    assert FactKeys.TEXT_PARAGRAPH_STYLES not in audit(source).reports[0].facts
 
 
 def test_template_api_without_decisions_still_returns_commented_template(

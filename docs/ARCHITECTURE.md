@@ -32,7 +32,7 @@ flowchart LR
 | `content` | Shared ODF text, language, graphics, links, tables, resource context and protected XML primitives. |
 | `families.<family>` | Family audit rules, explicit operations, protected-content policy, registered answers and native capabilities. |
 | `families` | Adapter registry and supported style inspection. |
-| `audit`, `remediation` | Read-only source inspection/plan preparation and guarded operation execution. |
+| `source_audit`, `remediation` | Read-only source source inspection/plan preparation and guarded operation execution. |
 | `pdf` | Structural PDF inspection, validation, shared bounded reading and fidelity comparison. |
 | `evidence` | Manifests, redaction, review sheets and atomic bundle publication/verification. |
 | `decisions`, `plans` | Registered answer contracts, canonical targets, source binding and one strict codec/schema/reference. |
@@ -226,8 +226,7 @@ visibility. Detailed budgets and uninspected cases belong to
 
 Public pipeline operations own document dispatch, guarded native export, comparisons,
 scratch lifetimes and assurance stages. The CLI translates arguments and renders results.
-`NativeOptions` supplies standalone tool settings; `PipelineOptions` also selects an
-assurance profile. Optional observers receive typed ProgressEvent values without document payloads
+`Tools` selects native executables and timeout; a `Profile` value selects run assurance. Optional observers receive typed ProgressEvent values without document payloads
 and must not raise. They do not alter persisted records, plan hashes or gate policy.
 
 `run_pipeline` executes a fixed stage order and stops at a failed gate. Stage status

@@ -11,10 +11,10 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.audit import prepare_plan
 from odfa11y.errors import PlanError
 from odfa11y.plans import Plan, parse_tables, registered_kinds
 from odfa11y.remediation import remediate
+from odfa11y.source_audit import prepare_plan
 
 from .documents import Variant, make_flat
 from .fixtures import make_minimal_odt
@@ -56,7 +56,7 @@ def test_plan_header_binds_audited_bytes_when_original_source_changes(
     audited_bytes = source.read_bytes()
     replacement = make_minimal_odt(tmp_path / "replacement.odt", title="Different document")
     replacement_bytes = replacement.read_bytes()
-    module = importlib.import_module("odfa11y.audit.plan")
+    module = importlib.import_module("odfa11y.source_audit.plan")
     original = module.audit_odf
 
     def exchange(path: Path) -> Report:

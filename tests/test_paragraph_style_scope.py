@@ -11,12 +11,12 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.audit import audit_odf
 from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.families.text.styles import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.outcomes import StageStatus
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
 
 from .documents import Variant, make_package
 from .fixtures import make_minimal_odt

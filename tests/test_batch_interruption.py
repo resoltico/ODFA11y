@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.evidence import check_bundle
-from odfa11y.pipeline import PipelineOptions
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.profiles import profile_named
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import plan_header
@@ -43,7 +44,7 @@ def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
 
     patch = pytest.MonkeyPatch()
     patch.setattr(runner, "load_plan", block_second)
-    result = runner.run_batch(manifest, output, PipelineOptions(profile="inspect"))
+    result = runner.run_batch(manifest, output, RunSettings(profile=profile_named("source")))
     sys.exit(result.exit_status)
 
 
@@ -112,10 +113,10 @@ def _blocked_publication(manifest: str, output: str, ready: Event, boundary: str
 
     patch = pytest.MonkeyPatch()
     if boundary == "after":
-        patch.setattr(runner, "run_pipeline", blocked(runner.run_pipeline))
+        patch.setattr(runner, "execute", blocked(runner.execute))
     else:
         patch.setattr(publisher, "write_manifest", blocked(publisher.write_manifest))
-    runner.run_batch(manifest, output, PipelineOptions(profile="inspect"))
+    runner.run_batch(manifest, output, RunSettings(profile=profile_named("source")))
 
 
 @pytest.mark.parametrize("boundary", ["before", "after"])

@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.cli import main
+from odfa11y.source_audit import audit_odf
 
 from .documents import Variant, make_flat, make_package
 

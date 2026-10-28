@@ -10,11 +10,11 @@ import pytest
 from lxml import etree
 
 import odfa11y.odf
-from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
-from odfa11y.pipeline import export_document
+from odfa11y.pipeline.native import export_document
 from odfa11y.remediation import SetMetadata
+from odfa11y.source_audit import audit_odf, prepare_plan
 
 from .fixtures import make_minimal_odt
 from .operation_execution import execute_operations

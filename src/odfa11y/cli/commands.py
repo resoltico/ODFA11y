@@ -7,16 +7,15 @@ import json
 import sys
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import prepare_plan
-from odfa11y.errors import OdfA11yError, PlanError
-from odfa11y.evidence import check_bundle
-from odfa11y.native.process import termination_interrupt
-from odfa11y.outcomes import ExitStatus, failure_status
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import NativeOptions, compare_documents, export_document, inspect_tools
-from odfa11y.plans import load_plan
-from odfa11y.remediation import remediate
-from odfa11y.report import Report, exit_status, render_reports, terminal_text
+import odfa11y as api
+from odfa11y import (
+    ExitStatus,
+    OdfA11yError,
+    PlanError,
+    failure_status,
+    render_reports,
+    terminal_text,
+)
 
 from .audit import audit_command, command_gate
 from .batch import batch_command
@@ -24,7 +23,6 @@ from .guidance import error_hint
 from .parser import build_parser
 from .pipeline import pipeline_command
 from .progress import progress_callback
-from .styles import styles_command
 
 if TYPE_CHECKING:
     import argparse
@@ -54,23 +52,14 @@ def main(argv: list[str] | None = None) -> int:
         "export": _export,
         "compare": _compare,
         "pipeline": pipeline_command,
-        "styles": styles_command,
-        "check-evidence": _check_evidence,
+        "verify": _check_evidence,
         "doctor": _doctor,
     }
     sarif = getattr(args, "format", None) == "sarif"
     try:
-        with termination_interrupt():
-            if sarif:
-                if args.source_root is None:
-                    print(  # noqa: T201  CLI output is the command interface.
-                        "error: SARIF requires an explicit source root (--source-root); "
-                        "all inputs must be files within it.",
-                        file=sys.stderr,
-                    )
-                    return ExitStatus.USAGE_ERROR
-                _preflight_sarif(args)
-            return handlers[args.command](args)
+        if sarif:
+            _preflight_sarif(args)
+        return handlers[args.command](args)
     except KeyboardInterrupt:
         print("error: command interrupted", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         return ExitStatus.EXECUTION_FAILURE
@@ -93,24 +82,22 @@ def main(argv: list[str] | None = None) -> int:
 
 def _preflight_sarif(args: argparse.Namespace) -> None:
     sources = tuple(args.sources) if args.command == "audit" else (args.candidate, args.source)
-    report = Report(kind="source", subject="", sources=sources)
-    render_reports([report], output_format="sarif", source_root=args.source_root)
+    api.preflight_sarif(sources, args.source_root)
 
 
 def _plan(args: argparse.Namespace) -> int:
-    report, template = prepare_plan(args.source)
-    if template is None:
-        print("No plan: the document cannot be read well enough to plan.", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        print(render_reports([report]), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        return exit_status([report])
-    print(template, end="")  # noqa: T201  CLI output is the command interface.
-    return 0
+    result = api.plan(args.source)
+    if result.template is None:
+        print("No plan: the document cannot be read well enough to plan.", file=sys.stderr)  # noqa: T201  CLI output.
+        print(render_reports([result.report]), file=sys.stderr)  # noqa: T201  CLI output.
+    else:
+        print(result.template, end="")  # noqa: T201  CLI output.
+    return result.exit_status
 
 
 def _remediate(args: argparse.Namespace) -> int:
-    plan = load_plan(args.plan)
-    result = remediate(
-        args.source, args.destination, plan, dry_run=args.dry_run, rebind=args.rebind
+    result = api.remediate(
+        args.source, args.destination, args.plan, dry_run=args.dry_run, rebind=args.rebind
     )
     if args.format == "json":
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
@@ -141,33 +128,41 @@ def _remediate(args: argparse.Namespace) -> int:
 
 
 def _export(args: argparse.Namespace) -> int:
-    output = export_document(args.source, args.destination, _native_options(args))
+    result = api.export(
+        args.source, args.destination, tools=_tools(args), observer=progress_callback("text")
+    )
+    output = result.output
     print(f"Wrote PDF: {terminal_text(output)}")  # noqa: T201  CLI output is the command interface.
     print("Next: audit the PDF with --verapdf --strict and review its accessibility.")  # noqa: T201  CLI output is the command interface.
-    return 0
+    return result.exit_status
 
 
 def _compare(args: argparse.Namespace) -> int:
-    policy = load_plan(args.plan).fidelity if args.plan else FidelityPolicy()
-    report = compare_documents(
-        args.source, args.candidate, policy, args.diff_dir, _native_options(args)
+    result = api.compare(
+        args.source,
+        args.candidate,
+        plan=args.plan,
+        diff_dir=args.diff_dir,
+        tools=_tools(args),
+        strict=args.strict,
+        observer=progress_callback(args.format),
     )
-    status = exit_status([report], strict=args.strict)
-    command_gate(args, status, scope="fidelity checks under the selected policy.")
-    print(render_reports([report], output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output is the command interface.
-    return status
+    command_gate(args, result.exit_status, scope="fidelity checks under the selected policy.")
+    print(render_reports([result.report], output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output.
+    return result.exit_status
 
 
-def _native_options(args: argparse.Namespace) -> NativeOptions:
-    return NativeOptions(
-        soffice=args.soffice,
+def _tools(args: argparse.Namespace) -> api.Tools:
+    return api.Tools(
+        soffice=getattr(args, "soffice", None),
+        verapdf=getattr(args, "verapdf_path", None),
         timeout=args.timeout,
-        on_progress=progress_callback(getattr(args, "format", "text")),
     )
 
 
 def _check_evidence(args: argparse.Namespace) -> int:
-    problems = check_bundle(args.directory)
+    result = api.verify_evidence(args.directory)
+    problems = result.problems
     for problem in problems:
         print(terminal_text(problem))  # noqa: T201  CLI output is the command interface.
     print(  # noqa: T201  CLI output is the command interface.
@@ -176,12 +171,13 @@ def _check_evidence(args: argparse.Namespace) -> int:
         else f"Evidence integrity: failed ({len(problems)} problem(s))."
     )
     print("This checks recorded files and hashes. It does not establish accessibility or review.")  # noqa: T201  CLI output is the command interface.
-    return 2 if problems else 0
+    return result.exit_status
 
 
 def _doctor(args: argparse.Namespace) -> int:
-    info, error = inspect_tools(_native_options(args))
-    status = ExitStatus.EXECUTION_FAILURE if error else 0
+    info = api.doctor(tools=_tools(args), observer=progress_callback(args.format))
+    error = info.error
+    status = info.exit_status
     if error:
         print(f"error: {terminal_text(error)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if details := getattr(error, "details", ""):
@@ -209,7 +205,7 @@ def _doctor(args: argparse.Namespace) -> int:
         for key, value in values.items():
             print(f"{key}: {terminal_text(value)}")  # noqa: T201  CLI output is the command interface.
         print(  # noqa: T201  CLI output is the command interface.
-            "Scope: dependency identities and a link-description export probe; "
+            "Scope: dependency identities and declared scoped export probes; "
             "no conformance verdict."
         )
     return status

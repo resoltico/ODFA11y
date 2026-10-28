@@ -113,7 +113,7 @@ review is never turned into a machine pass.
 ## Verifying
 
 ```bash
-uv run --no-sync odfa11y check-evidence DIR
+uv run --no-sync odfa11y verify DIR
 ```
 
 Missing, modified and unlisted files yield status 2. The untrusted manifest must be exactly

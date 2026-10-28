@@ -206,7 +206,8 @@ def test_nonreport_commands_reject_sarif_instead_of_printing_other_format(
     with pytest.raises(SystemExit) as exited:
         main([*arguments, "--format", "sarif"])
     assert exited.value.code == 4
-    assert "invalid choice: 'sarif'" in capsys.readouterr().err
+    message = capsys.readouterr().err
+    assert "invalid choice: 'sarif'" in message or "invalid choice: 'styles'" in message
 
 
 def test_sarif_preserves_strict_warning_exit_status(

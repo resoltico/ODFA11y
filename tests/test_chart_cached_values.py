@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.families.chart.ranges import resolve_range
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.source_audit import audit_odf
 
 SOURCE = Path(__file__).parent / "family_corpus/fruit-chart.odc"
 

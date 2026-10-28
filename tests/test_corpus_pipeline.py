@@ -10,10 +10,13 @@ import pytest
 from odfa11y.content import GraphicAlternative
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
+from odfa11y.outcomes import PIPELINE_STAGES
 from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
 from odfa11y.remediation import SetMetadata
+from odfa11y.tools import Tools
 
 from .corpus_manifest import CORPUS
 from .reviewed_plans import reviewed_plan
@@ -41,11 +44,11 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     plan = [SetMetadata(title="Corpus document", language="en-US"), *PIPELINE_RUNS[name]]
-    record = run_pipeline(
+    record = execute(
         CORPUS / name,
         reviewed_plan(CORPUS / name, plan, FidelityPolicy()),
         tmp_path / "out",
-        PipelineOptions(soffice=soffice),
+        RunSettings(tools=Tools(soffice=soffice)),
     )
     stages = {stage.name.value: stage.status for stage in record.stages}
     assert tuple(stages) == PIPELINE_STAGES

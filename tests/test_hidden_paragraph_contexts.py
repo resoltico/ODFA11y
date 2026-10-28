@@ -9,11 +9,11 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.content import GraphicAlternative, document_links, eligible_text_node
 from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf, prepare_plan
 
 from .documents import Variant, make_flat, make_package
 from .operation_execution import execute_operations

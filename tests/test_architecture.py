@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -38,11 +39,11 @@ def architecture_copy(tmp_path: Path) -> Path:
 @pytest.mark.parametrize(
     ("relative_path", "source", "diagnostic"),
     [
-        ("audit/forbidden.py", "from odfa11y.cli import main\n", "cannot depend"),
+        ("source_audit/forbidden.py", "from odfa11y.cli import main\n", "cannot depend"),
         (
             "cli/forbidden.py",
-            "from odfa11y.audit.engine import audit_odf\n",
-            "interface",
+            "from odfa11y.source_audit.engine import audit_odf\n",
+            "cannot depend",
         ),
         (
             "families/text/forbidden.py",
@@ -77,13 +78,12 @@ def test_forbidden_dependencies_are_rejected(
 
 def test_declared_dependencies_cannot_authorize_a_cycle(architecture_copy: Path) -> None:
     config = architecture_copy / "tach.toml"
-    config.write_text(
-        config.read_text(encoding="utf-8").replace(
-            'path = "odfa11y"\ndepends_on = []',
-            'path = "odfa11y"\ndepends_on = ["odfa11y.cli"]',
-        ),
-        encoding="utf-8",
+    original = config.read_text(encoding="utf-8")
+    modified = re.sub(
+        r'(path = "odfa11y"\ndepends_on = \[)', r'\1"odfa11y.cli", ', original, count=1
     )
+    assert modified != original
+    config.write_text(modified, encoding="utf-8")
     with (architecture_copy / "src" / "odfa11y" / "__init__.py").open(
         "a", encoding="utf-8"
     ) as stream:

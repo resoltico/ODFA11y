@@ -9,7 +9,7 @@ from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem, Sta
 from odfa11y.odf import Family, Part
 from odfa11y.outcomes import ReviewTopic
 
-from .audit import audit_text, style_summary
+from .audit import audit_text
 from .decisions import DECISION_KINDS, operations
 from .language import default_language, set_default_language
 from .preflight import preflight_text
@@ -72,7 +72,6 @@ class TextAdapter(FamilyAdapter):
     operations = staticmethod(operations)
     review_items = REVIEW_ITEMS
     pdf_filter = "writer_pdf_Export"
-    style_report = staticmethod(style_summary)
     preflight = staticmethod(preflight_text)
     protect_edit = staticmethod(protect_edit)
 

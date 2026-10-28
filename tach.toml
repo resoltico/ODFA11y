@@ -1,4 +1,3 @@
-# Runtime ownership and explicit PDF/native layering; tests challenge forbidden imports and cycles.
 source_roots = ["src"]
 exclude = ["tests", "tools", "**/__pycache__"]
 root_module = "forbid"
@@ -114,7 +113,7 @@ path = "odfa11y.families"
 depends_on = ["odfa11y.adapter", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
-path = "odfa11y.audit"
+path = "odfa11y.source_audit"
 depends_on = ["odfa11y.source_capture", "odfa11y.errors", "odfa11y.families", "odfa11y.odf", "odfa11y.report", "odfa11y.language_tags", "odfa11y.plans", "odfa11y.native.export_context"]
 
 [[modules]]
@@ -135,7 +134,7 @@ depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.
 
 [[modules]]
 path = "odfa11y.pipeline"
-depends_on = ["odfa11y.source_capture", "odfa11y", "odfa11y.native.process", "odfa11y.audit", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families", "odfa11y.pdf.fidelity", "odfa11y.odf", "odfa11y.pdf", "odfa11y.remediation", "odfa11y.report", "odfa11y.outcomes", "odfa11y.adapter", "odfa11y.records", "odfa11y.serialization", "odfa11y.plans", "odfa11y.native.export", "odfa11y.native.export_context", "odfa11y.native.probes"]
+depends_on = ["odfa11y.source_capture", "odfa11y.native.process", "odfa11y.source_audit", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families", "odfa11y.pdf.fidelity", "odfa11y.odf", "odfa11y.pdf", "odfa11y.remediation", "odfa11y.report", "odfa11y.outcomes", "odfa11y.adapter", "odfa11y.records", "odfa11y.serialization", "odfa11y.plans", "odfa11y.native.export", "odfa11y.native.export_context", "odfa11y.native.probes", "odfa11y.version", "odfa11y.tools"]
 
 [[modules]]
 path = "odfa11y.batch"
@@ -143,11 +142,11 @@ depends_on = ["odfa11y.errors", "odfa11y.evidence", "odfa11y.native.process", "o
 
 [[modules]]
 path = "odfa11y.cli"
-depends_on = ["odfa11y", "odfa11y.batch", "odfa11y.audit", "odfa11y.errors", "odfa11y.evidence", "odfa11y.native.process", "odfa11y.families", "odfa11y.pipeline", "odfa11y.remediation", "odfa11y.report", "odfa11y.outcomes", "odfa11y.plans", "odfa11y.pdf.fidelity"]
+depends_on = ["odfa11y"]
 
 [[modules]]
 path = "odfa11y"
-depends_on = []
+depends_on = ["odfa11y.version", "odfa11y.native.process", "odfa11y.records", "odfa11y.native.export", "odfa11y.source_audit", "odfa11y.outcomes", "odfa11y.plans", "odfa11y.tools", "odfa11y.report", "odfa11y.batch", "odfa11y.errors", "odfa11y.decisions", "odfa11y.remediation", "odfa11y.pipeline", "odfa11y.application"]
 
 [[modules]]
 path = "odfa11y.__main__"
@@ -181,14 +180,6 @@ depends_on = ["odfa11y.errors", "odfa11y.native.process", "odfa11y.staging"]
 path = "odfa11y.pdf.reading"
 depends_on = []
 
-[[interfaces]]
-from = ["odfa11y.batch", "odfa11y.content", "odfa11y.adapter", "odfa11y.audit", "odfa11y.cli", "odfa11y.evidence", "odfa11y.families", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.pages", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.pdf.fidelity", "odfa11y.odf", "odfa11y.pdf", "odfa11y.pdf.reading.content", "odfa11y.pipeline", "odfa11y.remediation", "odfa11y.report"]
-expose = ["[^.]+"]
-
-[[interfaces]]
-from = ["odfa11y"]
-expose = ["__version__"]
-
 [[modules]]
 path = "odfa11y.native.probes"
 depends_on = ["odfa11y.odf", "odfa11y.outcomes", "odfa11y.native.export", "odfa11y.errors"]
@@ -204,3 +195,23 @@ depends_on = ["odfa11y.odf"]
 [[modules]]
 path = "odfa11y.pdf.structure_walk"
 depends_on = ["odfa11y.pdf.reading.limits", "odfa11y.errors"]
+
+[[modules]]
+path = "odfa11y.version"
+depends_on = []
+
+[[modules]]
+path = "odfa11y.tools"
+depends_on = ["odfa11y.native.export", "odfa11y.native.process"]
+
+[[modules]]
+path = "odfa11y.application"
+depends_on = ["odfa11y.pdf.fidelity", "odfa11y.errors", "odfa11y.plans", "odfa11y.tools", "odfa11y.remediation", "odfa11y.source_audit", "odfa11y.batch", "odfa11y.evidence", "odfa11y.pipeline", "odfa11y.serialization", "odfa11y.outcomes", "odfa11y.report", "odfa11y.native.process"]
+
+[[interfaces]]
+from = ["odfa11y.batch", "odfa11y.content", "odfa11y.adapter", "odfa11y.source_audit", "odfa11y.cli", "odfa11y.evidence", "odfa11y.families", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.pages", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.pdf.fidelity", "odfa11y.odf", "odfa11y.pdf", "odfa11y.pdf.reading.content", "odfa11y.remediation", "odfa11y.report"]
+expose = ["[^.]+"]
+
+[[interfaces]]
+from = ["odfa11y"]
+expose = ["[^.]+"]
