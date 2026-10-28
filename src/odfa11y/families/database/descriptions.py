@@ -168,7 +168,6 @@ class SetObjectDescriptions(Operation):
             attribute = description_attribute(node)
             changed = node.get(attribute) != text
             if changed:
-                document.edit(Part.CONTENT)
                 node.set(attribute, text)
             outcomes.append(
                 Outcome(

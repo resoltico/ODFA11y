@@ -48,7 +48,7 @@ def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
     source = make_flat(tmp_path, family, Variant(body=body))
     document = OdfDocument.open(source)
     _style(document, "Visual")
-    target = select_elements(document.edit(Part.CONTENT), "//draw:rect[@draw:name='Decoration']")[0]
+    target = select_elements(document.tree(Part.CONTENT), "//draw:rect[@draw:name='Decoration']")[0]
     target.set(qn("draw", "style-name"), "Visual")
     document.save(source)
     adapter = presentation if family == "presentation" else drawing
@@ -174,7 +174,7 @@ def test_unstyled_restoration_refuses_and_styled_role_composes_under_decorative_
     tmp_path: Path,
 ) -> None:
     document, frame = _graphic(tmp_path)
-    root = document.edit(Part.STYLES).getroot()
+    root = document.tree(Part.STYLES).getroot()
     common = root.find("office:styles", NS)
     assert common is not None
     default = etree.SubElement(
@@ -185,7 +185,7 @@ def test_unstyled_restoration_refuses_and_styled_role_composes_under_decorative_
         qn("style", "graphic-properties"),
         {qn("draw", "decorative"): "true", qn("draw", "fill-color"): "#112233"},
     )
-    document.edit(Part.CONTENT)
+    document.tree(Part.CONTENT)
     parent = frame.getparent()
     assert parent is not None
     parent.remove(frame)
@@ -210,9 +210,9 @@ def test_unstyled_restoration_refuses_and_styled_role_composes_under_decorative_
     links = text.SetLinkDescriptions({
         link_location(link, 1).path: LinkDescription("Read the guide", reviewed)
     })
-    edits = document.edit_count
+    checkpoint = document.checkpoint()
     assert graphics.apply(document)[0].status == Status.FAILED
-    assert document.edit_count == edits
+    assert not document.changed_since(checkpoint)
     _style(document, "Visual")
     frame.set(qn("draw", "style-name"), "Visual")
     reviewed = link_fingerprint(document, link)

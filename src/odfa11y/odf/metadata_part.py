@@ -56,7 +56,7 @@ def ensure_metadata_part(document: OdfDocument) -> None:
     root.set(qn("office", "version"), version)
     etree.SubElement(root, qn("office", "meta"))
     if not entries:
-        parent = document.edit(Part.MANIFEST).getroot()
+        parent = document.tree(Part.MANIFEST).getroot()
         entry = etree.SubElement(parent, qn("manifest", "file-entry"))
         entry.set(qn("manifest", "full-path"), name)
         entry.set(qn("manifest", "media-type"), "text/xml")

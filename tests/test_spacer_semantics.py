@@ -99,7 +99,7 @@ def test_spacer_guard_rejects_identity_loss_before_publication(
     destination.write_bytes(b"keep existing destination")
 
     def damage(_operation: RemoveEmptySpacers, document: OdfDocument) -> tuple[Outcome, ...]:
-        tree = document.edit(Part.CONTENT)
+        tree = document.tree(Part.CONTENT)
         node = select_elements(tree, "//*[@xml:id='anchor']")[0]
         parent = node.getparent()
         assert parent is not None

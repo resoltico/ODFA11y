@@ -16,7 +16,7 @@ SOURCE = Path(__file__).parent / "family_corpus/sum-formula.odf"
 
 def _expression(tmp_path: Path, xml: str) -> Path:
     document = OdfDocument.open(SOURCE)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     root[:] = []
     root.set("alttext", "An explicitly reviewed alternative")
     root.append(
@@ -91,7 +91,7 @@ def test_presentation_and_content_tokens_are_meaningful(tmp_path: Path, xml: str
 
 def test_remote_glyph_remains_a_resource_warning_without_fetching(tmp_path: Path) -> None:
     document = OdfDocument.open(SOURCE)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     root[:] = []
     root.set("alttext", "A mathematical glyph")
     token = etree.SubElement(root, qn("math", "mi"))

@@ -107,7 +107,7 @@ def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail
         "Missing": GraphicAlternative("x"),
     }
     assert run(SetGraphicAlternatives(entries), doc) == (Status.FAILED,)
-    assert doc.edit_count == 0  # selectors are resolved before anything is edited
+    assert not doc.dirty  # selectors are resolved before anything is edited
     entries = {"Logo": GraphicAlternative("Title", "Description")}
     assert run(SetGraphicAlternatives(entries), doc) == (Status.APPLIED,)
     assert_valid(doc)
@@ -170,7 +170,7 @@ def _protect(doc: OdfDocument, paragraph: etree._Element, marker: str) -> None:
         parent.replace(paragraph, wrapper)
         wrapper.append(paragraph)
     elif marker in {"break", "master"}:
-        style = select_elements(doc.edit(Part.STYLES), "//style:style[@style:name='Body']")[0]
+        style = select_elements(doc.tree(Part.STYLES), "//style:style[@style:name='Body']")[0]
         properties = style.find("style:paragraph-properties", {"style": style.nsmap["style"]})
         assert properties is not None
         if marker == "break":
@@ -188,7 +188,7 @@ def _protect(doc: OdfDocument, paragraph: etree._Element, marker: str) -> None:
 
 def _spacing_document(tmp_path: Path) -> OdfDocument:
     doc = document(tmp_path)
-    paragraphs = select_elements(doc.edit(Part.CONTENT), "//text:p")
+    paragraphs = select_elements(doc.tree(Part.CONTENT), "//text:p")
     paragraphs[0].set(qn("text", "style-name"), "Body")
     paragraphs[-1].set(qn("text", "style-name"), "BodyTight")
     return doc
@@ -210,7 +210,7 @@ def test_spacing_copies_reference_spacing_onto_a_derived_style_once(tmp_path: Pa
 def test_spacing_follows_a_changed_reference_without_new_style_names(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
     NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(doc)
-    paragraphs = select_elements(doc.edit(Part.CONTENT), "//text:p")
+    paragraphs = select_elements(doc.tree(Part.CONTENT), "//text:p")
     paragraphs[0].set(qn("text", "style-name"), "Heading1")
     outcome = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(doc)[0]
     assert outcome.status is Status.APPLIED
@@ -251,5 +251,5 @@ def test_operations_describe_themselves_in_json_compatible_values() -> None:
 
 def test_a_reference_style_without_spacing_cannot_be_copied(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
-    select_elements(doc.edit(Part.CONTENT), "//text:p")[0].set(qn("text", "style-name"), "Unknown")
+    select_elements(doc.tree(Part.CONTENT), "//text:p")[0].set(qn("text", "style-name"), "Unknown")
     assert run(NormalizeSpacing("Body paragraph.", ("BodyTight",)), doc) == (Status.FAILED,)

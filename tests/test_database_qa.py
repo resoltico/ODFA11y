@@ -32,14 +32,14 @@ class ChangeDatabaseSettings(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        root = document.edit(Part.SETTINGS).getroot()
+        root = document.tree(Part.SETTINGS).getroot()
         item = next(root.iter(CONFIG + "config-item"))
         item.text = "Changed the setting"
         return (Outcome(self.name, Status.APPLIED, "Changed a setting", count=1),)
 
 
 def _nested_queries(document: OdfDocument) -> None:
-    database = select_elements(document.edit(Part.CONTENT), "//office:database")[0]
+    database = select_elements(document.tree(Part.CONTENT), "//office:database")[0]
     queries = etree.SubElement(database, qn("db", "queries"))
     collection = etree.SubElement(
         queries, qn("db", "query-collection"), {qn("db", "name"): "Fruit"}
@@ -141,7 +141,7 @@ def test_standard_server_database_declaration_is_external_instead_of_missing(
     tmp_path: Path,
 ) -> None:
     document = OdfDocument.open(SOURCE)
-    connection = select_elements(document.edit(Part.CONTENT), "//db:connection-data")[0]
+    connection = select_elements(document.tree(Part.CONTENT), "//db:connection-data")[0]
     resource = select_elements(connection, "./db:connection-resource")[0]
     connection.remove(resource)
     description = etree.Element(qn("db", "database-description"))
@@ -190,7 +190,7 @@ def test_named_authentication_settings_are_reported_without_exposing_values(
     document = OdfDocument.open(SOURCE)
     if part == "content":
         application = select_elements(
-            document.edit(Part.CONTENT), "//db:application-connection-settings"
+            document.tree(Part.CONTENT), "//db:application-connection-settings"
         )[0]
         settings = etree.SubElement(application, qn("db", "data-source-settings"))
         setting = etree.SubElement(
@@ -204,7 +204,7 @@ def test_named_authentication_settings_are_reported_without_exposing_values(
         etree.SubElement(setting, qn("db", "data-source-setting-value")).text = value
     else:
         settings = etree.SubElement(
-            document.edit(Part.SETTINGS).getroot(), qn("office", "settings")
+            document.tree(Part.SETTINGS).getroot(), qn("office", "settings")
         )
         setting_set = etree.SubElement(
             settings, CONFIG + "config-item-set", {CONFIG + "name": "Database"}

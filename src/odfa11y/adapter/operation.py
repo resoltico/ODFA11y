@@ -54,7 +54,7 @@ class Outcome:
 class Operation(ABC):
     """One explicit, deterministic change, fully described by its parameters.
 
-    An operation edits a document only through :meth:`OdfDocument.edit`, reports
+    An operation changes live XML through :meth:`OdfDocument.tree`, reports
     ``APPLIED`` only when it changed something, and ``UNCHANGED`` when its postcondition
     already held, so applying it twice never accumulates changes. ``family`` names the
     document family the operation belongs to; None means any document.

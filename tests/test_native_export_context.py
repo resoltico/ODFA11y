@@ -77,7 +77,7 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
 def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -> None:
     source = writer_resource(tmp_path)
     document = OdfDocument.open(source)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     paragraph = root.find(".//" + qn("text", "p"))
     assert paragraph is not None
 
@@ -98,7 +98,7 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
 def test_explicit_base_on_render_reference_is_unestablished(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "image.odt", features={"with_image_without_alt": True})
     document = OdfDocument.open(source)
-    image = document.edit(Part.CONTENT).find(".//" + qn("draw", "image"))
+    image = document.tree(Part.CONTENT).find(".//" + qn("draw", "image"))
     assert image is not None
     image.set("{http://www.w3.org/XML/1998/namespace}base", "https://example.test/assets/")
     document.save(source)
@@ -108,7 +108,7 @@ def test_explicit_base_on_render_reference_is_unestablished(tmp_path: Path) -> N
 def test_navigation_xml_base_is_not_a_render_dependency(tmp_path: Path) -> None:
     source = writer_resource(tmp_path)
     document = OdfDocument.open(source)
-    link = document.edit(Part.CONTENT).find(".//" + qn("text", "a"))
+    link = document.tree(Part.CONTENT).find(".//" + qn("text", "a"))
     assert link is not None
     link.set("{http://www.w3.org/XML/1998/namespace}base", "https://example.test/docs/")
     document.save(source)

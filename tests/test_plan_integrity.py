@@ -64,7 +64,7 @@ def test_conflicting_alt_text_for_one_graphic_fails_every_involved_entry(tmp_pat
     assert {outcome.key for outcome in outcomes} == {"Logo", "logo.svg"}
     assert all(outcome.status is Status.FAILED for outcome in outcomes)
     assert all("different description" in outcome.message for outcome in outcomes)
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 def test_entries_that_set_different_fields_or_equal_values_combine(tmp_path: Path) -> None:
@@ -114,12 +114,13 @@ def test_a_table_that_drifted_since_review_is_refused(tmp_path: Path) -> None:
     table = select_elements(document.tree(Part.CONTENT), "//table:table")[0]
     fingerprint = table_fingerprint(table)
     select_elements(table, ".//text:p")[0].text = "Edited after review"
+    checkpoint = document.checkpoint()
     (outcome,) = MarkTableHeaders({"Data": TableHeaders(1, fingerprint=fingerprint)}).apply(
         document
     )
     assert outcome.status is Status.FAILED
     assert "no longer the object" in outcome.message
-    assert document.edit_count == 0
+    assert not document.changed_since(checkpoint)
 
 
 def test_marking_headers_keeps_a_reviewed_graphic_in_that_row_addressable(tmp_path: Path) -> None:
@@ -139,7 +140,7 @@ def test_marking_headers_keeps_a_reviewed_graphic_in_that_row_addressable(tmp_pa
 
 def _spacing_document(tmp_path: Path) -> OdfDocument:
     document = open_document(tmp_path)
-    paragraphs = select_elements(document.edit(Part.CONTENT), "//text:p")
+    paragraphs = select_elements(document.tree(Part.CONTENT), "//text:p")
     paragraphs[0].set(qn("text", "style-name"), "Body")
     paragraphs[-1].set(qn("text", "style-name"), "BodyTight")
     return OdfDocument.open(document.save(tmp_path / "prepared.odt"))
@@ -158,20 +159,20 @@ def _add_style(tree: etree._ElementTree, container: str, name: str) -> etree._El
 def test_a_foreign_style_with_the_derived_name_is_never_overwritten(tmp_path: Path) -> None:
     document = _spacing_document(tmp_path)
     name = derived_style_name("BodyTight")
-    foreign = _add_style(document.edit(Part.CONTENT), "office:automatic-styles", name)
+    foreign = _add_style(document.tree(Part.CONTENT), "office:automatic-styles", name)
     before = etree.tostring(foreign)
-    edits = document.edit_count
+    checkpoint = document.checkpoint()
     (outcome,) = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(document)
     assert outcome.status is Status.FAILED
     assert "not an unmodified derivation" in outcome.message
     assert etree.tostring(foreign) == before
-    assert document.edit_count == edits  # nothing was edited after the conflict was found
+    assert not document.changed_since(checkpoint)  # nothing was edited after the conflict was found
 
 
 def test_a_foreign_style_in_the_styles_part_is_protected_too(tmp_path: Path) -> None:
     document = _spacing_document(tmp_path)
     name = derived_style_name("BodyTight")
-    _add_style(document.edit(Part.STYLES), "office:styles", name)
+    _add_style(document.tree(Part.STYLES), "office:styles", name)
     (outcome,) = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(document)
     assert outcome.status is Status.FAILED
 
@@ -191,7 +192,7 @@ def test_the_generated_style_converges_when_the_reference_changes(tmp_path: Path
         for style in select_elements(document.tree(Part.CONTENT), "//style:style")
         if "A11ySpacing" in (style.get(qn("style", "name")) or "")
     }
-    select_elements(document.edit(Part.CONTENT), "//text:p")[0].set(
+    select_elements(document.tree(Part.CONTENT), "//text:p")[0].set(
         qn("text", "style-name"), "Heading1"
     )
     assert statuses(operation, document) == (Status.APPLIED,)

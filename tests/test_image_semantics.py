@@ -54,7 +54,7 @@ class ChangeImageGeometry(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        frame = select_elements(document.edit(Part.CONTENT), "//draw:frame")[0]
+        frame = select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
         frame.set(qn("svg", "width"), "1cm")
         return (Outcome(self.name, Status.APPLIED, "Changed geometry", count=1),)
 
@@ -88,7 +88,7 @@ def test_changed_actual_image_bytes_make_reviewed_description_stale() -> None:
         _payload(document), b'<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>'
     )
     assert plan.apply(document)[0].status is Status.FAILED
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 @pytest.mark.parametrize("profile", ["inspect", "verify"])
@@ -123,7 +123,7 @@ def test_image_payload_integrity_rejects_malformed_or_unresolved_graphics(
 
 def test_image_external_reference_is_not_fetched_or_echoed(tmp_path: Path) -> None:
     document = OdfDocument.open(SOURCE)
-    image = select_elements(document.edit(Part.CONTENT), "//draw:image")[0]
+    image = select_elements(document.tree(Part.CONTENT), "//draw:image")[0]
     resource = "https://person:secret@invalid.example/image.svg"
     image.set(qn("xlink", "href"), resource)
     source = document.save(tmp_path / "external.odi")
@@ -208,7 +208,7 @@ def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
 def test_flat_image_malformed_embedded_base64_has_an_integrity_finding(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "image")
     document = OdfDocument.open(source)
-    select_elements(document.edit(Part.CONTENT), "//office:binary-data")[0].text = "%%%invalid%%%"
+    select_elements(document.tree(Part.CONTENT), "//office:binary-data")[0].text = "%%%invalid%%%"
     report = audit_odf(document.save(tmp_path / "invalid.fodi"))
     assert "IMAGE004" in {f.rule_id for f in report.findings}
 

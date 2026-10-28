@@ -102,7 +102,7 @@ def test_normative_info_queries_are_classified(query: str) -> None:
 def formula_document(tmp_path: Path, expression: str, attribute: str) -> Path:
     source = make_minimal_odt(tmp_path / "formula.odt")
     document = OdfDocument.open(source)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     body = root.find(".//" + qn("office", "text"))
     assert body is not None
     node = etree.SubElement(
@@ -152,7 +152,7 @@ def test_named_dependencies_follow_declarations_and_refuse_missing_or_cycles(
 ) -> None:
     source = formula_document(tmp_path, expression, qn("table", "formula"))
     document = OdfDocument.open(source)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     names = etree.SubElement(root, qn("table", "named-expressions"))
     for name, formula in [("LocalTotal", "of:=SUM([.A1:.A3])"), ("Cycle", "of:=Cycle")]:
         declaration = etree.SubElement(
@@ -170,7 +170,7 @@ def test_named_dependencies_follow_declarations_and_refuse_missing_or_cycles(
 def test_embedded_odf_styles_and_nested_formula_contexts_are_inspected(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "embedded.odt")
     document = OdfDocument.open(source)
-    body = document.edit(Part.CONTENT).find(".//" + qn("office", "text"))
+    body = document.tree(Part.CONTENT).find(".//" + qn("office", "text"))
     assert body is not None
     frame = etree.SubElement(body, qn("draw", "frame"))
     obj = etree.SubElement(frame, qn("draw", "object"))
@@ -203,7 +203,7 @@ def test_scoped_names_shadow_globals_and_case_collisions_refuse(
 ) -> None:
     source = make_minimal_odt(tmp_path / "scopes.odt")
     document = OdfDocument.open(source)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     body = root.find(".//" + qn("office", "text"))
     assert body is not None
     table = etree.SubElement(body, qn("table", "table"))
@@ -240,7 +240,7 @@ def test_source_or_base_range_addresses_cannot_hide_external_loading(
 def test_malformed_reachable_embedded_xml_is_explicitly_incomplete(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "embedded-malformed.odt")
     document = OdfDocument.open(source)
-    body = document.edit(Part.CONTENT).find(".//" + qn("office", "text"))
+    body = document.tree(Part.CONTENT).find(".//" + qn("office", "text"))
     assert body is not None
     obj = etree.SubElement(body, qn("draw", "object"))
     obj.set(qn("xlink", "href"), "./Object1")

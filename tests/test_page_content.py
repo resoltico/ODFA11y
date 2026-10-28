@@ -90,7 +90,7 @@ def test_partial_duplicate_unknown_or_malformed_navigation_is_rejected(
     )
     assert editor.apply(doc)[0].status is Status.FAILED
     assert etree.tostring(doc.tree(Part.CONTENT)) == original
-    assert doc.edit_count == 0
+    assert not doc.dirty
 
 
 def test_a_duplicate_identity_on_another_page_is_rejected(tmp_path: Path) -> None:
@@ -102,8 +102,9 @@ def test_a_duplicate_identity_on_another_page_is_rejected(tmp_path: Path) -> Non
     assert parent is not None
     parent.append(second)
     editor = PageEditor({"Overview": PageDecision(navigation=("counts", "title"))}, "set_pages")
+    checkpoint = doc.checkpoint()
     assert editor.apply(doc)[0].status is Status.FAILED
-    assert doc.edit_count == 0
+    assert not doc.changed_since(checkpoint)
 
 
 def test_hyperlink_wrapping_does_not_hide_a_top_level_shape(tmp_path: Path) -> None:

@@ -36,8 +36,11 @@ keeps machine JSON/SARIF clean.
 
 ## Guarded and caller-owned surfaces
 
-`OdfDocument.tree()` returns mutable cached XML. `edit()` additionally records serialization
-intent; storage, `save()` and direct `Operation.apply()` are caller-owned low-level surfaces.
+`OdfDocument.tree()` returns mutable cached XML. Content checkpoints drive change accounting
+and cache invalidation; `save()` serializes changed trees automatically. Stored XML cannot
+replace an already cached tree: reopen after low-level storage replacement. Direct storage,
+`save()` and `Operation.apply()` remain caller-owned surfaces; root remediation owns the
+preservation and publication guards.
 They do not imply executor safeguards or whole-plan atomicity. Multi-target operations
 preflight their own targets; guarded `remediate()` enforces final preservation/schema and
 atomic publication across the plan.

@@ -140,7 +140,7 @@ def test_note_targets_ignore_styled_header_notes_in_both_layouts(
         ),
     )
     document = OdfDocument.open(source)
-    root = document.edit(Part.STYLES).getroot()
+    root = document.tree(Part.STYLES).getroot()
     master = etree.SubElement(root, qn("office", "master-styles"))
     page = etree.SubElement(master, qn("style", "master-page"), {qn("style", "name"): "Header"})
     header = etree.SubElement(page, qn("style", "header"))
@@ -164,7 +164,7 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
     document = OdfDocument.open(source)
     operation = MarkTableHeaders({finding.location.path: TableHeaders(rows=1)})
     assert operation.apply(document)[0].status is Status.FAILED
-    assert document.edit_count == 0
+    assert not document.dirty
     reviewed_fingerprint = finding.details["fingerprint"]
     assert isinstance(reviewed_fingerprint, str)
     reviewed = MarkTableHeaders({

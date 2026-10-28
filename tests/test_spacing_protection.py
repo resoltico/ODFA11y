@@ -75,7 +75,7 @@ def test_spacing_in_table_cells_uses_only_proven_derivations_and_reapplies(tmp_p
 def test_text_only_paragraph_base_derives_valid_ordered_spacing_properties(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     document = OdfDocument.open(source)
-    body = select_elements(document.edit(Part.STYLES), "//style:style[@style:name='Body']")[0]
+    body = select_elements(document.tree(Part.STYLES), "//style:style[@style:name='Body']")[0]
     props = body.find(qn("style", "paragraph-properties"))
     assert props is not None
     body.remove(props)

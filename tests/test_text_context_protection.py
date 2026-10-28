@@ -52,7 +52,7 @@ class DamageTextFact(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        root = document.edit(Part.CONTENT)
+        root = document.tree(Part.CONTENT)
         if self.action == "href":
             select_elements(root, "//text:a")[0].set(qn("xlink", "href"), "https://changed.example")
         elif self.action == "separator":

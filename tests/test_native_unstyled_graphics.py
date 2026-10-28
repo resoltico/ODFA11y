@@ -29,7 +29,7 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
     document = OdfDocument.open(writer_resource(tmp_path))
-    frame = document.edit(Part.CONTENT).find(".//draw:frame", NS)
+    frame = document.tree(Part.CONTENT).find(".//draw:frame", NS)
     assert frame is not None
     assert frame.get(qn("draw", "style-name")) is None
     for node in list(frame):
@@ -42,11 +42,11 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
             decorative=True, fingerprint=graphics_fingerprint(document, [frame])
         )
     })
-    before = document.edit_count
+    before = document.checkpoint()
     outcome = operation.apply(document)[0]
     assert outcome.status == Status.FAILED
     assert "placement and wrapping are unestablished" in outcome.message
-    assert document.edit_count == before
+    assert not document.changed_since(before)
     destination = tmp_path / "destination.fodt"
     destination.write_bytes(b"Existing destination")
     original = source.read_bytes()

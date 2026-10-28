@@ -40,7 +40,7 @@ class ChangeChartData(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        cell = select_elements(document.edit(Part.CONTENT), "//table:table-cell[@office:value]")[0]
+        cell = select_elements(document.tree(Part.CONTENT), "//table:table-cell[@office:value]")[0]
         cell.set(qn("office", "value"), "999")
         return (Outcome(self.name, Status.APPLIED, "Changed data", count=1),)
 
@@ -119,7 +119,7 @@ def test_chart_repeats_are_compressed_and_quoted_table_names_resolve() -> None:
 
 def test_chart_external_provider_is_not_fetched_or_echoed(tmp_path: Path) -> None:
     document = OdfDocument.open(SOURCE)
-    chart = select_elements(document.edit(Part.CONTENT), "//chart:chart")[0]
+    chart = select_elements(document.tree(Part.CONTENT), "//chart:chart")[0]
     resource = "https://person:secret@invalid.example/private.csv"
     chart.set(qn("xlink", "href"), resource)
     source = document.save(tmp_path / "external.odc")
@@ -140,7 +140,7 @@ def test_chart_series_category_and_value_consistency_requires_review(
     tmp_path: Path, defect: str
 ) -> None:
     document = OdfDocument.open(SOURCE)
-    tree = document.edit(Part.CONTENT)
+    tree = document.tree(Part.CONTENT)
     if defect == "categories":
         categories = select_elements(tree, "//chart:categories")[0]
         categories.set(qn("table", "cell-range-address"), "local-table.$A$2")

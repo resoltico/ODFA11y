@@ -163,7 +163,7 @@ def _layouts(output: Path, soffice: str, port: int, requests: list[str]) -> list
 def _variant(original: Path, directory: Path, label: str, href: str | None) -> Path:
     document = OdfDocument.open(original)
     if href is not None:
-        image = document.edit(Part.CONTENT).find(".//draw:image", NS)
+        image = document.tree(Part.CONTENT).find(".//draw:image", NS)
         if image is None:
             msg = "Native source has no controlled image"
             raise RuntimeError(msg)

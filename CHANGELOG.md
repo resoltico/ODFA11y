@@ -6,6 +6,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Update low-level XML callers to `tree()` and content checkpoints; edit declarations/counters are removed. Reopen a model after replacing cached XML through raw storage.
 - Update JSON consumers and Python record access: report 6, run 3 and batch 2 use typed records and registered facts, with initial doctor/remediation schemas. Schema assurance is structured status/version/counts.
 - Invalid arguments and plans exit 4, with explicit precedence 3 > 4 > 2 > 1 > 0. Progress observers receive typed events, the validator stage is `validate-pdf`, and domain plan errors use `PlanError`.
 - Python 3.15 or newer is required; development and CI use 3.15.2. Recreate existing environments after upgrading.

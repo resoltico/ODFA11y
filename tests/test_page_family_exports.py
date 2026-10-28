@@ -110,7 +110,7 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
     doc = OdfDocument.open(CORPUS / "fruit-drawing.odg")
-    page = select_elements(doc.edit(Part.CONTENT), "//office:body/office:drawing/draw:page")[0]
+    page = select_elements(doc.tree(Part.CONTENT), "//office:body/office:drawing/draw:page")[0]
     for shape in list(page):
         if shape.get(qn("draw", "name")) != "Fruit illustration":
             page.remove(shape)

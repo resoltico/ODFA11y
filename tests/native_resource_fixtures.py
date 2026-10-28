@@ -63,7 +63,7 @@ def writer_resource(directory: Path, href: str | None = None) -> Path:
     path = make_flat(directory, "text", Variant(body=body))
     if href is not None:
         document = OdfDocument.open(path)
-        node = document.edit(Part.CONTENT).find(".//draw:image", NS)
+        node = document.tree(Part.CONTENT).find(".//draw:image", NS)
         assert node is not None
         node.set(qn("xlink", "href"), href)
         document.save(path)

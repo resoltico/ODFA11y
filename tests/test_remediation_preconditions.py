@@ -68,10 +68,11 @@ def test_metadata_creation_preflights_conflicting_manifest_declarations(
         entry = etree.SubElement(manifest, qn("manifest", "file-entry"))
         entry.set(qn("manifest", "full-path"), "meta.xml")
         entry.set(qn("manifest", "media-type"), "text/xml" if duplicate else "text/plain")
+    checkpoint = document.checkpoint()
     with pytest.raises(RemediationError, match="duplicate or has a conflicting"):
         ensure_metadata_part(document)
     assert not document.has(Part.META)
-    assert document.edit_count == 0
+    assert not document.changed_since(checkpoint)
 
 
 def test_invalid_metadata_language_prevents_earlier_valid_field_edits(tmp_path: Path) -> None:
@@ -79,7 +80,7 @@ def test_invalid_metadata_language_prevents_earlier_valid_field_edits(tmp_path: 
     original = etree.tostring(document.tree(Part.META))
     result = SetMetadata(title="A chosen title", language="not a language").apply(document)
     assert [outcome.status.value for outcome in result] == ["failed"]
-    assert document.edit_count == 0
+    assert not document.dirty
     assert etree.tostring(document.tree(Part.META)) == original
 
 

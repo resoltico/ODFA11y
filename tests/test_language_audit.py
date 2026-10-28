@@ -28,7 +28,7 @@ def test_audit_reports_unresolved_language_without_configuration_guess(
 ) -> None:
     source = make_minimal_odt(tmp_path / "original.odt")
     document = OdfDocument.open(source)
-    default = document.edit(Part.STYLES).find("office:styles/style:default-style", NS)
+    default = document.tree(Part.STYLES).find("office:styles/style:default-style", NS)
     assert default is not None
     props = default.find("style:text-properties", NS)
     assert props is not None
@@ -40,13 +40,13 @@ def test_audit_reports_unresolved_language_without_configuration_guess(
     elif problem in {"tag", "tag-no-metadata"}:
         props.set(qn("style", "rfc-language-tag"), "en-u")
         if problem == "tag-no-metadata":
-            metadata = document.edit(Part.META).find("office:meta", NS)
+            metadata = document.tree(Part.META).find("office:meta", NS)
             assert metadata is not None
             language = metadata.find("dc:language", NS)
             assert language is not None
             metadata.remove(language)
     else:
-        language = document.edit(Part.META).find("office:meta/dc:language", NS)
+        language = document.tree(Part.META).find("office:meta/dc:language", NS)
         assert language is not None
         language.text = "en-u"
     destination = document.save(tmp_path / "unresolved.odt")

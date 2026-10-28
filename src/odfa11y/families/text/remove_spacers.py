@@ -38,7 +38,6 @@ class RemoveEmptySpacers(Operation):
             return (Outcome(self.name, Status.FAILED, str(exc)),)
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No removable spacer paragraphs."),)
-        document.edit(Part.CONTENT)
         message = f"Removed {count} empty spacer paragraph(s) without break semantics."
         return (Outcome(self.name, Status.APPLIED, message, count=count, removed_blocks=count),)
 

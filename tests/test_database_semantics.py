@@ -26,7 +26,7 @@ SOURCE = Path(__file__).parent / "family_corpus/fruit-database.odb"
 
 def _query_source(tmp_path: Path, *, duplicate: bool = False) -> Path:
     document = OdfDocument.open(SOURCE)
-    database = select_elements(document.edit(Part.CONTENT), "//office:database")[0]
+    database = select_elements(document.tree(Part.CONTENT), "//office:database")[0]
     queries = etree.SubElement(database, qn("db", "queries"))
     for _ in range(2 if duplicate else 1):
         etree.SubElement(
@@ -102,13 +102,13 @@ def test_duplicate_and_stale_object_targets_reject_without_any_edits(tmp_path: P
     target = "content/query[name=Fruit%20totals]"
     result = SetObjectDescriptions({target: DatabaseDescription("Chosen meaning")}).apply(document)
     assert result[0].status is Status.FAILED
-    assert document.edit_count == 0
+    assert not document.dirty
     document = OdfDocument.open(_query_source(tmp_path))
     result = SetObjectDescriptions({target: DatabaseDescription("Chosen meaning", "stale")}).apply(
         document
     )
     assert result[0].status is Status.FAILED
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,7 +119,7 @@ class ChangeQuery(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        select_elements(document.edit(Part.CONTENT), "//db:query")[0].set(
+        select_elements(document.tree(Part.CONTENT), "//db:query")[0].set(
             qn("db", "command"), "DROP TABLE Fruit"
         )
         return (Outcome(self.name, Status.APPLIED, "Changed SQL", count=1),)
@@ -135,7 +135,7 @@ def test_sql_changes_are_rejected_before_output_publication(tmp_path: Path) -> N
 
 def test_external_authentication_findings_do_not_disclose_values(tmp_path: Path) -> None:
     document = OdfDocument.open(SOURCE)
-    resource = select_elements(document.edit(Part.CONTENT), "//db:connection-resource")[0]
+    resource = select_elements(document.tree(Part.CONTENT), "//db:connection-resource")[0]
     resource.set(qn("xlink", "href"), "sdbc:postgresql://alice:private-secret@example.invalid/db")
     output = tmp_path / "external.odb"
     document.save(output)

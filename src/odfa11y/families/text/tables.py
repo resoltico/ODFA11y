@@ -63,8 +63,6 @@ class MarkTableHeaders(Operation):
         for name, table, changes in plans:
             for axis, count in changes.items():
                 mark_axis(table, axis, count)
-            if changes:
-                document.edit(Part.CONTENT)
             outcomes.append(
                 Outcome(
                     self.name,

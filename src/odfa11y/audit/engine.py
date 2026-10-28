@@ -8,7 +8,7 @@ from pathlib import Path
 from odfa11y.content import native_export_limitations
 from odfa11y.errors import PackageError
 from odfa11y.families import adapter_for
-from odfa11y.odf import OdfDocument, Part
+from odfa11y.odf import OdfDocument, Part, Use
 from odfa11y.report import FactKeys, Report, rules
 
 from .metadata import audit_metadata
@@ -60,11 +60,15 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
             "were not validated.",
             details={"members": list(protection.signatures)},
         )
-    if protection.malformed_manifest:
-        report.add(rules.XML001, protection.malformed_manifest)
-        return report
-    if protection.encrypted:
-        report.add(rules.PKG009)
+    try:
+        document.require(Use.AUDIT)
+    except PackageError:
+        if protection.malformed_manifest:
+            report.add(rules.XML001, protection.malformed_manifest)
+        elif protection.encrypted:
+            report.add(rules.PKG009)
+        else:
+            audit_structure(document, report)
         return report
     if not audit_structure(document, report) or not audit_kind(document, report):
         return report

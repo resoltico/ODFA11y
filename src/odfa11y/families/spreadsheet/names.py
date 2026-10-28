@@ -63,7 +63,6 @@ class SetSheetNames(Operation):
                 message = f"A sheet is already named {new!r}."
                 outcomes.append(Outcome(self.name, Status.UNCHANGED, message, key=old))
                 continue
-            document.edit(Part.CONTENT)
             found[old].set(qn("table", "name"), new)
             _rename_settings(document, old, new)
             message = f"Renamed to {new!r}."
@@ -195,9 +194,7 @@ def _rename_settings(document: OdfDocument, old: str, new: str) -> None:
             and parent.get(f"{CONFIG}name") in {"Tables", "ScriptConfiguration"}
             and entry.get(f"{CONFIG}name") == old
         ):
-            document.edit(Part.SETTINGS)
             entry.set(f"{CONFIG}name", new)
     for item in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item"):
         if item.get(f"{CONFIG}name") == "ActiveTable" and item.text == old:
-            document.edit(Part.SETTINGS)
             item.text = new

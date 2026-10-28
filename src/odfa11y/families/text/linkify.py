@@ -31,7 +31,6 @@ class LinkifyAddresses(Operation):
         count = linkify_plain_addresses(document.tree(Part.CONTENT))
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No plain addresses remain."),)
-        document.edit(Part.CONTENT)
         return (Outcome(self.name, Status.APPLIED, f"Created {count} hyperlink(s).", count=count),)
 
 

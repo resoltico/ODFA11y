@@ -10,7 +10,7 @@ from odfa11y.content import require_native_context
 from odfa11y.errors import UnsupportedKindError
 from odfa11y.external_tools import validate_timeout
 from odfa11y.families import adapter_for
-from odfa11y.odf import OdfDocument
+from odfa11y.odf import OdfDocument, Use
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, ExportSettings, export_pdfua
 
@@ -59,12 +59,7 @@ def native_export_settings(
 
     """
     validate_timeout(timeout)
-    protection = document.protection
-    if protection.inspection_blocked:
-        msg = (
-            "Encrypted, ambiguous, unsafe or malformed package cannot establish native inspection."
-        )
-        raise UnsupportedKindError(msg)
+    document.require(Use.EXPORT)
     pdf_filter = adapter_for(document.kind).pdf_filter
     if pdf_filter is None:
         kind = document.kind.name if document.kind is not None else "unrecognised"
