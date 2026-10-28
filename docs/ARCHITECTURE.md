@@ -211,7 +211,7 @@ visibility. Detailed budgets and uninspected cases belong to
 Public pipeline operations own document dispatch, guarded native export, comparisons,
 scratch lifetimes and assurance stages. The CLI translates arguments and renders results.
 `NativeOptions` supplies standalone tool settings; `PipelineOptions` also selects an
-assurance profile. Optional observers receive labels/statuses without document payloads
+assurance profile. Optional observers receive typed ProgressEvent values without document payloads
 and must not raise. They do not alter persisted records, plan hashes or gate policy.
 
 `run_pipeline` executes a fixed stage order and stops at a failed gate. Stage status

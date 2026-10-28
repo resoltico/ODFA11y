@@ -160,7 +160,7 @@ def test_missing_explicit_root_and_outside_sources_fail_without_emitting_partial
     root = tmp_path / "confined"
     root.mkdir()
     for extra in ([], ["--source-root", str(root)]):
-        assert main(["audit", str(source), "--format", "sarif", *extra]) == 3
+        assert main(["audit", str(source), "--format", "sarif", *extra]) == 4
         output = capsys.readouterr()
         assert not output.out
         assert "error:" in output.err
@@ -203,7 +203,7 @@ def test_nonreport_commands_reject_sarif_instead_of_printing_other_format(
 ) -> None:
     with pytest.raises(SystemExit) as exited:
         main([*arguments, "--format", "sarif"])
-    assert exited.value.code == 2
+    assert exited.value.code == 4
     assert "invalid choice: 'sarif'" in capsys.readouterr().err
 
 
@@ -252,7 +252,7 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
             str(diff),
             *extra,
         ])
-        == 3
+        == 4
     )
     assert not calls
     assert not diff.exists()

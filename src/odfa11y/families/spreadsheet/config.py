@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.adapter import config_tables
 from odfa11y.content import graphic_alternatives, link_descriptions
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 
 from .names import SetSheetNames, invalid_name_reason
 from .objects import SetGraphicAlternatives, SetLinkDescriptions
@@ -42,11 +42,11 @@ def _sheet_names(table: dict[str, object]) -> list[Operation]:
     for old, new in entries.items():
         if not old.strip():
             msg = "spreadsheet.sheet_names keys must name an existing sheet"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         reason = invalid_name_reason(new)
         if reason:
             msg = f"spreadsheet.sheet_names.{old} is not a usable sheet name: {reason}"
-            raise ConfigError(msg)
+            raise PlanError(msg)
     return [SetSheetNames(entries)] if entries else []
 
 

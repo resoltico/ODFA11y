@@ -20,8 +20,16 @@ class XmlParseError(PackageError):
     """A package member contains malformed XML."""
 
 
-class ConfigError(OdfA11yError):
-    """The configuration file is malformed or contains unsupported values."""
+class UsageError(OdfA11yError):
+    """Arguments cannot describe a supported operation."""
+
+
+class ReportError(UsageError):
+    """A requested report format or source identity is invalid."""
+
+
+class PlanError(UsageError):
+    """The plan or fidelity policy is malformed, unsupported or bound to another source."""
 
 
 class RemediationError(OdfA11yError):

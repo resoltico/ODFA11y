@@ -10,14 +10,27 @@ from odfa11y.config import load_config
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
 from odfa11y.external_tools import termination_interrupt
+from odfa11y.outcomes import (
+    BatchStatus,
+    ExitStatus,
+    ProgressEvent,
+    StageName,
+    StageStatus,
+    StepName,
+    StepState,
+    failure_status,
+)
 from odfa11y.pipeline import PipelineOptions, RunRecord, StageResult, run_pipeline
 
 from .manifest import load_manifest, preflight
 from .record import BatchRecord
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from typing import Any
+
+    from odfa11y.outcomes import (
+        ProgressObserver,
+    )
 
     from .manifest import BatchItem
 
@@ -27,11 +40,11 @@ def run_batch(
     output_dir: str | Path,
     options: PipelineOptions | None = None,
     *,
-    on_item: Callable[[str, str], None] | None = None,
+    on_progress: ProgressObserver | None = None,
 ) -> BatchRecord:
     """Run every item, keeping completed evidence through ordinary failures and interruption.
 
-    Progress observers receive item IDs/statuses only and must not raise.
+    Progress observers receive fixed batch-step events only and must not raise.
 
     Returns
     -------
@@ -48,7 +61,7 @@ def run_batch(
         items=[
             {
                 "id": item.id,
-                "status": "pending",
+                "status": BatchStatus.PENDING,
                 "exit_status": None,
                 "failed_stage": None,
                 "evidence": None,
@@ -60,16 +73,18 @@ def run_batch(
     record.publish(output)
     with termination_interrupt():
         try:
-            _run_items(items, record, output, options, on_item)
+            _run_items(items, record, output, options, on_progress)
         except KeyboardInterrupt:
             for progress in record.items:
-                if progress["status"] == "running":
-                    progress.update(status="interrupted", exit_status=3)
-                    if on_item is not None:
-                        on_item(progress["id"], "interrupted")
-            record.status = "interrupted"
+                if progress["status"] == BatchStatus.RUNNING:
+                    progress.update(
+                        status=BatchStatus.INTERRUPTED, exit_status=ExitStatus.EXECUTION_FAILURE
+                    )
+                    if on_progress is not None:
+                        on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.FAILED))
+            record.status = BatchStatus.INTERRUPTED
         else:
-            record.status = "failed" if record.exit_status else "completed"
+            record.status = BatchStatus.FAILED if record.exit_status else BatchStatus.COMPLETED
         record.publish(output)
     return record
 
@@ -79,17 +94,24 @@ def _run_items(
     record: BatchRecord,
     output: Path,
     options: PipelineOptions,
-    on_item: Callable[[str, str], None] | None,
+    on_progress: ProgressObserver | None,
 ) -> None:
     for item, progress in zip(items, record.items, strict=True):
-        progress["status"] = "running"
+        progress["status"] = BatchStatus.RUNNING
         record.publish(output)
-        if on_item is not None:
-            on_item(item.id, "running")
+        if on_progress is not None:
+            on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.RUNNING))
         _advance_item(item, progress, output / item.id, options)
         record.publish(output)
-        if on_item is not None:
-            on_item(item.id, progress["status"])
+        if on_progress is not None:
+            on_progress(
+                ProgressEvent(
+                    StepName.BATCH_ITEM,
+                    StepState.PASSED
+                    if progress["status"] == BatchStatus.COMPLETED
+                    else StepState.FAILED,
+                )
+            )
 
 
 def _advance_item(
@@ -97,11 +119,15 @@ def _advance_item(
 ) -> None:
     try:
         result = _run_item(item, target, options)
-    except OdfA11yError, OSError:
-        progress.update(status="failed", exit_status=3, failed_stage="publish-evidence")
+    except (OdfA11yError, OSError) as exc:
+        progress.update(
+            status=BatchStatus.FAILED,
+            exit_status=failure_status(exc),
+            failed_stage=StageName.PUBLISH_EVIDENCE,
+        )
         return
     progress.update(
-        status="completed" if result.passed else "failed",
+        status=BatchStatus.COMPLETED if result.passed else BatchStatus.FAILED,
         exit_status=result.exit_status,
         failed_stage=result.failed_stage,
         evidence=item.id,
@@ -112,15 +138,19 @@ def _run_item(item: BatchItem, target: Path, options: PipelineOptions) -> RunRec
     try:
         config = load_config(item.plan)
     except (OdfA11yError, OSError) as exc:
-        return _failure(item, target, options, "load-plan", exc)
+        return _failure(item, target, options, StageName.LOAD_PLAN, exc)
     try:
         return run_pipeline(item.source, config.operations, config.fidelity, target, options)
     except (OdfA11yError, OSError) as exc:
-        return _failure(item, target, options, "pipeline", exc)
+        return _failure(item, target, options, StageName.PIPELINE, exc)
 
 
 def _failure(
-    item: BatchItem, target: Path, options: PipelineOptions, stage: str, exc: OdfA11yError | OSError
+    item: BatchItem,
+    target: Path,
+    options: PipelineOptions,
+    stage: StageName,
+    exc: OdfA11yError | OSError,
 ) -> RunRecord:
     record = RunRecord(
         document={"name": item.id, "sha256": None},
@@ -129,7 +159,11 @@ def _failure(
         profile=options.assurance,
     )
     reason = str(exc) if isinstance(exc, OdfA11yError) else "Item execution could not complete"
-    record.stages.append(StageResult(stage, "failed", reason, error=True))
+    record.stages.append(
+        StageResult(
+            stage, StageStatus.FAILED, reason, error=True, failure_status=failure_status(exc)
+        )
+    )
     redactor = Redactor.for_locations({
         "plan": item.plan,
         "inputs": item.plan.parent,

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from odfa11y.errors import ReportError
 from odfa11y.report import RULES, Location, Report, Severity, exit_status, render_reports, rules
 
 
@@ -57,7 +58,7 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
 
 
 def test_unsupported_format_is_rejected() -> None:
-    with pytest.raises(ValueError, match="Unsupported report format: yaml"):
+    with pytest.raises(ReportError, match="Unsupported report format: yaml"):
         render_reports([_report()], output_format="yaml")
 
 

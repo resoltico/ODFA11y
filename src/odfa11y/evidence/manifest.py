@@ -11,6 +11,8 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from odfa11y.errors import OutputError, PackageError
+
 from .paths import MANIFEST_NAME, unsafe_reason
 
 MANIFEST_FORMAT = 1
@@ -40,7 +42,7 @@ def write_manifest(directory: Path) -> None:
 
     Raises
     ------
-    ValueError
+    OutputError
         A name is unsafe, or an entry is a symbolic link or not a regular file.
 
     """
@@ -53,7 +55,7 @@ def write_manifest(directory: Path) -> None:
             continue
         if reason := unsafe_reason(relative) or _kind_problem(path):
             msg = f"Cannot record {relative!r} in a bundle: {reason}"
-            raise ValueError(msg)
+            raise OutputError(msg)
         files[relative] = sha256_file(path)
     payload = {"format": MANIFEST_FORMAT, "files": files}
     (directory / MANIFEST_NAME).write_text(
@@ -79,7 +81,7 @@ def check_bundle(directory: str | Path) -> list[str]:
     root = Path(directory)
     try:
         recorded = _read_manifest(root)
-    except (OSError, ValueError, TypeError) as exc:
+    except (OSError, PackageError, ValueError, TypeError) as exc:
         return [f"Cannot read {MANIFEST_NAME}: {exc}"]
     problems: list[str] = []
     for name, digest in sorted(recorded.items()):
@@ -97,26 +99,26 @@ def _shown(name: str) -> str:
 def _read_manifest(root: Path) -> dict[str, str]:
     if problem := _kind_problem(root / MANIFEST_NAME):
         msg = f"{MANIFEST_NAME} {problem}"
-        raise ValueError(msg)
+        raise PackageError(msg)
     text = (root / MANIFEST_NAME).read_text(encoding="utf-8")
     manifest = json.loads(text, object_pairs_hook=_no_duplicates)
     if not isinstance(manifest, dict) or manifest.keys() != {"format", "files"}:
         msg = "expected exactly the keys 'format' and 'files'"
-        raise TypeError(msg)
+        raise PackageError(msg)
     if type(manifest["format"]) is not int or manifest["format"] != MANIFEST_FORMAT:
         msg = f"unsupported format {manifest['format']!r}"
-        raise ValueError(msg)
+        raise PackageError(msg)
     files = manifest["files"]
     if not isinstance(files, dict):
         msg = "'files' must be an object"
-        raise TypeError(msg)
+        raise PackageError(msg)
     for name, digest in files.items():
         if not isinstance(digest, str) or not SHA256_HEX.fullmatch(digest):
             msg = f"invalid digest for {_shown(name)!r}"
-            raise TypeError(msg)
+            raise PackageError(msg)
         if reason := unsafe_reason(name):
             msg = f"unsafe name {_shown(name)!r} {reason}"
-            raise ValueError(msg)
+            raise PackageError(msg)
     return dict(files)
 
 
@@ -125,7 +127,7 @@ def _no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     for key, value in pairs:
         if key in result:
             msg = f"duplicate key {key!r}"
-            raise ValueError(msg)
+            raise PackageError(msg)
         result[key] = value
     return result
 

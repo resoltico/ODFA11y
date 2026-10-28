@@ -58,7 +58,7 @@ dpi = 72
 `FidelityPolicy` and TOML use the same validation: pagination is `same`/`may-change`,
 tolerance finite/non-negative (no upper cap), threshold an integer 0–255, DPI a positive
 integer. Booleans are not numeric values; NaN/infinities refuse. Invalid choices raise
-`odfa11y.errors.ConfigError` before comparison/export/publication.
+`odfa11y.errors.PlanError` before comparison/export/publication.
 
 `may-change` permits deliberate repagination, spacing or repeated-header movement by
 skipping page-count/size/raster checks. Extracted text and links remain gated. Review

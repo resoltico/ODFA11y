@@ -13,7 +13,7 @@ from lxml import etree
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
-from odfa11y.errors import ConfigError, RemediationError
+from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.fidelity import FidelityPolicy
@@ -154,7 +154,7 @@ def test_database_configuration_is_strict(tmp_path: Path) -> None:
         }),
     )
     plan.write_text('[database]\nconnection = "execute"\n')
-    with pytest.raises(ConfigError, match="Unknown database keys"):
+    with pytest.raises(PlanError, match="Unknown database keys"):
         load_config(plan)
 
 

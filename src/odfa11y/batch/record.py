@@ -7,13 +7,13 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from odfa11y.outcomes import BatchStatus, ExitStatus, combine_statuses
 from odfa11y.staging import staging_sibling
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 BATCH_FORMAT = 1
-EXECUTION_FAILURE = 3
 
 
 @dataclass(slots=True)
@@ -21,14 +21,14 @@ class BatchRecord:
     """Aggregate status and relative evidence references in manifest order."""
 
     items: list[dict[str, Any]] = field(default_factory=list)
-    status: str = "running"
+    status: BatchStatus = BatchStatus.RUNNING
 
     @property
-    def exit_status(self) -> int:
+    def exit_status(self) -> ExitStatus:
         """Execution failures dominate errors, then strict warnings."""
-        if self.status == "interrupted":
-            return EXECUTION_FAILURE
-        return max((item["exit_status"] or 0 for item in self.items), default=0)
+        if self.status == BatchStatus.INTERRUPTED:
+            return ExitStatus.EXECUTION_FAILURE
+        return combine_statuses(item["exit_status"] or ExitStatus.PASSED for item in self.items)
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize progress without input paths.
@@ -44,7 +44,9 @@ class BatchRecord:
             "status": self.status,
             "exit_status": self.exit_status,
             "items": self.items,
-            "pending_ids": [item["id"] for item in self.items if item["status"] == "pending"],
+            "pending_ids": [
+                item["id"] for item in self.items if item["status"] == BatchStatus.PENDING
+            ],
         }
 
     def publish(self, output: Path) -> None:

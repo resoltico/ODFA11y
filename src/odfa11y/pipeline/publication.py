@@ -7,10 +7,18 @@ from typing import TYPE_CHECKING
 
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
+from odfa11y.outcomes import (
+    ProgressEvent,
+    StepName,
+    StepState,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
+
+    from odfa11y.outcomes import (
+        ProgressObserver,
+    )
 
     from .record import RunRecord
 
@@ -20,11 +28,11 @@ def publish_evidence(
     target: Path,
     work: Path,
     record: RunRecord,
-    observer: Callable[[str, str], None] | None,
+    observer: ProgressObserver | None,
 ) -> None:
     """Gather artifacts and publish a bundle without persisting progress events.
 
-    Observers receive fixed labels/statuses and must not raise. Publication failures
+    Observers receive typed ProgressEvent values and must not raise. Publication failures
     and interruption retain their original exceptions and never report success.
 
     Raises
@@ -38,7 +46,7 @@ def publish_evidence(
 
     """
     if observer is not None:
-        observer("publish-evidence", "running")
+        observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.RUNNING))
     try:
         artifacts = {
             path.relative_to(work).as_posix(): path
@@ -56,11 +64,11 @@ def publish_evidence(
         )
     except OdfA11yError, OSError:
         if observer is not None:
-            observer("publish-evidence", "failed")
+            observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.FAILED))
         raise
     except KeyboardInterrupt:
         if observer is not None:
-            observer("publish-evidence", "interrupted")
+            observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.FAILED))
         raise
     if observer is not None:
-        observer("publish-evidence", "passed")
+        observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.PASSED))

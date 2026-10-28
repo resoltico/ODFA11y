@@ -17,7 +17,7 @@ from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.pdf import ExportSettings, export_pdfua, validate_pdfua
-from odfa11y.pipeline import STAGE_NAMES, PipelineOptions, run_pipeline
+from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
 
 from .spreadsheet_fixtures import (
@@ -198,7 +198,7 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     options = PipelineOptions(soffice=soffice)
     record = run_pipeline(source, plan, FidelityPolicy(), tmp_path / "out", options)
     reached = stages(record)
-    assert all(reached[name] == "passed" for name in STAGE_NAMES[:6]), record.as_dict()
+    assert all(reached[name] == "passed" for name in PIPELINE_STAGES[:6]), record.as_dict()
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
     assert pdf_stage.report is not None
     pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
@@ -250,7 +250,7 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     assert pdf_rules == {"PDF008", "PDF015"}, record.as_dict()
     assert failures == {("7.2", "43")}
     assert record.failed_stage == "audit-pdf", record.as_dict()
-    assert reached["verapdf"] == reached["fidelity"] == "skipped"
+    assert reached["validate-pdf"] == reached["fidelity"] == "skipped"
 
 
 def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(

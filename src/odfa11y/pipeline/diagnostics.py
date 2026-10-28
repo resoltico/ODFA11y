@@ -19,6 +19,7 @@ from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
 from odfa11y.external_tools import identify
 from odfa11y.families import REGISTRY
 from odfa11y.odf import SUPPORTED_VERSIONS, Family
+from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf import (
     ExportSettings,
     find_soffice,
@@ -50,7 +51,7 @@ def inspect_tools(
     """
     options = options or NativeOptions()
     if options.on_progress:
-        options.on_progress("Inspect dependency and tool identities", "running")
+        options.on_progress(ProgressEvent(StepName.PROBE_TOOLCHAIN, StepState.RUNNING))
     info: dict[str, object] = {
         "odfa11y": __version__,
         "python": sys.version.split()[0],
@@ -65,7 +66,7 @@ def inspect_tools(
     }
     try:
         if options.on_progress:
-            options.on_progress("Test link-description PDF export", "running")
+            options.on_progress(ProgressEvent(StepName.PROBE_CAPABILITIES, StepState.RUNNING))
         info["pdfua_link_descriptions"] = _link_descriptions(options)
     except OdfA11yError as exc:
         info["pdfua_link_descriptions"] = None

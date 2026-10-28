@@ -14,7 +14,7 @@ import pytest
 from odfa11y.batch import load_manifest, run_batch
 from odfa11y.batch.manifest import preflight
 from odfa11y.batch.record import BatchRecord
-from odfa11y.errors import ConfigError, OutputError
+from odfa11y.errors import OutputError, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.pipeline import PipelineOptions
 
@@ -64,7 +64,7 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
     record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
     assert record.status == "failed"
     assert record.exit_status == 3
-    assert [item["exit_status"] for item in record.items] == [3, 3, 2, 0]
+    assert [item["exit_status"] for item in record.items] == [4, 3, 2, 0]
     assert record.items[-1]["status"] == "completed"
     summary = (tmp_path / "out" / "batch.json").read_text()
     assert str(tmp_path) not in summary
@@ -78,14 +78,14 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
 )
 def test_unsafe_ids_rejected_without_output(tmp_path: Path, identity: str) -> None:
     manifest = manifest_file(tmp_path, [(identity, "doc.odt", "plan.toml")])
-    with pytest.raises(ConfigError):
+    with pytest.raises(PlanError):
         run_batch(manifest, tmp_path / "out")
     assert not (tmp_path / "out").exists()
 
 
 def test_case_collision_is_global_preflight(tmp_path: Path) -> None:
     manifest = manifest_file(tmp_path, [("Doc", "a", "p"), ("doc", "b", "q")])
-    with pytest.raises(ConfigError, match="unique"):
+    with pytest.raises(PlanError, match="unique"):
         run_batch(manifest, tmp_path / "out")
     assert not (tmp_path / "out").exists()
 
@@ -107,7 +107,7 @@ def test_case_collision_is_global_preflight(tmp_path: Path) -> None:
 def test_strict_manifest_rejects_wrong_shapes(tmp_path: Path, contents: str) -> None:
     manifest = tmp_path / "batch.toml"
     manifest.write_text(contents)
-    with pytest.raises(ConfigError):
+    with pytest.raises(PlanError):
         load_manifest(manifest)
 
 

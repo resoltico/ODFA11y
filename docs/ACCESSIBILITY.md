@@ -285,11 +285,11 @@ review diffs and choose `fidelity.pagination = "may-change"` only when intended.
 Before distribution, review:
 
 - **Headings:** actual hierarchy and navigation.
-- **Alt text:** meaning in context.
-- **Reading order:** notes, floating objects, tables, graphics and sheets/rows/columns.
-- **Table headers:** correct data relationships, including spreadsheet header cells.
+- **Alt text (`alt-text`):** meaning in context.
+- **Reading order (`reading-order`):** notes, floating objects, tables, graphics and sheets/rows/columns.
+- **Table headers (`table-headers`):** correct data relationships, including spreadsheet header cells.
 - **Sheet names and hidden content:** clear names and no inaccessible required information.
-- **Link purpose:** understandable destinations in context.
+- **Link purpose (`link-purpose`):** understandable destinations in context.
 - **Colour:** contrast and alternatives for information conveyed by colour.
 - **Layout:** typography, pagination, appearance and assistive-technology behavior.
 

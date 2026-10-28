@@ -136,11 +136,12 @@ checks recorded bytes, not accessibility, authenticity or human acceptance. See
 | --- | --- |
 | `0` | Success; warnings allowed without strict gating. |
 | `1` | Strict warning failure. |
-| `2` | Error findings; invalid CLI arguments; template blockers; bundle-integrity problems. |
-| `3` | Execution failure: invalid configuration, failed remediation, missing/failing required tool or unreadable input. |
+| `2` | Error findings; template blockers; bundle-integrity problems. |
+| `3` | Execution failure: failed remediation, missing/failing required tool or unreadable input. |
+| `4` | Invalid CLI arguments, plans or fidelity policies. |
 
-The strongest result wins across reports; informational findings never fail a command.
-Required veraPDF absence fails stage `verapdf` with status 3, retaining completed artifacts
+Precedence is 3 > 4 > 2 > 1 > 0 across reports; informational findings never fail a command.
+Required veraPDF absence fails stage `validate-pdf` with status 3, retaining completed artifacts
 and skipping fidelity. Optional audit validation absence retains `VERA000` warning behavior.
 
 ## Troubleshooting

@@ -8,6 +8,8 @@ from dataclasses import asdict, dataclass, is_dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from odfa11y.outcomes import StageStatus
+
 if TYPE_CHECKING:
     from odfa11y.odf import Family, OdfDocument
 
@@ -17,7 +19,7 @@ class Status(StrEnum):
 
     APPLIED = "applied"
     UNCHANGED = "unchanged"
-    FAILED = "failed"
+    FAILED = StageStatus.FAILED
 
 
 @dataclass(frozen=True, slots=True)

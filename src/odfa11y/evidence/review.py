@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from odfa11y.outcomes import StageName, StageStatus
+
 NOT_VALIDATION = (
     "veraPDF did not run: the built-in PDF checks are a smoke test, not PDF/UA validation."
 )
@@ -42,10 +44,10 @@ def render_review(record: dict[str, Any]) -> str:
     attention = _attention(stages)
     if attention:
         lines += ["", "## Findings that need attention", "", *attention]
-    verapdf = next((s for s in stages if s["name"] == "verapdf"), None)
-    if verapdf is None or verapdf["status"] != "passed":
+    verapdf = next((s for s in stages if s["name"] == StageName.VALIDATE_PDF), None)
+    if verapdf is None or verapdf["status"] != StageStatus.PASSED:
         caveat = NOT_VALIDATION
-        if verapdf is not None and verapdf["status"] == "failed":
+        if verapdf is not None and verapdf["status"] == StageStatus.FAILED:
             caveat = (
                 "veraPDF did not pass: PDF/UA conformance was not established. "
                 "Review the validator findings or execution failure above."

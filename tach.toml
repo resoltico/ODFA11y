@@ -14,6 +14,10 @@ exact = true
 # audit, remediation, pdf, fidelity and evidence never import each other.
 
 [[modules]]
+path = "odfa11y.outcomes"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
 path = "odfa11y.errors"
 depends_on = []
 
@@ -39,7 +43,7 @@ depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.pdf_content"]
 
 [[modules]]
 path = "odfa11y.report"
-depends_on = []
+depends_on = ["odfa11y.errors", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.external_tools"
@@ -51,7 +55,7 @@ depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
 
 [[modules]]
 path = "odfa11y.adapter"
-depends_on = ["odfa11y.errors"]
+depends_on = ["odfa11y.errors", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.content"
@@ -59,35 +63,35 @@ depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.repor
 
 [[modules]]
 path = "odfa11y.families.text"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.spreadsheet"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.presentation"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.drawing"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.formula"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.chart"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.image"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.safe_xml"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.safe_xml", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families.database"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.families"
@@ -103,7 +107,7 @@ depends_on = [
   "odfa11y.families.spreadsheet",
   "odfa11y.families.text",
   "odfa11y.odf",
-  "odfa11y.report",
+  "odfa11y.report", "odfa11y.outcomes",
 ]
 
 [[modules]]
@@ -139,7 +143,7 @@ depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.pdf_consumption",
 
 [[modules]]
 path = "odfa11y.evidence"
-depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
+depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.config"
@@ -167,12 +171,12 @@ depends_on = [
   "odfa11y.odf",
   "odfa11y.pdf",
   "odfa11y.remediation",
-  "odfa11y.report",
+  "odfa11y.report", "odfa11y.outcomes",
 ]
 
 [[modules]]
 path = "odfa11y.batch"
-depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.external_tools", "odfa11y.pipeline", "odfa11y.staging"]
+depends_on = ["odfa11y.config", "odfa11y.errors", "odfa11y.evidence", "odfa11y.external_tools", "odfa11y.pipeline", "odfa11y.staging", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.cli"
@@ -187,7 +191,7 @@ depends_on = [
   "odfa11y.families",
   "odfa11y.pipeline",
   "odfa11y.remediation",
-  "odfa11y.report",
+  "odfa11y.report", "odfa11y.outcomes",
 ]
 
 # A package's public API is exactly what its __init__ re-exports.

@@ -11,7 +11,7 @@ from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import ConfigError, RemediationError
+from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
@@ -87,7 +87,7 @@ def test_the_configuration_reads_the_spreadsheet_table_in_canonical_order(tmp_pa
 def test_an_invalid_spreadsheet_table_is_rejected_naming_the_key(
     tmp_path: Path, content: str, message: str
 ) -> None:
-    with pytest.raises(ConfigError, match=message):
+    with pytest.raises(PlanError, match=message):
         load_config(write_config(tmp_path, content))
 
 
@@ -186,7 +186,7 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo")}),
     ]
     record = run_pipeline(source, plan, FidelityPolicy(), tmp_path / "out", options)
-    statuses = {stage.name: stage.status for stage in record.stages}
+    statuses = {stage.name.value: stage.status for stage in record.stages}
     assert statuses["remediate"] == "passed"
     assert statuses["export-source"] == "failed"
     assert statuses["audit-pdf"] == "skipped"

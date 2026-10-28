@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.adapter import config_tables
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 
 from .alternative import SetFormulaAlternative
 
@@ -24,7 +24,7 @@ def parse_table(data: dict[str, object]) -> list[Operation]:
 
     Raises
     ------
-    ConfigError
+    PlanError
         A key/type is invalid or a fingerprint has no alternative decision.
 
     """
@@ -35,5 +35,5 @@ def parse_table(data: dict[str, object]) -> list[Operation]:
     text = values.get("alternative")
     if text is None or not text.strip():
         msg = "formula.alternative must be a nonblank spoken alternative"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     return [SetFormulaAlternative(text, values.get("fingerprint"))]

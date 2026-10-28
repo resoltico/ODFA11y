@@ -51,7 +51,7 @@ failed stage and relative evidence directory. It contains no source or plan path
 Each item directory is the ordinary atomic pipeline bundle, including `run.json`,
 `REVIEW.md` and a hash manifest; `odfa11y check-evidence evidence/annual-report` verifies
 its integrity. Invalid plans produce the same bundle structure with a failed `load-plan`
-stage. The overall exit status is the strongest result: execution failure 3, audit errors
+stage. The overall exit status is the strongest result: execution failure 3, usage error 4, audit errors
 2, strict warnings 1, or success 0.
 
 The summary is published before execution and atomically replaced after each item.

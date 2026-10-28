@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING
 
 from odfa11y.audit import prepare_template
 from odfa11y.config import Config, load_config
-from odfa11y.errors import ConfigError, OdfA11yError
+from odfa11y.errors import OdfA11yError, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.external_tools import termination_interrupt
+from odfa11y.outcomes import ExitStatus, failure_status
 from odfa11y.pipeline import NativeOptions, compare_documents, export_document, inspect_tools
 from odfa11y.remediation import remediate
 from odfa11y.report import Report, exit_status, render_reports, terminal_text
@@ -28,8 +29,6 @@ if TYPE_CHECKING:
     import argparse
     from collections.abc import Callable
 
-EXECUTION_FAILURE = 3
-
 
 def main(argv: list[str] | None = None) -> int:
     """Run a command and return its documented exit status.
@@ -44,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else argv
     if not arguments:
         parser.print_help(file=sys.stderr)
-        parser.exit(2)
+        parser.exit(ExitStatus.USAGE_ERROR)
     args = parser.parse_args(arguments)
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": audit_command,
@@ -68,27 +67,27 @@ def main(argv: list[str] | None = None) -> int:
                         "all inputs must be files within it.",
                         file=sys.stderr,
                     )
-                    return EXECUTION_FAILURE
+                    return ExitStatus.USAGE_ERROR
                 _preflight_sarif(args)
             return handlers[args.command](args)
     except KeyboardInterrupt:
         print("error: command interrupted", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        return EXECUTION_FAILURE
+        return ExitStatus.EXECUTION_FAILURE
     except (OdfA11yError, OSError, ValueError) as exc:
         if sarif:
             print(  # noqa: T201  CLI output is the command interface.
                 "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
             )
-            return EXECUTION_FAILURE
+            return failure_status(exc)
         print(f"error: {terminal_text(exc)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        if isinstance(exc, ConfigError) and getattr(args, "config", None):
+        if isinstance(exc, PlanError) and getattr(args, "config", None):
             print(f"Configuration: {terminal_text(args.config)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         details = getattr(exc, "details", "")
         if details:
             print(terminal_text(details), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if hint := error_hint(args, exc):
             print(hint, file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        return EXECUTION_FAILURE
+        return failure_status(exc)
 
 
 def _preflight_sarif(args: argparse.Namespace) -> None:
@@ -171,7 +170,7 @@ def _check_evidence(args: argparse.Namespace) -> int:
 
 def _doctor(args: argparse.Namespace) -> int:
     info, error = inspect_tools(_native_options(args))
-    status = EXECUTION_FAILURE if error else 0
+    status = ExitStatus.EXECUTION_FAILURE if error else 0
     if error:
         print(f"error: {terminal_text(error)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if details := getattr(error, "details", ""):

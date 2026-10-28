@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast
 
 from odfa11y.adapter import config_tables
 from odfa11y.content import graphic_alternatives, link_descriptions
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 
 from .graphics import SetGraphicAlternatives, SetLinkDescriptions
 from .headings import MAX_HEADING_LEVEL, HeadingLevel, SetHeadingLevels
@@ -76,7 +76,7 @@ def _tables(table: dict[str, object]) -> list[Operation]:
         ).get("fingerprint")
         if not counts or any(count < 1 for count in counts.values()):
             msg = f"{label} must contain positive rows or columns"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         entries[name] = TableHeaders(counts.get("rows"), counts.get("columns"), fingerprint)
     return [MarkTableHeaders(entries)] if entries else []
 
@@ -90,14 +90,14 @@ def _spacing(table: dict[str, object]) -> list[Operation]:
     targets = table.get("target_styles")
     if not isinstance(reference, str) or not reference:
         msg = "text.spacing.reference_text must be a non-empty string"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     if (
         not isinstance(targets, list)
         or not targets
         or not all(isinstance(item, str) for item in targets)
     ):
         msg = "text.spacing.target_styles must be a non-empty list of strings"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     flag_keys = ("exact_reference", "include_headings")
     flags = config_tables.typed(
         {key: table[key] for key in flag_keys if key in table}, bool, "text.spacing"
@@ -125,6 +125,6 @@ def _headings(table: dict[str, object]) -> list[Operation]:
         level = levels.get("level")
         if level is None or not 1 <= level <= MAX_HEADING_LEVEL:
             msg = f"{label}.level must be an integer from 1 to 10"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         entries[target] = HeadingLevel(level, fingerprints.get("fingerprint"))
     return [SetHeadingLevels(entries)] if entries else []

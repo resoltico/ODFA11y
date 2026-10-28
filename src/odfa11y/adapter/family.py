@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
+lazy from odfa11y.outcomes import ReviewTopic
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
 class ReviewItem:
     """A judgement a person still has to make after the machine checks."""
 
-    key: str
+    key: ReviewTopic
     text: str
 
 

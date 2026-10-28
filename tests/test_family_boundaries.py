@@ -175,11 +175,11 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     record = run_pipeline(
         source, [SetMetadata(title="T")], FidelityPolicy(), tmp_path / "out", PipelineOptions()
     )
-    statuses = {stage.name: stage.status for stage in record.stages}
+    statuses = {stage.name.value: stage.status for stage in record.stages}
     assert statuses["audit-remediated"] == "passed"
     for name in ("export-source", "export-remediated", "audit-pdf", "fidelity"):
         assert statuses[name] == "not-applicable", name
-    assert statuses["verapdf"] == "skipped"  # not part of the verify profile
+    assert statuses["validate-pdf"] == "skipped"  # not part of the verify profile
     assert record.passed
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["document"]["kind"] == "presentation"

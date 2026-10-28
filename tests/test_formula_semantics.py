@@ -12,7 +12,7 @@ import pytest
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
-from odfa11y.errors import ConfigError, RemediationError
+from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.formula import SetFormulaAlternative
 from odfa11y.families.formula.expression import fingerprint
@@ -126,7 +126,7 @@ def test_formula_configuration_is_explicit_and_strict(tmp_path: Path) -> None:
     plan.write_text('[formula]\nalternative = "a plus b equals c"\nfingerprint = "reviewed"\n')
     assert load_config(plan).operations == (SetFormulaAlternative("a plus b equals c", "reviewed"),)
     plan.write_text('[formula]\nfingerprint = "reviewed"\n')
-    with pytest.raises(ConfigError, match="nonblank spoken alternative"):
+    with pytest.raises(PlanError, match="nonblank spoken alternative"):
         load_config(plan)
 
 

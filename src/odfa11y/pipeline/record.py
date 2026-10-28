@@ -15,21 +15,28 @@ from typing import TYPE_CHECKING, Any
 from odfa11y import __version__
 from odfa11y.external_tools import validate_timeout
 from odfa11y.odf import provenance
+from odfa11y.outcomes import (
+    ExitStatus,
+    RunStatus,
+    StageStatus,
+    combine_statuses,
+)
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
 from odfa11y.report import exit_status
 
 from .profiles import DEFAULT_PROFILE, profile_named
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
+    from odfa11y.outcomes import (
+        ProgressObserver,
+        StageName,
+    )
     from odfa11y.remediation import RemediationResult
     from odfa11y.report import Report
 
     from .profiles import Profile
 
 RECORD_FORMAT = 2
-EXECUTION_FAILURE = 3
 LOCALE_VARIABLES = ("LANG", "LC_ALL", "LC_MESSAGES")
 LIBRARIES = ("lxml", "pillow", "pypdf", "pypdfium2")
 
@@ -42,14 +49,15 @@ class StageResult:
     the profile); ``not-applicable`` means the kind of document has no such stage.
     """
 
-    name: str
-    status: str
+    name: StageName
+    status: StageStatus
     reason: str | None = None
     report: Report | None = None
     remediation: RemediationResult | None = None
     gate: bool = True
     error: bool = False
     details: str | None = None
+    failure_status: ExitStatus = ExitStatus.EXECUTION_FAILURE
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize the stage.
@@ -92,7 +100,9 @@ class RunRecord:
     @property
     def failed_stage(self) -> str | None:
         """The first failed stage, if any."""
-        return next((stage.name for stage in self.stages if stage.status == "failed"), None)
+        return next(
+            (stage.name for stage in self.stages if stage.status == StageStatus.FAILED), None
+        )
 
     @property
     def passed(self) -> bool:
@@ -100,12 +110,13 @@ class RunRecord:
         return self.failed_stage is None
 
     @property
-    def exit_status(self) -> int:
-        """3 for an execution failure, else the audit exit status of the gate reports."""
-        if any(stage.error for stage in self.stages):
-            return EXECUTION_FAILURE
+    def exit_status(self) -> ExitStatus:
+        """Combine execution, usage and finding outcomes by explicit precedence."""
         reports = [stage.report for stage in self.stages if stage.gate and stage.report]
-        return exit_status(reports, strict=self.strict)
+        return combine_statuses([
+            exit_status(reports, strict=self.strict),
+            *(stage.failure_status for stage in self.stages if stage.error),
+        ])
 
     @property
     def plan_sha256(self) -> str:
@@ -145,7 +156,7 @@ class RunRecord:
             "fonts": self.fonts,
             "human_review": self.human_review,
             "outputs": dict(sorted(self.outputs.items())),
-            "status": "passed" if self.passed else "failed",
+            "status": RunStatus.PASSED if self.passed else RunStatus.FAILED,
             "failed_stage": self.failed_stage,
         }
 
@@ -164,7 +175,7 @@ def _library_versions() -> dict[str, str]:
 class PipelineOptions:
     """Tool locations, time limit, assurance profile and optional progress observer.
 
-    The observer receives fixed stage/status fields, must not raise, and is excluded
+    The observer receives typed ProgressEvent values, must not raise, and is excluded
     from evidence serialization and execution identity.
     """
 
@@ -172,7 +183,7 @@ class PipelineOptions:
     soffice: str | None = None
     verapdf_path: str | None = None
     timeout: int | float = DEFAULT_TIMEOUT_SECONDS
-    on_progress: Callable[[str, str], None] | None = field(default=None, repr=False, compare=False)
+    on_progress: ProgressObserver | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         """Reject an invalid duration before native work or output creation."""

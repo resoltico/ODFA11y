@@ -7,6 +7,7 @@ import sys
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import OdfA11yError
+from odfa11y.outcomes import ExitStatus, combine_statuses, failure_status
 from odfa11y.pipeline import audit_document
 from odfa11y.report import exit_status, render_reports, terminal_text
 
@@ -18,8 +19,6 @@ if TYPE_CHECKING:
     import argparse
 
     from odfa11y.report import Report
-
-EXECUTION_FAILURE = 3
 
 
 def audit_command(args: argparse.Namespace) -> int:
@@ -41,7 +40,7 @@ def audit_command(args: argparse.Namespace) -> int:
 
     """
     reports: list[Report] = []
-    status = 0
+    status = ExitStatus.PASSED
     for source in args.sources:
         try:
             reports.extend(
@@ -61,8 +60,8 @@ def audit_command(args: argparse.Namespace) -> int:
                 f"error: Cannot audit {terminal_text(source)}: {terminal_text(exc)}",
                 file=sys.stderr,
             )
-            status = EXECUTION_FAILURE
-    status = max(status, exit_status(reports, strict=args.strict))
+            status = combine_statuses([status, failure_status(exc)])
+    status = combine_statuses([status, exit_status(reports, strict=args.strict)])
     command_gate(args, status)
     if reports:
         print(render_reports(reports, output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output is the command interface.

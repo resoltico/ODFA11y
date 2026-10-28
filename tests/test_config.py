@@ -9,7 +9,7 @@ import pytest
 
 from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
@@ -132,12 +132,12 @@ def test_false_flags_request_nothing(tmp_path: Path) -> None:
     ],
 )
 def test_invalid_configuration_is_rejected(tmp_path: Path, content: str, message: str) -> None:
-    with pytest.raises(ConfigError, match=message):
+    with pytest.raises(PlanError, match=message):
         load_config(write(tmp_path, content))
 
 
 def test_missing_configuration_file_is_a_config_error(tmp_path: Path) -> None:
-    with pytest.raises(ConfigError, match="Cannot read configuration"):
+    with pytest.raises(PlanError, match="Cannot read configuration"):
         load_config(tmp_path / "absent.toml")
 
 
@@ -157,5 +157,5 @@ def test_example_configuration_is_valid(tmp_path: Path) -> None:
 def test_config_rejects_malformed_language_syntax(tmp_path: Path, tag: str) -> None:
     path = tmp_path / "language.toml"
     path.write_text(f'[document]\nlanguage = "{tag}"\n', encoding="utf-8")
-    with pytest.raises(ConfigError, match="Invalid language"):
+    with pytest.raises(PlanError, match="Invalid language"):
         load_config(path)

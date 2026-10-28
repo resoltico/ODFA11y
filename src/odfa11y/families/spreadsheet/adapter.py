@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.odf import Family
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_spreadsheet
 from .config import parse_spreadsheet_table
@@ -13,27 +14,29 @@ from .snapshot import sheet_snapshot, sheets_preserved
 from .template import spreadsheet_template
 
 REVIEW_ITEMS = (
-    ReviewItem("sheet names", "Whether each sheet name says what the sheet holds."),
+    ReviewItem(ReviewTopic.SHEET_NAMES, "Whether each sheet name says what the sheet holds."),
     ReviewItem(
-        "header cells",
+        ReviewTopic.HEADER_CELLS,
         "Whether the first row and column labels describe the data they head, on every sheet.",
     ),
-    ReviewItem("alt text", "Whether every picture's and chart's description is meaningful."),
     ReviewItem(
-        "reading order",
+        ReviewTopic.ALT_TEXT, "Whether every picture's and chart's description is meaningful."
+    ),
+    ReviewItem(
+        ReviewTopic.READING_ORDER,
         "Whether the order of sheets, rows and columns, and of floating objects, is logical.",
     ),
     ReviewItem(
-        "hidden content",
+        ReviewTopic.HIDDEN_CONTENT,
         "Whether hidden sheets, rows and columns hold nothing a reader needs.",
     ),
     ReviewItem(
-        "colour",
+        ReviewTopic.COLOUR,
         "Whether colour, including conditional formatting, conveys information that is not "
         "available any other way.",
     ),
     ReviewItem(
-        "layout",
+        ReviewTopic.LAYOUT,
         "Whether the printed or exported pages look right: print ranges, page breaks, column "
         "widths and truncated values.",
     ),

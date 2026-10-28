@@ -11,24 +11,26 @@ from odfa11y.errors import UnsupportedKindError
 from odfa11y.external_tools import validate_timeout
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
+from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, ExportSettings, export_pdfua
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
+
+    from odfa11y.outcomes import ProgressObserver
 
 
 @dataclass(frozen=True, slots=True)
 class NativeOptions:
     """Native executable, per-tool time limit and an optional progress observer.
 
-    Observers receive fixed labels/statuses and must not raise. They are presentation
+    Observers receive typed ProgressEvent values and must not raise. They are presentation
     hooks, excluded from options identity, and never persisted in reports or evidence.
     """
 
     soffice: str | Path | None = None
     timeout: int | float = DEFAULT_TIMEOUT_SECONDS
-    on_progress: Callable[[str, str], None] | None = field(default=None, repr=False, compare=False)
+    on_progress: ProgressObserver | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         """Reject an invalid duration before native work or output creation."""
@@ -89,8 +91,8 @@ def export_document(
     options = options or NativeOptions()
     settings = native_export_settings(OdfDocument.open(source), options.soffice, options.timeout)
     if options.on_progress is not None:
-        options.on_progress("export-pdf", "running")
+        options.on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.RUNNING))
     result = export_pdfua(source, destination, settings)
     if options.on_progress is not None:
-        options.on_progress("export-pdf", "passed")
+        options.on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.PASSED))
     return result

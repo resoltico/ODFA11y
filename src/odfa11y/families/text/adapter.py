@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.odf import Family, Part
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_text, style_summary
 from .config import parse_text_table
@@ -24,23 +25,31 @@ if TYPE_CHECKING:
 
 REVIEW_ITEMS = (
     ReviewItem(
-        "headings",
+        ReviewTopic.HEADINGS,
         "Whether each heading names its section and the hierarchy reflects the document.",
     ),
-    ReviewItem("alt text", "Whether every graphic's description is meaningful in its context."),
     ReviewItem(
-        "reading order",
+        ReviewTopic.ALT_TEXT, "Whether every graphic's description is meaningful in its context."
+    ),
+    ReviewItem(
+        ReviewTopic.READING_ORDER,
         "Whether the reading order, including footnotes and floating objects, is logical.",
     ),
     ReviewItem(
-        "table headers", "Whether table header cells describe the data relationships correctly."
+        ReviewTopic.TABLE_HEADERS,
+        "Whether table header cells describe the data relationships correctly.",
     ),
     ReviewItem(
-        "link purpose", "Whether each link's purpose is understandable from its text and context."
+        ReviewTopic.LINK_PURPOSE,
+        "Whether each link's purpose is understandable from its text and context.",
     ),
-    ReviewItem("colour", "Whether colour conveys information that is not available any other way."),
     ReviewItem(
-        "layout", "Whether the pages look right: typography, pagination and visual appearance."
+        ReviewTopic.COLOUR,
+        "Whether colour conveys information that is not available any other way.",
+    ),
+    ReviewItem(
+        ReviewTopic.LAYOUT,
+        "Whether the pages look right: typography, pagination and visual appearance.",
     ),
 )
 

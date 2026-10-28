@@ -60,12 +60,12 @@ def test_core_pdf_comparison_keeps_original_report_identity(tmp_path: Path) -> N
         source,
         candidate,
         FidelityPolicy(),
-        options=NativeOptions(on_progress=lambda name, status: events.append((name, status))),
+        options=NativeOptions(on_progress=lambda event: events.append((event.step, event.state))),
     )
     assert report.passed
     assert report.sources == (candidate, source)
     assert report.subject == "candidate.pdf vs source.pdf"
-    assert events == [("compare-fidelity", "running"), ("compare-fidelity", "completed")]
+    assert events == [("compare-fidelity", "running"), ("compare-fidelity", "passed")]
     assert (source.read_bytes(), candidate.read_bytes()) == before
 
 

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.odf import Family
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_formula
 from .config import parse_table
@@ -47,12 +48,15 @@ ADAPTER = FamilyAdapter(
     template=_template,
     review_items=(
         ReviewItem(
-            "mathematics",
+            ReviewTopic.MATHEMATICS,
             "Whether the spoken alternative conveys every symbol, relation and grouping correctly.",
         ),
-        ReviewItem("language", "Whether notation and spoken language match the intended audience."),
         ReviewItem(
-            "export boundary",
+            ReviewTopic.LANGUAGE,
+            "Whether notation and spoken language match the intended audience.",
+        ),
+        ReviewItem(
+            ReviewTopic.EXPORT_BOUNDARY,
             "Native Math export lacks PDF tagging; source correctness is not PDF/UA conformance.",
         ),
     ),

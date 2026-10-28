@@ -6,6 +6,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Invalid arguments and plans exit 4, with explicit precedence 3 > 4 > 2 > 1 > 0. Progress observers receive typed events, the validator stage is `validate-pdf`, and domain plan errors use `PlanError`.
 - Python 3.15 or newer is required; development and CI use 3.15.2. Recreate existing environments after upgrading.
 
 ### Fixed

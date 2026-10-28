@@ -12,7 +12,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.pdf import validate_pdfua
-from odfa11y.pipeline import STAGE_NAMES, PipelineOptions, run_pipeline
+from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 
 from .corpus_manifest import CORPUS
@@ -43,8 +43,8 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
     record = run_pipeline(
         CORPUS / name, plan, FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice=soffice)
     )
-    stages = {stage.name: stage.status for stage in record.stages}
-    assert tuple(stages) == STAGE_NAMES
+    stages = {stage.name.value: stage.status for stage in record.stages}
+    assert tuple(stages) == PIPELINE_STAGES
     diagnostics = [stage.as_dict() for stage in record.stages]
     assert stages["export-remediated"] == "passed", diagnostics
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")

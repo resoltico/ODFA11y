@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.content import protected_xml
 from odfa11y.odf import Family, Part, select_elements
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_chart
 
@@ -54,15 +55,15 @@ ADAPTER = FamilyAdapter(
     template=_template,
     review_items=(
         ReviewItem(
-            "chart meaning",
+            ReviewTopic.CHART_MEANING,
             "Whether the document description conveys the chart's trends, values and conclusion.",
         ),
         ReviewItem(
-            "labels and ranges",
+            ReviewTopic.LABELS_AND_RANGES,
             "Whether units, axes, categories, legend and data providers match the intended data.",
         ),
         ReviewItem(
-            "source assurance",
+            ReviewTopic.SOURCE_ASSURANCE,
             "Native Chart PDF export is unsupported; review it in its embedding application.",
         ),
     ),

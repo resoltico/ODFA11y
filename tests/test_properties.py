@@ -16,7 +16,7 @@ from lxml import etree
 from odfa11y.adapter import Status
 from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import ConfigError, PackageError
+from odfa11y.errors import PackageError, PlanError
 from odfa11y.families.text import (
     URI_RE,
     LinkifyAddresses,
@@ -141,7 +141,7 @@ def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_a_config_er
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "config.toml"
         path.write_bytes(payload)
-        with contextlib.suppress(ConfigError):
+        with contextlib.suppress(PlanError):
             load_config(path)
 
 

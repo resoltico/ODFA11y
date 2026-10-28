@@ -7,6 +7,9 @@ import json
 import textwrap
 from typing import TYPE_CHECKING
 
+from odfa11y.errors import ReportError
+from odfa11y.outcomes import ExitStatus
+
 from .sarif import sarif_log
 from .terminal import terminal_text
 
@@ -17,8 +20,6 @@ if TYPE_CHECKING:
     from .models import Report
 
 FORMATS = ("text", "json", "sarif")
-EXIT_STRICT_WARNINGS = 1
-EXIT_ERRORS = 2
 
 
 def render_reports(
@@ -33,26 +34,28 @@ def render_reports(
 
     Raises
     ------
-    ValueError
+    ReportError
         The requested format is unsupported or SARIF source identities are unsafe.
+    PackageError
+        A SARIF source path cannot be resolved.
 
     """
     items = list(reports)
     if output_format == "sarif":
         if source_root is None:
             msg = "SARIF requires an explicit source root."
-            raise ValueError(msg)
+            raise ReportError(msg)
         return json.dumps(sarif_log(items, source_root=source_root), indent=2, ensure_ascii=False)
     if output_format == "json":
         payload = items[0].as_dict() if len(items) == 1 else [r.as_dict() for r in items]
         return json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True)
     if output_format != "text":
         msg = f"Unsupported report format: {output_format}"
-        raise ValueError(msg)
+        raise ReportError(msg)
     return "\n\n".join(_render_text(report) for report in items)
 
 
-def exit_status(reports: Iterable[Report], *, strict: bool = False) -> int:
+def exit_status(reports: Iterable[Report], *, strict: bool = False) -> ExitStatus:
     """Map findings to a command exit status: 2 for errors, 1 for strict warnings.
 
     Returns
@@ -61,12 +64,12 @@ def exit_status(reports: Iterable[Report], *, strict: bool = False) -> int:
         Zero on success, 1 when strict and a warning exists, or 2 when an error exists.
 
     """
-    status = 0
+    status = ExitStatus.PASSED
     for report in reports:
         if report.error_count:
-            return EXIT_ERRORS
+            return ExitStatus.ERRORS
         if strict and report.warning_count:
-            status = EXIT_STRICT_WARNINGS
+            status = ExitStatus.STRICT_WARNINGS
     return status
 
 
