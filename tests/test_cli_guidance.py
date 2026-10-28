@@ -10,12 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.audit import audit_odf, render_template
+from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
 from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
-from odfa11y.families.text import ADAPTER
+from odfa11y.plans import PlanHeader, SourceBinding, render_plan
+from odfa11y.plans.registry import document_decisions
 from odfa11y.report import Report, rules
 
 from .fixtures import make_minimal_odt
@@ -25,7 +26,7 @@ from .fixtures import make_minimal_odt
     "name",
     [
         "audit",
-        "template",
+        "plan",
         "remediate",
         "export",
         "compare",
@@ -87,10 +88,11 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
     source = Path("-a document; $(touch unwanted).odt")
     report = Report(kind="odf", subject=source.name, sources=(source,))
     report.add(rules.META001)
+    document_decisions(report)
     hint = audit_next_step(argparse.Namespace(format="text"), [report])
     assert hint is not None
     command = hint.splitlines()[0].removeprefix("Next: ")
-    assert shlex.split(command) == ["odfa11y", "template", "--", str(source)]
+    assert shlex.split(command) == ["odfa11y", "plan", "--", str(source)]
     assert build_parser().parse_args(shlex.split(command)[1:]).source == source
 
 
@@ -98,6 +100,7 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
 def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str) -> None:
     report = Report(kind=kind, subject=source, sources=(Path(source),))
     report.add(rules.META001)
+    document_decisions(report)
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
     assert audit_next_step(argparse.Namespace(format="json"), [report]) is None
 
@@ -105,6 +108,7 @@ def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str)
 def test_unreadable_document_does_not_offer_template() -> None:
     report = Report(kind="odf", subject="bad.odt", sources=(Path("bad.odt"),))
     report.add(rules.META001)
+    document_decisions(report)
     report.add(rules.PKG000)
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
 
@@ -113,17 +117,17 @@ def test_template_header_escapes_untrusted_subject_without_active_toml(tmp_path:
     source = make_minimal_odt(tmp_path / "doc.odt", features={"with_image_without_alt": True})
     report = audit_odf(source)
     report.subject = "doc\n[document]\ntitle='Injected'\x1b[2J\u202e.odt"
-    template = render_template(report, ADAPTER)
-    assert tomllib.loads(template) == {}
+    template = render_plan(PlanHeader(1, SourceBinding("0" * 64), "0.8.0"), report.decisions)
+    assert set(tomllib.loads(template)) == {"plan"}
     assert "\x1b" not in template
     assert "\u202e" not in template
-    assert "# with the reviewed configuration" in template
+    assert "Review each answer" in template
     assert "fingerprint" in template
 
 
 def test_recovery_preserves_configuration_and_existing_output() -> None:
     args = argparse.Namespace(command="remediate", config=Path("reviewed.toml"))
-    assert "edit the existing configuration" in (error_hint(args, PlanError("wrong type")) or "")
+    assert "edit the existing plan" in (error_hint(args, PlanError("wrong type")) or "")
     assert "preserve" in (error_hint(args, OutputError("occupied")) or "")
     assert error_hint(args, ValueError("unexpected")) is None
 

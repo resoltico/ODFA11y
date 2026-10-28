@@ -53,9 +53,9 @@ dependencies. Commands use a POSIX shell. External applications are optional:
 The shortest complete path:
 
 ```bash
-uv run --no-sync odfa11y template original.odt > document.toml   # list open decisions
+uv run --no-sync odfa11y plan original.odt > document.toml   # list open decisions
 # edit document.toml: uncomment and complete only the decisions you have made
-uv run --no-sync odfa11y pipeline original.odt --config document.toml \
+uv run --no-sync odfa11y pipeline original.odt --plan document.toml \
   --output-dir evidence --profile production
 uv run --no-sync odfa11y check-evidence evidence
 ```
@@ -72,10 +72,10 @@ run record and `REVIEW.md`. Failed runs retain completed artifacts and failure e
 | --- | --- |
 | `audit FILE...` | Read-only checks of ODF or PDF files; `--schema` validates recognized ODF parts against bundled schemas, `--verapdf` validates PDFs. |
 | `template FILE` | Print a commented configuration for the decisions an audit leaves open. |
-| `remediate SRC DEST --config FILE` | Apply the configured operations; `--dry-run` shows outcomes without writing. |
+| `remediate SRC DEST --plan FILE` | Apply the configured operations; `--dry-run` shows outcomes without writing. |
 | `export SRC DEST` | Request a tagged PDF/UA-1 export with LibreOffice; validate the result separately. |
 | `compare A B` | Compare two ODF documents or PDFs for pages, text, links and rendered ink. |
-| `pipeline SRC --config FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
+| `pipeline SRC --plan FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
 | `batch MANIFEST --output-dir DIR` | Independent manifest runs, atomic per-item evidence and aggregate status; see [Batch](docs/BATCH.md). |
 | `styles FILE` | Paragraph-style usage and effective spacing. |
 | `check-evidence DIR` | Verify an evidence directory against its manifest. |
@@ -91,8 +91,8 @@ The CLI is a presentation layer over public core operations. Libraries can call
 `inspect_tools` and `run_pipeline` directly, with `NativeOptions` for standalone
 tool settings or `PipelineOptions` for assurance runs. Inspection yields reports
 incrementally, preserving completed checks if a later validator fails.
-`odfa11y.audit.prepare_template` prepares reviewed configuration decisions, and
-`odfa11y.remediation.remediate` applies explicit operation objects. Low-level
+`odfa11y.audit.prepare_plan` prepares source-bound decision plans, and
+`odfa11y.remediation.remediate` applies source-bound decision plans. Low-level
 `odfa11y.pdf.export_pdfua` remains available; its callers own native preflight.
 See the [public library contract](docs/API.md) for results, errors, output ownership and
 executable installed-package examples, and [Architecture](docs/ARCHITECTURE.md) for package
@@ -103,7 +103,7 @@ boundaries.
 - [Workflow](docs/WORKFLOW.md): staged commands, reports, exit statuses and troubleshooting.
 - [Batch](docs/BATCH.md): strict manifests, failure continuation and interruption evidence.
 - [SARIF](docs/SARIF.md): confined source identities and logical findings for tooling.
-- [Configuration](docs/CONFIGURATION.md): the maintained TOML example and every field.
+- [Configuration](docs/PLAN.md): the maintained TOML example and every field.
 - [Fidelity](docs/FIDELITY.md): what the render comparison measures and how to set its policy.
 - [Evidence](docs/EVIDENCE.md): the evidence directory, its record and verification.
 - [Accessibility and limits](docs/ACCESSIBILITY.md): scope, known limitations and human checks.

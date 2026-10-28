@@ -68,7 +68,7 @@ def test_registered_rules_levels_remedies_and_logical_locations(tmp_path: Path) 
         assert descriptors[result["ruleIndex"]]["id"] == result["ruleId"]
         assert "region" not in result["locations"][0]["physicalLocation"]
     first = run["results"][0]
-    assert first["properties"]["remedy"] == "document.title"
+    assert "remedy" not in first["properties"]
     assert first["locations"][0]["properties"] == {"packageMember": "meta.xml"}
     assert first["locations"][0]["logicalLocations"] == [{"fullyQualifiedName": "metadata/title"}]
     assert "logicalLocations" not in run["results"][2]["locations"][0]

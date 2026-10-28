@@ -12,6 +12,7 @@ from odfa11y.cli import main
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import tagged_writer, text_pdf
+from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,7 +20,12 @@ if TYPE_CHECKING:
 
 FINDINGS = 2
 EXECUTION_FAILURE = 3
-CONFIG = '[document]\ntitle = "Updated"\n[text.remediation]\nlinkify_plain_addresses = true\n'
+CONFIG = (
+    '[decisions."document.metadata"]\n'
+    'title = "Updated"\n'
+    '[decisions."text.linkify_addresses"]\n'
+    "enabled = true\n"
+)
 
 
 def config(tmp_path: Path, text: str = CONFIG) -> Path:
@@ -32,7 +38,7 @@ def config(tmp_path: Path, text: str = CONFIG) -> Path:
 
     """
     path = tmp_path / "odfa11y.toml"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(plan_header(tmp_path / "a.odt") + text, encoding="utf-8")
     return path
 
 
@@ -69,7 +75,7 @@ def test_audit_text_exit_status_and_strict_mode(
     assert main(["audit", str(failing)]) == FINDINGS
     output = capsys.readouterr().out
     assert "Check: errors found" in output
-    assert "remedy: text.graphics" in output
+    assert "graphic.alternative" in output
     warned = make_minimal_odt(tmp_path / "warn.odt", features={"with_plain_email": True})
     assert main(["audit", str(warned)]) == 0
     assert main(["audit", str(warned), "--strict"]) == 1
@@ -100,9 +106,9 @@ def test_template_prints_a_loadable_commented_configuration(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt", features={"with_image_without_alt": True})
-    assert main(["template", str(source)]) == 0
+    assert main(["plan", str(source)]) == 0
     output = capsys.readouterr().out
-    assert '# [text.graphics."content/frame[name=Logo]"]' in output
+    assert '# [decisions."graphic.alternative"."content/frame[name=Logo]"]' in output
 
 
 def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
@@ -110,7 +116,7 @@ def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt", features={"with_plain_email": True})
     destination = tmp_path / "out.odt"
-    arguments = ["remediate", str(source), str(destination), "--config", str(config(tmp_path))]
+    arguments = ["remediate", str(source), str(destination), "--plan", str(config(tmp_path))]
     assert main([*arguments, "--dry-run"]) == 0
     dry = capsys.readouterr().out
     assert "Dry run; proposed changes only. Nothing written." in dry
@@ -131,7 +137,7 @@ def test_remediate_json_output_is_structured(
         "remediate",
         str(source),
         str(tmp_path / "o.odt"),
-        "--config",
+        "--plan",
         str(config(tmp_path)),
     ]
     assert main([*arguments, "--format", "json", "--dry-run"]) == 0
@@ -141,17 +147,21 @@ def test_remediate_json_output_is_structured(
     assert data["outcomes"][0]["status"] == "applied"
 
 
-def test_remediation_failures_are_reported_on_stderr_with_exit_3(
+def test_remediation_refusals_return_outcomes_with_exit_2(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
-    bad = config(tmp_path, "[text.table_headers]\nMissing = { rows = 1 }\n")
-    destination = tmp_path / "out.odt"
-    assert (
-        main(["remediate", str(source), str(destination), "--config", str(bad)])
-        == EXECUTION_FAILURE
+    bad = config(
+        tmp_path,
+        (
+            '[decisions."table.headers"."content/table[name=Missing]"]\n'
+            "rows = 1\n"
+            'fingerprint = "0000000000000000"\n'
+        ),
     )
-    assert "must resolve to exactly one table" in capsys.readouterr().err
+    destination = tmp_path / "out.odt"
+    assert main(["remediate", str(source), str(destination), "--plan", str(bad)]) == 2
+    assert "must resolve to exactly one table" in capsys.readouterr().out
     assert not destination.exists()
 
 
@@ -159,14 +169,14 @@ def test_invalid_configuration_is_reported_on_stderr(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
-    invalid = config(tmp_path, "[document]\nlanguage = 7\n")
-    assert main(["remediate", str(source), str(tmp_path / "o.odt"), "--config", str(invalid)]) == 4
-    assert "document.language must be str" in capsys.readouterr().err
+    invalid = config(tmp_path, '[decisions."document.metadata"]\nlanguage = 7\n')
+    assert main(["remediate", str(source), str(tmp_path / "o.odt"), "--plan", str(invalid)]) == 4
+    assert "document.metadata.language has an unsupported value type" in capsys.readouterr().err
 
 
 def test_removed_flags_and_commands_are_rejected() -> None:
     for arguments in (
-        ["remediate", "a", "b", "--config", "c", "--title", "x"],
+        ["remediate", "a", "b", "--plan", "c", "--title", "x"],
         ["normalize-spacing", "a", "b"],
         ["verify", "a"],
         ["export-pdfua", "a", "b"],
@@ -197,7 +207,7 @@ def test_compare_pdfs_directly_gates_on_the_policy(
     assert "FID005" in capsys.readouterr().out
     assert any(diff.iterdir())
     relaxed = config(tmp_path, "[fidelity]\nraster_tolerance = 5.0\n")
-    assert main(["compare", str(left), str(right), "--config", str(relaxed)]) == 0
+    assert main(["compare", str(left), str(right), "--plan", str(relaxed)]) == 0
 
 
 def test_check_evidence_reports_integrity(
@@ -221,7 +231,7 @@ def test_pipeline_command_without_libreoffice_fails_with_evidence_and_exit_3(
     arguments = [
         "pipeline",
         str(source),
-        "--config",
+        "--plan",
         str(config(tmp_path)),
         "--soffice",
         str(tmp_path / "none"),
@@ -252,7 +262,7 @@ def test_export_compare_and_pipeline_with_real_libreoffice(
     assert json.loads(capsys.readouterr().out)["facts"]["fidelity.raster_max_changed_ratio"] == 0.0
     assert main(["audit", str(pdf)]) == 0
     capsys.readouterr()
-    arguments = ["pipeline", str(source), "--config", str(config(tmp_path)), "--soffice", soffice]
+    arguments = ["pipeline", str(source), "--plan", str(config(tmp_path)), "--soffice", soffice]
     assert main([*arguments, "--output-dir", str(tmp_path / "ev")]) == 0
     assert main(["check-evidence", str(tmp_path / "ev")]) == 0
 

@@ -3,37 +3,17 @@
 
 from __future__ import annotations
 
-import json
-from typing import TYPE_CHECKING
-
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.odf import Family
 from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_formula
-from .config import parse_table
+from .decisions import DECISION_KINDS, operations
 from .expression import language, set_language, snapshot
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
-    from odfa11y.report import Finding
 
 
 def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed: int) -> bool:
     return removed == 0 and before == after
-
-
-def _template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
-    findings = by_remedy.get("formula.alternative", ())
-    if not findings:
-        return []
-    return [
-        "# [formula]",
-        '# alternative = ""  # write the formula meaning in its language',
-        f"# fingerprint = {json.dumps(findings[0].details.get('fingerprint', ''))}",
-        "",
-    ]
 
 
 ADAPTER = FamilyAdapter(
@@ -44,8 +24,8 @@ ADAPTER = FamilyAdapter(
     set_default_language=set_language,
     snapshot=snapshot,
     preserved=_preserved,
-    config_tables={"formula": parse_table},
-    template=_template,
+    decision_kinds=DECISION_KINDS,
+    operations=operations,
     review_items=(
         ReviewItem(
             ReviewTopic.MATHEMATICS,

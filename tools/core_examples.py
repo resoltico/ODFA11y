@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import prepare_template
+from odfa11y.audit import prepare_plan
 from odfa11y.evidence import check_bundle
 from odfa11y.families import style_usage
 from odfa11y.fidelity import FidelityPolicy
@@ -17,7 +17,8 @@ from odfa11y.pipeline import (
     inspect_tools,
     run_pipeline,
 )
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import Plan, parse_tables, registered_kinds
+from odfa11y.remediation import remediate
 from odfa11y.report import exit_status
 
 if TYPE_CHECKING:
@@ -43,12 +44,19 @@ def inspect_source(source: Path, work: Path) -> list[Report]:
         # Core operations produce no terminal output. Render or serialize when needed.
         report.as_dict()
     style_usage(source)
-    report, template = prepare_template(source)
+    report, template = prepare_plan(source)
     completed.append(report)
     if template is not None:
         (work / "decisions.toml").write_text(template, encoding="utf-8")
     # This title is an explicit example decision, never inferred from document content.
-    remediate(source, work / ("reviewed" + source.suffix), [SetMetadata(title="Reviewed example")])
+    plan = parse_tables(
+        {
+            **Plan.for_source(source).as_dict(),
+            "decisions": {"document.metadata": {"title": "Reviewed example"}},
+        },
+        registered_kinds(),
+    )
+    remediate(source, work / ("reviewed" + source.suffix), plan)
     exit_status(completed, strict=True)
     return completed
 
@@ -74,8 +82,7 @@ def native_work(
     comparison = compare_documents(source, pdf, FidelityPolicy(), work / "diff", options)
     record = run_pipeline(
         source,
-        [SetMetadata(title="Reviewed example")],
-        FidelityPolicy(),
+        Plan.for_source(source),
         work / "evidence",
         PipelineOptions(
             soffice=str(options.soffice) if options.soffice is not None else None,

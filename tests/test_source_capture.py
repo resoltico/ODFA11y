@@ -11,15 +11,16 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from odfa11y import source_capture as capture
 from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.pipeline import source as capture
 
 from .documents import make_flat
+from .reviewed_plans import plan_header, reviewed_plan
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -73,7 +74,12 @@ def test_growth_after_descriptor_size_check_is_bounded(
 
 
 def _pipeline(source: str, output: str) -> None:
-    result = run_pipeline(source, [], FidelityPolicy(), output, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        output,
+        PipelineOptions(profile="inspect"),
+    )
     sys.exit(result.exit_status)
 
 
@@ -167,7 +173,10 @@ def test_zero_length_input_retains_invalid_document_outcome(tmp_path: Path) -> N
     source = tmp_path / "empty.odt"
     source.write_bytes(b"")
     result = run_pipeline(
-        source, [], FidelityPolicy(), tmp_path / "out", PipelineOptions(profile="inspect")
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        tmp_path / "out",
+        PipelineOptions(profile="inspect"),
     )
     assert result.failed_stage == "audit-source"
     assert result.exit_status == 2
@@ -178,7 +187,12 @@ def test_directory_input_has_valid_execution_failure_evidence(tmp_path: Path) ->
     source = tmp_path / "directory.odt"
     source.mkdir()
     output = tmp_path / "evidence"
-    result = run_pipeline(source, [], FidelityPolicy(), output, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        output,
+        PipelineOptions(profile="inspect"),
+    )
     assert result.failed_stage == "identify-source"
     assert result.exit_status == 3
     assert check_bundle(output) == []
@@ -189,7 +203,9 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
     with source.open("wb") as stream:
         stream.truncate(270 * 1024 * 1024)
     normal = make_flat(tmp_path, "text")
-    (tmp_path / "plan.toml").write_text('[document]\nlanguage="en-GB"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(normal) + '[decisions."document.metadata"]\nlanguage="en-GB"'
+    )
     manifest = manifest_file(
         tmp_path, [("oversized", source.name, "plan.toml"), ("valid", normal.name, "plan.toml")]
     )
@@ -212,7 +228,10 @@ def test_unwritable_source_directory_publishes_failure_elsewhere(tmp_path: Path)
             pytest.skip("The current platform/user does not enforce POSIX directory write modes")
         output = tmp_path / "evidence"
         result = run_pipeline(
-            source, [], FidelityPolicy(), output, PipelineOptions(profile="inspect")
+            source,
+            reviewed_plan(source, [], FidelityPolicy()),
+            output,
+            PipelineOptions(profile="inspect"),
         )
         assert result.failed_stage == "identify-source"
         assert result.exit_status == 3

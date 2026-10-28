@@ -9,12 +9,24 @@ from pathlib import Path
 
 from odfa11y.adapter import Outcome, ReviewItem, Status
 from odfa11y.batch.record import BatchItemResult, BatchRecord
+from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
 from odfa11y.external_tools import ToolIdentity
 from odfa11y.fidelity import FidelityPolicy
-from odfa11y.outcomes import BatchStatus, ExitStatus, ReviewTopic, RunStatus, StageName, StageStatus
+from odfa11y.outcomes import (
+    BatchStatus,
+    ExitStatus,
+    ReviewTopic,
+    RunStatus,
+    StageName,
+    StageStatus,
+    ViolationKind,
+)
 from odfa11y.pipeline import Profile, RunRecord, StageResult
+from odfa11y.plans import Plan, PlanHeader, SourceBinding
+from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.records import DoctorRecord, DocumentIdentity, SchemaCheck, Toolchain
-from odfa11y.remediation import RemediationResult
+from odfa11y.remediation import RemediationResult, Violation
 from odfa11y.report import FACT_REGISTRY, FactSet, Finding, Location, Report
 from odfa11y.serialization import JsonObject, JsonValue, schema_for
 
@@ -25,6 +37,7 @@ FORMATS = {
     "batch": BatchRecord,
     "doctor": DoctorRecord,
     "remediation": RemediationResult,
+    "plan": Plan,
 }
 # Supply type-only names while resolving record annotations; runtime modules stay layered.
 TYPE_NAMESPACE = {
@@ -43,6 +56,7 @@ TYPE_NAMESPACE = {
         RunStatus,
         StageName,
         StageStatus,
+        ViolationKind,
         Profile,
         RunRecord,
         StageResult,
@@ -56,7 +70,20 @@ TYPE_NAMESPACE = {
         Location,
         Report,
     )
-} | {"JsonObject": JsonObject, "JsonValue": JsonValue, "Path": Path}
+} | {
+    "Plan": Plan,
+    "Violation": Violation,
+    "ViolationKind": ViolationKind,
+    "PlanHeader": PlanHeader,
+    "SourceBinding": SourceBinding,
+    "OpenDecision": OpenDecision,
+    "Decision": Decision,
+    "DecisionKind": DecisionKind,
+    "DecisionScope": DecisionScope,
+    "JsonObject": JsonObject,
+    "JsonValue": JsonValue,
+    "Path": Path,
+}
 
 
 def schemas() -> dict[str, JsonObject]:
@@ -73,10 +100,15 @@ def schemas() -> dict[str, JsonObject]:
         | {"description": key.description}
         for key in FACT_REGISTRY.values()
     }
+    kinds = registered_kinds()
     overrides: dict[object, JsonObject] = {
+        Plan: plan_schema(kinds),
+        Decision: decision_schema(kinds, open_decision=False),
+        OpenDecision: decision_schema(kinds, open_decision=True),
+        DecisionKind: {"enum": list(kinds)},
         FactSet: {"type": "object", "properties": fact_properties, "additionalProperties": False},
     }
-    result = {
+    return {
         name: {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": f"urn:odfa11y:schema:{name}",
@@ -84,13 +116,6 @@ def schemas() -> dict[str, JsonObject]:
         }
         for name, record_type in FORMATS.items()
     }
-    result["plan"] = {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:odfa11y:schema:plan",
-        "$comment": "Reserved for the decision codec in WP-06; not an accepted plan contract.",
-        "not": {},
-    }
-    return result
 
 
 def main() -> int:
@@ -108,9 +133,21 @@ def main() -> int:
     )
     args = parser.parse_args()
     stale = []
-    for name, schema in schemas().items():
-        path = SCHEMA_DIRECTORY / f"{name}.schema.json"
-        expected = json.dumps(schema, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    artifacts = {
+        SCHEMA_DIRECTORY / f"{name}.schema.json": json.dumps(
+            schema, indent=2, sort_keys=True, ensure_ascii=False
+        )
+        + "\n"
+        for name, schema in schemas().items()
+    }
+    plan_path = SCHEMA_DIRECTORY.parents[2] / "docs/PLAN.md"
+    prose = plan_path.read_text(encoding="utf-8").split("<!-- generated decisions -->", 1)[0]
+    artifacts[plan_path] = (
+        prose.rstrip()
+        + "\n\n<!-- generated decisions -->\n"
+        + decision_reference(registered_kinds())
+    )
+    for path, expected in artifacts.items():
         if args.check:
             if not path.is_file() or path.read_text(encoding="utf-8") != expected:
                 stale.append(str(path))

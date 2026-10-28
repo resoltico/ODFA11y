@@ -10,14 +10,15 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
-from odfa11y.config import load_config
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import HeadingLevel, SetHeadingLevels
 from odfa11y.families.text.headings import heading_fingerprint, heading_location
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediation import remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation.planning import compile_operations
 
 from .documents import Variant, make_flat, make_package
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import plan_header, question_for
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -35,17 +36,18 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
     source = make(tmp_path, "text", Variant(body=BODY))
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "TXT002")
+    report = audit_odf(source)
+    finding = next(f for f in report.findings if f.rule_id == "TXT002")
     assert finding.location is not None
     target = finding.location.path
     assert target == "content/heading[2]"
-    reviewed_fingerprint = finding.details["fingerprint"]
+    reviewed_fingerprint = question_for(report, finding).fingerprint
     assert isinstance(reviewed_fingerprint, str)
     operation = SetHeadingLevels({target: HeadingLevel(2, reviewed_fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
-    remediate(source, once, [operation])
+    execute_operations(source, once, [operation])
     assert "TXT002" not in {f.rule_id for f in audit_odf(once).findings}
-    assert not remediate(once, twice, [operation]).changed
+    assert not execute_operations(once, twice, [operation]).changed
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(twice).tree(Part.CONTENT)
     original = select_elements(before, "//text:h")
@@ -114,17 +116,29 @@ def test_named_identity_is_escaped_and_ordinal_fingerprint_detects_reordering(
 def test_toml_uses_the_exact_report_target(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(body=BODY))
     plan = tmp_path / "plan.toml"
-    plan.write_text('[text.heading_levels."content/heading[id=first]"]\nlevel = 2\n')
-    operations = load_config(plan).operations
-    assert operations == (SetHeadingLevels({"content/heading[id=first]": HeadingLevel(2)}),)
+    document = OdfDocument.open(source)
+    node = select_elements(document.tree(Part.CONTENT), "//text:h")[0]
+    reviewed = heading_fingerprint(node)
+    plan.write_text(
+        plan_header(source)
+        + '[decisions."heading.level"."content/heading[id=first]"]\nlevel = 2\nfingerprint = "'
+        + reviewed
+        + '"\n'
+    )
+    operations = compile_operations(document, load_plan(plan))
+    assert operations == (
+        SetHeadingLevels({"content/heading[id=first]": HeadingLevel(2, reviewed)}),
+    )
     destination = tmp_path / "out.odt"
-    remediate(source, destination, operations)
-    with pytest.raises(RemediationError, match="ordinal heading target requires"):
-        remediate(
+    execute_operations(source, destination, operations)
+    assert_refused(
+        execute_operations(
             source,
             tmp_path / "unreviewed.odt",
             [SetHeadingLevels({"content/heading[2]": HeadingLevel(2)})],
-        )
+        ),
+        match="ordinal heading target requires",
+    )
 
 
 def test_audit_rejects_levels_above_the_supported_range(tmp_path: Path) -> None:

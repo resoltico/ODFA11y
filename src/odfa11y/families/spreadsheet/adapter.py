@@ -8,10 +8,9 @@ from odfa11y.odf import Family
 from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_spreadsheet
-from .config import parse_spreadsheet_table
+from .decisions import DECISION_KINDS, operations
 from .language import default_language, set_default_language
 from .snapshot import sheet_snapshot, sheets_preserved
-from .template import spreadsheet_template
 
 REVIEW_ITEMS = (
     ReviewItem(ReviewTopic.SHEET_NAMES, "Whether each sheet name says what the sheet holds."),
@@ -50,8 +49,8 @@ ADAPTER = FamilyAdapter(
     set_default_language=set_default_language,
     snapshot=sheet_snapshot,
     preserved=sheets_preserved,
-    config_tables={"spreadsheet": parse_spreadsheet_table},
-    template=spreadsheet_template,
+    decision_kinds=DECISION_KINDS,
+    operations=operations,
     review_items=REVIEW_ITEMS,
     pdf_filter="calc_pdf_Export",
 )

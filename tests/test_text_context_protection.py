@@ -11,13 +11,13 @@ from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import LinkifyAddresses, NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
+from odfa11y.remediation import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys
 
 from .documents import Variant, make_flat
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -105,8 +105,10 @@ def test_same_words_do_not_allow_protected_damage(tmp_path: Path, action: str) -
     original = source.read_bytes()
     destination = tmp_path / "existing.fodt"
     destination.write_bytes(b"keep")
-    with pytest.raises(RemediationError, match="Protected document content changed"):
-        remediate(source, destination, [DamageTextFact(action)])
+    assert_refused(
+        execute_operations(source, destination, [DamageTextFact(action)]),
+        match="Protected document content changed",
+    )
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"keep"
 
@@ -126,8 +128,12 @@ def test_revision_edit_refuses_before_first_metadata_edit(
 ) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     original = source.read_bytes()
-    with pytest.raises(RemediationError, match="Tracked revisions"):
-        remediate(source, tmp_path / "out.fodt", [SetMetadata(title="Allowed alone"), operation])
+    assert_refused(
+        execute_operations(
+            source, tmp_path / "out.fodt", [SetMetadata(title="Allowed alone"), operation]
+        ),
+        match="Tracked revisions",
+    )
     assert source.read_bytes() == original
     assert not (tmp_path / "out.fodt").exists()
 
@@ -140,7 +146,7 @@ def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     plain = [f.details["text"] for f in report.findings if f.rule_id == "TXT030"]
     assert plain == ["https://note.example"]
     destination = tmp_path / "out.fodt"
-    result = remediate(source, destination, [SetMetadata(title="Reviewed title")])
+    result = execute_operations(source, destination, [SetMetadata(title="Reviewed title")])
     assert result.changed
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(destination).tree(Part.CONTENT)
@@ -174,7 +180,7 @@ def test_inline_hidden_content_and_fields_never_enter_address_prose(tmp_path: Pa
         "https://visible.example"
     ]
     destination = tmp_path / "out.fodt"
-    remediate(source, destination, [LinkifyAddresses()])
+    execute_operations(source, destination, [LinkifyAddresses()])
     after = OdfDocument.open(destination).tree(Part.CONTENT)
     assert len(select_elements(after, "//text:a")) == 1
     assert not select_elements(
@@ -196,7 +202,7 @@ def test_foreign_authored_payload_is_not_current_flow(tmp_path: Path) -> None:
     assert [f.details["text"] for f in report.findings if f.rule_id == "TXT030"] == [
         "https://current.example"
     ]
-    remediate(source, destination, [LinkifyAddresses()])
+    execute_operations(source, destination, [LinkifyAddresses()])
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(destination).tree(Part.CONTENT)
     payload = "{urn:example:authored}payload"

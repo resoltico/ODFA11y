@@ -21,13 +21,11 @@ from odfa11y.outcomes import BatchStatus, ExitStatus
 from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from odfa11y.adapter import Operation
-    from odfa11y.fidelity import FidelityPolicy
     from odfa11y.pipeline import RunRecord
+    from odfa11y.plans import Plan
 
 
 def manifest_file(tmp_path: Path, entries: list[tuple[str, str, str]]) -> Path:
@@ -51,7 +49,10 @@ def manifest_file(tmp_path: Path, entries: list[tuple[str, str, str]]) -> Path:
 
 def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path: Path) -> None:
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle = "Invented title"\nlanguage = "en"\n')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle = "Invented title"\nlanguage = "en"\n'
+    )
     (tmp_path / "bad.toml").write_text("[misspelled]\nx = 1")
     (tmp_path / "broken.odt").write_bytes(b"invalid document")
     manifest = manifest_file(
@@ -145,7 +146,10 @@ def test_input_under_future_output_is_rejected_before_creation(tmp_path: Path) -
 def test_repeated_sources_and_hardlinked_plans_are_read_only(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     plan = tmp_path / "plan.toml"
-    plan.write_text('[document]\ntitle = "T"\nlanguage = "en"')
+    plan.write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle = "T"\nlanguage = "en"'
+    )
     os.link(plan, tmp_path / "alias.toml")
     before = source.read_bytes()
     manifest = manifest_file(
@@ -163,22 +167,26 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
     runner = importlib.import_module("odfa11y.batch.run")
     original = runner.run_pipeline
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("broken", "valid")]
     )
 
     def failing_pipeline(
         source: str | Path,
-        operations: Sequence[Operation],
-        policy: FidelityPolicy,
+        plan: Plan,
         output_dir: str | Path,
         options: PipelineOptions | None = None,
+        *,
+        rebind: bool = False,
     ) -> RunRecord:
         if str(output_dir).endswith("broken"):
             msg = "PRIVATE /private/host/path"
             raise OSError(msg)
-        return original(source, operations, policy, output_dir, options)
+        return original(source, plan, output_dir, options, rebind=rebind)
 
     monkeypatch.setattr(runner, "run_pipeline", failing_pipeline)
     record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
@@ -220,7 +228,10 @@ def test_unpublishable_item_is_explicit_and_later_document_still_runs(
 ) -> None:
     runner = importlib.import_module("odfa11y.batch.run")
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(
         tmp_path, [("failed", "doc.odt", "missing.toml"), ("valid", "doc.odt", "plan.toml")]
     )

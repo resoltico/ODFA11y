@@ -22,6 +22,7 @@ from odfa11y.outcomes import (
     combine_statuses,
 )
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
+from odfa11y.plans import Plan
 from odfa11y.records import Toolchain
 from odfa11y.report import exit_status
 from odfa11y.serialization import JsonProperty, record_dict
@@ -31,10 +32,12 @@ lazy from odfa11y.fidelity import FidelityPolicy
 from .profiles import DEFAULT_PROFILE, profile_named
 
 if TYPE_CHECKING:
+    from odfa11y.decisions import Decision
     from odfa11y.outcomes import (
         ProgressObserver,
         StageName,
     )
+    from odfa11y.plans import PlanHeader
     from odfa11y.records import DocumentIdentity
     from odfa11y.remediation import RemediationResult
     from odfa11y.report import Report
@@ -92,6 +95,9 @@ class RunRecord:
     fonts: dict[str, list[dict[str, object]]] = field(default_factory=dict)
     human_review: tuple[ReviewItem, ...] = ()
     outputs: dict[str, str] = field(default_factory=dict)
+    plan: PlanHeader | None = None
+    decisions: tuple[Decision, ...] = ()
+    rebind: bool = False
 
     @property
     def strict(self) -> bool:
@@ -117,12 +123,14 @@ class RunRecord:
         return combine_statuses([
             exit_status(reports, strict=self.strict),
             *(stage.failure_status for stage in self.stages if stage.error),
+            *(stage.remediation.exit_status for stage in self.stages if stage.remediation),
         ])
 
     @JsonProperty
     def plan_sha256(self) -> str:
         """Digest of the operations, fidelity policy and profile, independent of file layout."""
         plan = {
+            "plan": Plan(self.plan, self.decisions, self.policy).as_dict() if self.plan else None,
             "operations": list(self.operations),
             "fidelity_policy": self.policy.as_dict(),
             "profile": self.profile.as_dict(),

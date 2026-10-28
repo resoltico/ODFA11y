@@ -13,9 +13,9 @@ from odfa11y.errors import RemediationError
 from odfa11y.families import style_usage
 from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers, derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat, make_package
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -57,8 +57,10 @@ def test_overlay_on_reference_or_target_refuses_before_mutation(
     assert "TXT062" in {finding.rule_id for finding in report.findings}
     with pytest.raises(RemediationError, match="class overlays"):
         style_usage(source)
-    with pytest.raises(RemediationError, match="class overlays"):
-        remediate(source, destination, [NormalizeSpacing("Reference", ("Base",))])
+    assert_refused(
+        execute_operations(source, destination, [NormalizeSpacing("Reference", ("Base",))]),
+        match="class overlays",
+    )
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"retain destination"
 
@@ -77,7 +79,7 @@ def test_break_overlay_is_retained_while_inert_spacer_is_removed(
     before = OdfDocument.open(source).tree(Part.CONTENT)
     original = etree.tostring(select_elements(before, "//text:p[@text:class-names]")[0])
     destination = tmp_path / ("result" + source.suffix)
-    assert remediate(source, destination, [RemoveEmptySpacers()]).changed
+    assert execute_operations(source, destination, [RemoveEmptySpacers()]).changed
     after = OdfDocument.open(destination).tree(Part.CONTENT)
     retained = select_elements(after, "//text:p[@text:class-names]")[0]
     assert etree.tostring(retained) == original
@@ -106,7 +108,9 @@ def test_unselected_overlay_consumer_prevents_creating_or_updating_spacing_style
     source = author(tmp_path, "text", Variant(body=body, automatic_styles=styles))
     if existing:
         first = tmp_path / ("first" + source.suffix)
-        assert remediate(source, first, [NormalizeSpacing("First reference", ("Base",))]).changed
+        assert execute_operations(
+            source, first, [NormalizeSpacing("First reference", ("Base",))]
+        ).changed
         source = first
     document = OdfDocument.open(source)
     root = select_elements(document.tree(Part.CONTENT), "//office:text")[0]
@@ -119,8 +123,10 @@ def test_unselected_overlay_consumer_prevents_creating_or_updating_spacing_style
     original = source.read_bytes()
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"Keep destination")
-    with pytest.raises(RemediationError, match="unselected or unestablished consumers"):
-        remediate(source, destination, [NormalizeSpacing("Second reference", ("Base",))])
+    assert_refused(
+        execute_operations(source, destination, [NormalizeSpacing("Second reference", ("Base",))]),
+        match="unselected or unestablished consumers",
+    )
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"Keep destination"
 
@@ -143,19 +149,21 @@ def test_ordinary_heading_consumer_requires_explicit_heading_selection(
     )
     source = author(tmp_path, "text", Variant(body=body, automatic_styles=styles))
     first = tmp_path / ("first" + source.suffix)
-    assert remediate(
+    assert execute_operations(
         source, first, [NormalizeSpacing("First reference", ("Base",), include_headings=True)]
     ).changed
     assert validate(OdfDocument.open(first)).count == 0
     original = first.read_bytes()
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"Keep destination")
-    with pytest.raises(RemediationError, match="unselected or unestablished consumers"):
-        remediate(first, destination, [NormalizeSpacing("Second reference", ("Base",))])
+    assert_refused(
+        execute_operations(first, destination, [NormalizeSpacing("Second reference", ("Base",))]),
+        match="unselected or unestablished consumers",
+    )
     assert first.read_bytes() == original
     assert destination.read_bytes() == b"Keep destination"
     operation = NormalizeSpacing("Second reference", ("Base",), include_headings=True)
-    assert remediate(first, destination, [operation]).changed
+    assert execute_operations(first, destination, [operation]).changed
     document = OdfDocument.open(destination)
     style = select_elements(
         document.tree(Part.CONTENT),
@@ -164,4 +172,6 @@ def test_ordinary_heading_consumer_requires_explicit_heading_selection(
     properties = style.find(qn("style", "paragraph-properties"))
     assert properties is not None
     assert properties.get(qn("fo", "margin-top")) == "2cm"
-    assert not remediate(destination, tmp_path / ("again" + source.suffix), [operation]).changed
+    assert not execute_operations(
+        destination, tmp_path / ("again" + source.suffix), [operation]
+    ).changed

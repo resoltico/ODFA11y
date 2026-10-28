@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from odfa11y.odf import NS, qn
 
+from .locations import page_location, sheet_location
+
 if TYPE_CHECKING:
     from lxml import etree
 
@@ -88,7 +90,7 @@ def _conditional_paragraph(block: etree._Element) -> bool:
     return False
 
 
-def text_context_path(node: etree._Element) -> str:
+def reading_context_path(node: etree._Element) -> str:
     """Qualify a source target by its enclosing current-flow note or text box.
 
     Returns
@@ -98,6 +100,7 @@ def text_context_path(node: etree._Element) -> str:
 
     """
     for parent in node.iterancestors():
+        container = parent.getparent()
         if parent.tag in {qn("text", "note"), qn("draw", "text-box")}:
             kind = "note" if parent.tag == qn("text", "note") else "text-box"
             peers = [
@@ -107,4 +110,14 @@ def text_context_path(node: etree._Element) -> str:
                 if eligible_text_node(peer)
             ]
             return f"content/{kind}[{peers.index(parent) + 1}]" if parent in peers else "content"
+        if parent.tag == qn("draw", "page") and container is not None:
+            peers = list(container.iterchildren(qn("draw", "page")))
+            return page_location(parent, peers.index(parent) + 1).path
+        if (
+            parent.tag == qn("table", "table")
+            and container is not None
+            and container.tag == qn("office", "spreadsheet")
+        ):
+            peers = list(container.iterchildren(qn("table", "table")))
+            return sheet_location(peers.index(parent) + 1).path
     return "content"

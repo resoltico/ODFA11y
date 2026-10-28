@@ -11,17 +11,20 @@ import pytest
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative, GraphicIdentity
-from odfa11y.errors import PlanError, RemediationError
+from odfa11y.errors import PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.image import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation import SetMetadata
+from odfa11y.remediation.planning import compile_operations
 
 from .documents import make_flat
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import plan_header, reviewed_plan
 
 SOURCE = Path(__file__).parent / "family_corpus/fruit-image.odi"
 
@@ -64,8 +67,8 @@ def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_p
     assert validate(before).count == 0
     assert "IMAGE002" in {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odi", tmp_path / "twice.odi"
-    assert remediate(SOURCE, once, _plan()).changed
-    assert not remediate(once, twice, _plan()).changed
+    assert execute_operations(SOURCE, once, _plan()).changed
+    assert not execute_operations(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
     assert adapter_for(before.kind).snapshot(before) == adapter_for(after.kind).snapshot(after)
     assert before.storage.read(_payload(before)) == after.storage.read(_payload(after))
@@ -76,8 +79,9 @@ def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_p
 
 def test_image_geometry_change_is_rejected_before_publication(tmp_path: Path) -> None:
     destination = tmp_path / "wrong.odi"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(SOURCE, destination, [ChangeImageGeometry()])
+    assert_refused(
+        execute_operations(SOURCE, destination, [ChangeImageGeometry()]), match="content changed"
+    )
     assert not destination.exists()
 
 
@@ -94,7 +98,10 @@ def test_changed_actual_image_bytes_make_reviewed_description_stale() -> None:
 @pytest.mark.parametrize("profile", ["inspect", "verify"])
 def test_image_source_profiles_do_not_claim_pdf_assurance(tmp_path: Path, profile: str) -> None:
     record = run_pipeline(
-        SOURCE, _plan(), FidelityPolicy(), tmp_path / profile, PipelineOptions(profile=profile)
+        SOURCE,
+        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
+        tmp_path / profile,
+        PipelineOptions(profile=profile),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert not (tmp_path / profile / "remediated.pdf").exists()
@@ -134,11 +141,23 @@ def test_image_external_reference_is_not_fetched_or_echoed(tmp_path: Path) -> No
 
 def test_image_configuration_is_family_bound_and_strict(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
-    plan.write_text('[image.graphics."Fruit illustration"]\ndescription = "Fruit"\n')
-    assert isinstance(load_config(plan).operations[0], SetGraphicAlternatives)
-    plan.write_text('[image]\nalt_text = "Fruit"\n')
+    plan.write_text(
+        plan_header(SOURCE)
+        + (
+            '[decisions."graphic.alternative"."content/frame[name=Fruit%20illustration]"]\n'
+            'description = "Fruit"\n'
+            'fingerprint = "0123456789abcdef"\n'
+        )
+    )
+    [operation] = compile_operations(OdfDocument.open(SOURCE), load_plan(plan))
+    assert isinstance(operation, SetGraphicAlternatives)
+    assert operation.entries["content/frame[name=Fruit%20illustration]"].description == "Fruit"
+    plan.write_text(
+        plan_header(SOURCE)
+        + '[decisions."graphic.alternative"."content/frame[1]"]\nalt_text = "Fruit"\n'
+    )
     with pytest.raises(PlanError):
-        load_config(plan)
+        load_plan(plan)
 
 
 @pytest.mark.parametrize(
@@ -193,7 +212,7 @@ def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
     before = OdfDocument.open(source)
     binary = select_elements(before.tree(Part.CONTENT), "//office:binary-data")[0].text
     assert validate(before).count == 0
-    remediate(
+    execute_operations(
         source,
         destination,
         [SetGraphicAlternatives({"Picture": GraphicAlternative(description="One black pixel")})],

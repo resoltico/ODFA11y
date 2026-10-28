@@ -9,9 +9,17 @@ import pytest
 
 from odfa11y.adapter import Status
 from odfa11y.families.spreadsheet import SetSheetNames, invalid_name_reason
+from odfa11y.families.spreadsheet.names import SheetNameChange
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 
-from .spreadsheet_fixtures import LAYOUTS, make_spreadsheet, row, sheet, text_cell
+from .spreadsheet_fixtures import (
+    LAYOUTS,
+    make_spreadsheet,
+    reviewed_sheet_names,
+    row,
+    sheet,
+    text_cell,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -51,7 +59,7 @@ def test_renames_apply_once_then_report_unchanged_and_stay_schema_valid(
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN)
     before = validate(document)
-    operation = SetSheetNames({"Sheet1": "Budget"})
+    operation = reviewed_sheet_names(document, {"Sheet1": "Budget"})
     assert statuses(operation, document) == (Status.APPLIED,)
     assert sheet_names(document) == ["Budget", "Notes"]
     assert statuses(operation, document) == (Status.UNCHANGED,)
@@ -64,9 +72,11 @@ def test_an_unknown_sheet_fails_the_whole_operation_before_any_edit(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN)
-    outcomes = SetSheetNames({"Sheet1": "Budget", "Missing": "Other"}).apply(document)
-    assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Missing")]
-    assert "No unique sheet is named 'Missing'" in outcomes[0].message
+    outcomes = reviewed_sheet_names(document, {"Sheet1": "Budget", "Missing": "Other"}).apply(
+        document
+    )
+    assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "content/sheet[4]")]
+    assert "must resolve to exactly one sheet" in outcomes[0].message
     assert not document.dirty
     assert sheet_names(document) == ["Sheet1", "Notes"]
 
@@ -77,7 +87,7 @@ def test_a_new_name_that_collides_with_another_sheet_is_refused_whatever_its_cas
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN)
     for new in ("Notes", "notes"):
-        outcomes = SetSheetNames({"Sheet1": new}).apply(document)
+        outcomes = reviewed_sheet_names(document, {"Sheet1": new}).apply(document)
         assert outcomes[0].status is Status.FAILED
         assert "already named" in outcomes[0].message
     assert not document.dirty
@@ -86,7 +96,9 @@ def test_a_new_name_that_collides_with_another_sheet_is_refused_whatever_its_cas
 @by_layout
 def test_a_rename_that_only_changes_case_is_allowed(tmp_path: Path, layout: str) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN)
-    assert statuses(SetSheetNames({"Notes": "NOTES"}), document) == (Status.APPLIED,)
+    assert statuses(reviewed_sheet_names(document, {"Notes": "NOTES"}), document) == (
+        Status.APPLIED,
+    )
     assert sheet_names(document) == ["Sheet1", "NOTES"]
 
 
@@ -96,7 +108,7 @@ def test_a_rename_that_only_changes_case_is_allowed(tmp_path: Path, layout: str)
 def test_names_a_spreadsheet_application_rejects_are_refused(tmp_path: Path, new: str) -> None:
     assert invalid_name_reason(new)
     document = open_sheets(tmp_path, "package", *PLAIN)
-    [outcome] = SetSheetNames({"Sheet1": new}).apply(document)
+    [outcome] = reviewed_sheet_names(document, {"Sheet1": new}).apply(document)
     assert outcome.status is Status.FAILED
     assert "not a usable sheet name" in outcome.message
     assert not document.dirty
@@ -120,7 +132,7 @@ def test_swaps_chains_and_shared_targets_are_refused(
     tmp_path: Path, entries: dict[str, str]
 ) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
-    outcomes = SetSheetNames(entries).apply(document)
+    outcomes = reviewed_sheet_names(document, entries).apply(document)
     assert outcomes
     assert {o.status for o in outcomes} == {Status.FAILED}
     assert not document.dirty
@@ -128,7 +140,7 @@ def test_swaps_chains_and_shared_targets_are_refused(
 
 def test_two_sheets_with_one_name_cannot_be_addressed(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Notes"))
-    [outcome] = SetSheetNames({"Notes": "Memo"}).apply(document)
+    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
     assert outcome.status is Status.FAILED
     assert "must be unique" in outcome.message
 
@@ -148,7 +160,7 @@ def test_a_sheet_a_formula_refers_to_by_name_is_not_renamed(
     tmp_path: Path, layout: str, reference: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN, referencing(reference))
-    [outcome] = SetSheetNames({"Notes": "Memo"}).apply(document)
+    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
     assert outcome.status is Status.FAILED
     assert "may refer to it by name" in outcome.message
     assert not document.dirty
@@ -160,7 +172,7 @@ def test_a_quoted_reference_to_a_sheet_with_a_space_or_apostrophe_is_found(tmp_p
     formula = referencing("of:=['My Data'.A1]+['It''s'.A1]")
     for old in ("My Data", "It's"):
         document = open_sheets(tmp_path, "package", *spaced, formula)
-        [outcome] = SetSheetNames({old: "Renamed"}).apply(document)
+        [outcome] = reviewed_sheet_names(document, {old: "Renamed"}).apply(document)
         assert outcome.status is Status.FAILED, old
 
 
@@ -172,7 +184,7 @@ def test_references_outside_formulas_block_the_rename_too(tmp_path: Path, attrib
     document = open_sheets(
         tmp_path, "package", *PLAIN, sheet("Calc", row(text_cell("x", attribute)))
     )
-    [outcome] = SetSheetNames({"Notes": "Memo"}).apply(document)
+    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
     assert outcome.status is Status.FAILED
 
 
@@ -180,7 +192,7 @@ def test_references_outside_formulas_block_the_rename_too(tmp_path: Path, attrib
 def test_a_link_to_a_sheet_blocks_its_rename(tmp_path: Path, target: str) -> None:
     link = f'<text:a xlink:href="{target}" xlink:type="simple">Notes</text:a>'
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Calc", row(text_cell(link))))
-    [outcome] = SetSheetNames({"Notes": "Memo"}).apply(document)
+    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
     assert outcome.status is Status.FAILED
 
 
@@ -191,7 +203,9 @@ def test_references_to_other_sheets_do_not_block_an_unrelated_rename(
     document = open_sheets(
         tmp_path, layout, *PLAIN, referencing("of:=SUM([$Notes.A1:.A3])+[.B1]+[$Other.C1]")
     )
-    assert statuses(SetSheetNames({"Sheet1": "Budget"}), document) == (Status.APPLIED,)
+    assert statuses(reviewed_sheet_names(document, {"Sheet1": "Budget"}), document) == (
+        Status.APPLIED,
+    )
     assert sheet_names(document)[:2] == ["Budget", "Notes"]
 
 
@@ -201,7 +215,7 @@ def test_a_document_with_embedded_charts_refuses_every_rename(tmp_path: Path) ->
         '<draw:object xlink:href="./Object 1" xlink:type="simple"/></draw:frame></table:table-cell>'
     )
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Charts", row(chart)))
-    [outcome] = SetSheetNames({"Sheet1": "Budget"}).apply(document)
+    [outcome] = reviewed_sheet_names(document, {"Sheet1": "Budget"}).apply(document)
     assert outcome.status is Status.FAILED
     assert "embeds charts" in outcome.message
     assert not document.dirty
@@ -209,15 +223,15 @@ def test_a_document_with_embedded_charts_refuses_every_rename(tmp_path: Path) ->
 
 def test_a_failed_rename_is_reported_with_every_other_failure(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
-    outcomes = SetSheetNames({"Gone": "A", "Sheet1": "b/c"}).apply(document)
-    assert {o.key for o in outcomes} == {"Gone", "Sheet1"}
+    outcomes = reviewed_sheet_names(document, {"Gone": "A", "Sheet1": "b/c"}).apply(document)
+    assert {o.key for o in outcomes} == {"content/sheet[3]", "content/sheet[1]"}
     assert {o.status for o in outcomes} == {Status.FAILED}
 
 
 def test_the_operation_describes_itself_with_its_entries() -> None:
-    assert SetSheetNames({"Sheet1": "Budget"}).as_dict() == {
+    assert SetSheetNames({"content/sheet[1]": SheetNameChange("Budget", "a" * 16)}).as_dict() == {
         "operation": "set_sheet_names",
-        "entries": {"Sheet1": "Budget"},
+        "entries": {"content/sheet[1]": {"name": "Budget", "fingerprint": "a" * 16}},
     }
 
 
@@ -228,20 +242,20 @@ def test_dynamic_reference_functions_block_a_rename(
 ) -> None:
     formula = referencing(f"of:={function}(&quot;Notes&quot;&amp;&quot;.A1&quot;)")
     document = open_sheets(tmp_path, layout, *PLAIN, formula)
-    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
+    assert statuses(reviewed_sheet_names(document, {"Notes": "Memo"}), document) == (Status.FAILED,)
     assert not document.dirty
 
 
 def test_embedded_scripts_block_a_rename(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
     document.storage.write_member("Basic/Standard/Module1.xml", b"script")
-    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
+    assert statuses(reviewed_sheet_names(document, {"Notes": "Memo"}), document) == (Status.FAILED,)
     assert not document.dirty
 
 
 def test_duplicate_targets_are_not_treated_as_a_completed_rename(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", sheet("Memo"), sheet("Memo"))
-    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
+    assert statuses(reviewed_sheet_names(document, {"Notes": "Memo"}), document) == (Status.FAILED,)
 
 
 @pytest.mark.parametrize("map_name", ["Tables", "ScriptConfiguration"])
@@ -264,7 +278,9 @@ def test_sheet_settings_follow_a_rename_without_changing_other_settings(
         "</office:settings></office:document-settings>"
     )
     document.storage.write_member("settings.xml", settings.encode())
-    assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.APPLIED,)
+    assert statuses(reviewed_sheet_names(document, {"Notes": "Memo"}), document) == (
+        Status.APPLIED,
+    )
     tree = document.tree(Part.SETTINGS)
     assert tree.xpath(
         "//config:config-item-map-entry/@config:name", namespaces={"config": namespace}

@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import audit_odf, template_blockers
+from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
@@ -36,18 +36,18 @@ from odfa11y.pdf import (
 from odfa11y.records import DocumentIdentity
 from odfa11y.remediation import remediate
 from odfa11y.report import exit_status
+from odfa11y.source_capture import capture_source
+lazy from odfa11y.plans import Plan
 
 from .native import native_export_settings
 from .publication import publish_evidence
 from .record import PipelineOptions, RunRecord, StageResult
-from .source import capture_source
 from .stages import run_stage
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
-    from odfa11y.adapter import FamilyAdapter, Operation
-    from odfa11y.fidelity import FidelityPolicy
+    from odfa11y.adapter import FamilyAdapter
     from odfa11y.report import Report
 
 
@@ -55,11 +55,11 @@ if TYPE_CHECKING:
 class _Run:
     source: Path
     work: Path
-    operations: Sequence[Operation]
-    policy: FidelityPolicy
+    plan: Plan
     record: RunRecord
     options: PipelineOptions
     lifetime: ExitStack
+    rebind: bool = False
     captured: Path | None = None
     adapter: FamilyAdapter = GENERIC
     executable: str | None = None
@@ -104,7 +104,7 @@ class _Run:
     def audit_source(self) -> StageResult:
         report = audit_odf(self.captured or self.source, schema=True)
         report.subject = self.source.name
-        blocked = template_blockers(report) is not None
+        blocked = plan_blockers(report) is not None
         return StageResult(
             StageName.AUDIT_SOURCE,
             StageStatus.FAILED if blocked else StageStatus.PASSED,
@@ -114,12 +114,16 @@ class _Run:
         )
 
     def remediate(self) -> StageResult:
-        result = remediate(self.captured or self.source, self.remediated, self.operations)
+        result = remediate(
+            self.captured or self.source, self.remediated, self.plan, rebind=self.rebind
+        )
+        self.record.operations = result.operations
         return StageResult(
             StageName.REMEDIATE,
-            StageStatus.PASSED,
+            StageStatus.PASSED if result.published else StageStatus.FAILED,
+            reason="; ".join(item.message for item in result.violations) or None,
             remediation=replace(result, source=self.source),
-            gate=False,
+            gate=not result.published,
         )
 
     def audit_remediated(self) -> StageResult:
@@ -183,7 +187,7 @@ class _Run:
         report = compare_pdfs(
             self.work / "source.pdf",
             self.work / "remediated.pdf",
-            self.policy,
+            self.plan.fidelity,
             diff_dir=self.work / StageName.FIDELITY,
         )
         report.subject = "remediated.pdf vs source.pdf"
@@ -249,10 +253,11 @@ class _Run:
 
 def run_pipeline(
     source: str | Path,
-    operations: Sequence[Operation],
-    policy: FidelityPolicy,
+    plan: Plan,
     output_dir: str | Path,
     options: PipelineOptions | None = None,
+    *,
+    rebind: bool = False,
 ) -> RunRecord:
     """Identify, audit, remediate, export, validate and compare, then publish evidence.
 
@@ -275,14 +280,17 @@ def run_pipeline(
     require_free_directory(target)
     record = RunRecord(
         document=DocumentIdentity(source.name),
-        operations=tuple(operation.as_dict() for operation in operations),
-        policy=policy,
+        operations=(),
+        policy=plan.fidelity,
+        plan=plan.header,
+        decisions=plan.decisions,
+        rebind=rebind,
         profile=profile,
         human_review=GENERIC.review_items,
     )
     with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
         work = Path(scratch)
-        run = _Run(source, work, operations, policy, record, options, lifetime)
+        run = _Run(source, work, plan, record, options, lifetime, rebind=rebind)
         steps: dict[StageName, Callable[[], StageResult]] = {
             StageName.IDENTIFY_SOURCE: run.identify_source,
             StageName.AUDIT_SOURCE: run.audit_source,

@@ -43,10 +43,10 @@ class SchemaCheck:
 
     status: StageStatus
     version: str | None
-    before_count: int
-    after_count: int
-    new_count: int = 0
-    unlocated_count: int = 0
+    before_count: int | None
+    after_count: int | None
+    new_count: int | None = 0
+    unlocated_count: int | None = 0
 
     def as_dict(self) -> JsonObject:
         """Serialize schema assurance independently of human-readable prose.

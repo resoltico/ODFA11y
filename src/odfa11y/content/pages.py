@@ -17,6 +17,7 @@ from odfa11y.odf import Part, qn, select_elements
 from .graphic_identity import SHAPE_TAGS, GraphicIdentity, graphic_style_dependencies
 from .graphic_style_identity import normalized_graphic_tree
 from .graphics import GraphicAlternative, set_description
+from .locations import page_location
 from .xml import protected_xml
 
 if TYPE_CHECKING:
@@ -159,7 +160,11 @@ class PageEditor:
         decisions = []
         failures = []
         for name, entry in self.entries.items():
-            matches = [page for page in available if page.get(qn("draw", "name")) == name]
+            matches = [
+                page
+                for index, page in enumerate(available, 1)
+                if page.get(qn("draw", "name")) == name or page_location(page, index).path == name
+            ]
             problem = _problem(matches, entry, identities, document)
             if problem:
                 failures.append(Outcome(self.name, Status.FAILED, problem, key=name))

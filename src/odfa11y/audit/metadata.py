@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.content import normalize_language
+from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part
 from odfa11y.report import FactKeys, Location, rules
 

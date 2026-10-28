@@ -16,6 +16,7 @@ from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 
 from .corpus_manifest import CORPUS
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,7 +42,10 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
     soffice = external_tool("soffice", "libreoffice")
     plan = [SetMetadata(title="Corpus document", language="en-US"), *PIPELINE_RUNS[name]]
     record = run_pipeline(
-        CORPUS / name, plan, FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice=soffice)
+        CORPUS / name,
+        reviewed_plan(CORPUS / name, plan, FidelityPolicy()),
+        tmp_path / "out",
+        PipelineOptions(soffice=soffice),
     )
     stages = {stage.name.value: stage.status for stage in record.stages}
     assert tuple(stages) == PIPELINE_STAGES

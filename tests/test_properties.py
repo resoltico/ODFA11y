@@ -15,7 +15,6 @@ from hypothesis import strategies as st
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families.text import (
@@ -30,10 +29,12 @@ from odfa11y.families.text import (
     text_is_preserved,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import RULES, Report
 
 from .fixtures import TEXT_MEDIA_TYPE, make_minimal_odt
+from .operation_execution import execute_operations
 
 if TYPE_CHECKING:
     from .fixtures import Features
@@ -143,7 +144,7 @@ def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_a_config_er
         path = Path(directory) / "config.toml"
         path.write_bytes(payload)
         with contextlib.suppress(PlanError):
-            load_config(path)
+            load_plan(path)
 
 
 @given(st.lists(st.sampled_from(sorted(RULES)), max_size=10))
@@ -194,9 +195,9 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         source = make_minimal_odt(root / "source.odt", features=features)
-        first = remediate(source, root / "first.odt", operations)
+        first = execute_operations(source, root / "first.odt", operations)
         assert validate(OdfDocument.open(root / "first.odt")).violations == {}
-        second = remediate(root / "first.odt", root / "second.odt", operations)
+        second = execute_operations(root / "first.odt", root / "second.odt", operations)
         assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
         first_package = PackageStorage(root / "first.odt")
         second_package = PackageStorage(root / "second.odt")

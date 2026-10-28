@@ -12,14 +12,18 @@ from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.config import load_config
-from odfa11y.errors import PlanError, RemediationError
+from odfa11y.errors import PlanError
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation import SetMetadata
+from odfa11y.remediation.planning import compile_operations
+
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import plan_header, reviewed_plan
 
 SOURCE = Path(__file__).parent / "family_corpus/fruit-database.odb"
 
@@ -51,7 +55,7 @@ def test_real_embedded_base_validates_and_creates_optional_metadata_without_stor
     assert validate(source).count == 0
     assert not source.has(Part.META)
     destination = tmp_path / "described.odb"
-    remediate(
+    execute_operations(
         SOURCE,
         destination,
         [
@@ -71,7 +75,7 @@ def test_real_embedded_base_validates_and_creates_optional_metadata_without_stor
     assert source.storage.read("settings.xml") == result.storage.read("settings.xml")
     assert audit_odf(destination).passed
     twice = tmp_path / "twice.odb"
-    assert not remediate(destination, twice, [SetMetadata(title="Fruit counts")]).changed
+    assert not execute_operations(destination, twice, [SetMetadata(title="Fruit counts")]).changed
     assert destination.read_bytes() == twice.read_bytes()
 
 
@@ -82,7 +86,7 @@ def test_query_description_is_explicit_and_preserves_sql_and_bindings(tmp_path: 
     target = "content/query[name=Fruit%20totals]"
     node = available[target][0]
     output = tmp_path / "described-query.odb"
-    remediate(
+    execute_operations(
         source,
         output,
         [
@@ -128,8 +132,7 @@ class ChangeQuery(Operation):
 def test_sql_changes_are_rejected_before_output_publication(tmp_path: Path) -> None:
     source = _query_source(tmp_path)
     output = tmp_path / "bad.odb"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(source, output, [ChangeQuery()])
+    assert_refused(execute_operations(source, output, [ChangeQuery()]), match="content changed")
     assert not output.exists()
 
 
@@ -147,31 +150,39 @@ def test_external_authentication_findings_do_not_disclose_values(tmp_path: Path)
 
 def test_database_configuration_is_strict(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
-    plan.write_text('[database.descriptions."content/query[name=Fruit]"]\ntext = "Fruit counts"\n')
-    assert load_config(plan).operations == (
+    plan.write_text(
+        plan_header(SOURCE)
+        + (
+            '[decisions."database.description"."content/query[name=Fruit]"]\n'
+            'text = "Fruit counts"\n'
+            'fingerprint = "0123456789abcdef"\n'
+        )
+    )
+    assert compile_operations(OdfDocument.open(SOURCE), load_plan(plan)) == (
         SetObjectDescriptions({
-            "content/query[name=Fruit]": DatabaseDescription("Fruit counts"),
+            "content/query[name=Fruit]": DatabaseDescription("Fruit counts", "0123456789abcdef")
         }),
     )
-    plan.write_text('[database]\nconnection = "execute"\n')
-    with pytest.raises(PlanError, match="Unknown database keys"):
-        load_config(plan)
+    plan.write_text(
+        plan_header(SOURCE)
+        + '[decisions."database.description"."content/query[1]"]\nconnection = "execute"\n'
+    )
+    with pytest.raises(PlanError, match="Unknown"):
+        load_plan(plan)
 
 
 def test_base_source_assurance_and_pdf_boundary_are_explicit(tmp_path: Path) -> None:
     operations = [SetMetadata(title="Fruit counts", language="en-US")]
     inspected = run_pipeline(
         SOURCE,
-        operations,
-        FidelityPolicy(),
+        reviewed_plan(SOURCE, operations, FidelityPolicy()),
         tmp_path / "inspect",
         PipelineOptions(profile="inspect"),
     )
     assert inspected.exit_status == 0
     production = run_pipeline(
         SOURCE,
-        operations,
-        FidelityPolicy(),
+        reviewed_plan(SOURCE, operations, FidelityPolicy()),
         tmp_path / "production",
         PipelineOptions(profile="production"),
     )

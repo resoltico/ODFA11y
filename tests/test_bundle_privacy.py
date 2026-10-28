@@ -20,6 +20,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -83,7 +84,9 @@ def run(directory: Path, options: PipelineOptions, source: Path | None = None) -
     """
     source = source or make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
-    run_pipeline(source, [SetMetadata(title="T")], FidelityPolicy(), out, options)
+    run_pipeline(
+        source, reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()), out, options
+    )
     return out
 
 
@@ -141,7 +144,7 @@ def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
     source = make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
     plan = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
-    run_pipeline(source, plan, FidelityPolicy(), out, PipelineOptions())
+    run_pipeline(source, reviewed_plan(source, plan, FidelityPolicy()), out, PipelineOptions())
     assert_path_free(out, tmp_path)
 
 

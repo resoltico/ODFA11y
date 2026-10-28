@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from odfa11y.cli import main
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import plan_header
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -21,7 +22,10 @@ def test_batch_cli_publishes_json_and_returns_aggregate_status(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(
         tmp_path, [("valid", "doc.odt", "plan.toml"), ("bad", "missing.odt", "plan.toml")]
     )

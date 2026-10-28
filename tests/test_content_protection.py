@@ -11,13 +11,12 @@ from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.content import GraphicAlternative, protected_xml
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
-from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat
 from .fixtures import make_minimal_odt
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -62,8 +61,10 @@ def test_opaque_package_resource_damage_is_rejected(tmp_path: Path, member: str)
     storage.save(source)
     original = source.read_bytes()
     destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="Opaque document resources changed"):
-        remediate(source, destination, [DamagePayload(member)])
+    assert_refused(
+        execute_operations(source, destination, [DamagePayload(member)]),
+        match="Opaque document resources changed",
+    )
     assert source.read_bytes() == original
     assert not destination.exists()
 
@@ -76,16 +77,19 @@ def test_flat_embedded_binary_damage_is_rejected(tmp_path: Path) -> None:
     )
     source = make_flat(tmp_path, "text", Variant(body=body))
     destination = tmp_path / "out.fodt"
-    with pytest.raises(RemediationError, match="Protected document content changed"):
-        remediate(source, destination, [DamagePayload()])
+    assert_refused(
+        execute_operations(source, destination, [DamagePayload()]),
+        match="Protected document content changed",
+    )
     assert not destination.exists()
 
 
 def test_protected_cell_value_change_is_rejected_even_without_changed_words(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
     destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(source, destination, [DamageCellValue()])
+    assert_refused(
+        execute_operations(source, destination, [DamageCellValue()]), match="content changed"
+    )
     assert not destination.exists()
 
 

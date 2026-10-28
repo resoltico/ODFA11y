@@ -99,8 +99,6 @@ def _descriptor(rule_id: str) -> dict[str, Any]:
         "defaultConfiguration": {"level": _LEVELS[rule.severity]},
         "properties": {"category": rule.category.value},
     }
-    if rule.remedy:
-        result["help"] = {"text": f"Remedy configuration: {rule.remedy}"}
     return result
 
 
@@ -128,8 +126,6 @@ def _result(
         "locations": locations,
         "properties": {"category": rule.category.value},
     }
-    if rule.remedy:
-        result["properties"]["remedy"] = rule.remedy
     return result
 
 

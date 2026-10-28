@@ -6,9 +6,11 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from odfa11y.decisions import OpenDecision
 from odfa11y.odf import PackageStorage, Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
+from .decisions import DATABASE_DESCRIPTION
 from .descriptions import description_attribute, fingerprint, targets
 
 if TYPE_CHECKING:
@@ -125,7 +127,15 @@ def _objects(document: OdfDocument, report: Report) -> None:
             report.add(
                 rules.BASE004,
                 location=Location(path),
-                details={"target": path, "fingerprint": fingerprint(matches[0])},
+            )
+            report.add_decision(
+                OpenDecision(
+                    DATABASE_DESCRIPTION,
+                    Location(path),
+                    fingerprint(matches[0]),
+                    {"text": matches[0].get(description_attribute(matches[0]))},
+                    (rules.BASE004.id,),
+                )
             )
 
 

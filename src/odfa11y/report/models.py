@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import quote
 lazy from collections.abc import Mapping
 
+from odfa11y.errors import PackageError
 from odfa11y.serialization import JsonProperty, record_dict
+lazy from odfa11y.decisions import OpenDecision
 
 from .facts import FactSet
 from .rules import Severity
@@ -86,7 +88,6 @@ class Finding:
     message: str
     location: Location | None = None
     details: Mapping[str, object] = field(default_factory=dict)
-    remedy: str | None = None
 
     def as_dict(self) -> JsonObject:
         """Serialize the typed record.
@@ -117,6 +118,9 @@ class Report:
     subject: str
     findings: list[Finding] = field(default_factory=list)
     facts: FactSet = field(default_factory=FactSet)
+    _decisions: dict[tuple[str, Location | None], OpenDecision] = field(
+        default_factory=dict, init=False, repr=False, metadata={"serialize": False}
+    )
     sources: tuple[Path, ...] = field(
         default=(), metadata={"serialize": False}
     )  # physical identity is internal and never serialized
@@ -138,9 +142,33 @@ class Report:
                 message=message or rule.title,
                 location=location,
                 details=record_dict(details) if details else {},
-                remedy=rule.remedy,
             )
         )
+
+    @JsonProperty
+    def decisions(self) -> tuple[OpenDecision, ...]:
+        """The distinct reviewed questions this audit leaves open."""
+        return tuple(self._decisions.values())
+
+    def add_decision(self, decision: OpenDecision) -> None:
+        """Collect one target once and retain every motivating rule.
+
+        Raises
+        ------
+        PackageError
+            An audit observes inconsistent identities for the same logical target.
+
+        """
+        key = (decision.kind.id, decision.target)
+        previous = self._decisions.get(key)
+        if previous is not None:
+            if previous.fingerprint != decision.fingerprint:
+                msg = "Document identity changed while collecting reviewed decisions"
+                raise PackageError(msg)
+            decision = replace(
+                previous, rule_ids=tuple(dict.fromkeys((*previous.rule_ids, *decision.rule_ids)))
+            )
+        self._decisions[key] = decision
 
     @property
     def error_count(self) -> int:

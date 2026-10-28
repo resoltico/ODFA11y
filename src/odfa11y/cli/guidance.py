@@ -6,7 +6,7 @@ from __future__ import annotations
 import shlex
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import template_blockers
+from odfa11y.audit import plan_blockers
 from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
 from odfa11y.report import terminal_text
 
@@ -28,9 +28,9 @@ def error_hint(args: argparse.Namespace, exc: Exception) -> str | None:
     """
     if isinstance(exc, PlanError):
         return (
-            "Next: edit the existing configuration and retry. "
+            "Next: edit the existing plan and retry. "
             f"Use odfa11y {args.command} --help for command examples; "
-            "See https://github.com/resoltico/ODFA11y/blob/main/docs/CONFIGURATION.md "
+            "See https://github.com/resoltico/ODFA11y/blob/main/docs/PLAN.md "
             "for supported fields."
         )
     if isinstance(exc, OutputError):
@@ -64,15 +64,15 @@ def audit_next_step(args: argparse.Namespace, reports: Iterable[Report]) -> str 
     for report in reports:
         if report.kind != "odf" or not report.sources:
             continue
-        if template_blockers(report) is not None:
+        if plan_blockers(report) is not None:
             continue
-        if not any(f.remedy for f in report.findings):
+        if not report.decisions:
             continue
         source = str(report.sources[0])
         if terminal_text(source) != source:
             continue
         return (
-            f"Next: odfa11y template -- {shlex.quote(source)}\n"
+            f"Next: odfa11y plan -- {shlex.quote(source)}\n"
             "Review the commented decisions before enabling any remediation."
         )
     return None

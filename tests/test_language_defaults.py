@@ -10,8 +10,9 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
-from odfa11y.content import normalize_language, style_language
+from odfa11y.content import style_language
 from odfa11y.external_tools import run_bounded
+from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys

@@ -20,6 +20,7 @@ from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt
 from .native_resource_fixtures import writer_resource
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -44,8 +45,7 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
     # Verify reaches the explicit native refusal even without any installed application.
     result = run_pipeline(
         source,
-        [],
-        FidelityPolicy(),
+        reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "evidence",
         PipelineOptions(profile="verify", soffice="missing-tool"),
     )
@@ -66,7 +66,10 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
     }
     require_native_context(document, captured_identity=True)
     result = run_pipeline(
-        source, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(profile="inspect")
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        tmp_path / "evidence",
+        PipelineOptions(profile="inspect"),
     )
     assert result.passed
     published = OdfDocument.open(tmp_path / "evidence" / "remediated.fodt")
@@ -90,7 +93,12 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
     with pytest.raises(ToolFailedError, match="filename/path fields"):
         require_native_context(OdfDocument.open(source), captured_identity=True)
     output = tmp_path / "evidence"
-    result = run_pipeline(source, [], FidelityPolicy(), output, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        output,
+        PipelineOptions(profile="inspect"),
+    )
     assert result.passed
     assert (output / "remediated.fodt").read_bytes() == source.read_bytes()
 

@@ -13,10 +13,7 @@ from odfa11y.outcomes import ReviewTopic
 from .audit import audit_chart
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
     from odfa11y.odf import OdfDocument
-    from odfa11y.report import Finding
 
 
 def _snapshot(document: OdfDocument) -> tuple[str, ...]:
@@ -38,11 +35,6 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
     return False
 
 
-def _template(findings: Mapping[str, Sequence[Finding]]) -> list[str]:
-    del findings
-    return []  # Chart's title/alternative use the common [document] template.
-
-
 ADAPTER = FamilyAdapter(
     name="chart",
     family=Family.CHART,
@@ -51,8 +43,6 @@ ADAPTER = FamilyAdapter(
     set_default_language=_set_language,
     snapshot=_snapshot,
     preserved=_preserved,
-    config_tables={},
-    template=_template,
     review_items=(
         ReviewItem(
             ReviewTopic.CHART_MEANING,

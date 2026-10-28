@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf, render_template
-from odfa11y.config import load_config
-from odfa11y.families.text import ADAPTER
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import PackageStorage
+from odfa11y.plans import load_plan
 from odfa11y.report import RULES, FactKeys, Location, Severity
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import question_for
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -64,7 +64,7 @@ def test_audit_detects_plain_email_and_data_table_header(tmp_path: Path) -> None
     assert {"TXT030", "TXT021"} <= ids(report)
     table = next(f for f in report.findings if f.rule_id == "TXT021")
     assert table.details["table"] == "Data"
-    assert table.remedy == "text.table_headers"
+    assert question_for(report, table).kind.id == "table.headers"
 
 
 def test_audit_detects_missing_graphic_alt_text(tmp_path: Path) -> None:
@@ -74,7 +74,7 @@ def test_audit_detects_missing_graphic_alt_text(tmp_path: Path) -> None:
     finding = next(f for f in report.findings if f.rule_id == "TXT010")
     assert finding.severity is Severity.ERROR
     assert finding.details["frame"] == "Logo"
-    assert finding.remedy == "text.graphics"
+    assert question_for(report, finding).kind.id == "graphic.alternative"
 
 
 def test_every_emitted_rule_is_registered(tmp_path: Path) -> None:
@@ -138,12 +138,13 @@ def test_template_comments_out_every_open_decision(tmp_path: Path) -> None:
             "with_image_without_alt": True,
         },
     )
-    text = render_template(audit_odf(source), ADAPTER)
-    assert '[text.graphics."content/frame[name=Logo]"]' in text
-    assert '"content/table[name=Data]" = { rows = 1, fingerprint = ' in text
-    assert "linkify_plain_addresses" in text
+    text = prepare_plan(source)[1]
+    assert text is not None
+    assert '[decisions."graphic.alternative"."content/frame[name=Logo]"]' in text
+    assert '[decisions."table.headers"."content/table[name=Data]"]' in text
+    assert "text.linkify_addresses" in text
     assert "fingerprint = " in text
-    assert all(line.startswith("#") or not line.strip() for line in text.splitlines())
+    assert load_plan(write_plan(tmp_path, text)).decisions == ()
 
 
 @pytest.mark.parametrize(
@@ -153,5 +154,21 @@ def test_template_comments_out_every_open_decision(tmp_path: Path) -> None:
 def test_template_loads_as_an_empty_configuration(tmp_path: Path, features: Features) -> None:
     source = make_minimal_odt(tmp_path / "t.odt", features=features)
     config = tmp_path / "template.toml"
-    config.write_text(render_template(audit_odf(source), ADAPTER), encoding="utf-8")
-    assert load_config(config).operations == ()
+    text = prepare_plan(source)[1]
+    assert text is not None
+    config.write_text(text, encoding="utf-8")
+    assert load_plan(config).decisions == ()
+
+
+def write_plan(directory: Path, text: str) -> Path:
+    """Write a plan fixture.
+
+    Returns
+    -------
+    Path
+        The review file path.
+
+    """
+    path = directory / "review.plan.toml"
+    path.write_text(text)
+    return path

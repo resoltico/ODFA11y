@@ -8,9 +8,9 @@ import sys
 from textwrap import fill
 from typing import TYPE_CHECKING
 
-from odfa11y.config import load_config
 from odfa11y.outcomes import StageName
 from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.plans import load_plan
 from odfa11y.report import render_reports, terminal_text
 
 from .outcomes import render_command_outcome
@@ -31,7 +31,7 @@ def pipeline_command(args: argparse.Namespace) -> int:
         The effective pipeline exit status.
 
     """
-    config = load_config(args.config)
+    plan = load_plan(args.plan)
     options = PipelineOptions(
         profile=args.profile,
         soffice=str(args.soffice) if args.soffice else None,
@@ -41,10 +41,10 @@ def pipeline_command(args: argparse.Namespace) -> int:
     )
     record = run_pipeline(
         args.source,
-        config.operations,
-        config.fidelity,
+        plan,
         args.output_dir,
         options,
+        rebind=args.rebind,
     )
     if args.format == "json":
         sys.stdout.write(json.dumps(record.as_dict(), indent=2, sort_keys=True) + "\n")

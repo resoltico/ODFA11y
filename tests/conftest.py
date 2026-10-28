@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 from hypothesis import HealthCheck, settings
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
+from odfa11y.plans.registry import registered_formats
 from odfa11y.schemas import read_schema
 from tools.generate_reference import FORMATS
 
@@ -21,8 +22,23 @@ if TYPE_CHECKING:
 
     from odfa11y.serialization import JsonObject
 
+
+def _format_test(validator: Callable[[str], object]) -> Callable[[object], bool]:
+    def check(value: object) -> bool:
+        if isinstance(value, str):
+            validator(value)
+        return True
+
+    return check
+
+
+FORMAT_CHECKER = FormatChecker()
+for format_name, format_validator in registered_formats().items():
+    FORMAT_CHECKER.checks(format_name, raises=ValueError)(_format_test(format_validator))
+
 RECORD_VALIDATORS = {
-    record_type: Draft202012Validator(read_schema(name)) for name, record_type in FORMATS.items()
+    record_type: Draft202012Validator(read_schema(name), format_checker=FORMAT_CHECKER)
+    for name, record_type in FORMATS.items()
 }
 
 settings.register_profile(

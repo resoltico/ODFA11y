@@ -12,9 +12,9 @@ from odfa11y.families.text import NormalizeSpacing
 from odfa11y.families.text.protection import ProtectedEdit
 from odfa11y.families.text.spacing import derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import remediate
 
 from .fixtures import make_minimal_odt
+from .operation_execution import execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,8 +60,8 @@ def test_spacing_in_table_cells_uses_only_proven_derivations_and_reapplies(tmp_p
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
     operation = NormalizeSpacing("Synthetic heading", ("(none)",))
     output = tmp_path / "reviewed.odt"
-    assert remediate(source, output, [operation]).changed
-    assert not remediate(output, tmp_path / "again.odt", [operation]).changed
+    assert execute_operations(source, output, [operation]).changed
+    assert not execute_operations(output, tmp_path / "again.odt", [operation]).changed
     before = select_elements(
         OdfDocument.open(source).tree(Part.CONTENT), "//table:table-cell/text:p"
     )
@@ -85,7 +85,7 @@ def test_text_only_paragraph_base_derives_valid_ordered_spacing_properties(tmp_p
     document.save(source)
     output = tmp_path / "reviewed.odt"
     operation = NormalizeSpacing("Synthetic heading", ("Body",))
-    assert remediate(source, output, [operation]).changed
+    assert execute_operations(source, output, [operation]).changed
     after = OdfDocument.open(output)
     assert validate(after).count == 0
     derived = select_elements(after.tree(Part.CONTENT), "//style:style")[0]
@@ -93,4 +93,4 @@ def test_text_only_paragraph_base_derives_valid_ordered_spacing_properties(tmp_p
         qn("style", "paragraph-properties"),
         qn("style", "text-properties"),
     ]
-    assert not remediate(output, tmp_path / "again.odt", [operation]).changed
+    assert not execute_operations(output, tmp_path / "again.odt", [operation]).changed

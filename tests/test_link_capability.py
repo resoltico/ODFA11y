@@ -32,6 +32,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import annotation_references, dictionary, link_elements, map_link, tagged_writer
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -219,7 +220,10 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     assert reported == expected_support
 
     record = run_pipeline(
-        linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)
+        linked,
+        reviewed_plan(linked, [], FidelityPolicy()),
+        tmp_path / "evidence",
+        PipelineOptions(soffice=soffice),
     )
     assert record.toolchain.capabilities["pdfua_link_descriptions"] == reported
     assert record.toolchain.libreoffice is not None
@@ -263,8 +267,7 @@ def test_the_one_link_reproduction_and_explicit_name_control(
         assert result.compliant
         record = run_pipeline(
             source,
-            [],
-            FidelityPolicy(),
+            reviewed_plan(source, [], FidelityPolicy()),
             tmp_path / "named-evidence",
             PipelineOptions(soffice=external_tool("soffice", "libreoffice")),
         )

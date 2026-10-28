@@ -12,16 +12,17 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import RemediationError
 from odfa11y.families import REGISTRY, adapter_for
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
+from odfa11y.remediation import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys, Location, Severity, rules
 
 from .documents import OASIS, Variant, make_flat, make_package
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -104,8 +105,10 @@ def test_a_text_plan_is_refused_for_every_other_family(
     source = make(tmp_path, "presentation")
     destination = tmp_path / "out"
     plan = [SetGraphicAlternatives({"Logo": GraphicAlternative("x")})]
-    with pytest.raises(RemediationError, match="do not apply to a presentation document"):
-        remediate(source, destination, plan)
+    assert_refused(
+        execute_operations(source, destination, plan),
+        match="do not apply to a presentation document",
+    )
     assert not destination.exists()
 
 
@@ -115,7 +118,7 @@ def test_common_operations_apply_to_any_family_and_keep_the_body(
 ) -> None:
     source = make(tmp_path, "presentation")
     destination = tmp_path / f"out{source.suffix}"
-    result = remediate(
+    result = execute_operations(
         source, destination, [SetMetadata(title="New", language="de-DE"), SetOdfVersion("1.3")]
     )
     assert result.changed
@@ -125,14 +128,16 @@ def test_common_operations_apply_to_any_family_and_keep_the_body(
     meta = select_elements(after.tree(Part.META), "//dc:title | //dc:language")
     assert {m.text for m in meta} == {"New", "de-DE"}
     assert after.tree(Part.CONTENT).getroot().get(qn("office", "version")) == "1.3"
-    again = remediate(destination, tmp_path / f"again{source.suffix}", [SetMetadata(title="New")])
+    again = execute_operations(
+        destination, tmp_path / f"again{source.suffix}", [SetMetadata(title="New")]
+    )
     assert not again.changed
 
 
 def test_a_flat_document_is_saved_byte_identically_when_untouched(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text")
     destination = tmp_path / "copy.fodt"
-    remediate(source, destination, [])
+    execute_operations(source, destination, [])
     assert destination.read_bytes() == source.read_bytes()
 
 
@@ -141,7 +146,7 @@ def test_setting_the_language_on_a_flat_text_document_edits_its_default_style(
 ) -> None:
     source = make_flat(tmp_path, "text")
     destination = tmp_path / "out.fodt"
-    remediate(source, destination, [SetMetadata(language="fr-FR")])
+    execute_operations(source, destination, [SetMetadata(language="fr-FR")])
     report = audit_odf(destination)
     assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in ids(report)
@@ -152,14 +157,14 @@ def test_the_template_refuses_a_source_it_cannot_read(
 ) -> None:
     broken = tmp_path / "broken.odt"
     broken.write_bytes(b"not a zip")
-    status = main(["template", str(broken)])
+    status = main(["plan", str(broken)])
     captured = capsys.readouterr()
     assert status != 0
     assert not captured.out
     assert "PKG000" in captured.err
-    status = main(["template", str(tmp_path / "missing.odt")])
+    status = main(["plan", str(tmp_path / "missing.odt")])
     assert status != 0
-    assert "No template" in capsys.readouterr().err
+    assert "No plan" in capsys.readouterr().err
 
 
 def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
@@ -173,7 +178,10 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     )
     source = make_package(tmp_path, "presentation")
     record = run_pipeline(
-        source, [SetMetadata(title="T")], FidelityPolicy(), tmp_path / "out", PipelineOptions()
+        source,
+        reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
+        tmp_path / "out",
+        PipelineOptions(),
     )
     statuses = {stage.name.value: stage.status for stage in record.stages}
     assert statuses["audit-remediated"] == "passed"
@@ -198,8 +206,7 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     )
     record = run_pipeline(
         make_package(tmp_path, "presentation"),
-        [],
-        FidelityPolicy(),
+        reviewed_plan(make_package(tmp_path, "presentation"), [], FidelityPolicy()),
         tmp_path / "out",
         PipelineOptions(profile="production"),
     )

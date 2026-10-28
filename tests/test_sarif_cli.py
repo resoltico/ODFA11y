@@ -191,8 +191,8 @@ def test_missing_source_fails_without_fake_findings_or_traceback(
 @pytest.mark.parametrize(
     "arguments",
     [
-        ["remediate", "source", "destination", "--config", "plan"],
-        ["pipeline", "source", "--config", "plan", "--output-dir", "output"],
+        ["remediate", "source", "destination", "--plan", "plan"],
+        ["pipeline", "source", "--plan", "plan", "--output-dir", "output"],
         ["batch", "manifest", "--output-dir", "output"],
         ["styles", "source"],
         ["doctor"],

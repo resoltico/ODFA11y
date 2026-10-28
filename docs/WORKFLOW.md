@@ -19,7 +19,7 @@ uv run --no-sync odfa11y styles original.odt
 ```
 
 Audit is read-only. Findings identify a rule, [logical location](RULES.md#locations) and,
-where applicable, a configuration `remedy`. `--schema` validates recognized ODF parts and
+typed open decisions requiring human answers. `--schema` validates recognized ODF parts and
 native MathML against bundled schemas; it does not validate every arbitrary package member.
 See [schema limits](ACCESSIBILITY.md#odf-schema-validation). `styles` is text-family inspection.
 
@@ -52,15 +52,15 @@ descriptions, headers and page breaks. Appearance alone cannot establish these c
 ## 2. Record the decisions
 
 ```bash
-uv run --no-sync odfa11y template original.odt > document.toml
+uv run --no-sync odfa11y plan original.odt > document.toml
 # edit document.toml: uncomment and complete only reviewed decisions
-uv run --no-sync odfa11y remediate original.odt reviewed.odt --config document.toml --dry-run
-uv run --no-sync odfa11y remediate original.odt reviewed.odt --config document.toml
+uv run --no-sync odfa11y remediate original.odt reviewed.odt --plan document.toml --dry-run
+uv run --no-sync odfa11y remediate original.odt reviewed.odt --plan document.toml
 ```
 
 Templates leave every decision commented out and include reviewed object fingerprints.
 A source that cannot be inspected sufficiently yields blockers on stderr and status 2,
-not a usable empty plan. See [Configuration](CONFIGURATION.md).
+not a usable empty plan. See [Configuration](PLAN.md).
 
 Targets report `applied`, `unchanged` or `failed`; dry runs label outcomes as proposed and
 write nothing. A failed target, family mismatch, protected-content change or introduced
@@ -109,7 +109,7 @@ A sheet rename can change Calc's printed header (`FID003`); see
 ## 5. Or do it all, with evidence
 
 ```bash
-uv run --no-sync odfa11y pipeline original.odt --config document.toml \
+uv run --no-sync odfa11y pipeline original.odt --plan document.toml \
   --output-dir evidence --profile production
 uv run --no-sync odfa11y check-evidence evidence
 ```
@@ -136,7 +136,7 @@ checks recorded bytes, not accessibility, authenticity or human acceptance. See
 | --- | --- |
 | `0` | Success; warnings allowed without strict gating. |
 | `1` | Strict warning failure. |
-| `2` | Error findings; template blockers; bundle-integrity problems. |
+| `2` | Error findings; plan blockers; bundle-integrity problems. |
 | `3` | Execution failure: failed remediation, missing/failing required tool or unreadable input. |
 | `4` | Invalid CLI arguments, plans or fidelity policies. |
 
@@ -148,7 +148,7 @@ and skipping fidelity. Optional audit validation absence retains `VERA000` warni
 
 | Symptom | Action |
 | --- | --- |
-| Unknown TOML key/wrong type | Use [Configuration](CONFIGURATION.md); booleans are unquoted and header counts positive integers. |
+| Unknown TOML key/wrong type | Use [Configuration](PLAN.md); booleans are unquoted and header counts positive integers. |
 | Failed remediation targets | Correct named selectors/counts or regenerate and review stale fingerprints. Nothing is published. |
 | Introduced schema violations | Inspect listed violations; the operation's result fails the supported schema regression boundary. |
 | `PDF019` | Inspect the exported link description. Existing Writer Names can matter, but renaming targets requires reference review. |

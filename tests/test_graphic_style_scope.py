@@ -14,11 +14,10 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import effective_graphic_role, normalized_role_attributes
 from odfa11y.content.graphic_roles import GraphicRoleEditor
 from odfa11y.content.graphic_styles import GraphicStyles
-from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.remediation import remediate
 
 from .graphic_fixtures import _style
+from .operation_execution import assert_refused, execute_operations
 from .test_graphic_roles_links import _decision, _graphic
 
 if TYPE_CHECKING:
@@ -90,8 +89,10 @@ def test_common_generated_name_is_not_proven_output_and_cannot_shadow_a_peer(
     destination = tmp_path / "destination.odt"
     destination.write_bytes(b"Existing destination")
     operation = _decision(document, frame, decorative=True)
-    with pytest.raises(RemediationError, match="collides with an authored common style"):
-        remediate(source, destination, [operation])
+    assert_refused(
+        execute_operations(source, destination, [operation]),
+        match="collides with an authored common style",
+    )
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"Existing destination"
     reopened = OdfDocument.open(source)

@@ -8,15 +8,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf, prepare_template
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.families import style_usage
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 
 from .fixtures import make_minimal_odt
+from .operation_execution import execute_operations
+from .reviewed_plans import reviewed_plan
 from .test_package_protection import encrypted_manifest
 
 if TYPE_CHECKING:
@@ -85,7 +87,7 @@ def _assert_guarded_refusal(
     assert [finding.rule_id for finding in report.findings] == [rule]
     assert "complete inspection" in report.findings[0].message
     assert not report.facts
-    planned, template = prepare_template(source)
+    planned, template = prepare_plan(source)
     assert [finding.rule_id for finding in planned.findings] == [rule]
     assert template is None
     destination = directory / "existing.odt"
@@ -93,7 +95,7 @@ def _assert_guarded_refusal(
     for operations in ([], [SetMetadata()], [SetMetadata(title="Reviewed")]):
         for dry_run in (False, True):
             with pytest.raises(PackageError, match=r"ambiguous|malformed"):
-                remediate(source, destination, operations, dry_run=dry_run)
+                execute_operations(source, destination, operations, dry_run=dry_run)
     pdf = directory / "existing.pdf"
     pdf.write_bytes(b"existing PDF")
     with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
@@ -101,7 +103,10 @@ def _assert_guarded_refusal(
     with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
         style_usage(source)
     record = run_pipeline(
-        source, [], FidelityPolicy(), directory / "evidence", PipelineOptions(profile="inspect")
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        directory / "evidence",
+        PipelineOptions(profile="inspect"),
     )
     assert record.failed_stage == "audit-source"
     assert record.exit_status == 2

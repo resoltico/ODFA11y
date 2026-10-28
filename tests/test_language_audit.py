@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.audit import audit_odf, prepare_template
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.report import FactKeys
 
@@ -51,10 +51,10 @@ def test_audit_reports_unresolved_language_without_configuration_guess(
         language.text = "en-u"
     destination = document.save(tmp_path / "unresolved.odt")
     original = destination.read_bytes()
-    report, template = prepare_template(destination)
+    report, template = prepare_plan(destination)
     findings = [finding for finding in report.findings if finding.rule_id == "META004"]
     assert len(findings) == 1
-    assert not findings[0].remedy
+    assert not any(findings[0].rule_id in d.rule_ids for d in report.decisions)
     assert findings[0].details
     assert "META002" not in {finding.rule_id for finding in report.findings}
     assert template is not None

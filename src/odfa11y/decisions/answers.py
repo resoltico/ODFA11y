@@ -6,6 +6,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from odfa11y.odf import SUPPORTED_VERSIONS
+
+from .validation import LANGUAGE_TAG_FORMAT, xml_text_constraints
+
 
 @dataclass(frozen=True, slots=True)
 class GraphicAlternativeAnswer:
@@ -13,13 +17,11 @@ class GraphicAlternativeAnswer:
 
     title: str | None = field(
         default=None,
-        metadata={"schema": {"description": "Accessible title; empty text explicitly clears it."}},
+        metadata=xml_text_constraints("Accessible title; empty text explicitly clears it."),
     )
     description: str | None = field(
         default=None,
-        metadata={
-            "schema": {"description": "Explain the graphic's meaning; empty text clears it."}
-        },
+        metadata=xml_text_constraints("Explain the graphic's meaning; empty text clears it."),
     )
     decorative: bool | None = field(
         default=None,
@@ -35,12 +37,9 @@ class LinkDescriptionAnswer:
     """A supplied description without changing visible text or destination."""
 
     description: str = field(
-        metadata={
-            "schema": {
-                "pattern": r"\S",
-                "description": "Explain the link's purpose in its reading context.",
-            }
-        }
+        metadata=xml_text_constraints(
+            "Explain the link's purpose in its reading context.", nonblank=True
+        )
     )
 
 
@@ -48,11 +47,9 @@ class LinkDescriptionAnswer:
 class PageMetadataAnswer:
     """Explicit page title and purpose."""
 
-    title: str | None = field(
-        default=None, metadata={"schema": {"description": "Accessible page title."}}
-    )
+    title: str | None = field(default=None, metadata=xml_text_constraints("Accessible page title."))
     description: str | None = field(
-        default=None, metadata={"schema": {"description": "Page purpose and context."}}
+        default=None, metadata=xml_text_constraints("Page purpose and context.")
     )
     required_any: ClassVar[tuple[str, ...]] = ("title", "description")
 
@@ -64,7 +61,7 @@ class PageNavigationAnswer:
     navigation: tuple[str, ...] = field(
         metadata={
             "schema": {
-                "items": {"type": "string", "pattern": r"\S"},
+                "items": {"type": "string", "pattern": r"\S", "format": "odfa11y-xml-text"},
                 "description": "Complete reading order of the page's existing shape identities.",
             }
         }
@@ -85,12 +82,9 @@ class FormulaAlternativeAnswer:
     """The spoken meaning of the native mathematical expression."""
 
     alternative: str = field(
-        metadata={
-            "schema": {
-                "pattern": r"\S",
-                "description": "Write the formula's spoken meaning in its intended language.",
-            }
-        }
+        metadata=xml_text_constraints(
+            "Write the formula's spoken meaning in its intended language.", nonblank=True
+        )
     )
 
 
@@ -99,10 +93,46 @@ class DatabaseDescriptionAnswer:
     """Human-supplied meaning for an existing declared database object."""
 
     text: str = field(
+        metadata=xml_text_constraints(
+            "Explain the declared object without changing SQL or bindings.", nonblank=True
+        )
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentMetadataAnswer:
+    """Explicit document title, description and default language."""
+
+    title: str | None = field(
+        default=None,
+        metadata=xml_text_constraints("Document title identifying its purpose.", nonblank=True),
+    )
+    description: str | None = field(
+        default=None,
+        metadata=xml_text_constraints("Document description and context.", nonblank=True),
+    )
+    language: str | None = field(
+        default=None,
         metadata={
             "schema": {
                 "pattern": r"\S",
-                "description": "Explain the declared object without changing SQL or bindings.",
+                "description": "Intended default language, preserving explicit local overrides.",
+                "format": LANGUAGE_TAG_FORMAT,
+            }
+        },
+    )
+    required_any: ClassVar[tuple[str, ...]] = ("title", "description", "language")
+
+
+@dataclass(frozen=True, slots=True)
+class OdfVersionAnswer:
+    """An explicit supported source-version declaration."""
+
+    version: str = field(
+        metadata={
+            "schema": {
+                "enum": list(SUPPORTED_VERSIONS),
+                "description": "ODF version whose result must satisfy schema guards.",
             }
         }
     )

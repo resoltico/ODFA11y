@@ -11,8 +11,7 @@ from odfa11y.odf import Family
 from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_document
-from .config import parse_table
-from .template import template
+from .decisions import DECISION_KINDS, operations
 
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
@@ -38,8 +37,8 @@ ADAPTER = FamilyAdapter(
     set_default_language=_set_language,
     snapshot=page_snapshot,
     preserved=_preserved,
-    config_tables={"drawing": parse_table},
-    template=template,
+    decision_kinds=DECISION_KINDS,
+    operations=operations,
     review_items=(
         ReviewItem(ReviewTopic.PAGE_TITLES, "Whether titles identify their pages and topics."),
         ReviewItem(

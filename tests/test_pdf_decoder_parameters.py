@@ -21,6 +21,7 @@ from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import register, tagged_writer
+from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -86,7 +87,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
     bad = predictor_pdf(tmp_path / "bad.pdf", NameObject("/Bad"))
     good = tmp_path / "good.pdf"
     tagged_writer().write(good)
-    (tmp_path / "plan.toml").write_text("")
+    (tmp_path / "plan.toml").write_text(plan_header(source))
     manifest = tmp_path / "batch.toml"
     manifest.write_text(
         "\n".join(

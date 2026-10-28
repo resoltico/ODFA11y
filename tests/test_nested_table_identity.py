@@ -10,9 +10,9 @@ import pytest
 from odfa11y.content import table_content_fingerprint, table_fingerprint
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat
+from .operation_execution import execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,14 +46,14 @@ def test_nested_headers_and_repeat_splits_preserve_full_reviewed_outer_identity(
         "Inner": TableHeaders(rows=1, columns=1, fingerprint=table_fingerprint(inner, document)),
     })
     output = tmp_path / "reviewed.fodt"
-    result = remediate(source, output, [operation])
+    result = execute_operations(source, output, [operation])
     assert result.changed
     edited = OdfDocument.open(output)
     outer = select_elements(edited.tree(Part.CONTENT), "//table:table")[0]
     assert table_fingerprint(outer, edited) == reviewed
     assert table_content_fingerprint(outer, edited) == snapshot
     assert validate(edited).count == 0
-    assert not remediate(output, tmp_path / "again.fodt", [operation]).changed
+    assert not execute_operations(output, tmp_path / "again.fodt", [operation]).changed
     link = select_elements(outer, ".//text:a")[0]
     link.set(qn("xlink", "href"), "https://changed.example/")
     assert table_fingerprint(outer, edited) != reviewed

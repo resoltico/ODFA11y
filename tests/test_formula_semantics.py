@@ -11,8 +11,7 @@ import pytest
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.config import load_config
-from odfa11y.errors import PlanError, RemediationError
+from odfa11y.errors import PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.formula import SetFormulaAlternative
 from odfa11y.families.formula.expression import fingerprint
@@ -20,9 +19,13 @@ from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation import SetMetadata
+from odfa11y.remediation.planning import compile_operations
 
 from .documents import Variant, make_flat
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import plan_header, reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -59,10 +62,12 @@ def test_native_formula_validates_and_missing_alternative_has_a_reviewed_target(
     assert result.count == 0
     report = audit_odf(SOURCE, schema=True)
     finding = next(f for f in report.findings if f.rule_id == "MATH002")
-    assert finding.remedy == "formula.alternative"
+    question = next(d for d in report.decisions if d.kind.id == "formula.alternative")
+    assert question.target is None
+    assert question.fingerprint is None
     assert finding.location is not None
     assert finding.location.path == "content/formula"
-    assert finding.details["fingerprint"] == fingerprint(document.tree(Part.CONTENT).getroot())
+    assert "MATH002" in question.rule_ids
 
 
 def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_idempotent(
@@ -71,8 +76,8 @@ def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_
     before = OdfDocument.open(SOURCE)
     adapter = adapter_for(before.kind)
     once, twice = tmp_path / "once.odf", tmp_path / "twice.odf"
-    assert remediate(SOURCE, once, _plan()).changed
-    assert not remediate(once, twice, _plan()).changed
+    assert execute_operations(SOURCE, once, _plan()).changed
+    assert not execute_operations(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
     assert adapter.snapshot(before) == adapter.snapshot(after)
     root = after.tree(Part.CONTENT).getroot()
@@ -86,8 +91,9 @@ def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_
 
 def test_mathematical_changes_are_rejected_before_publication(tmp_path: Path) -> None:
     destination = tmp_path / "wrong.odf"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(SOURCE, destination, [ChangeMathematics()])
+    assert_refused(
+        execute_operations(SOURCE, destination, [ChangeMathematics()]), match="content changed"
+    )
     assert not destination.exists()
 
 
@@ -123,11 +129,17 @@ def test_flat_office_formula_wrapper_is_rejected_as_an_unsupported_representatio
 
 def test_formula_configuration_is_explicit_and_strict(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
-    plan.write_text('[formula]\nalternative = "a plus b equals c"\nfingerprint = "reviewed"\n')
-    assert load_config(plan).operations == (SetFormulaAlternative("a plus b equals c", "reviewed"),)
-    plan.write_text('[formula]\nfingerprint = "reviewed"\n')
-    with pytest.raises(PlanError, match="nonblank spoken alternative"):
-        load_config(plan)
+    plan.write_text(
+        plan_header(SOURCE)
+        + '[decisions."formula.alternative"]\nalternative = "a plus b equals c"\n'
+    )
+    assert compile_operations(OdfDocument.open(SOURCE), load_plan(plan)) == (
+        SetFormulaAlternative("a plus b equals c"),
+    )
+    for answer in ("", 'alternative = ""', 'alternative = "a"\nfingerprint = "reviewed"'):
+        plan.write_text(plan_header(SOURCE) + '[decisions."formula.alternative"]\n' + answer)
+        with pytest.raises(PlanError):
+            load_plan(plan)
 
 
 @pytest.mark.integration
@@ -137,7 +149,7 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
     described = tmp_path / "described.odf"
-    remediate(SOURCE, described, _plan())
+    execute_operations(SOURCE, described, _plan())
     pdf = export_pdfua(
         described, tmp_path / "formula.pdf", ExportSettings("math_pdf_Export", soffice)
     )
@@ -147,8 +159,7 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     assert not validate_pdfua(pdf, executable=verapdf).compliant
     record = run_pipeline(
         SOURCE,
-        _plan(),
-        FidelityPolicy(),
+        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
         tmp_path / "evidence",
         PipelineOptions(profile="verify", soffice=soffice),
     )

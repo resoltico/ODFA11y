@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.content import eligible_text_node, text_context_path
+from odfa11y.content import eligible_text_node, reading_context_path
 from odfa11y.odf import qn, select_elements
 from odfa11y.report import Location
 
@@ -41,7 +41,7 @@ def context_name(node: etree._Element) -> str:
         The logical context prefix; main body retains content.
 
     """
-    return text_context_path(node)
+    return reading_context_path(node)
 
 
 def context_location(

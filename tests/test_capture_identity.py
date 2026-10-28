@@ -8,14 +8,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from odfa11y import source_capture as capture
 from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.pipeline import source as capture
 
 from .documents import make_flat
+from .reviewed_plans import plan_header, reviewed_plan
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -82,7 +83,12 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
 
     monkeypatch.setattr(capture.os, "open", exchange)
     output = tmp_path / "pipeline"
-    record = run_pipeline(source, [], FidelityPolicy(), output, PipelineOptions(profile="inspect"))
+    record = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        output,
+        PipelineOptions(profile="inspect"),
+    )
     assert record.exit_status == 3
     assert record.failed_stage == "identify-source"
     assert check_bundle(output) == []
@@ -93,7 +99,9 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
     valid_dir = tmp_path / "valid"
     valid_dir.mkdir()
     valid = make_flat(valid_dir, "text")
-    (tmp_path / "plan.toml").write_text('[document]\nlanguage="en-GB"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(valid) + '[decisions."document.metadata"]\nlanguage="en-GB"'
+    )
     manifest = manifest_file(
         tmp_path,
         [

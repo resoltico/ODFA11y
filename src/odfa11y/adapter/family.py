@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING, TypedDict
 lazy from odfa11y.outcomes import ReviewTopic
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
+    from odfa11y.decisions import Decision, DecisionKind
     from odfa11y.odf import Family, OdfDocument
-    from odfa11y.report import Finding, Report
+    from odfa11y.report import Report
 
     from .operation import Operation
 
@@ -51,9 +52,9 @@ class FamilyAdapter:
     set_default_language: Callable[[OdfDocument, str], bool]
     snapshot: Callable[[OdfDocument], tuple[str, ...]]
     preserved: Callable[[tuple[str, ...], tuple[str, ...], int], bool]
-    config_tables: Mapping[str, Callable[[dict[str, object]], list[Operation]]]
-    template: Callable[[Mapping[str, Sequence[Finding]]], list[str]]
     review_items: tuple[ReviewItem, ...]
+    decision_kinds: tuple[DecisionKind, ...] = ()
+    operations: Callable[[OdfDocument, Sequence[Decision]], tuple[Operation, ...]] | None = None
     pdf_filter: str | None = None
     style_report: Callable[[OdfDocument], list[StyleUsage]] | None = None
     link_probe: Callable[[Path], Path] | None = None

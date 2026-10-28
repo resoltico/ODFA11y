@@ -6,6 +6,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Replace configuration/templates with strict source-bound decision plans (`plan`, `--plan`, explicit `--rebind`). Audits expose typed questions; remediation retains structured refusals and publishes only passing candidates. Valid dry runs exit 0 without publication; refused runs exit 2.
+
 - Update low-level XML callers to `tree()` and content checkpoints; edit declarations/counters are removed. Reopen a model after replacing cached XML through raw storage.
 - Update JSON consumers and Python record access: report 6, run 3 and batch 2 use typed records and registered facts, with initial doctor/remediation schemas. Schema assurance is structured status/version/counts.
 - Invalid arguments and plans exit 4, with explicit precedence 3 > 4 > 2 > 1 > 0. Progress observers receive typed events, the validator stage is `validate-pdf`, and domain plan errors use `PlanError`.

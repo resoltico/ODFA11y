@@ -12,16 +12,15 @@ from lxml import etree
 
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.families.text.styles import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.outcomes import StageStatus
-from odfa11y.remediation import remediate
 from odfa11y.report import FactKeys
 
 from .documents import Variant, make_package
 from .fixtures import make_minimal_odt
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -66,7 +65,7 @@ def test_foreign_style_cannot_shadow_a_real_page_break(tmp_path: Path) -> None:
     assert paragraph.getparent() is body
     assert etree.tostring(foreign) == before
     source = document.save(tmp_path / "source.odt")
-    result = remediate(source, tmp_path / "out.odt", [RemoveEmptySpacers()])
+    result = execute_operations(source, tmp_path / "out.odt", [RemoveEmptySpacers()])
     assert not result.changed
     assert select_elements(
         OdfDocument.open(tmp_path / "out.odt").tree(Part.CONTENT),
@@ -123,8 +122,7 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
     assert etree.tostring(document.tree(Part.CONTENT)) == before
     source = document.save(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError):
-        remediate(source, destination, [RemoveEmptySpacers()])
+    assert_refused(execute_operations(source, destination, [RemoveEmptySpacers()]))
     assert not destination.exists()
     report = audit_odf(source)
     assert "TXT062" in {finding.rule_id for finding in report.findings}
@@ -206,7 +204,7 @@ def test_inherited_page_number_reset_protects_empty_paragraphs(
     paragraph = _empty(document, name)
     assert validate(document).count == 0
     source = document.save(tmp_path / "source.odt")
-    result = remediate(source, tmp_path / "out.odt", [RemoveEmptySpacers()])
+    result = execute_operations(source, tmp_path / "out.odt", [RemoveEmptySpacers()])
     reloaded = OdfDocument.open(tmp_path / "out.odt")
     targets = select_elements(
         reloaded.tree(Part.CONTENT), f"//office:text/text:p[@text:style-name='{name}']"
@@ -243,11 +241,12 @@ def test_optional_styles_absence_is_distinct_from_an_unrecognized_styles_root(
         document.save(source)
     output = tmp_path / "out.odt"
     if missing:
-        result = remediate(source, output, [RemoveEmptySpacers()])
+        result = execute_operations(source, output, [RemoveEmptySpacers()])
         assert result.changed
         assert not OdfDocument.open(output).has(Part.STYLES)
     else:
-        with pytest.raises(RemediationError, match="unsupported root"):
-            remediate(source, output, [RemoveEmptySpacers()])
+        assert_refused(
+            execute_operations(source, output, [RemoveEmptySpacers()]), match="unsupported root"
+        )
         assert not output.exists()
         assert "TXT062" in {finding.rule_id for finding in audit_odf(source).findings}

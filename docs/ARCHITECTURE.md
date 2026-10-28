@@ -30,12 +30,13 @@ flowchart LR
 | `odf` | Package/flat storage, logical parts, document kinds, protection declarations and schema validation. |
 | `adapter` | Family, operation, outcome and review contracts. |
 | `content` | Shared ODF text, language, graphics, links, tables, resource context and protected XML primitives. |
-| `families.<family>` | Family audit rules, explicit operations, protected-content policy, configuration and native capabilities. |
+| `families.<family>` | Family audit rules, explicit operations, protected-content policy, registered answers and native capabilities. |
 | `families` | Adapter registry and supported style inspection. |
-| `audit`, `remediation` | Read-only source inspection/template preparation and guarded operation execution. |
+| `audit`, `remediation` | Read-only source inspection/plan preparation and guarded operation execution. |
 | `pdf`, `fidelity` | Native PDF export/inspection/validation and publication comparison. |
 | `evidence` | Manifests, redaction, review sheets and atomic bundle publication/verification. |
-| `config` | Strict TOML decisions translated into operations and fidelity policy. |
+| `decisions`, `plans` | Registered answer contracts, canonical targets, source binding and one strict codec/schema/reference. |
+| `source_capture` | Bounded regular-file snapshots shared by planning, remediation and pipeline execution. |
 | `pipeline`, `batch` | Public document workflows, assurance stages and serial manifest execution. |
 | `report` | Rule registry, findings, reports, rendering, SARIF and command statuses. |
 | `cli` | Argument translation, terminal output, progress and recovery guidance. |
@@ -111,7 +112,7 @@ and reported as deprecated by ODF.
 
 A [FamilyAdapter](../src/odfa11y/adapter/family.py) supplies audit and language hooks,
 protected-content snapshots, operation-specific guards, optional whole-plan preflight,
-configuration tables, templates and human-review items. It also declares an optional PDF
+decision kinds, typed answer translation and human-review items. It also declares an optional PDF
 filter, style report and link-capability probe. The generic adapter performs common checks
 for an unimplemented kind and reports the absent semantic audit explicitly.
 
@@ -127,11 +128,11 @@ for an unimplemented kind and reports the absent semantic audit explicitly.
 
 Native export capability is separate from source semantics. The current family/export
 matrix and exporter limits live in [Accessibility scope and limits](ACCESSIBILITY.md#document-families).
-Configuration fields, selectors and fingerprints live in [Configuration](CONFIGURATION.md).
+Configuration fields, selectors and fingerprints live in [Configuration](PLAN.md).
 
 ### Adding a family
 
-1. Implement its adapter, audit, operations, configuration and review items under
+1. Implement its adapter, audit, operations, decision kinds and review items under
    `families/<family>/`. Define default-language semantics and precisely which content an
    operation may change.
 2. Register the adapter and declare its actual dependencies and public interface in
@@ -150,7 +151,7 @@ family-specific branches. Operations addressed to another family are refused.
 An [Operation](../src/odfa11y/adapter/operation.py) is a frozen dataclass with parameters,
 `apply(document)` and a serialized decision record. It returns per-target `applied`,
 `unchanged` or `failed` outcomes. Repeating a supported reviewed decision is idempotent.
-The TOML configuration is the plan; there is no second persisted plan format.
+A source-bound TOML plan carries answered decisions and a fidelity policy. Explicit rebind permits a different source digest while target identities and preservation guards still apply.
 
 Addressed operations such as graphic, heading, table-header and spacing edits resolve and
 validate their targets before mutation. Missing, ambiguous or stale identities refuse.

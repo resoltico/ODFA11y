@@ -90,10 +90,13 @@ def _render_text(report: Report) -> str:
             )
             if finding.location:
                 lines.extend(_field("    location: ", finding.location.label))
-            if finding.remedy:
-                lines.extend(_field("    remedy: ", finding.remedy))
             for key, value in finding.details.items():
                 lines.extend(_field(f"    {terminal_text(key)}: ", value))
+    if report.decisions:
+        lines.append("Open decisions:")
+        for decision in report.decisions:
+            target = decision.target.label if decision.target else "document"
+            lines.extend(_field(f"  {decision.kind.id}: ", target))
     if report.facts:
         lines.append("Facts:")
         for key in sorted(report.facts, key=lambda item: item.id):

@@ -37,21 +37,13 @@ def audit_image(document: OdfDocument, report: Report) -> None:
         frame.findtext("svg:desc", namespaces=NS) or ""
     )
     href = images[0].get(qn("xlink", "href")) if images else None
-    selector = name or href
     identity = GraphicIdentity(document, frames)
     decorative = audit_graphic_role(document, frame, report)
     if not description.strip() and not decorative:
         report.add(
-            rules.IMAGE002,
-            location=location,
-            details={
-                "frame": name,
-                "selector": selector,
-                "fingerprint": identity.fingerprint(
-                    identity.matching(selector) if selector else frames
-                ),
-            },
+            rules.IMAGE002, location=Location(identity.target(frame)), details={"frame": name}
         )
+        report.add_decision(identity.open_decision(frame, rules.IMAGE002.id))
     for image in images:
         problem, review = inspect_payload(document, image)
         if problem:

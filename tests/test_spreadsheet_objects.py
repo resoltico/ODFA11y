@@ -13,13 +13,21 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative
 from odfa11y.families.spreadsheet import (
     SetGraphicAlternatives,
-    SetSheetNames,
     sheet_snapshot,
     sheets_preserved,
 )
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 
-from .spreadsheet_fixtures import LAYOUTS, make_spreadsheet, picture, row, sheet, text_cell
+from .reviewed_plans import question_for
+from .spreadsheet_fixtures import (
+    LAYOUTS,
+    make_spreadsheet,
+    picture,
+    reviewed_sheet_names,
+    row,
+    sheet,
+    text_cell,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -127,13 +135,15 @@ def _audited_fingerprint(directory: Path, layout: str, frame: str) -> str:
     [finding] = [
         f for f in report.findings if f.rule_id == "SHEET005" and f.details["frame"] == frame
     ]
-    return str(finding.details["fingerprint"])
+    return str(question_for(report, finding).fingerprint)
 
 
 def test_a_fingerprint_survives_a_sheet_rename_in_the_same_plan(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *SHEETS)
     fingerprint = _audited_fingerprint(tmp_path, "package", "Badge")
-    assert statuses(SetSheetNames({"Other": "Badges"}), document) == (Status.APPLIED,)
+    assert statuses(reviewed_sheet_names(document, {"Other": "Badges"}), document) == (
+        Status.APPLIED,
+    )
     entry = GraphicAlternative("Badge", fingerprint=fingerprint)
     assert statuses(SetGraphicAlternatives({"Badge": entry}), document) == (Status.APPLIED,)
 

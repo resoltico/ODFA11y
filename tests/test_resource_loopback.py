@@ -17,6 +17,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .native_resource_fixtures import png_bytes
 from .resource_declaration_fixtures import declaration
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -64,8 +65,7 @@ def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
             output = tmp_path / kind
             record = run_pipeline(
                 source,
-                [],
-                FidelityPolicy(),
+                reviewed_plan(source, [], FidelityPolicy()),
                 output,
                 PipelineOptions(profile="verify", soffice=soffice),
             )

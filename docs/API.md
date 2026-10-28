@@ -12,18 +12,18 @@ rendering, JSON/SARIF serialization and strict warning policy.
 | Entry point | Inputs/result | Ownership and failure |
 | --- | --- | --- |
 | `pipeline.audit_document` | Regular ODF/PDF path; iterator of `Report`; optional schema/PDF validation and timeout. | Read-only; starts on iteration. Consume incrementally to keep completed reports if a later validator fails. Stopping early omits checks. |
-| `audit.prepare_template` | ODF path; `(Report, commented TOML or None)`. | Read-only. Unreadable, encrypted, ambiguous or unsafe inputs yield blockers; templates choose no meaning. |
+| `audit.prepare_plan` | ODF path; `(Report, commented TOML or None)`. | Read-only. Unreadable, encrypted, ambiguous or unsafe inputs yield blockers; templates choose no meaning. |
 | `families.style_usage` | ODF path; style-usage rows. | Read-only. Unsupported families/blocked inspection raise `UnsupportedKindError`; storage/OS failures can propagate. |
-| `remediation.remediate` | Distinct source/destination, explicit operations, optional dry run; `RemediationResult`. | Guards package inspection, family/protected-content/schema contracts; publishes atomically only on success. Failure preserves destination; dry run writes nothing. |
+| `remediation.remediate` | Distinct source/destination, source-bound Plan, optional dry run/rebind; `RemediationResult`. | Guards package inspection, family/protected-content/schema contracts; publishes atomically only on success. Refused candidates return published=false and exit_status=2; valid previews return published=false and exit_status=0. Source-binding failures raise PlanError. |
 | `pipeline.export_document` | Original ODF, PDF destination, optional `NativeOptions`; published `Path`. | Guarded original export preserves logical identity. Caller chooses executables and stable source/resource directories. |
 | `pipeline.compare_documents` | Original ODF/PDF inputs, policy, optional diffs/options; `Report`. | Guards native inputs, owns temporary renders/profile through comparison, preserves requested diffs. Fidelity is not accessibility. |
 | `pipeline.inspect_tools` | Optional `NativeOptions`; `(partial identity facts, controlled probe error or None)`. | Can run bounded identity/capability probes; inspect both values. Version/capability is not document conformance. |
-| `pipeline.run_pipeline` | Source, operations, policy, absent/empty destination, optional `PipelineOptions`; `RunRecord`. | Records domain/OS stage failures and skips, publishing evidence when safely writable. Inspect `exit_status`, stages and required review. Unsafe destination/publication failures may raise. |
+| `pipeline.run_pipeline` | Source, Plan, absent/empty destination, optional `PipelineOptions`; `RunRecord`. | Records domain/OS stage failures and skips, publishing evidence when safely writable. Inspect `exit_status`, stages and required review. Unsafe destination/publication failures may raise. |
 | `evidence.check_bundle` | Bundle directory; list of integrity problems. | Read-only static unsafe-path/hash checks. Bundle/ancestor namespace must stay stable. Integrity is not authenticity/review. |
 
 Expected domain failures use `OdfA11yError` subclasses: `PlanError` for invalid choices
 (including invalid timeout values), `PackageError` for unreadable inputs,
-`RemediationError` for unsupported edits/postconditions, `UnsupportedKindError` for unavailable
+structured remediation violations for refused edits/postconditions, `UnsupportedKindError` for unavailable
 family/native contexts, and `ToolError` subclasses for native failures, including elapsed
 tool deadlines. Ordinary filesystem errors can propagate. Audit generators can raise while
 consumed. There is no universal result wrapper; respect each operation's error boundary.
@@ -56,7 +56,7 @@ manifest/body selection. Signatures, encryption, tracked changes and excluded co
 have explicit [preservation boundaries](ACCESSIBILITY.md#preservation-boundaries).
 Graphic/page/link metadata uses reviewed structural/style identities; detached pages do
 not establish style dependencies. `content.page_fingerprint(page, document)` requires the
-`OdfDocument`; see [configuration identities](CONFIGURATION.md#every-selector-must-match-and-mean-what-you-reviewed).
+`OdfDocument`; see [reviewed identities](PLAN.md#decision-plans).
 
 Source semantics, exporter capability, PDF audit/veraPDF, fidelity and human review remain
 separate. Production requires veraPDF and fails warnings. Missing tools and skipped stages

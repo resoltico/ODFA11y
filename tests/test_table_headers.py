@@ -14,9 +14,9 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import axis_count, header_count, table_fingerprint
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat, make_package
+from .operation_execution import execute_operations
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -43,8 +43,8 @@ def test_both_axes_split_repeats_without_changing_logical_data(
     fingerprint = table_fingerprint(table)
     operation = MarkTableHeaders({"Data": TableHeaders(rows=2, columns=1, fingerprint=fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
-    assert remediate(source, once, [operation]).changed
-    assert not remediate(once, twice, [operation]).changed
+    assert execute_operations(source, once, [operation]).changed
+    assert not execute_operations(once, twice, [operation]).changed
     result = OdfDocument.open(twice)
     table = select_elements(result.tree(Part.CONTENT), "//table:table")[0]
     assert (axis_count(table, "rows"), axis_count(table, "columns")) == (5, 4)

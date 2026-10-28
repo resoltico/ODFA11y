@@ -12,14 +12,17 @@ from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.config import load_config
 from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation import SetMetadata
+
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import reviewed_plan
 
 SOURCE = Path(__file__).parent / "family_corpus/fruit-chart.odc"
 
@@ -50,8 +53,8 @@ def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path)
     assert validate(before).count == 0
     assert {"CHART002", "CHART003"} <= {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odc", tmp_path / "twice.odc"
-    assert remediate(SOURCE, once, _plan()).changed
-    assert not remediate(once, twice, _plan()).changed
+    assert execute_operations(SOURCE, once, _plan()).changed
+    assert not execute_operations(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
     assert adapter_for(before.kind).snapshot(before) == adapter_for(after.kind).snapshot(after)
     assert before.storage.read("content.xml") == after.storage.read("content.xml")
@@ -62,15 +65,19 @@ def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path)
 
 def test_chart_numeric_change_is_rejected_before_publication(tmp_path: Path) -> None:
     destination = tmp_path / "wrong.odc"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(SOURCE, destination, [ChangeChartData()])
+    assert_refused(
+        execute_operations(SOURCE, destination, [ChangeChartData()]), match="content changed"
+    )
     assert not destination.exists()
 
 
 @pytest.mark.parametrize("profile", ["inspect", "verify"])
 def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, profile: str) -> None:
     record = run_pipeline(
-        SOURCE, _plan(), FidelityPolicy(), tmp_path / profile, PipelineOptions(profile=profile)
+        SOURCE,
+        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
+        tmp_path / profile,
+        PipelineOptions(profile=profile),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert not (tmp_path / profile / "remediated.pdf").exists()
@@ -81,8 +88,7 @@ def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, pr
 def test_chart_production_cannot_pass_without_pdf_assurance(tmp_path: Path) -> None:
     record = run_pipeline(
         SOURCE,
-        _plan(),
-        FidelityPolicy(),
+        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
         tmp_path / "production",
         PipelineOptions(profile="production"),
     )
@@ -132,7 +138,7 @@ def test_chart_has_no_invented_alternative_config_table(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
     plan.write_text('[chart]\nalternative = "Counts"\n')
     with pytest.raises(PlanError):
-        load_config(plan)
+        load_plan(plan)
 
 
 @pytest.mark.parametrize("defect", ["categories", "string-value"])
