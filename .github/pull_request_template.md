@@ -1,8 +1,8 @@
-## What changes and why
+## Problem and resulting behavior
 
-## Verification
+## Verification and limits
 
-- [ ] Relevant [development checks](https://github.com/resoltico/ODFA11y/blob/main/docs/DEVELOPING.md#required-checks) ran; failures, skips and unavailable tools/platforms are reported.
-- [ ] Behavior and relevant rejection paths have proportionate evidence; claimed native integration uses real applications.
-- [ ] Affected documentation reflects current behavior, and notable release outcomes are recorded in Unreleased.
-- [ ] No confidential document, credential or identifiable production material is included.
+- [ ] Relevant [development gates](https://github.com/resoltico/ODFA11y/blob/main/docs/DEVELOPING.md#required-checks) ran; failures/fixes, skips and unavailable platforms are reported.
+- [ ] Preservation/refusal controls and any claimed native behavior have direct evidence.
+- [ ] Generated references are current; guides and draft changelog describe shipped behavior.
+- [ ] Fixtures and reports contain only invented, nonconfidential material.

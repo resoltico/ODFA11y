@@ -1,16 +1,12 @@
 # Contributing
 
-Read [Development](../docs/DEVELOPING.md) for setup, checks, packaging and native integration,
-and [AGENTS.md](../AGENTS.md) for change and verification discipline.
+Read [Development](../docs/DEVELOPING.md) for setup/gates and
+[AGENTS.md](../AGENTS.md) for change discipline. Start from a requirement or reproduced
+defect, challenge assumptions and update affected callers, docs and generated references.
+Keep explicit decisions, preservation and refusal boundaries intact.
 
-For bug reports, provide the exact command, expected/actual results and relevant tool
-versions, with a small synthetic reproduction. Never upload customer ODF/PDF files,
-private reports, credentials or identifiable production content. Follow the
-[security reporting route](SECURITY.md) for vulnerabilities.
-
-Tie changes to a concrete requirement or reproduced defect. Review the design and
-downstream effects before implementation. Provide proportionate evidence for intended
-behavior and relevant rejection paths; a mock does not establish native integration.
-Report executed checks, skips and unavailable tools/platforms, and update affected
-documentation. Record notable release outcomes in the changelog's Unreleased section.
-Lint exceptions require specific central reasons and actual suppressed diagnostics.
+Provide a small invented reproduction, expected/actual results and tool identities.
+Native claims need real application evidence and negative controls. Report failed/skipped
+checks and unavailable platforms; update Unreleased or the current draft changelog.
+Never upload customer documents, private bundles, credentials or identifiable production
+material. Use the [private security route](SECURITY.md) for vulnerabilities.

@@ -103,7 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  odfa11y remediate source.odt reviewed.odt --plan plan.toml --dry-run\n"
             "  odfa11y remediate source.odt reviewed.odt --plan plan.toml"
         ),
-        description="Apply the configured operations to an ODF document.",
+        description="Apply reviewed decisions to a separate ODF document.",
     )
     p.add_argument("source", type=Path)
     p.add_argument("destination", type=Path)

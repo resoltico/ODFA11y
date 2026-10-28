@@ -1,7 +1,7 @@
 # Writer regression corpus
 
 Small, invented LibreOffice Writer documents exercise ODFA11y against native producer
-output alongside the synthetic documents in `tests/documents.py`. Their content is
+output alongside the synthetic documents in `tests/fixtures/documents.py`. Their content is
 released with the project under MPL-2.0.
 
 [manifest.toml](manifest.toml) identifies the producer and records each stored document's
@@ -50,7 +50,7 @@ also report the spacer rule. Tests verify that no document contains tracked chan
 
 ## Regenerating
 
-Follow [Developing](../../docs/DEVELOPING.md#writer-regression-corpus). Native regeneration
+Follow [Developing](../../docs/DEVELOPING.md#native-document-fixtures). Native regeneration
 reproduces document semantics, not exact bytes: generated metadata and producer choices
 can change the output. Review the documents, audit findings and schema results before
 updating the manifest's identities and expectations. Keep source changes, retained native

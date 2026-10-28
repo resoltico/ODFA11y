@@ -29,7 +29,7 @@ not provide an isolated execution environment.
 Pipeline capture checks bounded regular-file identity. Source/staging ancestor namespaces
 must remain stable; leaf identity does not prevent parent exchanges or concurrent in-place
 writes. Bundle verification likewise requires stable directory namespaces. See
-[Evidence](../docs/EVIDENCE.md#no-local-paths) for privacy and capture/verification details.
+[Evidence](../docs/EVIDENCE.md#privacy) for privacy and capture/verification details.
 
 Process untrusted documents under operating-system isolation/resource limits, without
 sensitive files or credentials. Keep native applications current within the supported

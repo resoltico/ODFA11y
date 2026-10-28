@@ -368,6 +368,7 @@
                         "type": "null"
                       }
                     ],
+                    "description": "Language for the target Asian-script channel.",
                     "format": "odfa11y-language-tag"
                   },
                   "complex": {
@@ -379,6 +380,7 @@
                         "type": "null"
                       }
                     ],
+                    "description": "Language for the target complex-script channel.",
                     "format": "odfa11y-language-tag"
                   },
                   "western": {
@@ -390,6 +392,7 @@
                         "type": "null"
                       }
                     ],
+                    "description": "Language for the target western-script channel.",
                     "format": "odfa11y-language-tag"
                   }
                 },

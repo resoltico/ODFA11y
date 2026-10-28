@@ -18,11 +18,11 @@ body:
     id: reproduce
     attributes:
       label: Command and minimal reproduction
-      description: The exact command, plus a synthetic document or its description.
+      description: Include the exact command, selected profile, rule IDs/stage and a minimal invented reproduction.
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: Output of `odfa11y doctor`
+      label: Tool identities and capability results from `odfa11y doctor --format json`
       render: text
