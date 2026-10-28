@@ -3,7 +3,7 @@
 
 from .apply import remediate
 from .metadata import SetMetadata
-from .result import RemediationResult
+from .result import RemediationResult, Violation
 from .version import SetOdfVersion
 
-__all__ = ["RemediationResult", "SetMetadata", "SetOdfVersion", "remediate"]
+__all__ = ["RemediationResult", "SetMetadata", "SetOdfVersion", "Violation", "remediate"]

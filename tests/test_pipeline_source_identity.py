@@ -14,6 +14,7 @@ from odfa11y.odf import PackageStorage
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,7 +36,12 @@ def test_source_replacement_uses_captured_bytes(
 
     monkeypatch.setattr(runner, boundary, replace)
     target = tmp_path / "bundle"
-    result = run_pipeline(source, [], FidelityPolicy(), target, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        target,
+        PipelineOptions(profile="inspect"),
+    )
     assert result.passed
     assert result.document.sha256 == digest
     assert (target / "remediated.odt").read_bytes() == original

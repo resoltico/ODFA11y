@@ -17,6 +17,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import tagged_writer
+from .reviewed_plans import plan_header, reviewed_plan
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -46,8 +47,7 @@ def test_required_validator_failure_reaches_stage_and_retains_evidence(tmp_path:
     target = tmp_path / "evidence"
     result = run_pipeline(
         source,
-        [],
-        FidelityPolicy(),
+        reviewed_plan(source, [], FidelityPolicy()),
         target,
         PipelineOptions(profile="production", verapdf_path=str(tmp_path / "missing-verapdf")),
     )
@@ -66,13 +66,15 @@ def test_cli_and_batch_keep_required_validator_status(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     plan = tmp_path / "plan.toml"
-    plan.write_text('[document]\ntitle="T"\nlanguage="en-GB"')
+    plan.write_text(
+        plan_header(source) + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en-GB"'
+    )
     missing = str(tmp_path / "missing-verapdf")
     assert (
         main([
             "pipeline",
             str(source),
-            "--config",
+            "--plan",
             str(plan),
             "--output-dir",
             str(tmp_path / "single"),
@@ -126,8 +128,7 @@ def test_real_production_reaches_missing_required_validator(
     target = tmp_path / "evidence"
     record = run_pipeline(
         source,
-        [],
-        FidelityPolicy(),
+        reviewed_plan(source, [], FidelityPolicy()),
         target,
         PipelineOptions(
             profile="production",

@@ -21,6 +21,7 @@ from odfa11y.report import Report, rules
 
 from .fixtures import make_minimal_odt
 from .record_fixtures import record
+from .reviewed_plans import plan_header
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -56,13 +57,13 @@ def test_production_warning_failure_preserves_findings_and_schema(
 ) -> None:
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     config = tmp_path / "plan.toml"
-    config.write_text("", encoding="utf-8")
+    config.write_text(plan_header(source) + "", encoding="utf-8")
     evidence = tmp_path / "evidence"
     assert (
         main([
             "pipeline",
             str(source),
-            "--config",
+            "--plan",
             str(config),
             "--output-dir",
             str(evidence),
@@ -93,12 +94,12 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
 ) -> None:
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     config = tmp_path / "plan.toml"
-    config.write_text("", encoding="utf-8")
+    config.write_text(plan_header(source) + "", encoding="utf-8")
     assert (
         main([
             "pipeline",
             str(source),
-            "--config",
+            "--plan",
             str(config),
             "--output-dir",
             str(tmp_path / "evidence"),
@@ -148,11 +149,9 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
         ),
     ]
     config = tmp_path / "plan.toml"
-    config.write_text("", encoding="utf-8")
-    monkeypatch.setattr(cli_pipeline, "run_pipeline", lambda *_args: data)
-    assert (
-        main(["pipeline", "source.odt", "--config", str(config), "--output-dir", "evidence"]) == 3
-    )
+    config.write_text(plan_header(tmp_path / "source.odt") + "", encoding="utf-8")
+    monkeypatch.setattr(cli_pipeline, "run_pipeline", lambda *_args, **_kwargs: data)
+    assert main(["pipeline", "source.odt", "--plan", str(config), "--output-dir", "evidence"]) == 3
     text = capsys.readouterr().out
     assert "Before remediation: audit-source" in text
     assert "TXT030" in text

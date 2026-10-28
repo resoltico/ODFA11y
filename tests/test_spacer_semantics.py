@@ -9,12 +9,11 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Outcome, Status
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import RemoveEmptySpacers
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat, make_package
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -46,7 +45,7 @@ def test_empty_semantic_paragraph_is_preserved(
     source = author(tmp_path, "text", Variant(body=f"<office:text>{paragraph}</office:text>"))
     before = source.read_bytes()
     destination = tmp_path / ("result" + source.suffix)
-    result = remediate(source, destination, [RemoveEmptySpacers()])
+    result = execute_operations(source, destination, [RemoveEmptySpacers()])
     assert not result.changed
     assert source.read_bytes() == before
     original = select_elements(OdfDocument.open(source).tree(Part.CONTENT), "//text:p")[0]
@@ -67,7 +66,7 @@ def test_linked_identity_survives_removal_of_inert_spacer(
     original = source.read_bytes()
     assert validate(OdfDocument.open(source)).count == 0
     destination = tmp_path / ("result" + source.suffix)
-    result = remediate(source, destination, [RemoveEmptySpacers()])
+    result = execute_operations(source, destination, [RemoveEmptySpacers()])
     assert result.changed
     assert source.read_bytes() == original
     document = OdfDocument.open(destination)
@@ -76,7 +75,7 @@ def test_linked_identity_survives_removal_of_inert_spacer(
     assert len(select_elements(tree, "//*[@xml:id='anchor']")) == 1
     assert len(select_elements(tree, "//text:p")) == 2
     assert select_elements(tree, "//text:a")[0].get(qn("xlink", "href")) == "#anchor"
-    assert not remediate(
+    assert not execute_operations(
         destination, tmp_path / ("again" + source.suffix), [RemoveEmptySpacers()]
     ).changed
 
@@ -109,7 +108,9 @@ def test_spacer_guard_rejects_identity_loss_before_publication(
         )
 
     monkeypatch.setattr(RemoveEmptySpacers, "apply", damage)
-    with pytest.raises(RemediationError, match="Protected document content changed"):
-        remediate(source, destination, [RemoveEmptySpacers()])
+    assert_refused(
+        execute_operations(source, destination, [RemoveEmptySpacers()]),
+        match="Protected document content changed",
+    )
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"keep existing destination"

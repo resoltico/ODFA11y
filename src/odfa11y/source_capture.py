@@ -24,7 +24,7 @@ COPY_CHUNK_BYTES = 64 * 1024
 
 def _require_input(info: os.stat_result) -> None:
     if not stat.S_ISREG(info.st_mode):
-        msg = "Pipeline capture requires a regular file, including an ordinary file symlink"
+        msg = "Source capture requires a regular file, including an ordinary file symlink"
         raise PackageError(msg)
     if info.st_size > MAX_SOURCE_BYTES:
         msg = f"Input exceeds the {MAX_SOURCE_BYTES}-byte physical capture limit"

@@ -8,6 +8,8 @@ import json
 import os
 from typing import TYPE_CHECKING
 
+from .reviewed_plans import reviewed_plan
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
@@ -37,7 +39,12 @@ def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: st
             source.read_bytes().replace(b"</text:p>", b" /private/person/file</text:p>", 1)
         )
     target = tmp_path / "bundle"
-    result = run_pipeline(source, [], FidelityPolicy(), target, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        target,
+        PipelineOptions(profile="inspect"),
+    )
     delivered = target / f"remediated{suffix}"
     OdfDocument.open(delivered)
     assert delivered.read_bytes() == source.read_bytes()
@@ -80,7 +87,12 @@ def test_unwritable_publication_has_no_partial_directory(tmp_path: Path) -> None
 def test_accepted_package_with_xml_suffix_is_copied_unchanged(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.xml")
     target = tmp_path / "bundle"
-    result = run_pipeline(source, [], FidelityPolicy(), target, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        target,
+        PipelineOptions(profile="inspect"),
+    )
     OdfDocument.open(target / "remediated.xml")
     assert (target / "remediated.xml").read_bytes() == source.read_bytes()
     assert result.passed
@@ -96,7 +108,12 @@ def test_flat_document_preserves_declared_encoding(tmp_path: Path) -> None:
         .replace(b"</text:p>", b" caf\xe9</text:p>", 1)
     )
     target = tmp_path / "bundle"
-    result = run_pipeline(source, [], FidelityPolicy(), target, PipelineOptions(profile="inspect"))
+    result = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        target,
+        PipelineOptions(profile="inspect"),
+    )
     assert result.passed
     delivered = target / f"remediated{source.suffix}"
     OdfDocument.open(delivered)
@@ -117,8 +134,7 @@ def test_native_published_artifact_syntax_content_and_identity(
     target = tmp_path / "bundle"
     result = run_pipeline(
         source,
-        [],
-        FidelityPolicy(),
+        reviewed_plan(source, [], FidelityPolicy()),
         target,
         PipelineOptions(
             profile="production",

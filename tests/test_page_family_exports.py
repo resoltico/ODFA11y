@@ -18,8 +18,11 @@ from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
+
+from .operation_execution import execute_operations
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -69,8 +72,8 @@ def test_native_page_plan_removes_its_findings_and_reapplies_unchanged(
     suffix, _ = FAMILIES[family]
     source = CORPUS / f"fruit-{family}{suffix}"
     once, twice = tmp_path / f"once{suffix}", tmp_path / f"twice{suffix}"
-    assert remediate(source, once, _plan(family)).changed
-    assert not remediate(once, twice, _plan(family)).changed
+    assert execute_operations(source, once, _plan(family)).changed
+    assert not execute_operations(once, twice, _plan(family)).changed
     assert audit_odf(twice, schema=True).findings == []
     assert once.read_bytes() == twice.read_bytes()
 
@@ -87,8 +90,7 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     root = tmp_path / "evidence"
     record = run_pipeline(
         source,
-        _plan(family),
-        FidelityPolicy(),
+        reviewed_plan(source, _plan(family), FidelityPolicy()),
         root,
         PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
     )
@@ -128,8 +130,7 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     ]
     record = run_pipeline(
         source,
-        plan,
-        FidelityPolicy(),
+        reviewed_plan(source, plan, FidelityPolicy()),
         root,
         PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
     )

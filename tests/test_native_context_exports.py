@@ -14,10 +14,12 @@ from odfa11y.fidelity.snapshot import read_snapshot
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.pdf import ExportSettings, export_pdfua
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 
 from .fixtures import make_minimal_odt
 from .native_resource_fixtures import PIXELS, author_package, decoded_images, writer_resource
+from .operation_execution import execute_operations
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -54,8 +56,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
     output = tmp_path / "evidence"
     result = run_pipeline(
         source,
-        [SetMetadata(language="en-GB")],
-        FidelityPolicy(),
+        reviewed_plan(source, [SetMetadata(language="en-GB")], FidelityPolicy()),
         output,
         PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
     )
@@ -69,10 +70,10 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         assert compare_pdfs(direct, pdf, FidelityPolicy()).passed
     published = output / ("remediated" + source.suffix)
     expected = tmp_path / ("expected" + source.suffix)
-    remediate(source, expected, [SetMetadata(language="en-GB")])
+    execute_operations(source, expected, [SetMetadata(language="en-GB")])
     assert published.read_bytes() == expected.read_bytes()
     assert source.read_bytes() == original
-    assert not remediate(
+    assert not execute_operations(
         published, tmp_path / ("again" + source.suffix), [SetMetadata(language="en-GB")]
     ).changed
     assert not list(source.resolve().parent.glob(".odfa11y-source-*"))
@@ -103,8 +104,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     for repeat in [1, 2]:
         result = run_pipeline(
             source,
-            [],
-            FidelityPolicy(),
+            reviewed_plan(source, [], FidelityPolicy()),
             output / str(repeat),
             PipelineOptions(profile="verify", soffice=soffice),
         )
@@ -114,7 +114,10 @@ def test_native_filename_context_is_refused_without_freezing_fields(
         assert check_bundle(output / str(repeat)) == []
     inspected = tmp_path / "inspected"
     assert run_pipeline(
-        source, [], FidelityPolicy(), inspected, PipelineOptions(profile="inspect")
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        inspected,
+        PipelineOptions(profile="inspect"),
     ).passed
     published = inspected / "remediated.odt"
     assert published.read_bytes() == original

@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf, render_template
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
+from odfa11y.plans import load_plan
 from odfa11y.report import FactKeys
 
 from .documents import make_package
+from .reviewed_plans import question_for
 from .spreadsheet_fixtures import (
     HIDDEN_SHEET_STYLE,
     LAYOUTS,
@@ -67,9 +69,10 @@ def test_a_sheet_without_a_name_is_an_error(tmp_path: Path, layout: str) -> None
 def test_a_default_sheet_name_is_reported_with_its_remedy(
     tmp_path: Path, layout: str, name: str
 ) -> None:
-    [finding] = found(audit(tmp_path, layout, sheet(name)), "SHEET002")
+    report = audit(tmp_path, layout, sheet(name))
+    [finding] = found(report, "SHEET002")
     assert finding.details == {"sheet": name}
-    assert finding.remedy == "spreadsheet.sheet_names"
+    assert question_for(report, finding).kind.id == "sheet.name"
 
 
 @by_layout
@@ -121,10 +124,10 @@ def test_a_picture_without_accessible_text_is_an_error_with_a_fingerprinted_sele
     report = audit(tmp_path, layout, body)
     [finding] = found(report, "SHEET005")
     assert finding.severity.value == "error"
-    assert finding.remedy == "spreadsheet.graphics"
+    assert question_for(report, finding).kind.id == "graphic.alternative"
     assert finding.details["frame"] == "Logo"
     assert finding.details["href"] == "Pictures/logo.png"
-    assert len(str(finding.details["fingerprint"])) == 16
+    assert len(str(question_for(report, finding).fingerprint)) == 16
     assert report.facts[FactKeys.SHEET_GRAPHIC_COUNT] == 2
 
 
@@ -219,11 +222,14 @@ def test_text_documents_never_produce_spreadsheet_rules(tmp_path: Path) -> None:
 def test_the_template_lists_each_decision_with_its_fingerprint(tmp_path: Path) -> None:
     body = sheet("Sheet1", row(picture("Logo")))
     path = make_spreadsheet(tmp_path, "package", body)
-    template = render_template(audit_odf(path), adapter_for(OdfDocument.open(path).kind))
-    assert '# [spreadsheet.sheet_names]\n# "Sheet1" = ""' in template
-    assert '# [spreadsheet.graphics."Logo"]' in template
+    template = prepare_plan(path)[1]
+    assert template is not None
+    assert '# [decisions."sheet.name"."content/sheet[1]"]' in template
+    assert 'decisions."graphic.alternative"' in template
     assert "# fingerprint = " in template
-    assert all(line.startswith("#") or not line for line in template.splitlines())
+    plan_path = tmp_path / "review.plan.toml"
+    plan_path.write_text(template)
+    assert load_plan(plan_path).decisions == ()
 
 
 def test_spreadsheet_findings_have_the_same_logical_locations_in_both_layouts(
@@ -236,7 +242,7 @@ def test_spreadsheet_findings_have_the_same_logical_locations_in_both_layouts(
     ]
     assert {f.location.path for f in findings[0] if f.location} >= {
         "content/sheet[name=Sheet1]",
-        "content/frame[name=Logo]",
+        "content/sheet[2]/frame[name=Logo]",
     }
 
 

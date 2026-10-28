@@ -11,19 +11,24 @@ from odfa11y.content import (
     GraphicIdentity,
     audit_graphic_role,
     document_links,
-    link_fingerprint,
+    link_decision,
     link_has_description,
     link_location,
     navigation_problem,
     page_fingerprint,
+    page_location,
     page_shapes,
     pages,
     visible_words,
 )
+from odfa11y.decisions import OpenDecision
+from odfa11y.decisions.kinds import PAGE_METADATA, PAGE_NAVIGATION
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
 if TYPE_CHECKING:
+    from lxml import etree
+
     from odfa11y.odf import OdfDocument
     from odfa11y.report import Report
 
@@ -43,31 +48,72 @@ def audit_document(document: OdfDocument, report: Report) -> None:
     if not available:
         report.add(rules.DRAW001, location=Location(Part.CONTENT))
     for index, page in enumerate(available, 1):
-        name = page.get(qn("draw", "name"))
-        location = (
-            Location.named(Part.CONTENT, "page", name)
-            if name
-            else Location.indexed(Part.CONTENT, "page", index)
-        )
-        details = {"page": name, "fingerprint": page_fingerprint(page, document)}
-        if not name or names[name] != 1:
-            report.add(rules.DRAW001, location=location)
-        if not (page.findtext("svg:title", namespaces=NS) or "").strip():
-            report.add(rules.DRAW002, location=location, details=details)
-        order = page.get(qn("draw", "nav-order"))
-        shapes = page_shapes(page)
-        details["shape_identities"] = [
-            shape.get(XML_ID) or shape.get(qn("draw", "id")) for shape in shapes
-        ]
-        if order is not None:
-            problem = navigation_problem(page, tuple(order.split()), identities)
-            if problem:
-                report.add(rules.DRAW005, problem, location=location, details=details)
-        elif len(shapes) > 1:
-            report.add(rules.DRAW006, location=location, details=details)
+        _audit_page(document, page, index, names, identities, report=report)
     _graphics(document, report)
     _links(document, report)
     _review_content(document, report)
+
+
+def _audit_page(
+    document: OdfDocument,
+    page: etree._Element,
+    index: int,
+    names: Counter[str | None],
+    identities: Counter[str],
+    *,
+    report: Report,
+) -> None:
+    name = page.get(qn("draw", "name"))
+    location = page_location(page, index)
+    fingerprint = page_fingerprint(page, document)
+    details = {"page": name}
+    if not name or names[name] != 1:
+        report.add(rules.DRAW001, location=location)
+    if not (page.findtext("svg:title", namespaces=NS) or "").strip():
+        report.add(rules.DRAW002, location=location, details=details)
+        if not name or names[name] == 1:
+            report.add_decision(
+                OpenDecision(
+                    PAGE_METADATA,
+                    location,
+                    fingerprint,
+                    {
+                        "title": page.findtext("svg:title", namespaces=NS),
+                        "description": page.findtext("svg:desc", namespaces=NS),
+                    },
+                    (rules.DRAW002.id,),
+                )
+            )
+    order = page.get(qn("draw", "nav-order"))
+    shapes = page_shapes(page)
+    details["shape_identities"] = [
+        shape.get(XML_ID) or shape.get(qn("draw", "id")) for shape in shapes
+    ]
+    if order is not None:
+        problem = navigation_problem(page, tuple(order.split()), identities)
+        if problem:
+            report.add(rules.DRAW005, problem, location=location, details=details)
+    elif len(shapes) > 1:
+        report.add(rules.DRAW006, location=location, details=details)
+    if (order is not None and navigation_problem(page, tuple(order.split()), identities)) or (
+        order is None and len(shapes) > 1
+    ):
+        supplied_ids = details["shape_identities"]
+        if (not name or names[name] == 1) and all(
+            identity and identities[identity] == 1 for identity in supplied_ids
+        ):
+            report.add_decision(
+                OpenDecision(
+                    PAGE_NAVIGATION,
+                    location,
+                    fingerprint,
+                    {
+                        "navigation": tuple(order.split()) if order else None,
+                        "available_identities": supplied_ids,
+                    },
+                    ((rules.DRAW005.id if order is not None else rules.DRAW006.id),),
+                )
+            )
 
 
 def _graphics(document: OdfDocument, report: Report) -> None:
@@ -78,7 +124,7 @@ def _graphics(document: OdfDocument, report: Report) -> None:
     ]
     identity = GraphicIdentity(document, shapes)
     report.facts[FactKeys.PAGE_SHAPE_COUNT] = len(shapes)
-    for index, shape in enumerate(shapes, 1):
+    for shape in shapes:
         decorative = audit_graphic_role(document, shape, report)
         if decorative or shape.tag == qn("draw", "g"):
             continue
@@ -91,21 +137,16 @@ def _graphics(document: OdfDocument, report: Report) -> None:
         payload = select_elements(shape, "./draw:image | ./draw:object | ./draw:object-ole")
         if not payload and visible_words(shape):
             continue
-        image = shape.find("draw:image", NS)
-        selector = name or (image.get(qn("xlink", "href")) if image is not None else None)
-        addressed = identity.matching(selector) if selector else [shape]
         rule = rules.DRAW003 if payload else rules.DRAW004
         report.add(
             rule,
-            location=Location.named(Part.CONTENT, "shape", name)
-            if name
-            else Location.indexed(Part.CONTENT, "shape", index),
+            location=Location(identity.target(shape)),
             details={
                 "shape": name,
-                "selector": selector,
-                "fingerprint": identity.fingerprint(addressed),
             },
         )
+
+        report.add_decision(identity.open_decision(shape, rule.id))
 
 
 def _links(document: OdfDocument, report: Report) -> None:
@@ -116,8 +157,8 @@ def _links(document: OdfDocument, report: Report) -> None:
             report.add(
                 rules.DRAW009,
                 location=link_location(link, index),
-                details={"fingerprint": link_fingerprint(document, link)},
             )
+            report.add_decision(link_decision(document, link, index, rules.DRAW009.id))
 
 
 def _review_content(document: OdfDocument, report: Report) -> None:

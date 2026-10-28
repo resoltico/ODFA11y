@@ -3,40 +3,19 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem, config_tables
+from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.content import protected_xml
-from odfa11y.errors import PlanError
 from odfa11y.odf import Family, Part, qn, select_elements
 from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_database
-from .descriptions import DatabaseDescription, SetObjectDescriptions, description_attributes
+from .decisions import DECISION_KINDS, operations
+from .descriptions import description_attributes
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
-    from odfa11y.adapter import Operation
     from odfa11y.odf import OdfDocument
-    from odfa11y.report import Finding
-
-
-def _parse(data: dict[str, object]) -> list[Operation]:
-    config_tables.known(data, {"descriptions"}, "database")
-    entries = {}
-    for target, raw in config_tables.table(data, "descriptions").items():
-        if not isinstance(raw, dict):
-            msg = "database.descriptions entries must be tables"
-            raise PlanError(msg)
-        config_tables.known(raw, {"text", "fingerprint"}, "database description")
-        values = config_tables.typed(raw, str, "database description")
-        if not values.get("text", "").strip():
-            msg = "database descriptions require nonblank text"
-            raise PlanError(msg)
-        entries[target] = DatabaseDescription(values["text"], values.get("fingerprint"))
-    return [SetObjectDescriptions(entries)] if entries else []
 
 
 def _snapshot(document: OdfDocument) -> tuple[str, ...]:
@@ -71,20 +50,6 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
     return False
 
 
-def _template(findings: Mapping[str, Sequence[Finding]]) -> list[str]:
-    lines = []
-    for finding in findings.get("database.descriptions", ()):
-        target = finding.details.get("target")
-        if target:
-            lines += [
-                f"# [database.descriptions.{json.dumps(target)}]",
-                '# text = ""  # explain the declared object in context',
-                f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}",
-                "",
-            ]
-    return lines
-
-
 ADAPTER = FamilyAdapter(
     name="database",
     family=Family.DATABASE,
@@ -93,8 +58,8 @@ ADAPTER = FamilyAdapter(
     set_default_language=_set_language,
     snapshot=_snapshot,
     preserved=_preserved,
-    config_tables={"database": _parse},
-    template=_template,
+    decision_kinds=DECISION_KINDS,
+    operations=operations,
     review_items=(
         ReviewItem(
             ReviewTopic.DATABASE_MEANING,

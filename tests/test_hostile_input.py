@@ -13,7 +13,7 @@ import pytest
 
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
-from odfa11y.errors import PackageError, RemediationError, ToolFailedError
+from odfa11y.errors import PackageError, ToolFailedError
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
@@ -25,10 +25,12 @@ from odfa11y.fidelity import compare as compare_module
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.outcomes import StageStatus
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
+from odfa11y.remediation import SetMetadata, SetOdfVersion
 
 from .fixtures import make_minimal_odt
+from .operation_execution import assert_refused, execute_operations
 from .pdf_fixtures import text_pdf
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -66,7 +68,7 @@ def test_malformed_optional_members_do_not_abort_the_audit_or_remediation(tmp_pa
     package.save(broken)
     report = audit_odf(broken, schema=True)
     assert "XML001" in {f.rule_id for f in report.findings}
-    result = remediate(broken, tmp_path / "out.odt", [SetMetadata(title="Still works")])
+    result = execute_operations(broken, tmp_path / "out.odt", [SetMetadata(title="Still works")])
     assert result.changed
 
 
@@ -160,7 +162,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     valid = make_minimal_odt(
         tmp_path / "v12.odt", version="1.2", features={"with_data_table": True}
     )
-    result = remediate(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
+    result = execute_operations(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.version == "1.4"
     package = PackageStorage(valid)
@@ -169,8 +171,10 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     )
     invalid = tmp_path / "invalid.odt"
     package.save(invalid)
-    with pytest.raises(RemediationError, match="must validate"):
-        remediate(invalid, tmp_path / "never.odt", [SetOdfVersion("1.4")])
+    assert_refused(
+        execute_operations(invalid, tmp_path / "never.odt", [SetOdfVersion("1.4")]),
+        match="must validate",
+    )
     assert not (tmp_path / "never.odt").exists()
 
 
@@ -199,7 +203,10 @@ def test_a_non_executable_soffice_fails_the_stage_and_still_publishes_evidence(
     fake.write_text("#!/bin/sh\n", encoding="utf-8")
     fake.chmod(0o600)
     record = run_pipeline(
-        source, [], FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice=str(fake))
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        tmp_path / "out",
+        PipelineOptions(soffice=str(fake)),
     )
     assert record.failed_stage == "export-source"
     assert (tmp_path / "out" / "run.json").is_file()
@@ -225,10 +232,13 @@ def test_published_outputs_honour_the_umask_instead_of_being_owner_only(tmp_path
     try:
         source = make_minimal_odt(tmp_path / "doc.odt")
         record = run_pipeline(
-            source, [], FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice="missing")
+            source,
+            reviewed_plan(source, [], FidelityPolicy()),
+            tmp_path / "out",
+            PipelineOptions(soffice="missing"),
         )
         remediated = tmp_path / "remediated.odt"
-        remediate(source, remediated, [SetMetadata(title="Modes")])
+        execute_operations(source, remediated, [SetMetadata(title="Modes")])
     finally:
         os.umask(previous)
     assert record.failed_stage == "export-source"

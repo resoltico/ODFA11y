@@ -11,8 +11,10 @@ from urllib.parse import unquote
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.odf import Family, PackageStorage, Part, qn, select_elements
+from odfa11y.report import Location
 
 from .sheets import sheet_name, sheets
+from .snapshot import sheet_fingerprint
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -26,50 +28,81 @@ EMBEDDED_OBJECTS = "//office:body//draw:object | //office:body//draw:object-ole"
 
 
 @dataclass(frozen=True, slots=True)
+class SheetNameChange:
+    """A reviewed name and preserved identity for one logical sheet target."""
+
+    name: str
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
 class SetSheetNames(Operation):
-    """Rename sheets from an explicit mapping of current name to new name.
+    """Rename stable logical sheet targets without rewriting unestablished references."""
 
-    Every rename is checked before the first edit. An unknown sheet, an invalid or
-    colliding new name, and a sheet that formulas, ranges or links refer to by name all fail
-    the operation and nothing is written. Renames are independent: a new name may not be
-    another entry's current name, so chains and swaps are refused, and applying the mapping
-    to its own result changes nothing.
-    """
-
-    entries: Mapping[str, str]
+    entries: Mapping[str, SheetNameChange]
     name: ClassVar[str] = "set_sheet_names"
     family: ClassVar[Family | None] = Family.SPREADSHEET
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        found = {sheet_name(sheet): sheet for sheet in sheets(document.tree(Part.CONTENT))}
-        names = Counter(sheet_name(sheet) for sheet in sheets(document.tree(Part.CONTENT)))
-        failures = {
-            old: problem
-            for old, new in self.entries.items()
-            if (
-                problem := self._plan_problem(old, new)
-                or _document_problem(document, old, new, names)
-            )
+        available = list(sheets(document.tree(Part.CONTENT)))
+        found = {
+            Location.indexed(Part.CONTENT, "sheet", index).path: sheet
+            for index, sheet in enumerate(available, 1)
         }
+        names = Counter(sheet_name(sheet) for sheet in available)
+        renames = {
+            sheet_name(found[target]): entry.name
+            for target, entry in self.entries.items()
+            if target in found
+        }
+        failures = {}
+        for target, entry in self.entries.items():
+            node = found.get(target)
+            if node is None:
+                failures[target] = "The sheet target must resolve to exactly one sheet."
+            elif entry.fingerprint != sheet_fingerprint(document, node):
+                failures[target] = (
+                    "The sheet is no longer the object this plan was reviewed against."
+                )
+            elif problem := self._plan_problem(
+                sheet_name(node), entry.name, renames
+            ) or _document_problem(document, sheet_name(node), entry.name, names):
+                failures[target] = problem
         if failures:
             return tuple(
-                Outcome(self.name, Status.FAILED, message, key=old)
-                for old, message in failures.items()
+                Outcome(self.name, Status.FAILED, message, key=target)
+                for target, message in failures.items()
             )
         outcomes = []
-        for old, new in self.entries.items():
-            if names[old] == 0 or old == new:
-                message = f"A sheet is already named {new!r}."
-                outcomes.append(Outcome(self.name, Status.UNCHANGED, message, key=old))
-                continue
-            found[old].set(qn("table", "name"), new)
-            _rename_settings(document, old, new)
-            message = f"Renamed to {new!r}."
-            outcomes.append(Outcome(self.name, Status.APPLIED, message, key=old, count=1))
+        for target, entry in self.entries.items():
+            node = found[target]
+            old = sheet_name(node)
+            if old == entry.name:
+                outcomes.append(
+                    Outcome(
+                        self.name,
+                        Status.UNCHANGED,
+                        f"Sheet is already named {entry.name!r}.",
+                        key=target,
+                    )
+                )
+            else:
+                node.set(qn("table", "name"), entry.name)
+                _rename_settings(document, old, entry.name)
+                outcomes.append(
+                    Outcome(
+                        self.name,
+                        Status.APPLIED,
+                        f"Renamed to {entry.name!r}.",
+                        key=target,
+                        count=1,
+                    )
+                )
         return tuple(outcomes)
 
-    def _plan_problem(self, old: str, new: str) -> str | None:
+    @staticmethod
+    def _plan_problem(old: str, new: str, renames: Mapping[str, str]) -> str | None:
         """Find what is wrong with an entry regardless of the document.
 
         Returns
@@ -81,10 +114,10 @@ class SetSheetNames(Operation):
         reason = invalid_name_reason(new)
         if reason:
             return f"{new!r} is not a usable sheet name: {reason}."
-        others = {key.casefold() for key in self.entries if key != old}
+        others = {key.casefold() for key in renames if key != old}
         if new.casefold() in others:
             return f"{new!r} is also renamed by this plan; chained and swapped renames are refused."
-        if sum(target.casefold() == new.casefold() for target in self.entries.values()) > 1:
+        if sum(target.casefold() == new.casefold() for target in renames.values()) > 1:
             return f"More than one sheet is renamed to {new!r}."
         return None
 
@@ -117,8 +150,6 @@ def _document_problem(document: OdfDocument, old: str, new: str, names: Counter[
         The reason, or None when the rename is safe or its result already holds.
 
     """
-    if names[old] == 0:
-        return None if names[new] == 1 else f"No unique sheet is named {old!r} or {new!r}."
     if names[old] > 1:
         return f"{names[old]} sheets are named {old!r}; the name must be unique."
     if old == new:

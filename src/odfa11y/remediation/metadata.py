@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, ClassVar, override
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import normalize_language
 from odfa11y.families import adapter_for
+from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part, ensure_metadata_part, qn
 
 if TYPE_CHECKING:

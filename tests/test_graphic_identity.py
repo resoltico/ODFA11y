@@ -176,7 +176,14 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     assert read_calls == ["styles.xml", "Pictures/logo.svg"]
     assert len(group_hashes) == (1 if duplicate_names else count)
     if duplicate_names:
-        assert len({finding.details["fingerprint"] for finding in report.findings}) == 1
+        assert (
+            len({
+                question.fingerprint
+                for question in report.decisions
+                if question.kind.id == "graphic.alternative"
+            })
+            == 1
+        )
 
 
 def test_indexed_groups_are_immutable_and_fresh_contexts_observe_mutations(tmp_path: Path) -> None:

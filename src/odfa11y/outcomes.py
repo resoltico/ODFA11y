@@ -187,3 +187,14 @@ class ReviewTopic(StrEnum):
     SOURCE_ASSURANCE = "source-assurance"
     SOURCE_BOUNDARY = "source-boundary"
     TABLE_HEADERS = "table-headers"
+
+
+class ViolationKind(StrEnum):
+    """Structured reasons a remediation candidate cannot be published."""
+
+    FAILED_OUTCOME = "failed-outcome"
+    PROTECTED_CONTENT = "protected-content"
+    OPAQUE_RESOURCE = "opaque-resource"
+    SCHEMA_REGRESSION = "schema-regression"
+    EDIT_ACCOUNTING = "edit-accounting"
+    FOREIGN_OPERATION = "foreign-operation"

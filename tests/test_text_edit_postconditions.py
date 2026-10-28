@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import LinkifyAddresses, MarkTableHeaders, TableHeaders
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 
 from .documents import Variant, make_flat
+from .operation_execution import assert_refused, execute_operations
 from .test_text_context_protection import BODY
 
 if TYPE_CHECKING:
@@ -104,7 +104,9 @@ def test_selected_outer_table_cannot_mask_unselected_nested_header_change(
 def _refuses(source: Path, destination: Path, operations: Sequence[Operation]) -> None:
     before = source.read_bytes()
     destination.write_bytes(b"existing destination")
-    with pytest.raises(RemediationError, match="Protected document content changed"):
-        remediate(source, destination, operations)
+    assert_refused(
+        execute_operations(source, destination, operations),
+        match="Protected document content changed",
+    )
     assert source.read_bytes() == before
     assert destination.read_bytes() == b"existing destination"

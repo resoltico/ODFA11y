@@ -33,7 +33,7 @@ be valid. Semantic audits and explicit decisions exist for all eight families.
 
 A missing native stage is `not-applicable` under source-oriented profiles; production
 requires PDF validation and fails that boundary. Source success does not certify opaque
-embedded content or database storage. See [configuration](CONFIGURATION.md) and
+embedded content or database storage. See [configuration](PLAN.md) and
 [assurance profiles](WORKFLOW.md#5-or-do-it-all-with-evidence).
 
 ### Spreadsheets
@@ -47,7 +47,7 @@ formatting semantics. Formula declarations are inspected separately for
 
 Source operations rename unreferenced sheets, set graphic alternatives/roles and set
 `office:title` link descriptions. Header rows, merges, visible link labels and hidden
-content are not rewritten. See [sheet renaming](CONFIGURATION.md#renaming-sheets).
+content are not rewritten. See [sheet renaming](PLAN.md#registered-decisions).
 
 ### Spreadsheet PDF exports
 
@@ -94,7 +94,7 @@ Roles resolve from ODF defaults, common/automatic styles, legal inheritance and 
 class overlays. An explicit role uses ODF 1.4 `draw:decorative` on
 `style:graphic-properties`. Each role change derives an isolated style from an established
 explicit context; unsupported or ambiguous contexts report `GRAPHIC001` and refuse edits.
-See [role decisions](CONFIGURATION.md#graphic-roles-and-link-descriptions).
+See [role decisions](PLAN.md#registered-decisions).
 
 A decorative role removes only the missing-alternative requirement. It never hides invalid
 payloads, external resources, scripts, interactivity or incomplete page navigation. Group

@@ -10,12 +10,13 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.errors import RemediationError
+from odfa11y.errors import PackageError, RemediationError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
 
 from .documents import OASIS, Variant, make_flat, make_package
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,8 +31,8 @@ def ids(report: Report) -> set[str]:
 def test_remediation_refuses_an_unrecognised_document(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
     destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="not a recognised OpenDocument"):
-        remediate(source, destination, [SetMetadata(title="x")])
+    with pytest.raises(PackageError, match="not a recognised OpenDocument"):
+        execute_operations(source, destination, [SetMetadata(title="x")])
     assert not destination.exists()
 
 
@@ -45,12 +46,14 @@ def test_explicit_metadata_creates_a_missing_optional_package_part(tmp_path: Pat
             if member.filename != "meta.xml":
                 cut.writestr(member, full.read(member.filename))
     destination = tmp_path / "out.odt"
-    assert remediate(source, destination, [SetMetadata(title="x")]).changed
+    assert execute_operations(source, destination, [SetMetadata(title="x")]).changed
     assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "x"
     with zipfile.ZipFile(destination) as created:
         manifest = created.read("META-INF/manifest.xml")
         assert manifest.count(b'manifest:full-path="meta.xml"') == 1
-    assert not remediate(destination, tmp_path / "again.odt", [SetMetadata(title="x")]).changed
+    assert not execute_operations(
+        destination, tmp_path / "again.odt", [SetMetadata(title="x")]
+    ).changed
 
 
 @pytest.mark.parametrize("duplicate", [False, True])
@@ -97,7 +100,7 @@ def test_editing_a_flat_document_keeps_comments_and_processing_instructions(
         encoding="utf-8",
     )
     destination = tmp_path / "out.fodt"
-    remediate(source, destination, [SetMetadata(title="Changed")])
+    execute_operations(source, destination, [SetMetadata(title="Changed")])
     saved = destination.read_text(encoding="utf-8")
     assert '<?xml-stylesheet href="s.css" type="text/css"?>' in saved
     assert "<!-- keep me -->" in saved
@@ -111,7 +114,7 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
     start, end = text.index("<office:meta>"), text.index("</office:meta>") + len("</office:meta>")
     source.write_text(text[:start] + text[end:], encoding="utf-8")
     destination = tmp_path / "out.fodt"
-    remediate(source, destination, [SetMetadata(title="Added")])
+    execute_operations(source, destination, [SetMetadata(title="Added")])
     assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "Added"
     assert "ODF900" not in ids(audit_odf(destination, schema=True))
 
@@ -119,8 +122,10 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
 def test_a_blank_title_is_refused_rather_than_written_empty(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text")
     destination = tmp_path / "out.odt"
-    with pytest.raises(RemediationError, match="must not be blank"):
-        remediate(source, destination, [SetMetadata(title="   ")])
+    assert_refused(
+        execute_operations(source, destination, [SetMetadata(title="   ")]),
+        match="must not be blank",
+    )
     assert not destination.exists()
 
 
@@ -130,7 +135,7 @@ def test_language_tags_are_normalised_or_private_use_and_stay_schema_valid(
 ) -> None:
     source = make_package(tmp_path, "text")
     destination = tmp_path / "out.odt"
-    remediate(source, destination, [SetMetadata(language=given)])
+    execute_operations(source, destination, [SetMetadata(language=given)])
     assert audit_odf(destination).facts[FactKeys.DOCUMENT_LANGUAGE] == written
 
 
@@ -142,6 +147,6 @@ def test_remediation_refuses_a_document_whose_parts_contradict_each_other(tmp_pa
         ),
     }.items():
         source = make_package(tmp_path, "text", variant)
-        with pytest.raises(RemediationError, match="nothing was written"):
-            remediate(source, tmp_path / f"{name}.odt", [SetMetadata(title="x")])
+        with pytest.raises(PackageError, match="nothing was written"):
+            execute_operations(source, tmp_path / f"{name}.odt", [SetMetadata(title="x")])
         assert not (tmp_path / f"{name}.odt").exists()

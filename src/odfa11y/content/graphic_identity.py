@@ -9,13 +9,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
+from odfa11y.decisions import OpenDecision
+from odfa11y.decisions.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.odf import NS, qn, select_elements
+from odfa11y.report import Location
 
 from .graphic_style_identity import graphic_style_fingerprint, normalized_graphic_tree
 from .graphic_styles import GraphicStyles
 from .resources import ResourceIdentity
 from .tables import AXES, declarations, repeated
-from .text import text_context_path
+from .text import reading_context_path
 from .xml import protected_xml
 
 if TYPE_CHECKING:
@@ -88,12 +91,9 @@ def graphic_selector(frame: etree._Element) -> str | None:
         A canonical logical selector, or None when native identity must be established.
 
     """
-    context = text_context_path(frame)
+    context = reading_context_path(frame)
     if name := frame.get(qn("draw", "name")):
         return f"{context}/frame[name={quote(name, safe='')}]"
-    image = frame.find("draw:image", NS)
-    if image is not None and (href := image.get(qn("xlink", "href"))):
-        return f"{context}/frame[href={quote(href, safe='')}]"
     return None
 
 
@@ -103,8 +103,15 @@ class GraphicIdentity:
     def __init__(self, document: OdfDocument, frames: Sequence[etree._Element]) -> None:
         """Index selectors once; compute protected structure and payload hashes only on demand."""
         grouped: dict[str, list[etree._Element]] = {}
+        self._targets: dict[etree._Element, str] = {}
+        positions: dict[str, int] = {}
         for frame in frames:
-            for key in graphic_keys(frame):
+            context = reading_context_path(frame)
+            if frame.tag != qn("draw", "g"):
+                positions[context] = positions.get(context, 0) + 1
+            target = graphic_selector(frame) or f"{context}/frame[{positions.get(context, 1)}]"
+            self._targets[frame] = target
+            for key in graphic_keys(frame) | {target}:
                 grouped.setdefault(key, []).append(frame)
         self._document = document
         self._groups = {key: tuple(group) for key, group in grouped.items()}
@@ -117,6 +124,37 @@ class GraphicIdentity:
         self._group_digests: dict[int, str] = {}
         self._sibling_ordinals: dict[etree._Element, dict[etree._Element, int]] = {}
         self._table_ordinals: dict[tuple[etree._Element, str], dict[etree._Element, int]] = {}
+
+    def target(self, frame: etree._Element) -> str:
+        """Return the canonical name/ordinal path used by both audit and operations.
+
+        Returns
+        -------
+        str
+            The graphic's reviewed logical target.
+
+        """
+        return self._targets[frame]
+
+    def open_decision(self, frame: etree._Element, rule_id: str) -> OpenDecision:
+        """Collect an explicit graphic question using the existing identity snapshot.
+
+        Returns
+        -------
+        OpenDecision
+            One reviewed group identity and its current authored alternatives.
+
+        """
+        target = self.target(frame)
+        group = self.matching(target)
+        current = {
+            "title": [node.findtext("svg:title", namespaces=NS) for node in group],
+            "description": [node.findtext("svg:desc", namespaces=NS) for node in group],
+            "count": len(group),
+        }
+        return OpenDecision(
+            GRAPHIC_ALTERNATIVE, Location(target), self.fingerprint(group), current, (rule_id,)
+        )
 
     def matching(self, selector: str) -> tuple[etree._Element, ...]:
         """Return the immutable, document-ordered group addressed by a selector.

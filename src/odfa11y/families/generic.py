@@ -11,10 +11,8 @@ from odfa11y.outcomes import ReviewTopic
 from odfa11y.report import rules
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
     from odfa11y.odf import OdfDocument
-    from odfa11y.report import Finding, Report
+    from odfa11y.report import Report
 
 REVIEW_ITEMS = (
     ReviewItem(
@@ -51,11 +49,6 @@ def _no_language_target(document: OdfDocument, tag: str) -> bool:
     return False
 
 
-def _no_template(by_remedy: Mapping[str, Sequence[Finding]]) -> list[str]:
-    del by_remedy
-    return []
-
-
 def _unchanged(before: tuple[str, ...], after: tuple[str, ...], removed_blocks: int) -> bool:
     return removed_blocks == 0 and before == after
 
@@ -68,7 +61,5 @@ GENERIC = FamilyAdapter(
     set_default_language=_no_language_target,
     snapshot=body_text_snapshot,
     preserved=_unchanged,
-    config_tables={},
-    template=_no_template,
     review_items=REVIEW_ITEMS,
 )

@@ -10,12 +10,13 @@ import pytest
 
 from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
-from odfa11y.config import Config
 from odfa11y.errors import OutputError
+from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import plan_header, reviewed_plan
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -97,8 +98,7 @@ def test_pipeline_progress_precedes_work_and_publication(tmp_path: Path) -> None
 
     result = run_pipeline(
         source,
-        (),
-        Config().fidelity,
+        reviewed_plan(source, (), FidelityPolicy()),
         output,
         PipelineOptions(profile="inspect", on_progress=observe),
     )
@@ -118,8 +118,7 @@ def test_failed_progress_stream_does_not_prevent_evidence(
     output = tmp_path / "evidence"
     run_pipeline(
         source,
-        (),
-        Config().fidelity,
+        reviewed_plan(source, (), FidelityPolicy()),
         output,
         PipelineOptions(profile="inspect", on_progress=progress_callback("text")),
     )
@@ -128,7 +127,10 @@ def test_failed_progress_stream_does_not_prevent_evidence(
 
 def test_batch_progress_contains_fixed_steps_and_published_status_only(tmp_path: Path) -> None:
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
     events: list[tuple[str, str]] = []
     record = run_batch(
@@ -156,8 +158,7 @@ def test_publication_failure_never_emits_passed_progress(
     with pytest.raises(OSError, match="storage unavailable"):
         run_pipeline(
             source,
-            (),
-            Config().fidelity,
+            reviewed_plan(source, (), FidelityPolicy()),
             tmp_path / "evidence",
             PipelineOptions(
                 profile="inspect",
@@ -172,7 +173,10 @@ def test_batch_interruption_emits_no_completion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
     events: list[tuple[str, str]] = []
 
@@ -219,8 +223,7 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
     with pytest.raises(type(failure)) as caught:
         run_pipeline(
             source,
-            (),
-            Config().fidelity,
+            reviewed_plan(source, (), FidelityPolicy()),
             tmp_path / "evidence",
             PipelineOptions(
                 profile="inspect",

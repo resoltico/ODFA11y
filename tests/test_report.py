@@ -9,7 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from odfa11y.decisions import OpenDecision
 from odfa11y.errors import ReportError
+from odfa11y.plans import registered_kinds
 from odfa11y.report import (
     RULES,
     FactKeys,
@@ -38,6 +40,15 @@ def _report() -> Report:
         location=Location("content/paragraph[2]"),
         details={"count": 2},
     )
+    report.add_decision(
+        OpenDecision(
+            registered_kinds()["text.linkify_addresses"],
+            None,
+            None,
+            {"enabled": False},
+            ("TXT030",),
+        )
+    )
     return report
 
 
@@ -52,7 +63,7 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
     assert "  fidelity.raster_changed_ratios: 2 record(s)" in lines
     assert "  WARNING TXT030: Needs review" in lines
     assert "    location: content/paragraph[2]" in lines
-    assert any(line.strip() == "remedy: text.remediation.linkify_plain_addresses" for line in lines)
+    assert any("text.linkify_addresses" in line for line in lines)
     assert any(line.strip() == "count: 2" for line in lines)
 
 
@@ -67,7 +78,8 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
         "warning",
         "links",
     )
-    assert finding["remedy"] == "text.remediation.linkify_plain_addresses"
+    assert "remedy" not in finding
+    assert single["decisions"][0]["kind"] == "text.linkify_addresses"
     assert finding["location"] == {"path": "content/paragraph[2]", "member": None}
     several = json.loads(render_reports([_report(), _report()], output_format="json"))
     assert isinstance(several, list)
@@ -121,15 +133,16 @@ def test_registry_ids_severities_and_remedies_are_consistent() -> None:
 
 def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_title() -> None:
     document = (Path(__file__).parents[1] / "docs/RULES.md").read_text(encoding="utf-8")
-    documented: dict[str, tuple[str, str, str | None]] = {}
+    documented: dict[str, tuple[str, str, str]] = {}
     for line in document.splitlines():
         match = re.match(r"\| `([A-Z]+\d{3})` \| (Error|Warning|Info) \| (.+?) \| (.*?) \|", line)
         if match:
             documented[match.group(1)] = (
                 match.group(2).lower(),
                 match.group(3),
-                match.group(4).strip().strip("`") or None,
+                match.group(4).replace("`", "").strip(),
             )
     assert documented == {
-        key: (rule.severity.value, rule.title, rule.remedy) for key, rule in RULES.items()
+        key: (rule.severity.value, rule.title, ", ".join(rule.decision_kinds))
+        for key, rule in RULES.items()
     }

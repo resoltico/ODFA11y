@@ -86,7 +86,7 @@ pytest enables strict options and treats warnings as errors. Tests use synthetic
 fixtures and invented native documents, never customer material. Helpers in
 `tests/documents.py` create package/flat fixtures, including deliberately unsupported
 representations used as rejection controls. A valid flat office-body Formula representation
-is not claimed. The [Configuration example](CONFIGURATION.md#example) is loaded directly
+is not claimed. The [Configuration example](PLAN.md#example) is loaded directly
 by a test.
 
 [Hypothesis](https://hypothesis.readthedocs.io/) properties in `tests/test_properties.py`

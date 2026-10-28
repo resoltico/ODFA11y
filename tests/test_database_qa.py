@@ -13,12 +13,13 @@ from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.errors import RemediationError
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
+
+from .operation_execution import assert_refused, execute_operations
 
 CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
 SOURCE = Path(__file__).parent / "family_corpus/fruit-database.odb"
@@ -68,8 +69,8 @@ def test_nested_database_descriptions_do_not_invalidate_their_own_review(tmp_pat
     plan = _descriptions(OdfDocument.open(source))
     assert len(plan.entries) == 3
     first, second = tmp_path / "first.odb", tmp_path / "second.odb"
-    assert remediate(source, first, [plan]).changed
-    assert not remediate(first, second, [plan]).changed
+    assert execute_operations(source, first, [plan]).changed
+    assert not execute_operations(first, second, [plan]).changed
     assert first.read_bytes() == second.read_bytes()
     assert "BASE004" not in {finding.rule_id for finding in audit_odf(second).findings}
     assert OdfDocument.open(second).storage.read("database/firebird.fbk") == document.storage.read(
@@ -121,7 +122,7 @@ def test_flat_base_metadata_edits_protect_settings_without_freezing_whole_docume
     assert validate(before).count == 0
     destination = tmp_path / "described.fodb"
     plan = _descriptions(before)
-    assert remediate(
+    assert execute_operations(
         source, destination, [SetMetadata(title="Fruit database", language="en-US"), plan]
     ).changed
     after = OdfDocument.open(destination)
@@ -130,10 +131,11 @@ def test_flat_base_metadata_edits_protect_settings_without_freezing_whole_docume
     assert etree.tostring(before_settings, method="c14n", exclusive=True) == etree.tostring(
         after_settings, method="c14n", exclusive=True
     )
-    assert not remediate(destination, tmp_path / "again.fodb", [plan]).changed
+    assert not execute_operations(destination, tmp_path / "again.fodb", [plan]).changed
     wrong = tmp_path / "wrong.fodb"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(destination, wrong, [ChangeDatabaseSettings()])
+    assert_refused(
+        execute_operations(destination, wrong, [ChangeDatabaseSettings()]), match="content changed"
+    )
     assert not wrong.exists()
 
 

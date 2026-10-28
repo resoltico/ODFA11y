@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import prepare_template, template_blockers
+from odfa11y.audit import plan_blockers, prepare_plan
 from odfa11y.errors import UnsupportedKindError
 from odfa11y.families import REGISTRY, style_usage
 from odfa11y.odf import Family
@@ -26,11 +26,11 @@ def test_template_api_prepares_loadable_configuration_for_source_layout(
     tmp_path: Path, layout: str
 ) -> None:
     source = (make_package if layout == "package" else make_flat)(tmp_path, "text")
-    report, template = prepare_template(source)
+    report, template = prepare_plan(source)
     assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
     assert template is not None
-    assert tomllib.loads(template) == {}
-    assert template_blockers(report) is None
+    assert set(tomllib.loads(template)) == {"plan"}
+    assert plan_blockers(report) is None
 
 
 @pytest.mark.parametrize("missing", [False, True])
@@ -40,9 +40,9 @@ def test_template_api_returns_readability_failure_without_preparing_decisions(
     source = tmp_path / "bad.odt"
     if not missing:
         source.write_bytes(b"invalid ODF")
-    report, template = prepare_template(source)
+    report, template = prepare_plan(source)
     assert template is None
-    blockers = template_blockers(report)
+    blockers = plan_blockers(report)
     assert blockers is not None
     assert [finding.rule_id for finding in blockers.findings] == ["PKG000"]
     assert blockers.sources == (source,)
@@ -50,11 +50,12 @@ def test_template_api_returns_readability_failure_without_preparing_decisions(
 
 def test_fixable_errors_leave_template_planning_available(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", title="")
-    report, template = prepare_template(source)
+    report, template = prepare_plan(source)
     assert report.error_count > 0
-    assert template_blockers(report) is None
+    assert plan_blockers(report) is None
     assert template is not None
-    assert '# title = ""  # META001' in template
+    assert '# [decisions."document.metadata"]' in template
+    assert "META001" in template
 
 
 def test_blocker_projection_preserves_original_full_report() -> None:
@@ -62,7 +63,7 @@ def test_blocker_projection_preserves_original_full_report() -> None:
     report.add(rules.META001)
     report.add(rules.PKG000)
     before = report.as_dict()
-    blockers = template_blockers(report)
+    blockers = plan_blockers(report)
     assert blockers is not None
     assert report.as_dict() == before
     assert [finding.rule_id for finding in blockers.findings] == ["PKG000"]
@@ -75,10 +76,11 @@ def test_generic_adapter_retains_common_metadata_decisions(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", title="")
     monkeypatch.delitem(REGISTRY, Family.TEXT)
-    report, template = prepare_template(source)
+    report, template = prepare_plan(source)
     assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "generic"
     assert template is not None
-    assert '# title = ""  # META001' in template
+    assert '# [decisions."document.metadata"]' in template
+    assert "META001" in template
 
 
 def test_style_usage_api_reports_text_family_usage(tmp_path: Path) -> None:
@@ -101,8 +103,8 @@ def test_template_api_without_decisions_still_returns_commented_template(
 ) -> None:
     monkeypatch.delitem(REGISTRY, Family.TEXT)
     source = make_minimal_odt(tmp_path / "source.odt")
-    report, template = prepare_template(source)
-    assert not any(finding.remedy for finding in report.findings)
+    report, template = prepare_plan(source)
+    assert not report.decisions
     assert template is not None
-    assert "no decisions" in template
-    assert tomllib.loads(template) == {}
+    assert "# [decisions." not in template
+    assert set(tomllib.loads(template)) == {"plan"}

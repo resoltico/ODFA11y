@@ -11,6 +11,9 @@ from odfa11y.odf import Part, qn
 from .sheets import sheet_name, sheets
 
 if TYPE_CHECKING:
+    from lxml import etree
+
+if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 SHEET_TAG = "sheet\t"
@@ -30,15 +33,7 @@ def sheet_snapshot(document: OdfDocument) -> tuple[str, ...]:
     for sheet in sheets(document.tree(Part.CONTENT)):
         entries.extend((
             f"{SHEET_TAG}{sheet_name(sheet)}",
-            "content\t"
-            + protected_xml(
-                normalized_graphic_tree(document, sheet),
-                omitted_root_attributes=(qn("table", "name"),),
-                omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
-                omitted_element_attributes={
-                    qn(ns, "a"): (qn("office", "title"),) for ns in ("draw", "text")
-                },
-            ),
+            "content\t" + sheet_identity(document, sheet),
         ))
     return tuple(entries)
 
@@ -61,3 +56,34 @@ def sheets_preserved(before: tuple[str, ...], after: tuple[str, ...], removed_bl
             for old, new in zip(before, after, strict=True)
         )
     )
+
+
+def sheet_identity(document: OdfDocument, sheet: etree._Element) -> str:
+    """Bind preserved sheet content independently of editable accessibility metadata.
+
+    Returns
+    -------
+    str
+        Full protected-content digest; sheet order is addressed separately.
+
+    """
+    return protected_xml(
+        normalized_graphic_tree(document, sheet),
+        omitted_root_attributes=(qn("table", "name"),),
+        omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
+        omitted_element_attributes={
+            qn(ns, "a"): (qn("office", "title"),) for ns in ("draw", "text")
+        },
+    )
+
+
+def sheet_fingerprint(document: OdfDocument, sheet: etree._Element) -> str:
+    """Bind a rename to the same preserved identity used by family guards.
+
+    Returns
+    -------
+    str
+        Reviewed target fingerprint, stable after allowed accessibility edits.
+
+    """
+    return sheet_identity(document, sheet)[:16]

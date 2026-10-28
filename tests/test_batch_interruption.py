@@ -17,6 +17,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import plan_header
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -24,15 +25,15 @@ if TYPE_CHECKING:
     from multiprocessing.synchronize import Event
     from pathlib import Path
 
-    from odfa11y.config import Config
+    from odfa11y.plans import Plan
 
 
 def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
     runner = importlib.import_module("odfa11y.batch.run")
-    original = runner.load_config
+    original = runner.load_plan
     count = 0
 
-    def block_second(path: str | Path) -> Config:
+    def block_second(path: str | Path) -> Plan:
         nonlocal count
         count += 1
         if count == 2:
@@ -41,7 +42,7 @@ def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
         return original(path)
 
     patch = pytest.MonkeyPatch()
-    patch.setattr(runner, "load_config", block_second)
+    patch.setattr(runner, "load_plan", block_second)
     result = runner.run_batch(manifest, output, PipelineOptions(profile="inspect"))
     sys.exit(result.exit_status)
 
@@ -52,7 +53,10 @@ def test_real_process_interruption_keeps_completed_evidence_and_pending_ids(
     tmp_path: Path, interrupt: int
 ) -> None:
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("first", "second", "third")]
     )
@@ -121,7 +125,10 @@ def test_forced_kill_at_publication_preserves_completed_bundles(
     if sys.platform == "win32":
         pytest.skip("SIGKILL publication boundaries are POSIX controls")
     make_minimal_odt(tmp_path / "doc.odt")
-    (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+    (tmp_path / "plan.toml").write_text(
+        plan_header(tmp_path / "doc.odt")
+        + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+    )
     manifest = manifest_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("first", "second", "third")]
     )

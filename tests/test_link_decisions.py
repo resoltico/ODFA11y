@@ -9,7 +9,6 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.config import load_config
 from odfa11y.content import (
     GraphicAlternative,
     LinkDescription,
@@ -23,10 +22,13 @@ from odfa11y.errors import PlanError
 from odfa11y.families import drawing, image, presentation, spreadsheet, text
 from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation.planning import compile_operations
 
-from .documents import Variant, make_flat
+from .documents import Variant, make_flat, make_package
 from .graphic_fixtures import _style
+from .operation_execution import execute_operations
+from .reviewed_plans import plan_header
 from .test_graphic_roles_links import _graphic
 
 if TYPE_CHECKING:
@@ -77,12 +79,12 @@ def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
             )
         }),
     ]
-    output = tmp_path / ("reviewed" + source.suffix)
+    output = tmp_path / ("0123456789abcdef" + source.suffix)
 
-    first = remediate(source, output, operations)
+    first = execute_operations(source, output, operations)
     assert first.changed
     assert validate(OdfDocument.open(output)).count == 0
-    repeated = remediate(output, tmp_path / "repeated.fodg", operations)
+    repeated = execute_operations(output, tmp_path / "repeated.fodg", operations)
     assert not repeated.changed
 
 
@@ -113,13 +115,15 @@ def test_link_identity_encoding_context_and_repeat_refusal(tmp_path: Path) -> No
 def test_family_link_configuration_requires_review_and_reaches_operations(
     tmp_path: Path, family: str
 ) -> None:
+    source = make_package(tmp_path, "graphics" if family == "drawing" else family)
+    header = plan_header(source)
     config = tmp_path / "links.toml"
     config.write_text(
-        f'[{family}.links."content/link[1]"]\n'
-        'description = "Read the guide"\nfingerprint = "reviewed"\n',
+        header + '[decisions."link.description"."content/link[1]"]\n'
+        'description = "Read the guide"\nfingerprint = "0123456789abcdef"\n',
         encoding="utf-8",
     )
-    [operation] = load_config(config).operations
+    [operation] = compile_operations(OdfDocument.open(source), load_plan(config))
     assert isinstance(
         operation,
         (
@@ -130,26 +134,38 @@ def test_family_link_configuration_requires_review_and_reaches_operations(
         ),
     )
     assert operation.name == "set_link_descriptions"
-    assert operation.entries["content/link[1]"] == LinkDescription("Read the guide", "reviewed")
+    assert operation.entries["content/link[1]"] == LinkDescription(
+        "Read the guide", "0123456789abcdef"
+    )
     for invalid in (
-        'description = ""\nfingerprint = "reviewed"',
+        'description = ""\nfingerprint = "0123456789abcdef"',
         'description = "Read the guide"',
         'description = "Read the guide"\nfingerprint = false',
-        'description = "Read the guide"\nfingerprint = "reviewed"\nname = "Target"',
+        'description = "Read the guide"\nfingerprint = "0123456789abcdef"\nname = "Target"',
     ):
-        config.write_text(f'[{family}.links."content/link[1]"]\n{invalid}\n', encoding="utf-8")
+        config.write_text(
+            header + f'[decisions."link.description"."content/link[1]"]\n{invalid}\n',
+            encoding="utf-8",
+        )
         with pytest.raises(PlanError):
-            load_config(config)
+            load_plan(config)
 
 
 @pytest.mark.parametrize("family", ["text", "spreadsheet", "presentation", "drawing", "image"])
 def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: str) -> None:
+    source = make_package(tmp_path, "graphics" if family == "drawing" else family)
+    header = plan_header(source)
     config = tmp_path / "roles.toml"
     config.write_text(
-        f'[{family}.graphics.Picture]\ndecorative = true\nfingerprint = "reviewed"\n',
+        header
+        + (
+            '[decisions."graphic.alternative"."content/frame[name=Picture]"]\n'
+            "decorative = true\n"
+            'fingerprint = "0123456789abcdef"\n'
+        ),
         encoding="utf-8",
     )
-    [operation] = load_config(config).operations
+    [operation] = compile_operations(OdfDocument.open(source), load_plan(config))
     assert isinstance(
         operation,
         (
@@ -161,13 +177,17 @@ def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: s
         ),
     )
     assert operation.name == "set_graphic_alternatives"
-    assert operation.entries["Picture"].decorative is True
+    assert operation.entries["content/frame[name=Picture]"].decorative is True
     for invalid in ("1", '"true"', "[true]"):
         config.write_text(
-            f"[{family}.graphics.Picture]\ndecorative = {invalid}\n", encoding="utf-8"
+            header
+            + '[decisions."graphic.alternative"."content/frame[name=Picture]"]\n'
+            + f"decorative = {invalid}\n"
+            + 'fingerprint = "0123456789abcdef"\n',
+            encoding="utf-8",
         )
         with pytest.raises(PlanError):
-            load_config(config)
+            load_plan(config)
 
 
 def test_unstyled_restoration_refuses_and_styled_role_composes_under_decorative_default(

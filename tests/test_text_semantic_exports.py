@@ -14,11 +14,13 @@ from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
 
 from .corpus_manifest import CORPUS
 from .fixtures import make_minimal_odt
+from .operation_execution import execute_operations
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -42,7 +44,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     )
     assert "PDF012" in {f.rule_id for f in audit_pdfua(baseline).findings}
     edited = tmp_path / "headings.odt"
-    remediate(source, edited, [SetHeadingLevels(decisions)])
+    execute_operations(source, edited, [SetHeadingLevels(decisions)])
     pdf = export_pdfua(
         edited, tmp_path / "headings.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
@@ -67,7 +69,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     verapdf = external_tool("verapdf")
     source = CORPUS / "table-no-header-row.odt"
     edited = tmp_path / "columns.odt"
-    remediate(source, edited, [MarkTableHeaders({"Table1": TableHeaders(columns=1)})])
+    execute_operations(source, edited, [MarkTableHeaders({"Table1": TableHeaders(columns=1)})])
     assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
     assert "TXT021" not in {f.rule_id for f in audit_odf(edited).findings}
     pdf = export_pdfua(
@@ -80,12 +82,15 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     assert validate_pdfua(pdf, executable=verapdf).compliant
     clean = make_minimal_odt(tmp_path / "clean.odt", features={"with_data_table": True})
     clean_columns = tmp_path / "clean-columns.odt"
-    remediate(clean, clean_columns, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
+    execute_operations(clean, clean_columns, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
     assert validate(OdfDocument.open(clean_columns)).count == 0
     record = run_pipeline(
         clean_columns,
-        [SetMetadata(title="Header column boundary", language="en-US")],
-        FidelityPolicy(),
+        reviewed_plan(
+            clean_columns,
+            [SetMetadata(title="Header column boundary", language="en-US")],
+            FidelityPolicy(),
+        ),
         tmp_path / "evidence",
         PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
     )

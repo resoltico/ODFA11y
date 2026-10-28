@@ -19,6 +19,7 @@ from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
 from odfa11y.report import FactKeys
 
 from .documents import TABLE_BODY, Variant, make_flat
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -70,7 +71,10 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     with pytest.raises(ToolFailedError, match="formula context"):
         export_document(source, tmp_path / "output.pdf")
     record = run_pipeline(
-        source, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(profile="verify")
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        tmp_path / "evidence",
+        PipelineOptions(profile="verify"),
     )
     assert record.failed_stage == "export-source"
     assert record.exit_status == 3

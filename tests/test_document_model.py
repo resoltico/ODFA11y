@@ -11,12 +11,13 @@ from lxml import etree
 
 from odfa11y.adapter import Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.errors import PackageError, RemediationError
+from odfa11y.errors import PackageError
 from odfa11y.odf import KINDS, NS, OdfDocument, PackageStorage, Part, Use, qn
 from odfa11y.odf.protection import PackageProtection
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 
 from .fixtures import make_minimal_odt
+from .operation_execution import assert_refused, execute_operations
 
 CORPUS = Path(__file__).parent
 CORPUS_DOCUMENTS = tuple(
@@ -61,7 +62,7 @@ def test_undeclared_tree_mutation_is_published_and_other_members_keep_their_byte
     source = make_minimal_odt(tmp_path / "source.odt")
     original = source.read_bytes()
     destination = tmp_path / "result.odt"
-    result = remediate(source, destination, [SetMetadata(title="Reviewed title")])
+    result = execute_operations(source, destination, [SetMetadata(title="Reviewed title")])
     assert result.changed
     before, after = PackageStorage(source), PackageStorage(destination)
     for member in before.member_names():
@@ -88,8 +89,10 @@ def test_mutation_misreported_as_unchanged_refuses_publication(
     )
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "result.odt"
-    with pytest.raises(RemediationError, match="reported no change but changed"):
-        remediate(source, destination, [SetMetadata(title="Reviewed title")])
+    assert_refused(
+        execute_operations(source, destination, [SetMetadata(title="Reviewed title")]),
+        match="reported no change but changed",
+    )
     assert not destination.exists()
 
 

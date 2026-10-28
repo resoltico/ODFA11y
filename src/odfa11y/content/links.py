@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-from odfa11y.adapter import Outcome, Status, config_tables
-from odfa11y.errors import PlanError
+from odfa11y.adapter import Outcome, Status
+from odfa11y.decisions import OpenDecision
+from odfa11y.decisions.kinds import LINK_DESCRIPTION
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.report import Location
 
@@ -19,16 +20,15 @@ from .graphic_identity import SHAPE_TAGS, GraphicIdentity
 from .graphic_style_identity import (
     normalized_graphic_tree,
 )
-from .text import eligible_text_node, text_context_path, visible_words
+from .text import eligible_text_node, reading_context_path, visible_words
 from .xml import protected_xml
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
 
     from lxml import etree
 
     from odfa11y.odf import OdfDocument
-    from odfa11y.report import Finding
 
 XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 LINK_TAGS = (qn("text", "a"), qn("draw", "a"))
@@ -71,9 +71,9 @@ def link_location(link: etree._Element, index: int) -> Location:
     """
     identity = link.get(XML_ID) if link.tag == qn("draw", "a") else None
     return (
-        Location(f"{text_context_path(link)}/link[id={quote(identity, safe='')}]")
+        Location(f"{reading_context_path(link)}/link[id={quote(identity, safe='')}]")
         if identity
-        else Location.indexed(text_context_path(link), "link", index)
+        else Location.indexed(reading_context_path(link), "link", index)
     )
 
 
@@ -204,49 +204,21 @@ def _link_problem(
     return problem
 
 
-def link_descriptions(table: dict[str, object], label: str) -> dict[str, LinkDescription]:
-    """Parse supplied descriptions and their mandatory review identities.
+def link_decision(
+    document: OdfDocument, link: etree._Element, index: int, rule_id: str
+) -> OpenDecision:
+    """Describe one reviewed link without hiding its identity in diagnostic details.
 
     Returns
     -------
-    dict[str, LinkDescription]
-        The reviewed explicit decisions.
-
-    Raises
-    ------
-    PlanError
-        The source context or supplied decision cannot be established safely.
+    OpenDecision
+        A source-bound link-description question.
 
     """
-    entries = {}
-    for target in table:
-        value = config_tables.table(table, target)
-        entry_label = f"{label}.{target}"
-        config_tables.known(value, {"description", "fingerprint"}, entry_label)
-        texts = config_tables.typed(value, str, entry_label)
-        if not texts.get("description", "").strip() or not texts.get("fingerprint", "").strip():
-            msg = f"{entry_label} requires nonblank description and fingerprint strings"
-            raise PlanError(msg)
-        entries[target] = LinkDescription(texts["description"], texts["fingerprint"])
-    return entries
-
-
-def link_template(findings: Sequence[Finding], family: str) -> list[str]:
-    """Offer descriptions only as disabled, blank human decisions.
-
-    Returns
-    -------
-    list[str]
-        Commented TOML decisions.
-
-    """
-    lines = []
-    for finding in findings:
-        if finding.location:
-            lines += [
-                f"# [{family}.links.{json.dumps(finding.location.path)}]",
-                '# description = ""  # describe the link purpose',
-                f"# fingerprint = {json.dumps(finding.details.get('fingerprint', ''))}",
-                "",
-            ]
-    return lines
+    return OpenDecision(
+        LINK_DESCRIPTION,
+        link_location(link, index),
+        link_fingerprint(document, link),
+        {"description": link.get(qn("office", "title")), "href": link.get(qn("xlink", "href"))},
+        (rule_id,),
+    )

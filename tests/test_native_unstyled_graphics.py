@@ -9,14 +9,13 @@ import pytest
 
 from odfa11y.adapter import Status
 from odfa11y.content import GraphicAlternative, graphics_fingerprint
-from odfa11y.errors import RemediationError
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import ExportSettings, export_pdfua
-from odfa11y.remediation import remediate
 
 from .native_resource_fixtures import PIXELS, decoded_images, writer_resource
+from .operation_execution import assert_refused, execute_operations
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -50,8 +49,10 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
     destination = tmp_path / "destination.fodt"
     destination.write_bytes(b"Existing destination")
     original = source.read_bytes()
-    with pytest.raises(RemediationError, match="placement and wrapping are unestablished"):
-        remediate(source, destination, [operation])
+    assert_refused(
+        execute_operations(source, destination, [operation]),
+        match="placement and wrapping are unestablished",
+    )
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"Existing destination"
     unchanged = document.save(tmp_path / "unchanged.fodt")

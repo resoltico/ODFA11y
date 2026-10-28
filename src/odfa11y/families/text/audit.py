@@ -8,15 +8,17 @@ from typing import TYPE_CHECKING
 
 from odfa11y.content import (
     document_links,
-    link_fingerprint,
+    link_decision,
     link_has_description,
     link_location,
 )
+from odfa11y.decisions import OpenDecision
 from odfa11y.errors import RemediationError
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
 from .contexts import context_location, has_revisions, text_nodes
+from .decisions import LINKIFY_ADDRESSES, REMOVE_SPACERS
 from .links import URI_RE, split_trailing_punctuation
 from .prose import prose_slots
 from .semantics import audit_headings, audit_images, audit_tables
@@ -54,12 +56,16 @@ def audit_text(document: OdfDocument, report: Report) -> None:
             report.add(
                 rules.TXT031,
                 location=link_location(link, index),
-                details={"fingerprint": link_fingerprint(document, link)},
             )
+            report.add_decision(link_decision(document, link, index, rules.TXT031.id))
     _audit_empty_spacers(document, report)
     _audit_notes(content, report)
     _audit_blinking(document, report)
     _audit_style_summary(document, report)
+
+    for kind, rule in [(LINKIFY_ADDRESSES, rules.TXT030), (REMOVE_SPACERS, rules.TXT040)]:
+        if any(finding.rule_id == rule.id for finding in report.findings):
+            report.add_decision(OpenDecision(kind, None, None, {"enabled": False}, (rule.id,)))
 
 
 def _audit_links(tree: etree._ElementTree, report: Report) -> None:

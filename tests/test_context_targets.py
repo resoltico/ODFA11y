@@ -9,7 +9,7 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Status
-from odfa11y.audit import audit_odf, prepare_template
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.content import GraphicAlternative, LinkDescription, link_fingerprint, link_location
 from odfa11y.families.text import (
     LinkifyAddresses,
@@ -19,9 +19,10 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediation import remediate
 
 from .documents import Variant, make_flat, make_package
+from .operation_execution import execute_operations
+from .reviewed_plans import question_for
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -55,7 +56,7 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     tmp_path: Path, make: Callable[[Path, str, Variant], Path]
 ) -> None:
     source = make(tmp_path, "text", Variant(body=BODY))
-    report, template = prepare_template(source)
+    report, template = prepare_plan(source)
     assert template is not None
     note_graphic = next(
         f
@@ -71,8 +72,8 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     assert note_table.location is not None
     assert note_graphic.location.path in template
     assert note_table.location.path in template
-    graphic_fingerprint = note_graphic.details["fingerprint"]
-    table_fingerprint = note_table.details["fingerprint"]
+    graphic_fingerprint = question_for(report, note_graphic).fingerprint
+    table_fingerprint = question_for(report, note_table).fingerprint
     assert isinstance(graphic_fingerprint, str)
     assert isinstance(table_fingerprint, str)
     operations = [
@@ -87,8 +88,8 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
         }),
     ]
     output = tmp_path / ("output" + source.suffix)
-    assert remediate(source, output, operations).changed
-    assert not remediate(output, tmp_path / ("again" + source.suffix), operations).changed
+    assert execute_operations(source, output, operations).changed
+    assert not execute_operations(output, tmp_path / ("again" + source.suffix), operations).changed
     tree = OdfDocument.open(output).tree(Part.CONTENT)
     main_frame, note_frame = select_elements(tree, "//draw:frame")
     assert main_frame.find(qn("svg", "desc")) is None
@@ -116,8 +117,8 @@ def test_legal_id_link_plan_composes_with_address_linkification(tmp_path: Path) 
         }),
     ]
     output = tmp_path / "output.fodt"
-    assert remediate(source, output, plan).changed
-    assert not remediate(output, tmp_path / "again.fodt", plan).changed
+    assert execute_operations(source, output, plan).changed
+    assert not execute_operations(output, tmp_path / "again.fodt", plan).changed
     report = audit_odf(output)
     assert not any(f.rule_id == "TXT030" for f in report.findings)
     edited = select_elements(OdfDocument.open(output).tree(Part.CONTENT), "//draw:a")[0]
@@ -165,9 +166,9 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
     operation = MarkTableHeaders({finding.location.path: TableHeaders(rows=1)})
     assert operation.apply(document)[0].status is Status.FAILED
     assert not document.dirty
-    reviewed_fingerprint = finding.details["fingerprint"]
+    reviewed_fingerprint = question_for(report, finding).fingerprint
     assert isinstance(reviewed_fingerprint, str)
     reviewed = MarkTableHeaders({
         finding.location.path: TableHeaders(rows=1, fingerprint=reviewed_fingerprint)
     })
-    assert remediate(source, tmp_path / "reviewed.fodt", [reviewed]).changed
+    assert execute_operations(source, tmp_path / "reviewed.fodt", [reviewed]).changed

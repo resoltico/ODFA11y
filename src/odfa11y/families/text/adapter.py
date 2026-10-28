@@ -10,12 +10,11 @@ from odfa11y.odf import Family, Part
 from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_text, style_summary
-from .config import parse_text_table
+from .decisions import DECISION_KINDS, operations
 from .language import default_language, set_default_language
 from .link_probe import write_link_probe
 from .preflight import preflight_text
 from .protection import protect_edit
-from .template import text_template
 from .text import text_is_preserved, visible_text_snapshot
 
 if TYPE_CHECKING:
@@ -84,8 +83,8 @@ ADAPTER = FamilyAdapter(
     set_default_language=set_default_language,
     snapshot=_snapshot,
     preserved=_preserved,
-    config_tables={"text": parse_text_table},
-    template=text_template,
+    decision_kinds=DECISION_KINDS,
+    operations=operations,
     review_items=REVIEW_ITEMS,
     pdf_filter="writer_pdf_Export",
     style_report=style_summary,

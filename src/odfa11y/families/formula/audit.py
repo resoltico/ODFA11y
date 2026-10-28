@@ -5,10 +5,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from odfa11y.decisions import OpenDecision
 from odfa11y.odf import Part, qn
 from odfa11y.report import FactKeys, Location, rules
 
-from .expression import expression, fingerprint
+from .decisions import FORMULA_ALTERNATIVE
+from .expression import expression
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -76,7 +78,16 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
     if not any(_meaningful(node) for node in nodes):
         report.add(rules.MATH001, "The mathematical expression is empty.", location=location)
     if not (root.get("alttext") or "").strip():
-        report.add(rules.MATH002, location=location, details={"fingerprint": fingerprint(root)})
+        report.add(rules.MATH002, location=location)
+        report.add_decision(
+            OpenDecision(
+                FORMULA_ALTERNATIVE,
+                None,
+                None,
+                {"alternative": root.get("alttext")},
+                (rules.MATH002.id,),
+            )
+        )
     if any(
         node.get("href") or node.get("src") or node.get("altimg") or node.get(qn("xlink", "href"))
         for node in nodes

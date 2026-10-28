@@ -11,21 +11,23 @@ from pypdf import PdfReader
 
 from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import RemediationError
 from odfa11y.external_tools import run_bounded
-from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
+from odfa11y.families.spreadsheet import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.pdf import ExportSettings, export_pdfua, validate_pdfua
 from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
 
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import reviewed_plan
 from .spreadsheet_fixtures import (
     HIDDEN_SHEET_STYLE,
     data_sheet,
     make_spreadsheet,
     picture,
+    reviewed_sheet_names,
     row,
     sheet,
     text_cell,
@@ -149,16 +151,18 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     soffice = external_tool("soffice", "libreoffice")
     source = author(tmp_path, soffice, *problem_sheets(), styles=HIDDEN_SHEET_STYLE)
     fingerprint = next(
-        str(f.details["fingerprint"]) for f in audit_odf(source).findings if f.rule_id == "SHEET005"
+        str(d.fingerprint)
+        for d in audit_odf(source).decisions
+        if d.kind.id == "graphic.alternative"
     )
     plan = [
-        SetSheetNames({"Sheet1": "Fruit prices", "Blank": "Spare"}),
+        reviewed_sheet_names(source, {"Sheet1": "Fruit prices", "Blank": "Spare"}),
         SetGraphicAlternatives({
             "Logo": GraphicAlternative("Logo", "A sample picture", fingerprint)
         }),
     ]
     output = tmp_path / "remediated.ods"
-    result = remediate(source, output, plan)
+    result = execute_operations(source, output, plan)
     assert result.changed
     assert OdfDocument.open(output).tree(Part.SETTINGS).xpath(
         "//config:config-item-map-named[@config:name='ScriptConfiguration']/config:config-item-map-entry/@config:name",
@@ -172,7 +176,7 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     assert "Fruit prices" in after_text
     assert "Fruit prices" not in before_text
     assert "Apples" in after_text
-    assert not remediate(output, tmp_path / "again.ods", plan).changed
+    assert not execute_operations(output, tmp_path / "again.ods", plan).changed
 
 
 def test_a_sheet_a_libreoffice_formula_refers_to_is_not_renamed(
@@ -185,8 +189,10 @@ def test_a_sheet_a_libreoffice_formula_refers_to_is_not_renamed(
         styles=HIDDEN_SHEET_STYLE,
     )
     output = tmp_path / "remediated.ods"
-    with pytest.raises(RemediationError, match="may refer to it by name"):
-        remediate(source, output, [SetSheetNames({"Data": "Notes"})])
+    assert_refused(
+        execute_operations(source, output, [reviewed_sheet_names(source, {"Data": "Notes"})]),
+        match="may refer to it by name",
+    )
     assert not output.exists()
 
 
@@ -197,7 +203,9 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     source = author(tmp_path, soffice, *clean_sheets())
     plan = [SetMetadata(language="en-GB")]
     options = PipelineOptions(soffice=soffice)
-    record = run_pipeline(source, plan, FidelityPolicy(), tmp_path / "out", options)
+    record = run_pipeline(
+        source, reviewed_plan(source, plan, FidelityPolicy()), tmp_path / "out", options
+    )
     reached = stages(record)
     assert all(reached[name] == "passed" for name in PIPELINE_STAGES[:6]), record.as_dict()
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
@@ -220,9 +228,12 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     source = author(tmp_path, soffice, *clean_sheets())
-    plan = [SetSheetNames({"Fruit": "Fruit prices"})]
+    plan = [reviewed_sheet_names(source, {"Fruit": "Fruit prices"})]
     record = run_pipeline(
-        source, plan, FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice=soffice)
+        source,
+        reviewed_plan(source, plan, FidelityPolicy()),
+        tmp_path / "out",
+        PipelineOptions(soffice=soffice),
     )
     assert stages(record)["remediate"] == "passed"
     report = compare_pdfs(
@@ -240,7 +251,10 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     source = author(tmp_path, soffice, *clean_sheets())
     options = PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf)
     record = run_pipeline(
-        source, [SetMetadata(language="en-GB")], FidelityPolicy(), tmp_path / "out", options
+        source,
+        reviewed_plan(source, [SetMetadata(language="en-GB")], FidelityPolicy()),
+        tmp_path / "out",
+        options,
     )
     reached = stages(record)
     assert reached["export-source"] == reached["export-remediated"] == "passed"

@@ -4,6 +4,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+lazy from collections.abc import Mapping
+
+from odfa11y.families.spreadsheet import SetSheetNames
+from odfa11y.families.spreadsheet.names import SheetNameChange
+from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
+from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
+from odfa11y.odf import OdfDocument, Part
 
 from .documents import Variant, make_flat, make_package
 
@@ -129,3 +136,26 @@ def make_spreadsheet(
     body = f"<office:spreadsheet>{''.join(sheets)}</office:spreadsheet>"
     variant = Variant(body=body, automatic_styles=automatic_styles)
     return LAYOUTS[layout](directory, kind, variant)
+
+
+def reviewed_sheet_names(source: OdfDocument | Path, names: Mapping[str, str]) -> SetSheetNames:
+    """Bind explicit fixture answers to current sheet ordinals and preserved content.
+
+    Returns
+    -------
+    SetSheetNames
+        The real operation contract; missing names receive a nonexistent ordinal.
+
+    """
+    document = source if isinstance(source, OdfDocument) else OdfDocument.open(source)
+    available = list(sheets(document.tree(Part.CONTENT)))
+    entries = {}
+    for position, (old, new) in enumerate(names.items(), 1):
+        match = next(
+            ((i, node) for i, node in enumerate(available, 1) if sheet_name(node) == old), None
+        )
+        index, node = match or (len(available) + position, None)
+        entries[f"content/sheet[{index}]"] = SheetNameChange(
+            new, sheet_fingerprint(document, node) if node is not None else "0" * 16
+        )
+    return SetSheetNames(entries)

@@ -15,6 +15,7 @@ from odfa11y.pipeline import run as pipeline_run
 
 from .pdf_fixtures import text_pdf
 from .resource_declaration_fixtures import declaration
+from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -44,7 +45,12 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
         assert main(["compare", str(left), str(right), "--format", "json"]) == 3
     assert launched == [safe]
     output = tmp_path / "evidence"
-    record = run_pipeline(source, [], FidelityPolicy(), output, PipelineOptions(profile="verify"))
+    record = run_pipeline(
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        output,
+        PipelineOptions(profile="verify"),
+    )
     assert record.failed_stage == "export-source"
     assert record.exit_status == 3
     assert (output / "remediated.odg").read_bytes() == source.read_bytes()
@@ -52,7 +58,10 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
     assert check_bundle(output) == []
     inspected = tmp_path / "inspect"
     result = run_pipeline(
-        source, [], FidelityPolicy(), inspected, PipelineOptions(profile="inspect")
+        source,
+        reviewed_plan(source, [], FidelityPolicy()),
+        inspected,
+        PipelineOptions(profile="inspect"),
     )
     assert result.passed
     assert result.exit_status == 0

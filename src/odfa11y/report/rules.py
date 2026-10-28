@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""The registry of stable finding rules: the one source of id, severity and remedy."""
+"""The registry of stable finding rules: the one source of id, severity and decision kinds."""
 
 from __future__ import annotations
 
@@ -33,22 +33,26 @@ class Category(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Rule:
-    """A stable check identity; ``remedy`` names the configuration key that addresses it."""
+    """A stable check identity; decision kinds name the human answers that can address it."""
 
     id: str
     severity: Severity
     category: Category
     title: str
-    remedy: str | None = None
+    decision_kinds: tuple[str, ...] = ()
 
 
 RULES: dict[str, Rule] = {}
 
 
 def _rule(
-    rule_id: str, severity: Severity, category: Category, title: str, remedy: str | None = None
+    rule_id: str,
+    severity: Severity,
+    category: Category,
+    title: str,
+    decision_kinds: tuple[str, ...] = (),
 ) -> Rule:
-    rule = Rule(rule_id, severity, category, title, remedy)
+    rule = Rule(rule_id, severity, category, title, decision_kinds)
     RULES[rule_id] = rule
     return rule
 
@@ -70,7 +74,11 @@ PKG008 = _rule("PKG008", WARNING, PKG, "Declared signatures are unverified.")
 PKG009 = _rule("PKG009", ERROR, PKG, "Manifest encryption prevents complete inspection.")
 XML001 = _rule("XML001", ERROR, XML, "A required XML member cannot be parsed.")
 ODF001 = _rule(
-    "ODF001", ERROR, ODF, "Package members declare different ODF versions.", "document.odf_version"
+    "ODF001",
+    ERROR,
+    ODF,
+    "Package members declare different ODF versions.",
+    ("document.odf_version",),
 )
 ODF002 = _rule("ODF002", ERROR, ODF, "Manifest root file-entry '/' is missing.")
 ODF003 = _rule(
@@ -78,7 +86,7 @@ ODF003 = _rule(
     ERROR,
     ODF,
     "Manifest root file-entry version differs from the document version.",
-    "document.odf_version",
+    ("document.odf_version",),
 )
 ODF004 = _rule("ODF004", ERROR, ODF, "Manifest root media type differs from the document's.")
 ODF005 = _rule("ODF005", ERROR, ODF, "The media type is not an OpenDocument document type.")
@@ -94,21 +102,29 @@ ODF012 = _rule(
     "ODF012", WARNING, ODF, "Native resource declarations are unresolved or unestablished."
 )
 ODF013 = _rule("ODF013", WARNING, ODF, "Pipeline export cannot preserve filename/path fields.")
-META001 = _rule("META001", ERROR, META, "Document title metadata is missing.", "document.title")
-META002 = _rule("META002", ERROR, META, "Document language is not declared.", "document.language")
+META001 = _rule(
+    "META001", ERROR, META, "Document title metadata is missing.", ("document.metadata",)
+)
+META002 = _rule(
+    "META002", ERROR, META, "Document language is not declared.", ("document.metadata",)
+)
 META003 = _rule(
-    "META003", WARNING, META, "Metadata and default style languages disagree.", "document.language"
+    "META003",
+    WARNING,
+    META,
+    "Metadata and default style languages disagree.",
+    ("document.metadata",),
 )
 META004 = _rule(
     "META004", WARNING, META, "Document language syntax or default-style target is unresolved."
 )
-TXT001 = _rule("TXT001", ERROR, SEM, "Heading has no valid outline level.", "text.heading_levels")
+TXT001 = _rule("TXT001", ERROR, SEM, "Heading has no valid outline level.", ("heading.level",))
 TXT002 = _rule(
     "TXT002",
     ERROR,
     SEM,
     "Heading hierarchy starts too deep or skips a level.",
-    "text.heading_levels",
+    ("heading.level",),
 )
 TXT003 = _rule("TXT003", WARNING, SEM, "Heading text resembles manually typed numbering.")
 TXT004 = _rule("TXT004", INFO, SEM, "No structural headings were found.")
@@ -117,33 +133,35 @@ TXT060 = _rule("TXT060", WARNING, SEM, "Tracked revision scope requires review."
 TXT061 = _rule("TXT061", WARNING, SEM, "Hidden or conditional content requires visibility review.")
 TXT062 = _rule("TXT062", WARNING, SEM, "Paragraph style scope or properties are unresolved.")
 TXT010 = _rule(
-    "TXT010", ERROR, SEM, "Graphic has neither accessible title nor description.", "text.graphics"
+    "TXT010",
+    ERROR,
+    SEM,
+    "Graphic has neither accessible title nor description.",
+    ("graphic.alternative",),
 )
 TXT020 = _rule("TXT020", WARNING, SEM, "Merged table cells need header-relationship review.")
 TXT022 = _rule("TXT022", ERROR, SEM, "Table grid or header bands cannot be resolved safely.")
 TXT021 = _rule(
-    "TXT021", WARNING, SEM, "Data-like table has no semantic headers.", "text.table_headers"
+    "TXT021", WARNING, SEM, "Data-like table has no semantic headers.", ("table.headers",)
 )
 TXT030 = _rule(
     "TXT030",
     WARNING,
     LNK,
     "Visible URL or email address is not a hyperlink.",
-    "text.remediation.linkify_plain_addresses",
+    ("text.linkify_addresses",),
 )
 TXT040 = _rule(
     "TXT040",
     INFO,
     LAY,
     "Empty paragraphs may be visual spacers.",
-    "text.remediation.remove_empty_spacers",
+    ("text.remove_spacers",),
 )
 TXT050 = _rule("TXT050", ERROR, STYLE, "Blinking text styling is declared.")
 
 SHEET001 = _rule("SHEET001", ERROR, SEM, "Sheet has no name.")
-SHEET002 = _rule(
-    "SHEET002", WARNING, SEM, "Sheet keeps its default name.", "spreadsheet.sheet_names"
-)
+SHEET002 = _rule("SHEET002", WARNING, SEM, "Sheet keeps its default name.", ("sheet.name",))
 SHEET003 = _rule("SHEET003", WARNING, SEM, "Data sheet marks no header rows.")
 SHEET004 = _rule("SHEET004", WARNING, SEM, "Data sheet merges cells.")
 SHEET005 = _rule(
@@ -151,66 +169,80 @@ SHEET005 = _rule(
     ERROR,
     SEM,
     "Picture, chart or object has neither accessible title nor description.",
-    "spreadsheet.graphics",
+    ("graphic.alternative",),
 )
 SHEET006 = _rule("SHEET006", WARNING, LNK, "Hyperlink text is a raw address.")
 SHEET007 = _rule("SHEET007", WARNING, SEM, "Empty sheet follows the last sheet with content.")
 SHEET008 = _rule("SHEET008", WARNING, SEM, "Hidden sheets, rows or columns are present.")
 
 PRES001 = _rule("PRES001", ERROR, SEM, "Pages are missing, unnamed or ambiguously named.")
-PRES002 = _rule("PRES002", WARNING, SEM, "Page has no accessible title.", "presentation.pages")
+PRES002 = _rule("PRES002", WARNING, SEM, "Page has no accessible title.", ("page.metadata",))
 PRES003 = _rule(
-    "PRES003", ERROR, SEM, "Graphic payload has no accessible description.", "presentation.graphics"
+    "PRES003",
+    ERROR,
+    SEM,
+    "Graphic payload has no accessible description.",
+    ("graphic.alternative",),
 )
 PRES004 = _rule(
     "PRES004",
     WARNING,
     SEM,
     "Nontext shape needs a meaning/decorative-content decision.",
-    "presentation.graphics",
+    ("graphic.alternative",),
 )
 PRES005 = _rule(
-    "PRES005", ERROR, SEM, "Navigation order is incomplete or ambiguous.", "presentation.pages"
+    "PRES005", ERROR, SEM, "Navigation order is incomplete or ambiguous.", ("page.navigation",)
 )
 PRES006 = _rule(
-    "PRES006", WARNING, SEM, "Page has no explicit navigation order.", "presentation.pages"
+    "PRES006", WARNING, SEM, "Page has no explicit navigation order.", ("page.navigation",)
 )
 PRES007 = _rule("PRES007", WARNING, SEM, "Hidden content needs review.")
 PRES008 = _rule(
     "PRES008", INFO, SEM, "Notes or annotations need relationship and reading-order review."
 )
-PRES009 = _rule("PRES009", ERROR, LNK, "Hyperlink has no readable purpose.", "presentation.links")
+PRES009 = _rule("PRES009", ERROR, LNK, "Hyperlink has no readable purpose.", ("link.description",))
 
 DRAW001 = _rule("DRAW001", ERROR, SEM, "Pages are missing, unnamed or ambiguously named.")
-DRAW002 = _rule("DRAW002", WARNING, SEM, "Page has no accessible title.", "drawing.pages")
+DRAW002 = _rule("DRAW002", WARNING, SEM, "Page has no accessible title.", ("page.metadata",))
 DRAW003 = _rule(
-    "DRAW003", ERROR, SEM, "Graphic payload has no accessible description.", "drawing.graphics"
+    "DRAW003",
+    ERROR,
+    SEM,
+    "Graphic payload has no accessible description.",
+    ("graphic.alternative",),
 )
 DRAW004 = _rule(
     "DRAW004",
     WARNING,
     SEM,
     "Nontext shape needs a meaning/decorative-content decision.",
-    "drawing.graphics",
+    ("graphic.alternative",),
 )
 DRAW005 = _rule(
-    "DRAW005", ERROR, SEM, "Navigation order is incomplete or ambiguous.", "drawing.pages"
+    "DRAW005", ERROR, SEM, "Navigation order is incomplete or ambiguous.", ("page.navigation",)
 )
-DRAW006 = _rule("DRAW006", WARNING, SEM, "Page has no explicit navigation order.", "drawing.pages")
+DRAW006 = _rule(
+    "DRAW006", WARNING, SEM, "Page has no explicit navigation order.", ("page.navigation",)
+)
 DRAW007 = _rule("DRAW007", WARNING, SEM, "Hidden content needs review.")
 DRAW008 = _rule(
     "DRAW008", INFO, SEM, "Notes or annotations need relationship and reading-order review."
 )
-DRAW009 = _rule("DRAW009", ERROR, LNK, "Hyperlink has no readable purpose.", "drawing.links")
+DRAW009 = _rule("DRAW009", ERROR, LNK, "Hyperlink has no readable purpose.", ("link.description",))
 
 MATH001 = _rule("MATH001", ERROR, SEM, "Native mathematical expression is missing or unsupported.")
-MATH002 = _rule("MATH002", ERROR, SEM, "Formula has no spoken alternative.", "formula.alternative")
+MATH002 = _rule(
+    "MATH002", ERROR, SEM, "Formula has no spoken alternative.", ("formula.alternative",)
+)
 MATH003 = _rule("MATH003", WARNING, SEM, "Formula references external content requiring review.")
 
 CHART001 = _rule("CHART001", ERROR, SEM, "Chart body or data series is missing or ambiguous.")
-CHART002 = _rule("CHART002", WARNING, SEM, "Chart has no identifying title.", "document.title")
+CHART002 = _rule(
+    "CHART002", WARNING, SEM, "Chart has no identifying title.", ("document.metadata",)
+)
 CHART003 = _rule(
-    "CHART003", ERROR, SEM, "Chart has no supplied document description.", "document.description"
+    "CHART003", ERROR, SEM, "Chart has no supplied document description.", ("document.metadata",)
 )
 CHART004 = _rule("CHART004", ERROR, SEM, "Local chart range does not match its declared data grid.")
 CHART005 = _rule(
@@ -223,7 +255,9 @@ IMAGE005 = _rule(
 )
 IMAGE004 = _rule("IMAGE004", ERROR, SEM, "Image payload is malformed or unsafe to inspect.")
 IMAGE001 = _rule("IMAGE001", ERROR, SEM, "Image body does not contain one supported graphic frame.")
-IMAGE002 = _rule("IMAGE002", ERROR, SEM, "Image has no accessible description.", "image.graphics")
+IMAGE002 = _rule(
+    "IMAGE002", ERROR, SEM, "Image has no accessible description.", ("graphic.alternative",)
+)
 IMAGE003 = _rule(
     "IMAGE003", WARNING, SEM, "Image resource is external, unavailable or not embedded."
 )
@@ -238,7 +272,7 @@ BASE004 = _rule(
     WARNING,
     SEM,
     "Database object description is missing or ambiguous.",
-    "database.descriptions",
+    ("database.description",),
 )
 BASE005 = _rule(
     "BASE005", WARNING, SEM, "Database has executable scripts requiring offline review."
@@ -294,7 +328,9 @@ GRAPHIC001 = _rule("GRAPHIC001", WARNING, SEM, "Graphic decorative role is unres
 GRAPHIC002 = _rule(
     "GRAPHIC002", WARNING, SEM, "Decorative graphic retains authored alternative metadata."
 )
-TXT031 = _rule("TXT031", ERROR, LNK, "Hyperlink has no readable source purpose.", "text.links")
+TXT031 = _rule(
+    "TXT031", ERROR, LNK, "Hyperlink has no readable source purpose.", ("link.description",)
+)
 SHEET014 = _rule(
-    "SHEET014", ERROR, LNK, "Hyperlink has no readable source purpose.", "spreadsheet.links"
+    "SHEET014", ERROR, LNK, "Hyperlink has no readable source purpose.", ("link.description",)
 )

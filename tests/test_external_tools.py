@@ -24,6 +24,7 @@ from odfa11y.odf import PackageStorage
 from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
+from .reviewed_plans import plan_header
 from .test_batch import manifest_file
 
 if TYPE_CHECKING:
@@ -248,12 +249,18 @@ def test_real_native_termination_cleans_tool_and_preserves_completed_batch(
     output = tmp_path / ("out.pdf" if mode == "standalone" else "batch")
     if mode == "batch":
         make_minimal_odt(tmp_path / "first.odt")
-        (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
+        (tmp_path / "plan.toml").write_text(
+            plan_header(tmp_path / "first.odt")
+            + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+        )
+        (tmp_path / "second.plan.toml").write_text(
+            plan_header(source) + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
+        )
         source = manifest_file(
             tmp_path,
             [
                 ("first", "first.odt", "plan.toml"),
-                ("second", "second-input/source.odt", "plan.toml"),
+                ("second", "second-input/source.odt", "second.plan.toml"),
             ],
         )
     context = multiprocessing.get_context("spawn")

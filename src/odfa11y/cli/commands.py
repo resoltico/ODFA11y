@@ -7,13 +7,14 @@ import json
 import sys
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import prepare_template
-from odfa11y.config import Config, load_config
+from odfa11y.audit import prepare_plan
 from odfa11y.errors import OdfA11yError, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.external_tools import termination_interrupt
+from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import ExitStatus, failure_status
 from odfa11y.pipeline import NativeOptions, compare_documents, export_document, inspect_tools
+from odfa11y.plans import load_plan
 from odfa11y.remediation import remediate
 from odfa11y.report import Report, exit_status, render_reports, terminal_text
 
@@ -48,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": audit_command,
         "batch": batch_command,
-        "template": _template,
+        "plan": _plan,
         "remediate": _remediate,
         "export": _export,
         "compare": _compare,
@@ -80,8 +81,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             return failure_status(exc)
         print(f"error: {terminal_text(exc)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        if isinstance(exc, PlanError) and getattr(args, "config", None):
-            print(f"Configuration: {terminal_text(args.config)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+        if isinstance(exc, PlanError) and getattr(args, "plan", None):
+            print(f"Plan: {terminal_text(args.plan)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         details = getattr(exc, "details", "")
         if details:
             print(terminal_text(details), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
@@ -96,10 +97,10 @@ def _preflight_sarif(args: argparse.Namespace) -> None:
     render_reports([report], output_format="sarif", source_root=args.source_root)
 
 
-def _template(args: argparse.Namespace) -> int:
-    report, template = prepare_template(args.source)
+def _plan(args: argparse.Namespace) -> int:
+    report, template = prepare_plan(args.source)
     if template is None:
-        print("No template: the document cannot be read well enough to plan.", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+        print("No plan: the document cannot be read well enough to plan.", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         print(render_reports([report]), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         return exit_status([report])
     print(template, end="")  # noqa: T201  CLI output is the command interface.
@@ -107,15 +108,19 @@ def _template(args: argparse.Namespace) -> int:
 
 
 def _remediate(args: argparse.Namespace) -> int:
-    config = load_config(args.config)
-    result = remediate(args.source, args.destination, config.operations, dry_run=args.dry_run)
+    plan = load_plan(args.plan)
+    result = remediate(
+        args.source, args.destination, plan, dry_run=args.dry_run, rebind=args.rebind
+    )
     if args.format == "json":
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
-        return 0
+        return result.exit_status
     print(  # noqa: T201  CLI output is the command interface.
         "Dry run; proposed changes only. Nothing written."
         if args.dry_run
         else f"Wrote: {terminal_text(result.destination)}"
+        if result.published
+        else "Not published; review the failed guards."
     )
     for outcome in result.outcomes:
         key = f" [{terminal_text(outcome.key)}]" if outcome.key else ""
@@ -123,6 +128,8 @@ def _remediate(args: argparse.Namespace) -> int:
             f"- {outcome.status.value:9} {terminal_text(outcome.operation)}{key}: "
             f"{terminal_text(outcome.message)}"
         )
+    for violation in result.violations:
+        print(f"- {violation.kind}: {terminal_text(violation.message)}")  # noqa: T201  CLI output is the command interface.
     if not result.outcomes:
         print("- No operations were configured. Enable reviewed decisions in your TOML plan.")  # noqa: T201  CLI output is the command interface.
     print(  # noqa: T201  CLI output is the command interface.
@@ -130,7 +137,7 @@ def _remediate(args: argparse.Namespace) -> int:
         f"{result.schema.before_count} before, {result.schema.after_count} after, "
         f"{result.schema.new_count} new"
     )
-    return 0
+    return result.exit_status
 
 
 def _export(args: argparse.Namespace) -> int:
@@ -141,7 +148,7 @@ def _export(args: argparse.Namespace) -> int:
 
 
 def _compare(args: argparse.Namespace) -> int:
-    policy = (load_config(args.config) if args.config else Config()).fidelity
+    policy = load_plan(args.plan).fidelity if args.plan else FidelityPolicy()
     report = compare_documents(
         args.source, args.candidate, policy, args.diff_dir, _native_options(args)
     )

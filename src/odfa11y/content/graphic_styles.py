@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from odfa11y.odf import NS, Part, qn
 from odfa11y.report import Location, rules
 
-from .text import text_context_path, visible_words
+from .text import reading_context_path, visible_words
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -253,7 +253,9 @@ def audit_graphic_role(document: OdfDocument, shape: etree._Element, report: Rep
         problem = problem or "Group graphic roles require individual leaf semantic review."
     if role.decorative:
         problem = problem or decorative_problem(shape)
-    location = Location.named(text_context_path(shape), "frame", shape.get(qn("draw", "name"), ""))
+    location = Location.named(
+        reading_context_path(shape), "frame", shape.get(qn("draw", "name"), "")
+    )
     if problem:
         report.add(rules.GRAPHIC001, problem, location=location)
         return False

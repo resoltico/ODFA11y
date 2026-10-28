@@ -3,6 +3,808 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "decisions": {
+      "items": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "version": {
+                    "description": "ODF version whose result must satisfy schema guards.",
+                    "enum": [
+                      "1.3",
+                      "1.4"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "document.odf_version"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Document description and context.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S"
+                  },
+                  "language": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Intended default language, preserving explicit local overrides.",
+                    "format": "odfa11y-language-tag",
+                    "pattern": "\\S"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Document title identifying its purpose.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S"
+                  }
+                },
+                "required": [
+                  "title",
+                  "description",
+                  "language"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "document.metadata"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "description": "Enable only after reviewing all affected content.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "text.linkify_addresses"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "description": "Enable only after reviewing all affected content.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "text.remove_spacers"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "decorative": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Explicit decorative role, subject to source safety guards."
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Explain the graphic's meaning; empty text clears it.",
+                    "format": "odfa11y-xml-text"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Accessible title; empty text explicitly clears it.",
+                    "format": "odfa11y-xml-text"
+                  }
+                },
+                "required": [
+                  "title",
+                  "description",
+                  "decorative"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "graphic.alternative"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "level": {
+                    "description": "Intended outline level.",
+                    "maximum": 10,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "level"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "heading.level"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "columns": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Number of leading logical header columns.",
+                    "minimum": 1
+                  },
+                  "rows": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Number of leading logical header rows.",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "rows",
+                  "columns"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "table.headers"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "exact_reference": {
+                    "description": "Match the entire reference paragraph.",
+                    "type": "boolean"
+                  },
+                  "include_headings": {
+                    "description": "Also apply to headings using the selected styles.",
+                    "type": "boolean"
+                  },
+                  "reference_text": {
+                    "description": "Authored text identifying the reference paragraph.",
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "target_styles": {
+                    "description": "Existing paragraph styles selected for spacing normalization.",
+                    "items": {
+                      "pattern": "\\S",
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "reference_text",
+                  "target_styles",
+                  "exact_reference",
+                  "include_headings"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "text.spacing"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "description": "Explain the link's purpose in its reading context.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "description"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "link.description"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "text": {
+                    "description": "Explain the declared object without changing SQL or bindings.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "database.description"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "alternative": {
+                    "description": "Write the formula's spoken meaning in its intended language.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "alternative"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "type": "null"
+              },
+              "kind": {
+                "const": "formula.alternative"
+              },
+              "target": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Page purpose and context.",
+                    "format": "odfa11y-xml-text"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Accessible page title.",
+                    "format": "odfa11y-xml-text"
+                  }
+                },
+                "required": [
+                  "title",
+                  "description"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "page.metadata"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "navigation": {
+                    "description": "Complete reading order of the page's existing shape identities.",
+                    "items": {
+                      "format": "odfa11y-xml-text",
+                      "pattern": "\\S",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "navigation"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "page.navigation"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "description": "Name identifying what the sheet contains.",
+                    "format": "odfa11y-sheet-name",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
+                "const": "sheet.name"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "answer"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "type": "array"
+    },
     "document": {
       "additionalProperties": false,
       "properties": {
@@ -262,6 +1064,48 @@
       },
       "type": "object"
     },
+    "plan": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "enum": [
+                1
+              ]
+            },
+            "generator": {
+              "description": "Version that generated the plan.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "source": {
+              "additionalProperties": false,
+              "properties": {
+                "sha256": {
+                  "description": "SHA-256 of the reviewed source bytes.",
+                  "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "sha256"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "format",
+            "source",
+            "generator"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "plan_sha256": {
       "type": "string"
     },
@@ -310,6 +1154,9 @@
     },
     "python": {
       "type": "string"
+    },
+    "rebind": {
+      "type": "boolean"
     },
     "schemas": {
       "additionalProperties": {
@@ -378,6 +1225,15 @@
                   "dry_run": {
                     "type": "boolean"
                   },
+                  "exit_status": {
+                    "enum": [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4
+                    ]
+                  },
                   "format": {
                     "enum": [
                       1
@@ -431,17 +1287,44 @@
                     },
                     "type": "array"
                   },
+                  "published": {
+                    "type": "boolean"
+                  },
+                  "rebind": {
+                    "type": "boolean"
+                  },
                   "schema": {
                     "additionalProperties": false,
                     "properties": {
                       "after_count": {
-                        "type": "integer"
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "before_count": {
-                        "type": "integer"
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "new_count": {
-                        "type": "integer"
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "status": {
                         "enum": [
@@ -452,7 +1335,14 @@
                         ]
                       },
                       "unlocated_count": {
-                        "type": "integer"
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "version": {
                         "anyOf": [
@@ -477,6 +1367,54 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "violations": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "failed-outcome",
+                            "protected-content",
+                            "opaque-resource",
+                            "schema-regression",
+                            "edit-accounting",
+                            "foreign-operation"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "operation": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "message",
+                        "operation",
+                        "key"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
                   }
                 },
                 "required": [
@@ -485,9 +1423,13 @@
                   "outcomes",
                   "schema",
                   "format",
+                  "published",
+                  "violations",
+                  "rebind",
                   "dry_run",
                   "operations",
-                  "changed"
+                  "changed",
+                  "exit_status"
                 ],
                 "type": "object"
               },
@@ -501,6 +1443,615 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "decisions": {
+                    "items": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "document.odf_version"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "document.metadata"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "text.linkify_addresses"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "text.remove_spacers"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "graphic.alternative"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "heading.level"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "table.headers"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "text.spacing"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "link.description"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "database.description"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "type": "null"
+                            },
+                            "kind": {
+                              "const": "formula.alternative"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "page.metadata"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "page.navigation"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "current": {
+                              "type": "object"
+                            },
+                            "fingerprint": {
+                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "const": "sheet.name"
+                            },
+                            "rule_ids": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "member": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "member"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "target",
+                            "fingerprint",
+                            "current",
+                            "rule_ids"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "type": "array"
+                  },
                   "facts": {
                     "additionalProperties": false,
                     "properties": {
@@ -807,16 +2358,6 @@
                         "message": {
                           "type": "string"
                         },
-                        "remedy": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
                         "rule_id": {
                           "type": "string"
                         },
@@ -834,8 +2375,7 @@
                         "category",
                         "message",
                         "location",
-                        "details",
-                        "remedy"
+                        "details"
                       ],
                       "type": "object"
                     },
@@ -881,6 +2421,7 @@
                   "subject",
                   "findings",
                   "facts",
+                  "decisions",
                   "passed",
                   "format",
                   "summary"
@@ -1000,6 +2541,9 @@
     "fonts",
     "human_review",
     "outputs",
+    "plan",
+    "decisions",
+    "rebind",
     "failed_stage",
     "exit_status",
     "plan_sha256",

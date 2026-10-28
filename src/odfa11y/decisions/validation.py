@@ -11,6 +11,7 @@ import types
 from typing import TYPE_CHECKING, Literal, cast, get_args, get_origin, get_type_hints
 
 from odfa11y.errors import PlanError
+from odfa11y.language_tags import normalize_language
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -176,6 +177,8 @@ def _constraints(value: object, schema: Mapping[str, object], label: str) -> Non
 
 
 def _string_constraints(value: str, schema: Mapping[str, object], label: str) -> None:
+    if validator := ANSWER_FORMATS.get(str(schema.get("format", ""))):
+        validator(value)
     if len(value) < cast("int", schema.get("minLength", 0)):
         msg = f"{label} is too short"
         raise PlanError(msg)
@@ -190,3 +193,40 @@ def _number_constraints(value: float, schema: Mapping[str, object], label: str) 
     ):
         msg = f"{label} is outside its supported range"
         raise PlanError(msg)
+
+
+XML_TEXT_FORMAT = "odfa11y-xml-text"
+INVALID_XML_CHARACTER = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF\uFFFE\uFFFF]")
+
+
+def validate_xml_text(value: str) -> None:
+    """Require characters representable in the source XML vocabulary.
+
+    Raises
+    ------
+    ValueError
+        The supplied text contains a character XML 1.0 cannot represent.
+
+    """
+    if INVALID_XML_CHARACTER.search(value):
+        msg = "Text contains a character XML 1.0 cannot represent"
+        raise ValueError(msg)
+
+
+LANGUAGE_TAG_FORMAT = "odfa11y-language-tag"
+ANSWER_FORMATS = {XML_TEXT_FORMAT: validate_xml_text, LANGUAGE_TAG_FORMAT: normalize_language}
+
+
+def xml_text_constraints(description: str, *, nonblank: bool = False) -> dict[str, object]:
+    """Declare XML-safe text constraints and help once for all codec consumers.
+
+    Returns
+    -------
+    dict[str, object]
+        Field metadata used by parsing, schema and reference generation.
+
+    """
+    schema: dict[str, object] = {"format": XML_TEXT_FORMAT, "description": description}
+    if nonblank:
+        schema["pattern"] = r"\S"
+    return {"schema": schema}

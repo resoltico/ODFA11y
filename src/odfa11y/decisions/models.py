@@ -109,6 +109,21 @@ class Decision:
             raise PlanError(msg)
         validate_answer(self.answer, self.kind.id)
 
+    @property
+    def target_path(self) -> str:
+        """The required path of a targeted decision.
+
+        Raises
+        ------
+        PlanError
+            A document-scoped answer is consumed as a targeted one.
+
+        """
+        if self.target is None:
+            msg = f"{self.kind.id} requires a target"
+            raise PlanError(msg)
+        return self.target.path
+
     def answer_as[T](self, expected: type[T]) -> T:
         """Read an answer through its family's declared type.
 

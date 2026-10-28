@@ -20,7 +20,7 @@ from odfa11y.decisions import (
 from odfa11y.errors import PlanError
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.report import Location
-from odfa11y.serialization import schema_for
+from odfa11y.serialization import record_dict, schema_for
 
 from .models import PLAN_FORMAT, Plan, PlanHeader
 
@@ -138,12 +138,16 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
         if decision.target is not None:
             key += "." + json.dumps(decision.target.path)
         lines += [f"# [{key}]", f"# Rules: {', '.join(decision.rule_ids)}"]
+        if decision.current:
+            lines.append(
+                "# Current: " + json.dumps(record_dict(dict(decision.current)), ensure_ascii=False)
+            )
         if decision.fingerprint is not None:
             lines.append(f"# fingerprint = {json.dumps(decision.fingerprint)}")
         hints = get_type_hints(kind.answer_type)
         for field in dataclasses.fields(cast("type[DataclassInstance]", kind.answer_type)):
             help_text = field.metadata.get("schema", {}).get("description", field.name)
-            placeholder = _placeholder(field, hints[field.name], decision.current.get(field.name))
+            placeholder = _placeholder(field, hints[field.name])
             lines.append(
                 f"# {field.name} = {json.dumps(placeholder, ensure_ascii=False)}  # {help_text}"
             )
@@ -151,9 +155,7 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
     return "\n".join(lines)
 
 
-def _placeholder(field: dataclasses.Field[object], value_type: object, current: object) -> object:
-    if field.name == "navigation" and isinstance(current, (tuple, list)):
-        return list(current)
+def _placeholder(field: dataclasses.Field[object], value_type: object) -> object:
     schema = field.metadata.get("schema", {})
     if "minimum" in schema:
         return schema["minimum"]
@@ -246,3 +248,62 @@ def plan_schema(kinds: Mapping[str, DecisionKind]) -> JsonObject:
         "required": ["plan"],
         "additionalProperties": False,
     }
+
+
+def decision_schema(kinds: Mapping[str, DecisionKind], *, open_decision: bool) -> JsonObject:
+    """Describe a decision record with the exact kind-dependent target and answer contract.
+
+    Returns
+    -------
+    JsonObject
+        One registered variant per decision kind.
+
+    """
+    variants: list[JsonValue] = []
+    for kind in kinds.values():
+        targeted = kind.scope == DecisionScope.TARGET
+        properties: JsonObject = {
+            "kind": {"const": kind.id},
+            "target": schema_for(Location, namespace=globals()) if targeted else {"type": "null"},
+            "fingerprint": {
+                "type": "string",
+                "pattern": "^" + TARGET_FINGERPRINT_PATTERN + r"(?![\s\S])",
+            }
+            if targeted
+            else {"type": "null"},
+        }
+        if open_decision:
+            properties |= {
+                "current": {"type": "object"},
+                "rule_ids": {"type": "array", "items": {"type": "string"}},
+            }
+        else:
+            properties["answer"] = schema_for(
+                kind.answer_type, namespace=vars(sys.modules[kind.answer_type.__module__])
+            )
+        variants.append({
+            "type": "object",
+            "properties": properties,
+            "required": list(properties),
+            "additionalProperties": False,
+        })
+    return {"oneOf": variants}
+
+
+def decision_reference(kinds: Mapping[str, DecisionKind]) -> str:
+    """Describe registered answers from the same schema used by the parser.
+
+    Returns
+    -------
+    str
+        A Markdown reference fragment with authoritative answer fields and constraints.
+
+    """
+    lines = ["## Registered decisions", ""]
+    for kind in kinds.values():
+        lines += [f"### `{kind.id}`", "", f"Scope: {kind.scope.value}.", ""]
+        if kind.scope == DecisionScope.TARGET:
+            lines += ["Use the audit's canonical target and mandatory fingerprint.", ""]
+        schema = answer_schema(kind.answer_type)
+        lines += ["```json", json.dumps(schema, indent=2, ensure_ascii=False), "```", ""]
+    return "\n".join(lines)

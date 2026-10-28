@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from typing import TYPE_CHECKING
 
 from odfa11y.content import (
@@ -12,15 +13,18 @@ from odfa11y.content import (
     audit_graphic_role,
     document_links,
     eligible_text_node,
-    link_fingerprint,
+    link_decision,
     link_has_description,
     link_location,
     visible_words,
 )
+from odfa11y.decisions import OpenDecision
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
+from .decisions import SHEET_NAME
 from .sheets import cell_text, is_data_sheet, is_empty, sheet_name, sheets
+from .snapshot import sheet_fingerprint
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -46,7 +50,7 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     content = document.tree(Part.CONTENT)
     all_sheets = sheets(content)
     report.facts[FactKeys.SHEET_COUNT] = len(all_sheets)
-    _audit_names(all_sheets, report)
+    _audit_names(document, all_sheets, report)
     _audit_data_sheets(all_sheets, report)
     _audit_graphics(document, report)
     _audit_links(all_sheets, report)
@@ -55,8 +59,8 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
             report.add(
                 rules.SHEET014,
                 location=link_location(link, index),
-                details={"fingerprint": link_fingerprint(document, link)},
             )
+            report.add_decision(link_decision(document, link, index, rules.SHEET014.id))
     _audit_trailing_empty_sheets(all_sheets, report)
     _audit_hidden(content, all_sheets, report)
 
@@ -70,21 +74,36 @@ def _location(index: int, sheet: etree._Element) -> Location:
     )
 
 
-def _audit_names(all_sheets: list[etree._Element], report: Report) -> None:
+def _audit_names(document: OdfDocument, all_sheets: list[etree._Element], report: Report) -> None:
+    names = Counter(sheet_name(sheet) for sheet in all_sheets)
     for index, sheet in enumerate(all_sheets, start=1):
         name = sheet_name(sheet)
+        rule = None
         if not name.strip():
+            rule = rules.SHEET001
             report.add(
                 rules.SHEET001,
                 "Sheet has no name, so a reader cannot tell it from the others.",
-                location=_location(index, sheet),
+                location=Location.indexed(Part.CONTENT, "sheet", index),
             )
         elif DEFAULT_SHEET_NAME.fullmatch(name.strip()):
+            rule = rules.SHEET002
             report.add(
                 rules.SHEET002,
                 "Sheet keeps its default name, which says nothing about its content.",
-                location=_location(index, sheet),
+                location=Location.indexed(Part.CONTENT, "sheet", index),
                 details={"sheet": name},
+            )
+
+        if rule is not None and names[name] == 1:
+            report.add_decision(
+                OpenDecision(
+                    SHEET_NAME,
+                    Location.indexed(Part.CONTENT, "sheet", index),
+                    sheet_fingerprint(document, sheet),
+                    {"name": name},
+                    (rule.id,),
+                )
             )
 
 
@@ -120,7 +139,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)
-    for index, frame in enumerate(frames, start=1):
+    for frame in frames:
         if audit_graphic_role(document, frame, report):
             continue
         if visible_words(frame) and not select_elements(
@@ -134,22 +153,17 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         declared_name = frame.get(qn("draw", "name"))
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
-        selector = declared_name or href
-        addressed = identity.matching(selector) if selector else [frame]
         report.add(
             rules.SHEET005,
             "Picture, chart or object has neither accessible title nor description.",
-            location=(
-                Location.named(Part.CONTENT, "frame", declared_name)
-                if declared_name
-                else Location.indexed(Part.CONTENT, "frame", index)
-            ),
+            location=Location(identity.target(frame)),
             details={
                 "frame": declared_name,
                 "href": href,
-                "fingerprint": identity.fingerprint(addressed),
             },
         )
+
+        report.add_decision(identity.open_decision(frame, rules.SHEET005.id))
 
 
 def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:

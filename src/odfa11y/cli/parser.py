@@ -43,10 +43,10 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Workflow (review decisions before changing a document):\n"
             "  odfa11y audit original.odt\n"
-            "  odfa11y template original.odt > document.toml\n"
+            "  odfa11y plan original.odt > document.toml\n"
             "  # Edit document.toml: uncomment only reviewed decisions.\n"
-            "  odfa11y remediate original.odt reviewed.odt --config document.toml --dry-run\n"
-            "  odfa11y pipeline original.odt --config document.toml \\\n"
+            "  odfa11y remediate original.odt reviewed.odt --plan document.toml --dry-run\n"
+            "  odfa11y pipeline original.odt --plan document.toml \\\n"
             "    --output-dir evidence --profile production\n"
             "  odfa11y check-evidence evidence\n\n"
             "Use a new configuration filename and evidence directory.\n"
@@ -75,13 +75,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = _command(
         sub,
-        "template",
+        "plan",
         examples=(
-            "  odfa11y template source.odt\n"
-            "  odfa11y template source.odt > plan.toml\n"
+            "  odfa11y plan source.odt\n"
+            "  odfa11y plan source.odt > plan.toml\n"
             "  # Use a new filename; edit and review the commented decisions."
         ),
-        description="Print a commented configuration template for an ODF document.",
+        description="Print a source-bound plan of disabled human answers.",
     )
     p.add_argument("source", type=Path)
 
@@ -89,14 +89,19 @@ def build_parser() -> argparse.ArgumentParser:
         sub,
         "remediate",
         examples=(
-            "  odfa11y remediate source.odt reviewed.odt --config plan.toml --dry-run\n"
-            "  odfa11y remediate source.odt reviewed.odt --config plan.toml"
+            "  odfa11y remediate source.odt reviewed.odt --plan plan.toml --dry-run\n"
+            "  odfa11y remediate source.odt reviewed.odt --plan plan.toml"
         ),
         description="Apply the configured operations to an ODF document.",
     )
     p.add_argument("source", type=Path)
     p.add_argument("destination", type=Path)
-    p.add_argument("--config", type=Path, required=True, help="TOML configuration file.")
+    p.add_argument("--plan", type=Path, required=True, help="Source-bound TOML plan.")
+    p.add_argument(
+        "--rebind",
+        action="store_true",
+        help="Explicitly accept a different source digest; target fingerprints still apply.",
+    )
     p.add_argument("--dry-run", action="store_true", help="Report outcomes without writing.")
     p.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -123,7 +128,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("source", type=Path)
     p.add_argument("candidate", type=Path)
-    p.add_argument("--config", type=Path, help="TOML file whose [fidelity] table sets the policy.")
+    p.add_argument("--plan", type=Path, help="TOML file whose [fidelity] table sets the policy.")
     p.add_argument("--diff-dir", type=Path, help="Write images of pages that differ here.")
     _add_tool_options(p)
     _add_report_options(p)
@@ -132,15 +137,15 @@ def build_parser() -> argparse.ArgumentParser:
         sub,
         "pipeline",
         examples=(
-            "  odfa11y pipeline source.odt --config plan.toml --output-dir evidence\n"
-            "  odfa11y pipeline source.odt --config plan.toml \\\n"
+            "  odfa11y pipeline source.odt --plan plan.toml --output-dir evidence\n"
+            "  odfa11y pipeline source.odt --plan plan.toml \\\n"
             "    --output-dir production --profile production\n"
             "  # Review evidence/REVIEW.md; automated gates do not certify accessibility."
         ),
         description="Remediate, export, validate, compare and keep evidence.",
     )
     p.add_argument("source", type=Path)
-    p.add_argument("--config", type=Path, required=True, help="TOML configuration file.")
+    p.add_argument("--plan", type=Path, required=True, help="Source-bound TOML plan.")
     p.add_argument("--output-dir", type=Path, required=True, help="Evidence directory to create.")
     p.add_argument(
         "--profile",
@@ -153,6 +158,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_tool_options(p)
     p.add_argument("--format", choices=("text", "json"), default="text")
+
+    p.add_argument(
+        "--rebind", action="store_true", help="Explicitly rebind this plan to the selected source."
+    )
 
     _add_batch(sub)
 
@@ -238,6 +247,9 @@ def _add_batch(sub: argparse._SubParsersAction) -> None:
             "  odfa11y batch manifest.toml --output-dir production --profile production"
         ),
         description="Run independent manifest items and retain aggregate evidence.",
+    )
+    p.add_argument(
+        "--rebind", action="store_true", help="Explicitly rebind each plan to its selected source."
     )
     p.add_argument("manifest", type=Path)
     p.add_argument("--output-dir", type=Path, required=True)

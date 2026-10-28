@@ -19,10 +19,9 @@ from .spreadsheet import ADAPTER as SPREADSHEET_ADAPTER
 from .text import ADAPTER as TEXT_ADAPTER
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
-    from odfa11y.adapter import FamilyAdapter, Operation, StyleUsage
+    from odfa11y.adapter import FamilyAdapter, StyleUsage
     from odfa11y.odf import DocumentKind
 
 REGISTRY: dict[Family, FamilyAdapter] = {
@@ -47,22 +46,6 @@ def adapter_for(kind: DocumentKind | None) -> FamilyAdapter:
 
     """
     return REGISTRY.get(kind.family, GENERIC) if kind is not None else GENERIC
-
-
-def config_tables() -> dict[str, Callable[[dict[str, object]], list[Operation]]]:
-    """Collect the plan tables every registered family reads.
-
-    Returns
-    -------
-    dict[str, Callable[[dict[str, object]], list[Operation]]]
-        Table name to the function turning that table into operations.
-
-    """
-    return {
-        name: parse
-        for adapter in REGISTRY.values()
-        for name, parse in adapter.config_tables.items()
-    }
 
 
 def style_usage(source: str | Path) -> list[StyleUsage]:

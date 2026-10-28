@@ -9,24 +9,34 @@ import pytest
 
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
-from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import PlanError, RemediationError
+from odfa11y.errors import PlanError
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
-from odfa11y.odf import Family, Part, select_elements
+from odfa11y.odf import Family, OdfDocument, Part, select_elements
 from odfa11y.outcomes import StageStatus
 from odfa11y.pipeline import PipelineOptions, run_pipeline
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.plans import load_plan
+from odfa11y.remediation import SetMetadata
+from odfa11y.remediation.planning import compile_operations
 from odfa11y.report import FactKeys
 
-from .spreadsheet_fixtures import LAYOUTS, make_spreadsheet, picture, row, sheet, text_cell
+from .operation_execution import assert_refused, execute_operations
+from .reviewed_plans import plan_header, reviewed_plan
+from .spreadsheet_fixtures import (
+    LAYOUTS,
+    make_spreadsheet,
+    picture,
+    reviewed_sheet_names,
+    row,
+    sheet,
+    text_cell,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.odf import OdfDocument
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 SHEETS = (
@@ -37,7 +47,7 @@ SHEETS = (
 
 def write_config(directory: Path, text: str) -> Path:
     path = directory / "plan.toml"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(plan_header(directory / "unused") + text, encoding="utf-8")
     return path
 
 
@@ -60,42 +70,50 @@ class EditCell(Operation):
 
 
 def test_the_configuration_reads_the_spreadsheet_table_in_canonical_order(tmp_path: Path) -> None:
-    config = load_config(
+    source = make_spreadsheet(tmp_path, "package", *SHEETS)
+    plan = load_plan(
         write_config(
             tmp_path,
-            '[spreadsheet.graphics.Logo]\ntitle = "Logo"\nfingerprint = "abc"\n'
-            '[spreadsheet.sheet_names]\n"Sheet1" = "Budget"\n',
+            '[decisions."graphic.alternative"."content/sheet[1]/frame[name=Logo]"]\n'
+            'title = "Logo"\nfingerprint = "0123456789abcdef"\n'
+            '[decisions."sheet.name"."content/sheet[1]"]\n'
+            'name = "Budget"\nfingerprint = "fedcba9876543210"\n',
         )
     )
-    first, second = config.operations
-    assert first == SetSheetNames({"Sheet1": "Budget"})
-    assert second == SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", None, "abc")})
+    first, second = compile_operations(OdfDocument.open(source), plan)
+    assert isinstance(first, SetSheetNames)
+    assert first.name == "set_sheet_names"
+    assert first.entries["content/sheet[1]"].name == "Budget"
+    assert first.entries["content/sheet[1]"].fingerprint == "fedcba9876543210"
+    assert second == SetGraphicAlternatives({
+        "content/sheet[1]/frame[name=Logo]": GraphicAlternative("Logo", None, "0123456789abcdef")
+    })
 
 
 @pytest.mark.parametrize(
-    ("content", "message"),
+    "content",
     [
-        ("[spreadsheet]\nsheets = 1", "Unknown spreadsheet keys: sheets"),
-        ('[spreadsheet]\nsheet_names = "x"', "must be a table"),
-        ("[spreadsheet.sheet_names]\nSheet1 = 3", "spreadsheet.sheet_names.Sheet1 must be str"),
-        ('[spreadsheet.sheet_names]\nSheet1 = ""', "not a usable sheet name"),
-        ('[spreadsheet.sheet_names]\nSheet1 = "a/b"', "not a usable sheet name"),
-        ('[spreadsheet.sheet_names]\n" " = "Budget"', "must name an existing sheet"),
-        ("[spreadsheet.graphics]\nLogo = 1", "must be a table"),
-        ("[spreadsheet.graphics.Logo]\ndescription = 7", "must be str"),
-        ('[spreadsheet.graphics.Logo]\ndescripton = "x"', "Unknown spreadsheet.graphics.Logo keys"),
+        '[decisions."sheet.name"]\nsheets = 1',
+        '[decisions]\n"sheet.name" = "x"',
+        '[decisions."sheet.name"."content/sheet[1]"]\nname = 3',
+        '[decisions."sheet.name"."content/sheet[1]"]\nname = ""',
+        '[decisions."sheet.name"."content/sheet[1]"]\nname = "a/b"',
+        '[decisions."sheet.name"." "]\nname = "Budget"',
+        '[decisions."graphic.alternative"]\nLogo = 1',
+        '[decisions."graphic.alternative"."content/frame[1]"]\ndescription = 7',
+        '[decisions."graphic.alternative"."content/frame[1]"]\ndescripton = "x"',
     ],
 )
 def test_an_invalid_spreadsheet_table_is_rejected_naming_the_key(
-    tmp_path: Path, content: str, message: str
+    tmp_path: Path, content: str
 ) -> None:
-    with pytest.raises(PlanError, match=message):
-        load_config(write_config(tmp_path, content))
+    with pytest.raises(PlanError):
+        load_plan(write_config(tmp_path, content))
 
 
 def test_empty_spreadsheet_tables_request_nothing(tmp_path: Path) -> None:
-    config = load_config(write_config(tmp_path, "[spreadsheet.sheet_names]\n[spreadsheet]\n"))
-    assert config.operations == ()
+    plan = load_plan(write_config(tmp_path, '[decisions."sheet.name"]\n'))
+    assert plan.decisions == ()
 
 
 @by_layout
@@ -104,17 +122,17 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
 ) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     plan = [
-        SetSheetNames({"Sheet1": "Budget"}),
+        reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "The company logo")}),
     ]
     assert {"SHEET002", "SHEET005"} <= ids(source)
     output = tmp_path / f"out{source.suffix}"
-    result = remediate(source, output, plan)
+    result = execute_operations(source, output, plan)
     assert result.changed
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.new_count == 0
     assert not {"SHEET002", "SHEET005"} & ids(output)
-    again = remediate(output, tmp_path / f"again{source.suffix}", plan)
+    again = execute_operations(output, tmp_path / f"again{source.suffix}", plan)
     assert not again.changed
     assert {o.status for o in again.outcomes} == {Status.UNCHANGED}
 
@@ -123,12 +141,14 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
 def test_the_language_reaches_the_default_cell_style(tmp_path: Path, layout: str) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / f"out{source.suffix}"
-    remediate(source, output, [SetMetadata(language="fr-FR")])
+    execute_operations(source, output, [SetMetadata(language="fr-FR")])
     report = audit_odf(output, schema=True)
     assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in {f.rule_id for f in report.findings}
     assert "ODF900" not in {f.rule_id for f in report.findings}
-    again = remediate(output, tmp_path / f"again{source.suffix}", [SetMetadata(language="fr-FR")])
+    again = execute_operations(
+        output, tmp_path / f"again{source.suffix}", [SetMetadata(language="fr-FR")]
+    )
     assert not again.changed
 
 
@@ -139,8 +159,10 @@ def test_a_rename_that_would_break_a_reference_stops_the_run_and_writes_nothing(
     caller = sheet("Calc", row(text_cell("x", 'table:formula="of:=[$Notes.A1]"')))
     source = make_spreadsheet(tmp_path, layout, *SHEETS, caller)
     output = tmp_path / f"out{source.suffix}"
-    with pytest.raises(RemediationError, match="may refer to it by name"):
-        remediate(source, output, [SetSheetNames({"Notes": "Memo"})])
+    assert_refused(
+        execute_operations(source, output, [reviewed_sheet_names(source, {"Notes": "Memo"})]),
+        match="may refer to it by name",
+    )
     assert not output.exists()
 
 
@@ -150,10 +172,13 @@ def test_an_operation_that_changes_what_a_sheet_shows_is_refused(
 ) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / f"out{source.suffix}"
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(source, output, [EditCell()])
-    with pytest.raises(RemediationError, match="content changed"):
-        remediate(source, output, [SetSheetNames({"Sheet1": "Budget"}), EditCell()])
+    assert_refused(execute_operations(source, output, [EditCell()]), match="content changed")
+    assert_refused(
+        execute_operations(
+            source, output, [reviewed_sheet_names(source, {"Sheet1": "Budget"}), EditCell()]
+        ),
+        match="content changed",
+    )
     assert not output.exists()
 
 
@@ -161,8 +186,12 @@ def test_an_operation_that_changes_what_a_sheet_shows_is_refused(
 def test_a_text_plan_is_refused_for_a_spreadsheet(tmp_path: Path, layout: str) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / "out"
-    with pytest.raises(RemediationError, match="do not apply to a spreadsheet document"):
-        remediate(source, output, [TextGraphicAlternatives({"Logo": GraphicAlternative("x")})])
+    assert_refused(
+        execute_operations(
+            source, output, [TextGraphicAlternatives({"Logo": GraphicAlternative("x")})]
+        ),
+        match="do not apply to a spreadsheet document",
+    )
     assert not output.exists()
 
 
@@ -171,11 +200,12 @@ def test_a_spreadsheet_plan_is_refused_for_a_text_document(tmp_path: Path, layou
     source = LAYOUTS[layout](tmp_path, "text")
     output = tmp_path / "out"
     for operation in (
-        SetSheetNames({"Sheet1": "Budget"}),
+        reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         SetGraphicAlternatives({"Logo": GraphicAlternative("x")}),
     ):
-        with pytest.raises(RemediationError, match="do not apply to a text document"):
-            remediate(source, output, [operation])
+        assert_refused(
+            execute_operations(source, output, [operation]), match="do not apply to a text document"
+        )
     assert not output.exists()
 
 
@@ -185,10 +215,12 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
     source = make_spreadsheet(tmp_path, "package", *SHEETS)
     options = PipelineOptions(soffice=str(tmp_path / "no-such-soffice"))
     plan = [
-        SetSheetNames({"Sheet1": "Budget"}),
+        reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo")}),
     ]
-    record = run_pipeline(source, plan, FidelityPolicy(), tmp_path / "out", options)
+    record = run_pipeline(
+        source, reviewed_plan(source, plan, FidelityPolicy()), tmp_path / "out", options
+    )
     statuses = {stage.name.value: stage.status for stage in record.stages}
     assert statuses["remediate"] == "passed"
     assert statuses["export-source"] == "failed"

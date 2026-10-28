@@ -19,9 +19,10 @@ from odfa11y.families.text import (
 )
 from odfa11y.odf import OdfDocument, Part, validate
 from odfa11y.outcomes import StageStatus
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 
 from .corpus_manifest import DOCUMENT_IDS, DOCUMENTS, visible_text
+from .operation_execution import execute_operations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -59,12 +60,12 @@ def test_a_plan_is_idempotent_and_keeps_text_and_schema_validity(
 ) -> None:
     suffix = document.path.suffix
     once, twice = tmp_path / f"once{suffix}", tmp_path / f"twice{suffix}"
-    first = remediate(document.path, once, _plan(document))
+    first = execute_operations(document.path, once, _plan(document))
     assert first.changed
     assert first.schema.status == StageStatus.PASSED
     assert first.schema.new_count == 0
     assert visible_text(once) == visible_text(document.path)
-    second = remediate(once, twice, _plan(document))
+    second = execute_operations(once, twice, _plan(document))
     assert not second.changed
     assert _parts(twice) == _parts(once)
     assert validate(OdfDocument.open(twice)).count <= document.schema_violations
@@ -75,5 +76,5 @@ def test_a_plan_leaves_exactly_the_findings_it_cannot_resolve(
     document: CorpusDocument, tmp_path: Path
 ) -> None:
     result = tmp_path / f"result{document.path.suffix}"
-    remediate(document.path, result, _plan(document))
+    execute_operations(document.path, result, _plan(document))
     assert {finding.rule_id for finding in audit_odf(result).findings} == document.rules_after_plan

@@ -11,19 +11,18 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.content import table_fingerprint
-from odfa11y.errors import RemediationError
 from odfa11y.external_tools import run_bounded
-from odfa11y.families.spreadsheet import SetSheetNames
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.fidelity.snapshot import read_snapshot
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
-from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
 
 from .documents import Variant, make_flat
-from .spreadsheet_fixtures import picture, row, sheet, text_cell
+from .operation_execution import assert_refused, execute_operations
+from .spreadsheet_fixtures import picture, reviewed_sheet_names, row, sheet, text_cell
 from .test_spreadsheet_integration import ALT, PNG, REFERENCE, author, validation_failures
 
 if TYPE_CHECKING:
@@ -97,9 +96,9 @@ def test_writer_nested_headers_graphic_and_named_link(
     }
     plan = [MarkTableHeaders(decisions), SetMetadata(title="Compound Writer", language="en-GB")]
     output = tmp_path / "edited.odt"
-    remediate(source, output, plan)
+    execute_operations(source, output, plan)
     assert validate(OdfDocument.open(output)).count == validate(before).count
-    assert not remediate(output, tmp_path / "again.odt", plan).changed
+    assert not execute_operations(output, tmp_path / "again.odt", plan).changed
     assert not {"TXT021", "TXT022"} & {f.rule_id for f in audit_odf(output).findings}
     pdf = export_pdfua(
         output, tmp_path / "writer.pdf", ExportSettings("writer_pdf_Export", soffice)
@@ -151,7 +150,7 @@ def test_calc_formula_graphic_and_printed_header(
     assert formulas
     output = tmp_path / "edited.ods"
     plan = [SetMetadata(title="Compound Calc", language="en-GB")]
-    remediate(source, output, plan)
+    execute_operations(source, output, plan)
     after = OdfDocument.open(output)
     assert validate(after).count == validate(before).count
     _resources_preserved(source, output)
@@ -159,15 +158,19 @@ def test_calc_formula_graphic_and_printed_header(
         cell.get(qn("table", "formula"))
         for cell in select_elements(after.tree(Part.CONTENT), "//table:table-cell[@table:formula]")
     ] == formulas
-    assert not remediate(output, tmp_path / "again.ods", plan).changed
+    assert not execute_operations(output, tmp_path / "again.ods", plan).changed
     pdf = export_pdfua(output, tmp_path / "calc.pdf", ExportSettings("calc_pdf_Export", soffice))
     report = audit_pdfua(pdf)
     assert {f.rule_id for f in report.findings} == {"PDF008", "PDF015"}
     assert validation_failures(pdf, external_tool("verapdf")) == {("7.2", "43")}
     assert "Fruit" in read_snapshot(pdf).text
     _assert_fidelity(source, pdf, "calc_pdf_Export", soffice)
-    with pytest.raises(RemediationError, match="may refer to it by name"):
-        remediate(source, tmp_path / "rejected.ods", [SetSheetNames({"Data": "Other"})])
+    assert_refused(
+        execute_operations(
+            source, tmp_path / "rejected.ods", [reviewed_sheet_names(source, {"Data": "Other"})]
+        ),
+        match="may refer to it by name",
+    )
 
 
 def _resources_preserved(source: Path, output: Path) -> None:

@@ -13,18 +13,19 @@ from odfa11y.content import (
     axis_count,
     declarations,
     eligible_text_node,
-    graphic_selector,
     header_count,
     repeated,
     require_safe_boundary,
     table_fingerprint,
     visible_words,
 )
+from odfa11y.decisions import OpenDecision
 from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 
 from .contexts import context_location, text_nodes
+from .decisions import HEADING_LEVEL, TABLE_HEADERS
 from .headings import MAX_HEADING_LEVEL, heading_fingerprint, heading_location
 from .text import element_text
 
@@ -57,13 +58,29 @@ def audit_headings(
         except ValueError:
             level = 0
         location = heading_location(heading, index)
-        excerpt = {"text": text[:80], "fingerprint": heading_fingerprint(heading, document)}
+        excerpt = {"text": text[:80]}
+        decision = OpenDecision(
+            HEADING_LEVEL,
+            location,
+            heading_fingerprint(heading, document),
+            {"level": raw},
+            (rules.TXT002.id,),
+        )
         if not 1 <= level <= MAX_HEADING_LEVEL:
             report.add(
                 rules.TXT001,
                 "Heading has no valid text:outline-level.",
                 location=location,
                 details=excerpt,
+            )
+            report.add_decision(
+                OpenDecision(
+                    HEADING_LEVEL,
+                    location,
+                    decision.fingerprint,
+                    decision.current,
+                    (rules.TXT001.id,),
+                )
             )
             continue
         if previous_level is None and level > 1:
@@ -80,6 +97,10 @@ def audit_headings(
                 location=location,
                 details=excerpt,
             )
+        if (previous_level is None and level > 1) or (
+            previous_level is not None and level > previous_level + 1
+        ):
+            report.add_decision(decision)
         previous_level = level
         if _looks_manually_numbered_heading(text):
             report.add(
@@ -111,7 +132,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)
     report.facts[FactKeys.TEXT_GRAPHIC_COUNT] = len(frames)
-    for index, frame in enumerate(frames, start=1):
+    for frame in frames:
         if audit_graphic_role(document, frame, report):
             continue
         if visible_words(frame) and not select_elements(
@@ -123,22 +144,18 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         declared_name = frame.get(qn("draw", "name"))
         image = frame.find("draw:image", NS)
         href = image.get(qn("xlink", "href")) if image is not None else None
-        selector = graphic_selector(frame) or declared_name or href
-        addressed = identity.matching(selector) if selector else [frame]
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.add(
                 rules.TXT010,
                 "Graphic object has neither accessible title nor description.",
-                location=Location(selector)
-                if selector
-                else context_location(frame, "frame", index),
+                location=Location(identity.target(frame)),
                 details={
-                    "selector": selector,
                     "frame": declared_name,
                     "href": href,
-                    "fingerprint": identity.fingerprint(addressed),
                 },
             )
+
+            report.add_decision(identity.open_decision(frame, rules.TXT010.id))
 
 
 def audit_tables(
@@ -177,10 +194,13 @@ def audit_tables(
                 location=location,
                 details={
                     "table": declared_name,
-                    "target": location.path,
                     "rows": row_count,
-                    "fingerprint": fingerprint,
                 },
+            )
+            report.add_decision(
+                OpenDecision(
+                    TABLE_HEADERS, location, fingerprint, {"rows": headers}, (rules.TXT021.id,)
+                )
             )
 
 
