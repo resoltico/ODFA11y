@@ -14,6 +14,14 @@ exact = true
 # audit, remediation, pdf, fidelity and evidence never import each other.
 
 [[modules]]
+path = "odfa11y.decisions"
+depends_on = ["odfa11y.errors", "odfa11y.odf"]
+
+[[modules]]
+path = "odfa11y.plans"
+depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.fidelity", "odfa11y.report", "odfa11y.serialization"]
+
+[[modules]]
 path = "odfa11y.serialization"
 depends_on = ["odfa11y.errors"]
 
@@ -151,7 +159,7 @@ depends_on = [
 
 [[modules]]
 path = "odfa11y.fidelity"
-depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.pdf_consumption", "odfa11y.report"]
+depends_on = ["odfa11y.errors", "odfa11y.pdf_limits", "odfa11y.pdf_consumption", "odfa11y.report", "odfa11y.decisions"]
 
 [[modules]]
 path = "odfa11y.evidence"
