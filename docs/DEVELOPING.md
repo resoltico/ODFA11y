@@ -2,255 +2,121 @@
 
 ## Restore the environment
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run from
-the source directory:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
-```bash
-uv sync --locked
+```sh
+uv sync --locked --group audit
+uv run --no-sync odfa11y doctor
 ```
 
-[.python-version](../.python-version) selects the development interpreter; uv installs it
-when needed. [pyproject.toml](../pyproject.toml) declares the supported Python range,
-dependency constraints, pinned build/analyzer tools and development groups.
-[uv.lock](../uv.lock) records resolved dependencies. The `dev` group is installed by
-default and is not part of runtime package metadata.
+[.python-version](../.python-version) selects development Python; [pyproject.toml](../pyproject.toml)
+owns supported versions, dependencies, build/tool pins and analyzer policy. [uv.lock](../uv.lock)
+restores Python inputs. Native installer/action/Go pins and vendor checksums live in
+[Checks](../.github/workflows/checks.yml). Verify downloads before installation.
 
-Native export/integration also needs the supported LibreOffice and veraPDF installations;
-see [prerequisites](../README.md#start-here) and run `uv run --no-sync odfa11y doctor`.
-The minimum LibreOffice version is enforced by `find_soffice` in
-[pdf/export.py](../src/odfa11y/native/export.py). Exact CI tool/installer inputs are declared
-in [Checks](../.github/workflows/checks.yml), with installer checksums where configured.
-
-To refresh dependencies, query PyPI's JSON API, vendor GitHub releases, python.org,
-documentfoundation.org and verapdf.org directly. Review all current releases, including
-majors; update constraints, exact tool pins and action commit SHAs from those sources.
-Verify native installers against the vendor's published SHA-256 before installation.
-Run `uv lock --upgrade`, restore with `uv sync --locked --group audit`, then repeat the
-static, unit, native, workflow, dependency-audit and distribution checks below.
-Dependabot security alerts and the scheduled [dependency audit](../.github/workflows/audit.yml)
-remain vulnerability signals; version-update PRs are not release-version sources.
+Refresh versions from PyPI, vendor GitHub releases, python.org, documentfoundation.org and
+verapdf.org, including majors. Update constraints/pins, run `uv lock --upgrade`, restore
+locked groups and repeat all gates. Security alerts/audits remain vulnerability signals;
+Dependabot version proposals are not a release-version authority.
 
 ## Required checks
 
-Run inexpensive static checks before the complete test/build gates:
+Run on stable inputs, using focused checks while iterating:
 
-```bash
+```sh
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
 uv run --no-sync python -m tools.check_quality
 uv run --no-sync tach check
 uv run --no-sync tach check-external
-uv run --no-sync pytest -m 'not integration' --cov --durations=10
-ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --cov --cov-append --durations=10
+uv run --no-sync python -m tools.generate_reference --check
+uv run --no-sync pytest -m 'not integration' --cov
+ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --cov --cov-append
 uv build
 ```
 
-The local test commands select complementary sets and append native coverage to the
-unit coverage. Run them in order because they share the coverage data file. Keep unit
-tests sequential so hostile-input timing controls have predictable CPU availability.
-Integration uses two workers with separate documents, outputs and LibreOffice profiles;
-a worker crash fails without retry. Targeted tests remain sequential by default.
+Run unit then native coverage sequentially; they share `.coverage`. Keep unit tests
+sequential for hostile-input timing controls. Native workers have separate inputs,
+outputs and LibreOffice profiles; worker crashes fail without retry. Required native mode
+turns absent tools into failures. Record versions, failures/fixes, skipped work and unavailable
+platforms. Branch coverage must remain at least 88%; inspect `coverage json` totals.
 
-Use targeted checks while iterating, then required checks on stable delivered inputs.
-Independent static checks may run together; do not edit or format their inputs during a
-verification batch. Record failures, skips, tool identities and unavailable platforms.
+Ruff checks all authored Python, including hidden/ignored source; `tools.check_quality`
+passes explicit authored paths to ty. Generated environments/caches/root build outputs are
+excluded, while nested authored `build`/`dist` names remain in scope. Complexity/branch
+limits stay at 10; module cohesion is reviewed separately from size. Narrow justified
+inline suppressions are checked for staleness; file-level ignores are for tests only.
+See [architecture](ARCHITECTURE.md) and [AGENTS.md](../AGENTS.md).
 
-### Policy, lint and types
+CI requires **CI gate**, aggregating static/security, platform Quality and Integration jobs;
+skipped/cancelled required jobs fail it. Native installers are checksum-pinned on all three
+platforms. Runner images still vary; local macOS results do not establish Linux/Windows
+behavior. [Releasing](RELEASING.md) defines exact-revision publication qualification.
 
-Ruff selects its pinned complete rule set, including preview rules. Public APIs use NumPy
-docstrings; the formatter owns trailing commas. Narrow inline `# noqa: CODE  reason` and
-`# ty: ignore[rule]  reason` suppressions are allowed. Ruff's `RUF100` and ty's
-`unused-ignore-comment` reject stale suppressions. File-level ignores are reserved for tests.
-Ruff's stylistic `RUF105` preference for its alternative comment syntax is disabled.
+## Generate documentation
 
-Type checking receives explicit authored paths, including hidden and Git-ignored Python;
-Ruff also checks ignored source. Generated environments, caches and root build/distribution
-outputs are excluded; nested domain directories named `build` or `dist` remain authored.
-Cyclomatic complexity and branch limits stay at 10. Module cohesion is a review criterion;
-file length, argument, return and statement counts have no caps.
-
-Apply routine fixes with `uv run --no-sync ruff check . --fix` and
-`uv run --no-sync ruff format .`; review unsafe fixes before accepting them.
-
-[ty](https://github.com/astral-sh/ty) uses `types-lxml` for lxml's API. Select ODF elements
-through `odfa11y.odf.select_elements` so callers receive element nodes rather than lxml's
-XPath union type. [Tach](https://github.com/tach-org/tach) enforces declared dependencies
-and public interfaces in [tach.toml](../tach.toml). Review the design before changing an
-edge. The architecture tests also reject family-specific XML selection in orchestration;
-shared vocabulary belongs in `content`, family semantics in its adapter. See
-[Architecture](ARCHITECTURE.md#packages-and-dependency-rules).
-
-### Tests and generated inputs
-
-pytest enables strict options and treats warnings as errors. Tests use synthetic ODF/PDF
-fixtures and invented native documents, never customer material. Helpers in
-`tests/fixtures/documents.py` create package/flat fixtures, including deliberately unsupported
-representations used as rejection controls. A valid flat office-body Formula representation
-is not claimed. The [Configuration example](PLAN.md#example) is loaded directly
-by a test.
-
-[Hypothesis](https://hypothesis.readthedocs.io/) properties in `tests/application/test_properties.py`
-cover address splitting, text-preserving linkification, package round trips, controlled
-errors for malformed inputs and schema-preserving/idempotent operation subsets.
-`tests/conftest.py` defines the deterministic required profile and a smaller smoke profile:
-
-```bash
-uv run --no-sync pytest tests/application/test_properties.py --hypothesis-profile=smoke
+```sh
+uv run --no-sync python -m tools.generate_reference
+uv run --no-sync python -m tools.generate_reference --check
 ```
 
-Smoke does not replace required properties. Profiles have no per-example deadline;
-regression examples, rejected draws and shrinking mean `max_examples` is not a total
-invocation limit. CI job timeouts bound a job. Store useful counterexamples beside their
-regression tests. File-based properties use a temporary directory per example.
-
-Successful `tmp_path` call outputs are removed; failed-call outputs retain pytest's
-configured session history. A later teardown failure can lose a successful call's files.
-Cleanup is best effort, and explicit `--basetemp` leaves session-root cleanup to the caller.
-These settings bound retention, not total disk allocation. Native scratch, caches and
-abrupt termination prevent a workspace byte guarantee; use a filesystem quota for a hard
-limit. Coverage policy and its branch-measurement floor are in `pyproject.toml`.
+One module generates rules, plan fields, CLI/options/exits, schema listing and measured
+capabilities. Refresh the committed doctor measurement deliberately after actual native
+qualification; generation/checking itself never runs native tools. Keep task guides short
+and link to the canonical [boundaries](ACCESSIBILITY.md). Check Markdown links/anchors.
 
 ## Native document fixtures
 
-### Writer regression corpus
+Use invented content and independent positive/negative controls. Inspect source relationships,
+native reload, exported PDF and human-review scope together; a passing detection control
+is not an accessible publication. Fixtures/hashes alone do not establish semantics.
 
-`tests/corpus` contains invented Writer documents. Its [README](../tests/corpus/README.md)
-describes every input, and `manifest.toml` is authoritative for artifact identity, producer,
-expected findings, post-plan findings and schema violations. The corpus tests verify
-these expectations; native pipeline tests verify actual export behavior. A producer
-version records an input's provenance, not a separate supported-runtime lane.
+- [Writer corpus](../tests/corpus/README.md): edit `sources`, run its `build.sh`, review results
+  and update manifest expectations/producer/hashes. Retain unrelated fixture bytes.
+- [Text structure corpus](../tests/text_corpus/README.md): run
+  `uv run --no-sync python -m tools.build_text_corpus FEATURE`; sources and manifest record
+  the real Writer save. Numeric values need the [explicit number format](../tests/fixtures/table_formats.py)
+  to survive import as numeric data. Do not weaken classification to accept stripped types.
+- [Family corpus](../tests/family_corpus/README.md) and
+  [focused reproductions](../tests/reproductions/README.md): use disposable profiles for trusted
+  authoring macros. Inspection itself executes no macros, SQL or connections.
 
-To add or change a fixture:
-
-1. Edit the source in `tests/corpus/sources/` (HTML or flat XML).
-2. Run `sh tests/corpus/build.sh` with a supported `soffice` on `PATH`. This regenerates
-   every document and may change producer metadata/bytes; retain only intended changes.
-3. Read actual audit/schema/native results, decide expected behavior and update the
-   manifest's findings, producer and hashes. Keep the corpus README's filename inventory
-   synchronized. Regeneration reproduces semantics, not byte-identical native output.
-4. Run corpus audit, remediation and native pipeline checks. Positive controls must retain
-   intended content; rejection cases must fail for the expected reason.
-
-### Family and focused reproductions
-
-[Native family fixtures](../tests/family_corpus/README.md) have their own manifest and
-authoring sources. Chart/Image assemblies distinguish native components from standalone
-native save/export support. Use disposable profiles for trusted fixture-authoring macros;
-the library's source inspection does not execute macros or Base queries.
-
-[Focused reproductions](../tests/reproductions/README.md) exercise text contexts and native
-link behavior. Inspect source XML, protected content and actual exported output together.
-An expected exporter failure is a passing detection control, not evidence of an accessible
-publication. Never suppress unrelated native failures.
-
-## External integration and CI
-
-Tests marked `integration` run real LibreOffice and veraPDF. Missing tools can skip tests
-locally; `ODFA11Y_REQUIRE_INTEGRATION=1` requires them and turns absence into failure.
-A unit-only result does not establish native integration.
-
-[Checks](../.github/workflows/checks.yml) defines:
-
-- **Static analysis**: policy, Ruff, types, Tach, workflow syntax/security, known dependency
-  advisories and a redacted Git-history secret scan.
-- **Quality** on Linux/macOS/Windows: unit tests, distribution build/inspection, an extracted
-  source-archive contributor flow, and isolated installed-wheel checks/tests. Linux also
-  measures unit coverage and compares rebuilt distribution bytes.
-- **Integration** on Linux/macOS/Windows: configured native installations, doctor output
-  and required real export/validation/pipeline tests. These hosted commands do not append
-  integration coverage to the Quality job's coverage.
-- **CI gate**: waits for all three job groups and requires success; skipped/cancelled jobs
-  fail it. It is the single branch-protection check documented in
-  [Releasing](RELEASING.md#repository-settings).
-
-The workflow declares tool pins, installer checksums, job timeouts, permissions and cache
-policy. Linux/Windows use pinned LibreOffice installers; macOS follows the configured
-current distribution. Runner images also vary. The lockfile does not freeze the OS or
-complete native toolchain. Native results must carry the actual tool identity.
-
-Checks run for main/version-tag pushes, pull-request merge commits and manual dispatch.
-PR runs can cancel superseded PR runs. Default permissions are read-only; checkout does
-not persist credentials. Only the draft-release job receives write/attestation permissions.
-Cache restoration is bypassed where the workflow requires release isolation; cache policy
-does not establish a storage quota.
-
-With the workflow's actionlint version installed, validate both workflow files locally:
-
-```bash
-actionlint .github/workflows/checks.yml .github/workflows/audit.yml
-```
-
-The workflow uses the runner's Go toolchain and ShellCheck for this gate. Native installer
-steps verify configured hashes before execution and have bounded job/step runtimes;
-transport retries are not a hard end-to-end download deadline.
+Shared fixtures live under `tests/fixtures`; tests follow owner packages and `tests/native`.
+Moves retain assertions/markers; eight-family conformance covers the shared contracts.
+Hypothesis uses the deterministic required profile; `--hypothesis-profile=smoke` is for
+iteration only. Successful pytest scratch is cleaned best-effort; failed/abrupt runs can
+retain evidence. These settings do not impose a disk quota or OS sandbox.
 
 ## Packaging
 
-`uv build` reads the pinned Hatchling backend in `[build-system]` and builds in isolation.
-Contributors need neither the Hatch application nor `setup.py`. Build selection is
-centralized in `[tool.hatch.build.targets]`:
+`uv build` uses the pinned backend without the Hatch application or `setup.py`. Source
+archives carry contributor sources/docs/tests/tools/workflows/locks; wheels carry runtime
+packages/resources, notices, metadata and `py.typed`. `[project].version` is authoritative;
+run `uv lock` and `uv sync --locked` after changing it.
 
-- Source archives include package sources, documentation, tests/corpus inputs, tools,
-  workflows, dependency lockfile, boundary rules and environment/project configuration.
-- Wheels include runtime packages/resources, CLI entrypoint, metadata, notices and
-  `py.typed`. Repository docs/tests are contributor materials, not runtime package files.
-
-`[project].version` is the version authority. Runtime reporting derives installed
-distribution metadata; after changing the declaration, run `uv lock` and
-`uv sync --locked` to refresh the lockfile/editable environment.
-
-After moving files or changing inclusion rules, build and inspect both distributions.
-Run the release checker with the declared version:
-
-```bash
-uv run --no-sync python -m tools.check_release vVERSION dist
+```sh
+uv run --no-sync python -m tools.check_release v0.8.0 dist
 ```
 
-It checks distribution metadata/resources and compares source-archive regular-file names
-and bytes with tracked contributor inputs; generated root `PKG-INFO` and directories are
-the only packaging additions. Deleted files must be removed from the tracked inventory,
-and new deliverables must be tracked. Duplicates, unsafe names, missing/altered contributor
-materials and unexpected authored files fail.
-
-To verify the contributor boundary, extract the archive outside the checkout, enter its
-top directory, run `uv sync --locked` and repeat static/unit checks, build and release
-inspection there. No `.git` is needed. The extracted inventory excludes configured root
-generated outputs and recursive Python/pytest/Ruff/Hypothesis caches; nested authored
-`build`, `dist` and `PKG-INFO` names remain included. Required native checks still need
-real tools.
-
-Verify the wheel from a separate environment using locked/hashed dependencies and the
-extracted contributor tests. Check imports come from that environment, metadata matches
-the project declaration, and notices, schema provenance and runtime resources are present.
-The Quality job implements this flow on all three platforms.
-
-## Contribution invariants
-
-Audits remain read-only. Semantic choices require explicit reviewed input. Remediation
-preserves family-specific content/references and opaque resources, uses schema comparison
-when available, and publishes atomically to a separate destination. Evidence diagnostics
-redact local directories; document payloads preserve authored content. Verification rejects
-unsafe paths within the stated stable-directory prerequisite. Automated checks, native
-application evidence and human acceptance establish different properties.
-
-Read [AGENTS.md](../AGENTS.md) and [Architecture](ARCHITECTURE.md) before changes.
-Update affected documentation, provide meaningful behavior/rejection evidence and follow
-[Releasing](RELEASING.md) for release work.
+The checker requires exact contributor file names/bytes, runtime resources and metadata.
+Stage intended additions/deletions before checking Git inventory. Rebuild twice and compare
+bytes. Extract the sdist outside the checkout, restore locked inputs and repeat checks/build
+without `.git`. Test the wheel in an isolated environment with hashed locked dependencies,
+using the extracted contributor tests and [root-only examples](../tools/core_examples.py).
+The workflow is the executable authority for this contributor/distribution flow.
 
 ## Audit hygiene
 
-Install the locked optional audit tools for security/release review:
+With pinned actionlint/Gitleaks available and the audit group restored:
 
-```bash
-uv sync --locked --group audit
+```sh
+actionlint .github/workflows/checks.yml .github/workflows/audit.yml
 uv run --no-sync zizmor --offline --persona pedantic --no-ignores --strict-collection .github/workflows
-uv export --locked --group audit --no-emit-project --output-file /tmp/odfa11y-audit.txt > /dev/null
+uv export --locked --group audit --no-emit-project -o /tmp/odfa11y-audit.txt > /dev/null
 uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r /tmp/odfa11y-audit.txt
+gitleaks git --redact --ignore-gitleaks-allow
 ```
 
-Known-advisory scans need network access and establish findings from that database at
-that time. With the workflow's Gitleaks version installed, run
-`gitleaks dir . --redact --ignore-gitleaks-allow` on intended publication files or
-`gitleaks git --redact --ignore-gitleaks-allow` for Git history. Keep third-party
-environments/caches separate from publication scans. Do not include private documents,
-credentials or identifiable production material in fixtures or reports submitted for review.
+Advisory scans describe their database at that time. Scan intended publication contents;
+exclude third-party environments/caches and never submit private documents or credentials.
+Use operating-system isolation/resource limits for untrusted native processing.

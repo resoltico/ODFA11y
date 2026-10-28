@@ -305,5 +305,20 @@ def decision_reference(kinds: Mapping[str, DecisionKind]) -> str:
         if kind.scope == DecisionScope.TARGET:
             lines += ["Use the audit's canonical target and mandatory fingerprint.", ""]
         schema = answer_schema(kind.answer_type)
-        lines += ["```json", json.dumps(schema, indent=2, ensure_ascii=False), "```", ""]
+        required = cast("list[str]", schema.get("required", []))
+        lines += ["| Field | Required | Value constraints | Help |", "| --- | --- | --- | --- |"]
+        properties = cast("dict[str, JsonObject]", schema["properties"])
+        for name, field_schema in properties.items():
+            constraints = {
+                key: value for key, value in field_schema.items() if key != "description"
+            }
+            value = json.dumps(constraints, ensure_ascii=False, separators=(",", ":"))
+            help_text = str(field_schema.get("description", "")).replace("|", "\\|")
+            lines.append(
+                f"| `{name}` | {'yes' if name in required else 'no'} | `{value}` | {help_text} |"
+            )
+        if alternatives := schema.get("anyOf"):
+            lines += ["", "Required-field alternatives: `" + json.dumps(alternatives) + "`."]
+        lines.append("")
+
     return "\n".join(lines)

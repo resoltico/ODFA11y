@@ -33,9 +33,33 @@ if TYPE_CHECKING:
 class TargetLanguageAnswer:
     """Explicit language overrides for one paragraph or inline reading target."""
 
-    western: str | None = field(default=None, metadata={"schema": {"format": LANGUAGE_TAG_FORMAT}})
-    asian: str | None = field(default=None, metadata={"schema": {"format": LANGUAGE_TAG_FORMAT}})
-    complex: str | None = field(default=None, metadata={"schema": {"format": LANGUAGE_TAG_FORMAT}})
+    western: str | None = field(
+        default=None,
+        metadata={
+            "schema": {
+                "format": LANGUAGE_TAG_FORMAT,
+                "description": "Language for the target western-script channel.",
+            }
+        },
+    )
+    asian: str | None = field(
+        default=None,
+        metadata={
+            "schema": {
+                "format": LANGUAGE_TAG_FORMAT,
+                "description": "Language for the target Asian-script channel.",
+            }
+        },
+    )
+    complex: str | None = field(
+        default=None,
+        metadata={
+            "schema": {
+                "format": LANGUAGE_TAG_FORMAT,
+                "description": "Language for the target complex-script channel.",
+            }
+        },
+    )
     required_any: ClassVar[tuple[str, ...]] = ("western", "asian", "complex")
 
 

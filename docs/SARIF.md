@@ -1,39 +1,28 @@
 # SARIF reports
 
-Use `--format sarif --source-root ROOT` with `audit` or `compare`. ROOT is
-an existing directory containing every source artifact in the report. For example:
+Confine every input beneath an existing source root:
 
 ```sh
 odfa11y audit documents/example.odt --format sarif --source-root . > audit.sarif
 ```
 
-The output is a SARIF 2.1.0 log with a single run. Registered rules retain their IDs,
-severity, categories and configuration remedies. Informational findings use SARIF's
-`note` level. Artifact URIs are escaped paths relative to ROOT, including subdirectories
-so duplicate basenames remain distinct. ROOT itself is never serialized. Symbolic links
-are resolved before containment is checked; a link leaving ROOT is rejected. Comparisons
-carry candidate and original artifact identities explicitly, independently of their
-display label. Physical `Report.sources` identities are internal and never appear in report-format-5 JSON.
+`audit` and `compare` emit one SARIF 2.1.0 run. Registered rule IDs, severity, categories
+and decision-kind references are retained; informational findings use `note`. Artifact
+URIs are escaped relative paths, preserving distinct subdirectories/basenames. Links
+resolve before containment checks; an alias leaving the root is rejected. Comparison
+artifacts retain both identities. Physical `Report.sources` remains internal.
 
-ODF findings use logical document locations rather than invented XML line numbers.
-Package members are diagnostic metadata, not separate source artifacts. Equivalent
-packaged and flat documents retain equivalent logical locations. Global findings identify
-the artifact without claiming an element or physical line.
+[Logical ODF locations](RULES.md#locations) identify objects without invented XML line
+numbers. Package members are diagnostics, not separate artifacts. Global findings do not
+claim an element location.
 
-SARIF messages use the registered rule title. Free-form finding messages, details,
-display labels and report facts are excluded because they can contain source content,
-database credentials or absolute paths from external-tool diagnostics. Use local JSON
-or text reports when those detailed diagnostics are needed. Logical labels containing
-absolute host paths or URI credentials are rejected. Source-root violations and missing
-physical source identities are errors; display labels are never guessed as filenames.
-The CLI checks these prerequisites before auditing or exporting any input. SARIF execution
-errors use fixed path-free stderr advice to avoid leaking exception paths or tool diagnostics.
-A missing root identifies `--source-root` and the requirement that all inputs be files within
-it; other execution failures retain generic advice. Rerun with text or JSON output to
-investigate detailed local failures. With `--strict`, the CLI also reports the effective
-command gate on stderr; the SARIF log remains unchanged.
+Messages use registered rule titles. Free-form messages, details, labels and facts are
+excluded because they can contain source content, credentials or absolute diagnostic paths.
+Logical labels containing host paths/URI credentials refuse. Source identities are never
+guessed from labels. CLI preflight runs before inspection/export and execution failures
+produce no partial log, with fixed path-free stderr advice. Use local JSON/text to diagnose.
+`--strict` changes the effective gate, not the log's contents.
 
-The test suite validates generated logs against the unmodified official OASIS draft-07
-schema, including negative controls and rule-index/artifact-index assertions.
-The schema and its notice are test inputs in source distributions; they are not a
-runtime dependency or wheel asset. This format does not upload reports to GitHub.
+Tests validate against the unmodified official OASIS draft-07 schema and check negative
+rule/artifact-index controls. That schema/notice is a source-test input, not a runtime
+wheel dependency. Producing SARIF does not upload it anywhere.

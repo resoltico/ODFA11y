@@ -137,28 +137,16 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 
 ## Reading findings
 
-`SCHEMA001` is a warning because pristine LibreOffice output often fails the strict ODF
-schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
-which `remediate` enforces when a bundled schema is available: it refuses a result with
-a detected violation the source did not already have. Source link, table, heading-numbering and spacer findings use heuristics; inspect the
-source in context. Graphics need supplied titles or descriptions, and table headers need an unambiguous
-reviewed table target with explicit leading row or column counts; unnamed ordinal targets
-require their fingerprint. `LAYOUT001` is observational: [spacer
-removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
-The `SHEET` findings are structural: a *default name* is a name of the form `Sheet` and
-digits (other languages' defaults are not recognised); a *data sheet* is one whose first row
-with text holds at least two short labels and which has another row with text, and only such
-sheets are checked for header rows (`table:table-header-rows`, which Calc writes for rows
-repeated on every printed page) and merged cells. `GRAPHIC003` covers eligible frames and
-vector shapes, including pictures, charts and embedded objects; `LINK002` flags raw-address labels without a native `office:title` description;
-`SHEET007` flags empty sheets after the last one with text or graphics (the first sheet is
-always kept); `HIDDEN001` reports counts, as hidden content is sometimes intended. Header
-rows, merged cells, visible link text and hidden content need a person's decision in Calc.
-Sheet names, eligible graphic alternatives/roles and native link descriptions have explicit
-typed decisions. `LINK003` reports links without readable source purpose; a supplied
-`office:title` can establish purpose without rewriting labels or target names.
-`VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
-number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.
+Errors fail checks; warnings fail strict gates. A registered rule can identify decision
+kinds without guessing an answer. Read [plans](PLAN.md) and inspect the finding's actual
+context before enabling a change. Source relationships, native output and PDF validation
+remain separate; [accessibility boundaries](ACCESSIBILITY.md) explain measured limits.
+
+`SCHEMA001` is a producer/differential-assurance warning, not a conformance certificate.
+Text table classification uses declared data and actual grid/header relationships;
+ambiguous cases require native editing. Spreadsheet data-sheet/default-name heuristics
+remain scoped observations; they do not establish intended meaning. `VERA001` retains the
+independent standard clause/test. The built-in PDF audit is a bounded smoke test.
 
 ## Locations
 
@@ -182,8 +170,8 @@ ref      = "name=" percent_encoded_name | "id=" percent_encoded_identity | N
 objects retain parent segments, such as
 `content/query-collection[name=Fruit]/query[name=Totals]/column[name=Count]`.
 Named and XML-identity values percent-encode reserved delimiters; consumers must not
-split decoded names as path syntax. `N` counts from 1 in document order, separately for each kind: `heading[2]` is the second
-`text:h`, `paragraph[3]` the third `text:p` (headings are not paragraphs here). `ref` is the
+split decoded names as path syntax. `N` is a one-based domain ordinal, not an XML child index. Use the printed target and
+fingerprint; do not reconstruct it from decoded names or another reading context. `ref` is the
 element's percent-encoded declared name (`table[name=Data]`, `frame[name=Logo]`) or, when it has none, its
 index among tables or graphics (`table[2]`). `meta/title` and `meta/language` name the
 missing or conflicting metadata field. `styles` covers style definitions wherever they are

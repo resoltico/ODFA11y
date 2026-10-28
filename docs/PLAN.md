@@ -5,6 +5,11 @@ question, supply its answer and enable only the reviewed decision tables. Pass
 `--plan reviewed.plan.toml` to `remediate` or `pipeline`. `compare` reads its fidelity
 policy. Plans are never loaded automatically.
 
+Target-language decisions preserve other script channels and authored inline overrides.
+Apply structural edits first and regenerate/review ordinal targets afterward; the combined
+plan refuses. Tables with ambiguous intent/relationships require native editing. See
+[preservation boundaries](ACCESSIBILITY.md#preservation-boundaries).
+
 ## Example
 
 The SHA-256 value must identify the exact reviewed source bytes. Generate it with
@@ -48,160 +53,37 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "text": {
-      "type": "string",
-      "format": "odfa11y-xml-text",
-      "description": "Explain the declared object without changing SQL or bindings.",
-      "pattern": "\\S"
-    }
-  },
-  "required": [
-    "text"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `text` | yes | `{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"}` | Explain the declared object without changing SQL or bindings. |
 
 ### `document.metadata`
 
 Scope: document.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "title": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-xml-text",
-      "description": "Document title identifying its purpose.",
-      "pattern": "\\S"
-    },
-    "description": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-xml-text",
-      "description": "Document description and context.",
-      "pattern": "\\S"
-    },
-    "language": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "pattern": "\\S",
-      "description": "Intended default language, preserving explicit local overrides.",
-      "format": "odfa11y-language-tag"
-    }
-  },
-  "required": [],
-  "additionalProperties": false,
-  "anyOf": [
-    {
-      "required": [
-        "title"
-      ],
-      "properties": {
-        "title": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "description"
-      ],
-      "properties": {
-        "description": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "language"
-      ],
-      "properties": {
-        "language": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    }
-  ]
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `title` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text","pattern":"\\S"}` | Document title identifying its purpose. |
+| `description` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text","pattern":"\\S"}` | Document description and context. |
+| `language` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"pattern":"\\S","format":"odfa11y-language-tag"}` | Intended default language, preserving explicit local overrides. |
+
+Required-field alternatives: `[{"required": ["title"], "properties": {"title": {"not": {"type": "null"}}}}, {"required": ["description"], "properties": {"description": {"not": {"type": "null"}}}}, {"required": ["language"], "properties": {"language": {"not": {"type": "null"}}}}]`.
 
 ### `document.odf_version`
 
 Scope: document.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "version": {
-      "type": "string",
-      "enum": [
-        "1.3",
-        "1.4"
-      ],
-      "description": "ODF version whose result must satisfy schema guards."
-    }
-  },
-  "required": [
-    "version"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `version` | yes | `{"type":"string","enum":["1.3","1.4"]}` | ODF version whose result must satisfy schema guards. |
 
 ### `formula.alternative`
 
 Scope: document.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "alternative": {
-      "type": "string",
-      "format": "odfa11y-xml-text",
-      "description": "Write the formula's spoken meaning in its intended language.",
-      "pattern": "\\S"
-    }
-  },
-  "required": [
-    "alternative"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `alternative` | yes | `{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"}` | Write the formula's spoken meaning in its intended language. |
 
 ### `graphic.alternative`
 
@@ -209,88 +91,13 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "title": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-xml-text",
-      "description": "Accessible title; empty text explicitly clears it."
-    },
-    "description": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-xml-text",
-      "description": "Explain the graphic's meaning; empty text clears it."
-    },
-    "decorative": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "Explicit decorative role, subject to source safety guards."
-    }
-  },
-  "required": [],
-  "additionalProperties": false,
-  "anyOf": [
-    {
-      "required": [
-        "title"
-      ],
-      "properties": {
-        "title": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "description"
-      ],
-      "properties": {
-        "description": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "decorative"
-      ],
-      "properties": {
-        "decorative": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    }
-  ]
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `title` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Accessible title; empty text explicitly clears it. |
+| `description` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Explain the graphic's meaning; empty text clears it. |
+| `decorative` | no | `{"anyOf":[{"type":"boolean"},{"type":"null"}]}` | Explicit decorative role, subject to source safety guards. |
+
+Required-field alternatives: `[{"required": ["title"], "properties": {"title": {"not": {"type": "null"}}}}, {"required": ["description"], "properties": {"description": {"not": {"type": "null"}}}}, {"required": ["decorative"], "properties": {"decorative": {"not": {"type": "null"}}}}]`.
 
 ### `heading.level`
 
@@ -298,23 +105,9 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "level": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 10,
-      "description": "Intended outline level."
-    }
-  },
-  "required": [
-    "level"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `level` | yes | `{"type":"integer","minimum":1,"maximum":10}` | Intended outline level. |
 
 ### `language.target`
 
@@ -322,86 +115,13 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "western": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-language-tag"
-    },
-    "asian": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-language-tag"
-    },
-    "complex": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-language-tag"
-    }
-  },
-  "required": [],
-  "additionalProperties": false,
-  "anyOf": [
-    {
-      "required": [
-        "western"
-      ],
-      "properties": {
-        "western": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "asian"
-      ],
-      "properties": {
-        "asian": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "complex"
-      ],
-      "properties": {
-        "complex": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    }
-  ]
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `western` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-language-tag"}` | Language for the target western-script channel. |
+| `asian` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-language-tag"}` | Language for the target Asian-script channel. |
+| `complex` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-language-tag"}` | Language for the target complex-script channel. |
+
+Required-field alternatives: `[{"required": ["western"], "properties": {"western": {"not": {"type": "null"}}}}, {"required": ["asian"], "properties": {"asian": {"not": {"type": "null"}}}}, {"required": ["complex"], "properties": {"complex": {"not": {"type": "null"}}}}]`.
 
 ### `link.description`
 
@@ -409,23 +129,9 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "description": {
-      "type": "string",
-      "format": "odfa11y-xml-text",
-      "description": "Explain the link's purpose in its reading context.",
-      "pattern": "\\S"
-    }
-  },
-  "required": [
-    "description"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `description` | yes | `{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"}` | Explain the link's purpose in its reading context. |
 
 ### `page.metadata`
 
@@ -433,65 +139,12 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "title": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-xml-text",
-      "description": "Accessible page title."
-    },
-    "description": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "format": "odfa11y-xml-text",
-      "description": "Page purpose and context."
-    }
-  },
-  "required": [],
-  "additionalProperties": false,
-  "anyOf": [
-    {
-      "required": [
-        "title"
-      ],
-      "properties": {
-        "title": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "description"
-      ],
-      "properties": {
-        "description": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    }
-  ]
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `title` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Accessible page title. |
+| `description` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Page purpose and context. |
+
+Required-field alternatives: `[{"required": ["title"], "properties": {"title": {"not": {"type": "null"}}}}, {"required": ["description"], "properties": {"description": {"not": {"type": "null"}}}}]`.
 
 ### `page.navigation`
 
@@ -499,26 +152,9 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "navigation": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "\\S",
-        "format": "odfa11y-xml-text"
-      },
-      "description": "Complete reading order of the page's existing shape identities."
-    }
-  },
-  "required": [
-    "navigation"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `navigation` | yes | `{"type":"array","items":{"type":"string","pattern":"\\S","format":"odfa11y-xml-text"}}` | Complete reading order of the page's existing shape identities. |
 
 ### `sheet.name`
 
@@ -526,22 +162,9 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "name": {
-      "type": "string",
-      "format": "odfa11y-sheet-name",
-      "description": "Name identifying what the sheet contains."
-    }
-  },
-  "required": [
-    "name"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `name` | yes | `{"type":"string","format":"odfa11y-sheet-name"}` | Name identifying what the sheet contains. |
 
 ### `table.headers`
 
@@ -549,141 +172,36 @@ Scope: target.
 
 Use the audit's canonical target and mandatory fingerprint.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "rows": {
-      "anyOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "minimum": 1,
-      "description": "Number of leading logical header rows."
-    },
-    "columns": {
-      "anyOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "minimum": 1,
-      "description": "Number of leading logical header columns."
-    }
-  },
-  "required": [],
-  "additionalProperties": false,
-  "anyOf": [
-    {
-      "required": [
-        "rows"
-      ],
-      "properties": {
-        "rows": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "required": [
-        "columns"
-      ],
-      "properties": {
-        "columns": {
-          "not": {
-            "type": "null"
-          }
-        }
-      }
-    }
-  ]
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `rows` | no | `{"anyOf":[{"type":"integer"},{"type":"null"}],"minimum":1}` | Number of leading logical header rows. |
+| `columns` | no | `{"anyOf":[{"type":"integer"},{"type":"null"}],"minimum":1}` | Number of leading logical header columns. |
+
+Required-field alternatives: `[{"required": ["rows"], "properties": {"rows": {"not": {"type": "null"}}}}, {"required": ["columns"], "properties": {"columns": {"not": {"type": "null"}}}}]`.
 
 ### `text.linkify_addresses`
 
 Scope: document.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "enabled": {
-      "type": "boolean",
-      "description": "Enable only after reviewing all affected content."
-    }
-  },
-  "required": [
-    "enabled"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `enabled` | yes | `{"type":"boolean"}` | Enable only after reviewing all affected content. |
 
 ### `text.remove_spacers`
 
 Scope: document.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "enabled": {
-      "type": "boolean",
-      "description": "Enable only after reviewing all affected content."
-    }
-  },
-  "required": [
-    "enabled"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `enabled` | yes | `{"type":"boolean"}` | Enable only after reviewing all affected content. |
 
 ### `text.spacing`
 
 Scope: document.
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "reference_text": {
-      "type": "string",
-      "pattern": "\\S",
-      "description": "Authored text identifying the reference paragraph."
-    },
-    "target_styles": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "\\S"
-      },
-      "minItems": 1,
-      "description": "Existing paragraph styles selected for spacing normalization."
-    },
-    "exact_reference": {
-      "type": "boolean",
-      "description": "Match the entire reference paragraph."
-    },
-    "include_headings": {
-      "type": "boolean",
-      "description": "Also apply to headings using the selected styles."
-    }
-  },
-  "required": [
-    "reference_text",
-    "target_styles"
-  ],
-  "additionalProperties": false
-}
-```
+| Field | Required | Value constraints | Help |
+| --- | --- | --- | --- |
+| `reference_text` | yes | `{"type":"string","pattern":"\\S"}` | Authored text identifying the reference paragraph. |
+| `target_styles` | yes | `{"type":"array","items":{"type":"string","pattern":"\\S"},"minItems":1}` | Existing paragraph styles selected for spacing normalization. |
+| `exact_reference` | no | `{"type":"boolean"}` | Match the entire reference paragraph. |
+| `include_headings` | no | `{"type":"boolean"}` | Also apply to headings using the selected styles. |

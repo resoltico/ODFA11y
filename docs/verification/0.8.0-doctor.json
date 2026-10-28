@@ -1,0 +1,79 @@
+{
+  "exit_status": 0,
+  "format": 1,
+  "libraries": {
+    "lxml": "6.1.3",
+    "pillow": "13.0.0",
+    "pypdf": "6.21.3",
+    "pypdfium2": "5.14.0"
+  },
+  "odfa11y": "0.8.0",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "python": "3.15.2",
+  "schema_versions": [
+    "1.3",
+    "1.4"
+  ],
+  "toolchain": {
+    "capabilities": [
+      {
+        "family": "text",
+        "id": "link-descriptions",
+        "reason": null,
+        "status": "unsupported",
+        "tool": {
+          "name": "LibreOffice",
+          "version": "26.8.1.1"
+        }
+      },
+      {
+        "family": "text",
+        "id": "decorative-graphic-role",
+        "reason": null,
+        "status": "unsupported",
+        "tool": {
+          "name": "LibreOffice",
+          "version": "26.8.1.1"
+        }
+      },
+      {
+        "family": "text",
+        "id": "writer-header-columns",
+        "reason": null,
+        "status": "unsupported",
+        "tool": {
+          "name": "LibreOffice",
+          "version": "26.8.1.1"
+        }
+      },
+      {
+        "family": "formula",
+        "id": "math-tagging",
+        "reason": null,
+        "status": "unsupported",
+        "tool": {
+          "name": "LibreOffice",
+          "version": "26.8.1.1"
+        }
+      },
+      {
+        "family": "spreadsheet",
+        "id": "calc-pdfua",
+        "reason": null,
+        "status": "unsupported",
+        "tool": {
+          "name": "LibreOffice",
+          "version": "26.8.1.1"
+        }
+      }
+    ],
+    "libreoffice": {
+      "name": "LibreOffice",
+      "version": "26.8.1.1"
+    },
+    "verapdf": {
+      "name": "veraPDF",
+      "version": "1.30.3"
+    }
+  }
+}

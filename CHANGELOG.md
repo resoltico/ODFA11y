@@ -4,45 +4,25 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+## [0.8.0]
+
+Draft; release date pending.
+
 ### Breaking
 
-- Table audits classify declared data, layout candidates and valid complex grids. Ambiguous intent or header relationships require native review; merged cells alone no longer trigger a finding.
-
-- Call the root application API with `Tools` and `Profile` values; results own effective exit statuses. Use `verify` and profile `source`; paragraph styles appear in `audit` output.
-
-- Native process/export/preflight APIs live in `native`; PDF reading and fidelity live under `pdf`. Size-split graphic-style and Writer style/protection/spacing modules are consolidated, with no forwarding modules.
-
-- Use concept-based rule IDs across families. Missing graphic text uses one title-or-description criterion; notes and annotations consistently warn and can now fail strict page-document runs. Findings reference their registered rules.
-
-- Presentation and drawing share `families.pages`; use `Family.DRAWING` and drawing names. Internal operations declare supported families. Standard ODF media types retain their `graphics` names.
-
-- Family implementations use an abstract contract and typed preservation snapshots; preservation consumes operation outcomes, and generic removed-block accounting is removed.
-
-- Replace configuration/templates with strict source-bound decision plans (`plan`, `--plan`, explicit `--rebind`). Audits expose typed questions; remediation retains structured refusals and publishes only passing candidates. Valid dry runs exit 0 without publication; refused runs exit 2.
-
-- Update low-level XML callers to `tree()` and content checkpoints; edit declarations/counters are removed. Reopen a model after replacing cached XML through raw storage.
-- Update JSON consumers and Python record access: report 6, run 3 and batch 2 use typed records and registered facts, with initial doctor/remediation schemas. Schema assurance is structured status/version/counts.
-- Invalid arguments and plans exit 4, with explicit precedence 3 > 4 > 2 > 1 > 0. Progress observers receive typed events, the validator stage is `validate-pdf`, and domain plan errors use `PlanError`.
-- Python 3.15 or newer is required; development and CI use 3.15.2. Recreate existing environments after upgrading.
+- Use Python 3.15+ and restore the refreshed lockfile, including major dependency upgrades. Call the root application API with `Tools` and `Profile`; results own their effective exit status.
+- Generate and review source-bound decision plans with `plan`; use explicit `--rebind` for changed sources. Use `verify` and profile `source`; paragraph styles appear in audit output.
+- Consume typed records/facts and the [published schemas](docs/SCHEMAS.md), with concept-based rule IDs. Invalid arguments/plans exit 4; precedence is 3 > 4 > 2 > 1 > 0. Refused remediation exits 2; a passing dry run exits 0 without publication.
+- Presentation/drawing share page semantics; native process/export and PDF reading/fidelity have distinct owners. XML content checkpoints replace edit declarations, and family implementations use abstract contracts and typed preservation snapshots.
 
 ### Added
 
-- Audit Writer lists, references, notes, effective script-channel language, revision/visibility relationships and reading-order uncertainty. Apply source-bound language decisions to paragraphs and inline targets.
+- Audit Writer lists, references/notes, effective script-channel language, classified table relationships and revision/visibility scope. Apply guarded per-target language answers; ambiguous intent and reading order retain native/human review.
+- Record scoped exporter probes, source binding, every remediation outcome and explicit refusals. Generated command/plan/rule/schema/capability references describe the current interfaces.
 
 ### Fixed
 
-- Count flat drawing layer declarations once across logical views.
-
-- Updated all dependencies from primary sources, including Pillow 13 and patched PDF handling; graphic style cascades exclude absent style names.
-
-### Internal
-
-- Replaced file/function size caps and lint-policy probing with cohesion review, local justified suppressions and stale-suppression diagnostics; retained complexity and architecture checks.
-- Native CI uses checksum-pinned LibreOffice 26.8.1.1 on every platform and Go 1.27.3. Dependency updates use primary sources; security alerts remain enabled.
-
-## [0.8.0]
-
-Draft: the remaining 0.8.0 work packages and final release qualification are in progress.
+- Bind inspection and execution to the same captured bytes; detect namespace-sensitive XML changes and unstable ordinal language combinations. Count flat drawing layers once and handle absent graphic style names at their source.
 
 ## [0.7.0] - 2026-10-16
 
@@ -51,7 +31,7 @@ Draft: the remaining 0.8.0 work packages and final release qualification are in 
 - Graphic decisions and operations are now `GraphicAlternative` and `SetGraphicAlternatives`, serialized as `set_graphic_alternatives`. Update Python imports and consumers of serialized plans; no compatibility aliases remain. Existing family `graphics` tables remain available.
 - JSON report format 5 uses current-body, note and text-box targets and stronger reviewed fingerprints. Regenerate templates/fingerprints after upgrading. Ordinal link-description plans must be separate from address linkification and table-header changes; legal unique ID targets can compose when structural guards permit them.
 - Guarded remediation refuses declared signatures, including empty/no-op plans and dry runs. Manifest encryption, duplicate package names and unsafe archive paths block complete inspection, planning, remediation and guarded native export; signatures remain unverified. Use a deliberately prepared supported source in the native application. Low-level storage, `save()` and direct operation calls remain caller-owned surfaces.
-- Native work refuses unestablished formula loading, dynamic references, unsupported namespaces/functions/condition grammars and captured filename dependencies. Named dependencies use bounded traversal without multiplying parser recursion; exhausted budgets produce explicit incomplete classification. Original exports retain original identity subject to the other guards; source inspection remains available. See [Workflow](docs/WORKFLOW.md#formula-declarations-at-native-export).
+- Native work refuses unestablished formula loading, dynamic references, unsupported namespaces/functions/condition grammars and captured filename dependencies. Named dependencies use bounded traversal without multiplying parser recursion; exhausted budgets produce explicit incomplete classification. Original exports retain original identity subject to the other guards; source inspection remains available. See [Workflow](docs/ACCESSIBILITY.md#formula-declarations).
 - `TXT020` classifies valid merged-cell complexity as a header-relationship review warning; unresolved/malformed grids remain errors and production strict warnings still fail. This change does not establish accessible header relationships.
 - Selected high-level timeouts now govern veraPDF as well as LibreOffice; audit/work defaults are 120 seconds. Direct `validate_pdfua` retains 180 seconds. Invalid/nonfinite/boolean values and durations beyond `(2**32 - 2) / 1000` seconds refuse before side effects; fractional library values remain supported.
 - Human-readable CLI reports show findings and actual gate outcomes, wrap text and escape terminal controls. Consumers parsing terminal text should use JSON or SARIF and review the report-format change above.
@@ -87,7 +67,7 @@ Draft: the remaining 0.8.0 work packages and final release qualification are in 
 
 ### Added
 
-- PDF audit enters invoked Form XObjects with stream-specific MCIDs, scoped resources and bounded nesting/reuse. Page/Form correspondence extends `PDF020`/`PDF021`; whole-object `/StructParent` ownership and unsupported cycles/depth/invocation work produce explicit incomplete-inspection refusal. This establishes inspected content correspondence and nonartifact graphic operations, not pixel visibility, reading order or PDF/UA conformance; see [PDF diagnostic limits](docs/ACCESSIBILITY.md#what-each-tool-establishes).
+- PDF audit enters invoked Form XObjects with stream-specific MCIDs, scoped resources and bounded nesting/reuse. Page/Form correspondence extends `PDF020`/`PDF021`; whole-object `/StructParent` ownership and unsupported cycles/depth/invocation work produce explicit incomplete-inspection refusal. This establishes inspected content correspondence and nonartifact graphic operations, not pixel visibility, reading order or PDF/UA conformance; see [PDF diagnostic limits](docs/ACCESSIBILITY.md#threat-model).
 - Text/JSON multi-input audit retains completed reports and continues to later inputs after an unreadable file, identifying each failure on stderr and returning execution status 3. Failed inputs do not become clean reports. SARIF retains global identity/confinement preflight and no partial log on execution failure.
 
 ### Fixed
@@ -215,7 +195,7 @@ Draft: the remaining 0.8.0 work packages and final release qualification are in 
   mapping, and `spreadsheet.alt_text` sets the title and description of frames, with
   fingerprints as in `[text.alt_text]`. `odfa11y template` lists both, and the review
   checklist has spreadsheet items. See [Rules](docs/RULES.md) and
-  [Configuration](docs/CONFIGURATION.md#renaming-sheets).
+  [Configuration](docs/PLAN.md#registered-decisions).
 - **Conservative sheet renaming.** A rename fails, and nothing is written, for an
   unknown sheet, an invalid or colliding new name, a chained or swapped rename, any sheet that
   a formula, range or link refers to by name, and every sheet of a document that embeds

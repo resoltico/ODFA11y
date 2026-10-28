@@ -60,6 +60,8 @@ jobs:
         run: uv run --no-sync ruff format --check .
       - name: Type-check source, tests and tools
         run: uv run --no-sync python -m tools.check_quality
+      - name: Check generated references and schemas
+        run: uv run --no-sync python -m tools.generate_reference --check
       - name: Enforce package boundaries
         run: |
           uv run --no-sync tach check
