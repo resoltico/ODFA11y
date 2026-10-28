@@ -13,6 +13,7 @@ from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
 from odfa11y.content import effective_graphic_role, normalized_role_attributes
 from odfa11y.content.graphic_roles import GraphicRoleEditor
+from odfa11y.content.graphic_styles import GraphicStyles
 from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.remediation import remediate
@@ -139,3 +140,17 @@ def test_odf13_decorative_declaration_is_unresolved_and_retains_missing_alternat
     assert effective_graphic_role(document, frame).problem
     source = document.save(tmp_path / "unsupported-role.odt")
     assert {"GRAPHIC001", "TXT010"} <= {finding.rule_id for finding in audit_odf(source).findings}
+
+
+@pytest.mark.parametrize("style_name", [None, "", "Authored"])
+@pytest.mark.parametrize("namespace", ["draw", "presentation"])
+def test_graphic_cascade_contains_only_present_names(
+    style_name: str | None, namespace: str
+) -> None:
+    shape = etree.Element(qn("draw", "frame"))
+    if style_name is not None:
+        shape.set(qn(namespace, "style-name"), style_name)
+    shape.set(qn(namespace, "class-names"), "First Second")
+    family = "graphic" if namespace == "draw" else "presentation"
+    expected = ([style_name] if style_name else []) + ["First", "Second"]
+    assert GraphicStyles.context(shape) == (namespace, family, expected)

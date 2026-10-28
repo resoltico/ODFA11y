@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.32.4"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -7,7 +7,7 @@ name = "odfa11y"
 version = "0.7.0"
 description = "Audit and explicitly remediate OpenDocument families; verify supported PDF/UA exports with evidence"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 # Code uses MPL-2.0; bundled ODF and MathML grammars retain OASIS and W3C notices.
 license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
 license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt", "src/odfa11y/content/formula_data/NOTICE.txt"]
@@ -20,7 +20,7 @@ classifiers = [
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Operating System :: OS Independent",
   "Typing :: Typed",
   "Topic :: Office/Business",
@@ -28,27 +28,27 @@ classifiers = [
 ]
 dependencies = [
   "lxml>=6.1.3,<7",
-  "pillow>=12.3.0,<13",
-  "pypdf>=6.19.0,<7",
+  "pillow>=13.0.0,<14",
+  "pypdf>=6.21.3,<7",
   "pypdfium2>=5.14.0,<6",
 ]
 
 [dependency-groups]
 dev = [
-  "hypothesis>=6.152.0,<7",
+  "hypothesis>=6.170.12,<7",
   "types-lxml==2026.2.16",
-  "pytest>=9.1.1,<10",
+  "pytest>=9.2.0,<10",
   "pytest-cov>=7.1.0,<8",
   "pytest-xdist>=3.8.0,<4",
-  "ruff==0.16.10",
+  "ruff==0.17.3",
   "tach==0.35.3",
-  "ty==0.0.85",
-  "jsonschema>=4.25.1,<5",
+  "ty==0.0.93",
+  "jsonschema>=4.26.0,<5",
   "tomli-w>=1.2.0,<2",
 ]
 audit = [
   "pip-audit==2.10.1",
-  "zizmor==1.30.1",
+  "zizmor==1.31.1",
 ]
 
 [project.scripts]
@@ -105,7 +105,7 @@ show_missing = true
 skip_covered = true
 
 [tool.ty.environment]
-python-version = "3.14"
+python-version = "3.15"
 
 [tool.ty.src]
 include = ["src", "tests", "tools"]
@@ -114,8 +114,8 @@ include = ["src", "tests", "tools"]
 error-on-warning = true
 
 [tool.ruff]
-required-version = "==0.16.10"
-target-version = "py314"
+required-version = "==0.17.3"
+target-version = "py315"
 preview = true
 line-length = 100
 respect-gitignore = false
