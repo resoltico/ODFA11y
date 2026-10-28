@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-28
+
 - Requires Python 3.15+; restore the refreshed lockfile, including major dependency upgrades and patched PDF/image handling.
 - Use the root application API with `Tools` and `Profile`; results own exit status. Internal workflow imports have no compatibility aliases.
 - Generate source-bound decisions with `plan`/`--plan`; regenerate old configurations. Changed sources require explicit `--rebind`, with target fingerprints and preservation still enforced.
