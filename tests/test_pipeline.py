@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.content import GraphicAlternative
-from odfa11y.errors import ConfigError, OutputError
+from odfa11y.errors import OutputError, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import (
     MarkTableHeaders,
@@ -19,7 +19,7 @@ from odfa11y.families.text import (
 )
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import PackageStorage
-from odfa11y.pipeline import PROFILES, STAGE_NAMES, PipelineOptions, run_pipeline
+from odfa11y.pipeline import PIPELINE_STAGES, PROFILES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 
 from .fixtures import make_minimal_odt
@@ -102,7 +102,7 @@ def test_the_record_lists_every_stage_in_order(tmp_path: Path) -> None:
     record = run_pipeline(
         source, [], FidelityPolicy(), tmp_path / "out", PipelineOptions(soffice="nope")
     )
-    assert tuple(stage.name for stage in record.stages) == STAGE_NAMES
+    assert tuple(stage.name for stage in record.stages) == PIPELINE_STAGES
 
 
 @pytest.mark.integration
@@ -131,7 +131,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
         for stage in record.stages
         if stage.status != "passed"
     ]
-    assert statuses(record) == dict.fromkeys(STAGE_NAMES, "passed"), why
+    assert statuses(record) == dict.fromkeys(PIPELINE_STAGES, "passed"), why
     assert record.exit_status == 0
     assert check_bundle(tmp_path / "out") == []
     run = json.loads((tmp_path / "out" / "run.json").read_text())
@@ -220,7 +220,8 @@ def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path
         source, [SetMetadata(title="T")], FidelityPolicy(), tmp_path / "o", options
     )
     expected = {
-        name: "passed" if name in PROFILES["inspect"].stages else "skipped" for name in STAGE_NAMES
+        name: "passed" if name in PROFILES["inspect"].stages else "skipped"
+        for name in PIPELINE_STAGES
     }
     assert statuses(record) == expected
     assert record.exit_status == 0
@@ -232,7 +233,7 @@ def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path
 
 def test_an_unknown_profile_is_a_configuration_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    with pytest.raises(ConfigError, match="Unknown profile"):
+    with pytest.raises(PlanError, match="Unknown profile"):
         run_pipeline(source, [], FidelityPolicy(), tmp_path / "o", PipelineOptions(profile="x"))
     assert not (tmp_path / "o").exists()
 

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.content import page_snapshot, set_style_language, style_language
 from odfa11y.odf import Family
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_document
 from .config import parse_table
@@ -40,18 +41,20 @@ ADAPTER = FamilyAdapter(
     config_tables={"presentation": parse_table},
     template=template,
     review_items=(
-        ReviewItem("page titles", "Whether titles identify their pages and topics."),
+        ReviewItem(ReviewTopic.PAGE_TITLES, "Whether titles identify their pages and topics."),
         ReviewItem(
-            "reading order",
+            ReviewTopic.READING_ORDER,
             "Whether the complete shape order makes sense, including groups and links.",
         ),
-        ReviewItem("descriptions", "Whether graphic descriptions convey their meaning in context."),
         ReviewItem(
-            "colour and layout",
+            ReviewTopic.ALT_TEXT, "Whether graphic descriptions convey their meaning in context."
+        ),
+        ReviewItem(
+            ReviewTopic.COLOUR_AND_LAYOUT,
             "Whether contrast, colour, cropping and placement preserve meaning.",
         ),
         ReviewItem(
-            "slides and notes",
+            ReviewTopic.SLIDES_AND_NOTES,
             "Whether hidden slides, notes, transitions and projected content are intentional.",
         ),
     ),

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from odfa11y.errors import PackageError
 from odfa11y.fidelity import compare_pdfs
 from odfa11y.odf import OdfDocument
+from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf import export_pdfua
 
 from .native import NativeOptions, native_export_settings
@@ -79,10 +80,10 @@ def compare_documents(
         left = _render_input(source, work, options, pdf=source_pdf, name="source")
         right = _render_input(candidate, work, options, pdf=candidate_pdf, name="candidate")
         if options.on_progress is not None:
-            options.on_progress("compare-fidelity", "running")
+            options.on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.RUNNING))
         report = compare_pdfs(left, right, policy, diff_dir=diff_dir)
         if options.on_progress is not None:
-            options.on_progress("compare-fidelity", "completed")
+            options.on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.PASSED))
     report.subject = f"{candidate.name} vs {source.name}"
     report.sources = (candidate, source)
     return report
@@ -95,8 +96,8 @@ def _render_input(path: Path, work: Path, options: NativeOptions, *, pdf: bool, 
         OdfDocument.open(path), options.soffice, options.timeout, work / "profile"
     )
     if options.on_progress is not None:
-        options.on_progress(f"export-{name}", "running")
+        options.on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.RUNNING))
     rendered = export_pdfua(path, work / f"{name}.pdf", settings)
     if options.on_progress is not None:
-        options.on_progress(f"export-{name}", "passed")
+        options.on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.PASSED))
     return rendered

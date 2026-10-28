@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from types import FrameType
 
-from odfa11y.errors import ConfigError, ToolNotFoundError
+from odfa11y.errors import PlanError, ToolNotFoundError
 
 IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
@@ -43,16 +43,16 @@ def validate_timeout(timeout: float) -> float:
 
     Raises
     ------
-    ConfigError
+    PlanError
         The input is not a supported finite, positive duration.
     """
     message = f"Timeout must be finite positive numeric seconds, at most {MAX_TIMEOUT_SECONDS}."
     if type(timeout) not in {int, float}:
-        raise ConfigError(message)
+        raise PlanError(message)
     try:
         seconds = float(timeout)
     except OverflowError as exc:
-        raise ConfigError(message) from exc
+        raise PlanError(message) from exc
     if (
         not math.isfinite(seconds)
         or seconds <= 0
@@ -60,7 +60,7 @@ def validate_timeout(timeout: float) -> float:
         or seconds > MAX_TIMEOUT_SECONDS
         or math.ceil(seconds * 1000) > 2**32 - 2
     ):
-        raise ConfigError(message)
+        raise PlanError(message)
     return seconds
 
 

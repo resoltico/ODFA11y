@@ -7,7 +7,7 @@ import shlex
 from typing import TYPE_CHECKING
 
 from odfa11y.audit import template_blockers
-from odfa11y.errors import ConfigError, OutputError, ToolNotFoundError
+from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
 from odfa11y.report import terminal_text
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ def error_hint(args: argparse.Namespace, exc: Exception) -> str | None:
         A human-facing hint, or None when the specific error already explains recovery.
 
     """
-    if isinstance(exc, ConfigError):
+    if isinstance(exc, PlanError):
         return (
             "Next: edit the existing configuration and retry. "
             f"Use odfa11y {args.command} --help for command examples; "

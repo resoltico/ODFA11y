@@ -49,7 +49,12 @@ def record(**changes: object) -> dict[str, Any]:
                 },
                 "remediation": None,
             },
-            {"name": "verapdf", "status": "skipped", "reason": "not requested", "report": None},
+            {
+                "name": "validate-pdf",
+                "status": "skipped",
+                "reason": "not requested",
+                "report": None,
+            },
         ],
     }
     return base | changes

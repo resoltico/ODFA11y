@@ -160,10 +160,7 @@ def test_invalid_configuration_is_reported_on_stderr(
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
     invalid = config(tmp_path, "[document]\nlanguage = 7\n")
-    assert (
-        main(["remediate", str(source), str(tmp_path / "o.odt"), "--config", str(invalid)])
-        == EXECUTION_FAILURE
-    )
+    assert main(["remediate", str(source), str(tmp_path / "o.odt"), "--config", str(invalid)]) == 4
     assert "document.language must be str" in capsys.readouterr().err
 
 
@@ -176,7 +173,7 @@ def test_removed_flags_and_commands_are_rejected() -> None:
     ):
         with pytest.raises(SystemExit) as raised:
             main(arguments)
-        assert raised.value.code == FINDINGS
+        assert raised.value.code == 4
 
 
 def test_styles_prints_usage(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

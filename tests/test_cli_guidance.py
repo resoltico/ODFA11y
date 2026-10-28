@@ -14,7 +14,7 @@ from odfa11y.audit import audit_odf, render_template
 from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
-from odfa11y.errors import ConfigError, OutputError, ToolNotFoundError
+from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
 from odfa11y.families.text import ADAPTER
 from odfa11y.report import Report, rules
 
@@ -66,7 +66,7 @@ def test_bare_invocation_shows_workflow_without_executing(
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as raised:
         main([])
-    assert raised.value.code == 2
+    assert raised.value.code == 4
     captured = capsys.readouterr()
     assert not captured.out
     assert "Workflow" in captured.err
@@ -77,7 +77,7 @@ def test_bare_invocation_shows_workflow_without_executing(
 def test_command_typo_suggests_without_executing(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as raised:
         main(["audti", "absent.odt"])
-    assert raised.value.code == 2
+    assert raised.value.code == 4
     captured = capsys.readouterr()
     assert "maybe you meant 'audit'" in captured.err
     assert not captured.out
@@ -123,7 +123,7 @@ def test_template_header_escapes_untrusted_subject_without_active_toml(tmp_path:
 
 def test_recovery_preserves_configuration_and_existing_output() -> None:
     args = argparse.Namespace(command="remediate", config=Path("reviewed.toml"))
-    assert "edit the existing configuration" in (error_hint(args, ConfigError("wrong type")) or "")
+    assert "edit the existing configuration" in (error_hint(args, PlanError("wrong type")) or "")
     assert "preserve" in (error_hint(args, OutputError("occupied")) or "")
     assert error_hint(args, ValueError("unexpected")) is None
 
@@ -158,7 +158,7 @@ def test_parser_errors_escape_terminal_controls_before_execution(
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as raised:
         main(arguments)
-    assert raised.value.code == 2
+    assert raised.value.code == 4
     captured = capsys.readouterr()
     assert not captured.out
     assert "\x1b" not in captured.err

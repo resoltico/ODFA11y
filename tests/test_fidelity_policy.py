@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.cli import main
 from odfa11y.config import load_config
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.fidelity import FidelityPolicy
 
 from .fixtures import make_minimal_odt
@@ -42,7 +42,7 @@ def test_nonfinite_policy_refuses_cli_before_publication(
             "--format",
             "json",
         ])
-        == 3
+        == 4
     )
     result = capsys.readouterr()
     assert not result.out
@@ -50,9 +50,9 @@ def test_nonfinite_policy_refuses_cli_before_publication(
     assert "finite non-negative" in result.err
     assert not output.exists()
     assert source.read_bytes() == before
-    with pytest.raises(ConfigError, match="raster_tolerance"):
+    with pytest.raises(PlanError, match="raster_tolerance"):
         load_config(plan)
-    with pytest.raises(ConfigError, match="raster_tolerance"):
+    with pytest.raises(PlanError, match="raster_tolerance"):
         FidelityPolicy(raster_tolerance=float(value))
 
 
@@ -75,7 +75,7 @@ def test_nonfinite_policy_refuses_cli_before_publication(
     ],
 )
 def test_library_rejects_invalid_policy(field: str, value: object) -> None:
-    with pytest.raises(ConfigError, match=field):
+    with pytest.raises(PlanError, match=field):
         FidelityPolicy(**cast("dict[str, Any]", {field: value}))
 
 

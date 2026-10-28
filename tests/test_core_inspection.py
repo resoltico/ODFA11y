@@ -79,10 +79,10 @@ def test_core_progress_contains_no_source_path_or_document_values(tmp_path: Path
         audit_document(
             source,
             verapdf_path=tmp_path / "absent-validator",
-            on_progress=lambda label, status: events.append((label, status)),
+            on_progress=lambda event: events.append((event.step, event.state)),
         )
     )
     assert events == [
-        ("Audit document", "running"),
-        ("Validate PDF with veraPDF", "running"),
+        ("audit-document", "running"),
+        ("validate-pdf", "running"),
     ]

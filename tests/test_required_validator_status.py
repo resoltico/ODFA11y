@@ -51,11 +51,11 @@ def test_required_validator_failure_reaches_stage_and_retains_evidence(tmp_path:
         target,
         PipelineOptions(profile="production", verapdf_path=str(tmp_path / "missing-verapdf")),
     )
-    assert result.failed_stage == "verapdf"
+    assert result.failed_stage == "validate-pdf"
     assert result.exit_status == 3
     assert all(stage.status == "passed" for stage in result.stages[:7])
     assert result.stages[-1].status == "skipped"
-    assert result.stages[-1].reason == "not run: verapdf failed"
+    assert result.stages[-1].reason == "not run: validate-pdf failed"
     assert check_bundle(target) == []
     assert json.loads((target / "run.json").read_text())["status"] == "failed"
 
@@ -101,7 +101,7 @@ def test_cli_and_batch_keep_required_validator_status(
     )
     record = json.loads((tmp_path / "batch" / "batch.json").read_text())
     assert [item["exit_status"] for item in record["items"]] == [3, 3]
-    assert [item["failed_stage"] for item in record["items"]] == ["verapdf", "verapdf"]
+    assert [item["failed_stage"] for item in record["items"]] == ["validate-pdf", "validate-pdf"]
     for name in ("first", "second"):
         assert check_bundle(tmp_path / "batch" / name) == []
     assert "Traceback" not in capsys.readouterr().err
@@ -136,6 +136,6 @@ def test_real_production_reaches_missing_required_validator(
         ),
     )
     assert all(stage.status == "passed" for stage in record.stages[:7]), record.as_dict()
-    assert record.failed_stage == "verapdf"
+    assert record.failed_stage == "validate-pdf"
     assert record.exit_status == 3
     assert check_bundle(target) == []

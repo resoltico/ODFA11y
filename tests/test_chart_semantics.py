@@ -13,7 +13,7 @@ from lxml import etree
 from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
-from odfa11y.errors import ConfigError, RemediationError
+from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.fidelity import FidelityPolicy
@@ -131,7 +131,7 @@ def test_chart_external_provider_is_not_fetched_or_echoed(tmp_path: Path) -> Non
 def test_chart_has_no_invented_alternative_config_table(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
     plan.write_text('[chart]\nalternative = "Counts"\n')
-    with pytest.raises(ConfigError):
+    with pytest.raises(PlanError):
         load_config(plan)
 
 

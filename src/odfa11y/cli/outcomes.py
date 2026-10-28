@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from odfa11y.outcomes import ExitStatus
+
 
 def render_command_outcome(status: int, *, strict: bool = False) -> str:
     """Return a text outcome with the gate policy and actual exit status.
@@ -14,11 +16,12 @@ def render_command_outcome(status: int, *, strict: bool = False) -> str:
 
     """
     reasons = {
-        0: "selected checks completed",
-        1: "warnings rejected by the strict gate",
-        2: "error findings",
-        3: "execution failure; checks may be incomplete",
+        ExitStatus.PASSED: "selected checks completed",
+        ExitStatus.STRICT_WARNINGS: "warnings rejected by the strict gate",
+        ExitStatus.ERRORS: "error findings",
+        ExitStatus.EXECUTION_FAILURE: "execution failure; checks may be incomplete",
+        ExitStatus.USAGE_ERROR: "invalid arguments, plan or policy",
     }
     outcome = "completed" if status == 0 else "failed"
     policy = "errors and warnings fail" if strict else "errors fail; warnings require review"
-    return f"Command: {outcome} (exit {status}; {reasons[status]}).\nGate: {policy}."
+    return f"Command: {outcome} (exit {status}; {reasons[ExitStatus(status)]}).\nGate: {policy}."

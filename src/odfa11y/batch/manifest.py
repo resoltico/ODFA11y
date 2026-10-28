@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from odfa11y.errors import ConfigError, OutputError
+from odfa11y.errors import OutputError, PlanError
 
 ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 RESERVED_IDS = frozenset({
@@ -40,7 +40,7 @@ def load_manifest(manifest: Path) -> tuple[BatchItem, ...]:
 
     Raises
     ------
-    ConfigError
+    PlanError
         The manifest or an entry is invalid.
 
     """
@@ -48,17 +48,17 @@ def load_manifest(manifest: Path) -> tuple[BatchItem, ...]:
         data = tomllib.loads(manifest.read_text(encoding="utf-8"))
     except (tomllib.TOMLDecodeError, UnicodeError) as exc:
         msg = "Invalid batch TOML manifest"
-        raise ConfigError(msg) from exc
+        raise PlanError(msg) from exc
     entries = data.get("documents")
     if set(data) != {"documents"} or not isinstance(entries, list) or not entries:
         msg = "Batch manifest must contain a nonempty [[documents]] list only"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     items = []
     seen = set()
     for entry in entries:
         if not isinstance(entry, dict) or set(entry) != {"id", "source", "plan"}:
             msg = "Each batch document must contain exactly id, source and plan"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         identity = entry["id"]
         if (
             not isinstance(identity, str)
@@ -66,10 +66,10 @@ def load_manifest(manifest: Path) -> tuple[BatchItem, ...]:
             or identity.upper() in RESERVED_IDS
         ):
             msg = "Batch IDs require 1-64 ASCII letters, digits, underscores or hyphens"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         if identity.casefold() in seen:
             msg = "Batch IDs must be unique ignoring case"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         seen.add(identity.casefold())
         items.append(
             BatchItem(
@@ -84,11 +84,11 @@ def load_manifest(manifest: Path) -> tuple[BatchItem, ...]:
 def _input(base: Path, value: object) -> Path:
     if not isinstance(value, str) or not value.strip() or "\x00" in value:
         msg = "Batch source and plan must be nonempty relative paths"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     path = Path(value)
     if path.is_absolute() or re.match(r"^[A-Za-z]:", value) or value.startswith(("/", "\\")):
         msg = "Batch source and plan paths must be relative to the manifest"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     return base / path
 
 

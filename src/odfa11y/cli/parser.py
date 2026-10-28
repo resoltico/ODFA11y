@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Never
 
 from odfa11y import __version__
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.external_tools import validate_timeout
+from odfa11y.outcomes import ExitStatus
 from odfa11y.pipeline import DEFAULT_PROFILE, DEFAULT_TIMEOUT_SECONDS, PROFILES
 from odfa11y.report import FORMATS, terminal_text
 
@@ -18,8 +20,9 @@ class TerminalParser(argparse.ArgumentParser):
     """Keep native help and suggestions while escaping untrusted error messages."""
 
     def error(self, message: str) -> Never:
-        """Print a terminal-safe parse error and exit with argparse's status two."""
-        super().error(terminal_text(message))
+        """Print a terminal-safe parse error and exit with the shared usage status."""
+        self.print_usage(sys.stderr)
+        self.exit(ExitStatus.USAGE_ERROR, f"{self.prog}: error: {terminal_text(message)}\n")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  odfa11y check-evidence evidence\n\n"
             "Use a new configuration filename and evidence directory.\n"
             "Exit statuses: 0 success; 1 gated warnings;\n"
-            "  2 findings/arguments; 3 execution failure.\n"
+            "  2 error findings; 3 execution failure; 4 invalid arguments/plans.\n"
             "A successful automated check still requires human accessibility review.\n"
             "Use odfa11y COMMAND --help for examples and options."
         ),
@@ -210,7 +213,7 @@ def _timeout_seconds(value: str) -> int:
     try:
         seconds = int(value)
         validate_timeout(seconds)
-    except (ValueError, ConfigError) as exc:
+    except (ValueError, PlanError) as exc:
         msg = (
             f"Invalid timeout: {value!r}; "
             "use positive whole seconds within the portable wait range."

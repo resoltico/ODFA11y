@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.adapter import FamilyAdapter, ReviewItem
 from odfa11y.odf import body_text_snapshot
+from odfa11y.outcomes import ReviewTopic
 from odfa11y.report import rules
 
 if TYPE_CHECKING:
@@ -16,10 +17,17 @@ if TYPE_CHECKING:
     from odfa11y.report import Finding, Report
 
 REVIEW_ITEMS = (
-    ReviewItem("alt text", "Whether every graphic's description is meaningful in its context."),
-    ReviewItem("reading order", "Whether the reading order of the content is logical."),
-    ReviewItem("colour", "Whether colour conveys information that is not available any other way."),
-    ReviewItem("layout", "Whether the pages look right: typography and visual appearance."),
+    ReviewItem(
+        ReviewTopic.ALT_TEXT, "Whether every graphic's description is meaningful in its context."
+    ),
+    ReviewItem(ReviewTopic.READING_ORDER, "Whether the reading order of the content is logical."),
+    ReviewItem(
+        ReviewTopic.COLOUR,
+        "Whether colour conveys information that is not available any other way.",
+    ),
+    ReviewItem(
+        ReviewTopic.LAYOUT, "Whether the pages look right: typography and visual appearance."
+    ),
 )
 
 

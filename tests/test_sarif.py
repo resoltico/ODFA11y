@@ -11,6 +11,7 @@ import pytest
 from jsonschema import Draft7Validator
 
 from odfa11y.audit import audit_odf
+from odfa11y.errors import PackageError, ReportError
 from odfa11y.pdf import check_pdfua
 from odfa11y.report import Finding, Location, Report, Severity, render_reports, rules
 
@@ -139,7 +140,7 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
 def test_unsafe_logical_labels_are_rejected(tmp_path: Path, label: str) -> None:
     report = Report(kind="odf", subject="x", sources=(_source(tmp_path, "x.odt"),))
     report.add(rules.TXT010, location=Location(label))
-    with pytest.raises(ValueError, match="unsafe path or credential"):
+    with pytest.raises(ReportError, match="unsafe path or credential"):
         _render([report], tmp_path)
 
 
@@ -151,25 +152,25 @@ def test_sources_outside_root_and_symlink_escape_are_rejected(tmp_path: Path) ->
     link.symlink_to(outside)
     for source in (outside, link):
         report = Report(kind="odf", subject="x", sources=(source,))
-        with pytest.raises(ValueError, match="within the source root"):
+        with pytest.raises(ReportError, match="within the source root"):
             _render([report], root)
 
 
 def test_missing_root_source_identity_and_unregistered_rules_are_rejected(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="explicit source root"):
+    with pytest.raises(ReportError, match="explicit source root"):
         render_reports([], output_format="sarif")
-    with pytest.raises(ValueError, match="explicit source identities"):
+    with pytest.raises(ReportError, match="explicit source identities"):
         _render([Report(kind="odf", subject="sample.odt")], tmp_path)
     report = Report(kind="odf", subject="x", sources=(_source(tmp_path, "x.odt"),))
     report.findings.append(Finding("UNKNOWN", Severity.ERROR, "x", "x"))
-    with pytest.raises(ValueError, match="registered rules"):
+    with pytest.raises(ReportError, match="registered rules"):
         _render([report], tmp_path)
 
 
 def test_missing_source_is_private_and_empty_report_is_valid(tmp_path: Path) -> None:
     source = tmp_path / "missing-secret.odt"
     report = Report(kind="odf", subject="x", sources=(source,))
-    with pytest.raises(ValueError, match=r"^SARIF source identity cannot be resolved\.$"):
+    with pytest.raises(PackageError, match=r"^SARIF source identity cannot be resolved\.$"):
         _render([report], tmp_path)
     assert _render([], tmp_path)["runs"][0]["results"] == []
 
@@ -187,7 +188,7 @@ def test_verapdf_report_keeps_pdf_identity_independent_of_display_subject(tmp_pa
 
 def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Path) -> None:
     source = _source(tmp_path, "original.odt")
-    with pytest.raises(ValueError, match="existing directory"):
+    with pytest.raises(ReportError, match="existing directory"):
         _render([], source)
     link = tmp_path / "alias.odt"
     link.symlink_to(source)

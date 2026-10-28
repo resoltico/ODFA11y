@@ -15,6 +15,14 @@ from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.fidelity import compare_pdfs
 from odfa11y.odf import OdfDocument, declared_version
+from odfa11y.outcomes import (
+    PIPELINE_STAGES,
+    ProgressEvent,
+    StageName,
+    StageStatus,
+    StepName,
+    StepState,
+)
 from odfa11y.pdf import (
     ExportSettings,
     audit_pdfua,
@@ -29,7 +37,6 @@ from odfa11y.remediation import remediate
 from odfa11y.report import exit_status
 
 from .native import native_export_settings
-from .profiles import STAGE_NAMES
 from .publication import publish_evidence
 from .record import PipelineOptions, RunRecord, StageResult
 from .source import capture_source
@@ -69,9 +76,13 @@ class _Run:
         try:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
-            return StageResult("identify-source", "passed", gate=False)  # audit-source explains
+            return StageResult(
+                StageName.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False
+            )  # audit-source explains
         if document.protection.inspection_blocked:
-            return StageResult("identify-source", "passed", gate=False)  # audit-source explains
+            return StageResult(
+                StageName.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False
+            )  # audit-source explains
         detection = document.detection
         self.adapter = adapter_for(detection.kind)
         self.record.document.update(
@@ -83,15 +94,15 @@ class _Run:
             odf_version=declared_version(document),
         )
         self.record.human_review = review_items(self.adapter.review_items)
-        return StageResult("identify-source", "passed", gate=False)
+        return StageResult(StageName.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False)
 
     def audit_source(self) -> StageResult:
         report = audit_odf(self.captured or self.source, schema=True)
         report.subject = self.source.name
         blocked = template_blockers(report) is not None
         return StageResult(
-            "audit-source",
-            "failed" if blocked else "passed",
+            StageName.AUDIT_SOURCE,
+            StageStatus.FAILED if blocked else StageStatus.PASSED,
             "source is not a readable ODF document" if blocked else None,
             report=report,
             gate=blocked,
@@ -100,20 +111,23 @@ class _Run:
     def remediate(self) -> StageResult:
         result = remediate(self.captured or self.source, self.remediated, self.operations)
         return StageResult(
-            "remediate", "passed", remediation=replace(result, source=self.source), gate=False
+            StageName.REMEDIATE,
+            StageStatus.PASSED,
+            remediation=replace(result, source=self.source),
+            gate=False,
         )
 
     def audit_remediated(self) -> StageResult:
         report = audit_odf(self.remediated)
         report.subject = self.remediated.name
-        return self._gate("audit-remediated", report)
+        return self._gate(StageName.AUDIT_REMEDIATED, report)
 
     def export_source(self) -> StageResult:
-        return self._export("export-source", self.captured or self.source, "source.pdf")
+        return self._export(StageName.EXPORT_SOURCE, self.captured or self.source, "source.pdf")
 
     def export_remediated(self) -> StageResult:
         if not self._exportable:
-            return self._no_pdf("export-remediated")
+            return self._no_pdf(StageName.EXPORT_REMEDIATED)
         native_export_settings(
             OdfDocument.open(self.remediated),
             self.options.soffice,
@@ -123,22 +137,22 @@ class _Run:
         with capture_source(
             self.remediated, directory=(self.captured or self.source).parent
         ) as staged:
-            return self._export("export-remediated", staged, "remediated.pdf")
+            return self._export(StageName.EXPORT_REMEDIATED, staged, "remediated.pdf")
 
     def audit_pdf(self) -> StageResult:
         if not self._exportable:
-            return self._no_pdf("audit-pdf")
+            return self._no_pdf(StageName.AUDIT_PDF)
         self.record.fonts = {
             "source": list_fonts(self.work / "source.pdf"),
             "remediated": list_fonts(self.work / "remediated.pdf"),
         }
         report = audit_pdfua(self.work / "remediated.pdf")
         report.subject = "remediated.pdf"
-        return self._gate("audit-pdf", report)
+        return self._gate(StageName.AUDIT_PDF, report)
 
     def validate_pdfua(self) -> StageResult:
         if not self._exportable:
-            return self._no_pdf("verapdf")
+            return self._no_pdf(StageName.VALIDATE_PDF)
         report, result = check_pdfua(
             self.work / "remediated.pdf",
             subject="remediated.pdf",
@@ -148,46 +162,51 @@ class _Run:
         if result is None:
             required = self.record.profile.verapdf_required
             return StageResult(
-                "verapdf",
-                "failed" if required else "skipped",
+                StageName.VALIDATE_PDF,
+                StageStatus.FAILED if required else StageStatus.SKIPPED,
                 "veraPDF unavailable",
                 report=report,
                 error=required,
             )
         (self.work / "verapdf.xml").write_text(result.raw_xml, encoding="utf-8")
         self.record.toolchain["veraPDF"] = result.identity.as_dict()
-        return self._gate("verapdf", report)
+        return self._gate(StageName.VALIDATE_PDF, report)
 
     def fidelity(self) -> StageResult:
         if not self._exportable:
-            return self._no_pdf("fidelity")
+            return self._no_pdf(StageName.FIDELITY)
         report = compare_pdfs(
             self.work / "source.pdf",
             self.work / "remediated.pdf",
             self.policy,
-            diff_dir=self.work / "fidelity",
+            diff_dir=self.work / StageName.FIDELITY,
         )
         report.subject = "remediated.pdf vs source.pdf"
-        return self._gate("fidelity", report)
+        return self._gate(StageName.FIDELITY, report)
 
     @property
     def _exportable(self) -> bool:
         return self.adapter.pdf_filter is not None
 
-    def _no_pdf(self, name: str) -> StageResult:
+    def _no_pdf(self, name: StageName) -> StageResult:
         kind = self.record.document.get("kind") or "this kind of"
         reason = f"no PDF export is defined for {kind} documents"
         if self.record.profile.verapdf_required:
             return StageResult(
-                name, "failed", f"{reason}; the profile requires PDF validation", error=True
+                name,
+                StageStatus.FAILED,
+                f"{reason}; the profile requires PDF validation",
+                error=True,
             )
-        return StageResult(name, "not-applicable", reason, gate=False)
+        return StageResult(name, StageStatus.NOT_APPLICABLE, reason, gate=False)
 
-    def _gate(self, name: str, report: Report) -> StageResult:
+    def _gate(self, name: StageName, report: Report) -> StageResult:
         failed = exit_status([report], strict=self.record.strict) != 0
-        return StageResult(name, "failed" if failed else "passed", report=report)
+        return StageResult(
+            name, StageStatus.FAILED if failed else StageStatus.PASSED, report=report
+        )
 
-    def _export(self, name: str, document: Path, pdf_name: str) -> StageResult:
+    def _export(self, name: StageName, document: Path, pdf_name: str) -> StageResult:
         if self.adapter.pdf_filter is None:
             return self._no_pdf(name)
         settings = native_export_settings(
@@ -220,7 +239,7 @@ class _Run:
             self.work / pdf_name,
             replace(settings, soffice=self.executable),
         )
-        return StageResult(name, "passed", gate=False)
+        return StageResult(name, StageStatus.PASSED, gate=False)
 
 
 def review_items(items: tuple[ReviewItem, ...]) -> list[dict[str, str]]:
@@ -271,21 +290,28 @@ def run_pipeline(
     with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
         work = Path(scratch)
         run = _Run(source, work, operations, policy, record, options, lifetime)
-        steps: dict[str, Callable[[], StageResult]] = {
-            "identify-source": run.identify_source,
-            "audit-source": run.audit_source,
-            "remediate": run.remediate,
-            "audit-remediated": run.audit_remediated,
-            "export-source": run.export_source,
-            "export-remediated": run.export_remediated,
-            "audit-pdf": run.audit_pdf,
-            "verapdf": run.validate_pdfua,
-            "fidelity": run.fidelity,
+        steps: dict[StageName, Callable[[], StageResult]] = {
+            StageName.IDENTIFY_SOURCE: run.identify_source,
+            StageName.AUDIT_SOURCE: run.audit_source,
+            StageName.REMEDIATE: run.remediate,
+            StageName.AUDIT_REMEDIATED: run.audit_remediated,
+            StageName.EXPORT_SOURCE: run.export_source,
+            StageName.EXPORT_REMEDIATED: run.export_remediated,
+            StageName.AUDIT_PDF: run.audit_pdf,
+            StageName.VALIDATE_PDF: run.validate_pdfua,
+            StageName.FIDELITY: run.fidelity,
         }
-        for name in STAGE_NAMES:
+        for name in PIPELINE_STAGES:
             stage = run_stage(name, steps[name], record, on_progress=on_progress)
             record.stages.append(stage)
             if on_progress is not None:
-                on_progress(name, stage.status)
+                on_progress(
+                    ProgressEvent(
+                        StepName(name),
+                        StepState.SKIPPED
+                        if stage.status == StageStatus.NOT_APPLICABLE
+                        else StepState(stage.status),
+                    )
+                )
         publish_evidence(source, target, work, record, on_progress)
     return record

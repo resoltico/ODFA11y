@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, cast
 
 from odfa11y.adapter import config_tables
 from odfa11y.content import normalize_language
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.families import config_tables as family_tables
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import SUPPORTED_VERSIONS
@@ -40,7 +40,7 @@ def load_config(path: str | Path) -> Config:
 
     Raises
     ------
-    ConfigError
+    PlanError
         The file is unreadable or invalid TOML, or a key, type or value is not supported.
 
     """
@@ -49,7 +49,7 @@ def load_config(path: str | Path) -> Config:
             data = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
         msg = f"Cannot read configuration {path}: {exc}"
-        raise ConfigError(msg) from exc
+        raise PlanError(msg) from exc
     families = family_tables()
     config_tables.known(data, COMMON_TABLES | families.keys(), "configuration")
     operations: list[Operation] = []
@@ -67,12 +67,12 @@ def _document(table: dict[str, object]) -> list[Operation]:
         try:
             texts["language"] = normalize_language(texts["language"])
         except ValueError as exc:
-            raise ConfigError(str(exc)) from exc
+            raise PlanError(str(exc)) from exc
     version = texts.get("odf_version")
     if version is not None:
         if version not in SUPPORTED_VERSIONS:
             msg = f"document.odf_version must be one of {', '.join(SUPPORTED_VERSIONS)}"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         operations.append(SetOdfVersion(version))
     if {"title", "description", "language"} & texts.keys():
         operations.append(

@@ -49,7 +49,12 @@ def record(**changes: object) -> dict[str, Any]:
                 },
                 "remediation": None,
             },
-            {"name": "verapdf", "status": "skipped", "reason": "not requested", "report": None},
+            {
+                "name": "validate-pdf",
+                "status": "skipped",
+                "reason": "not requested",
+                "report": None,
+            },
         ],
     }
     return base | changes
@@ -107,7 +112,12 @@ def test_review_separates_facts_from_decisions_and_never_overclaims() -> None:
 
 def test_review_omits_the_validation_caveat_only_when_verapdf_passed() -> None:
     passed = record()
-    passed["stages"][1] = {"name": "verapdf", "status": "passed", "reason": None, "report": None}
+    passed["stages"][1] = {
+        "name": "validate-pdf",
+        "status": "passed",
+        "reason": None,
+        "report": None,
+    }
     assert "not PDF/UA validation" not in render_review(passed)
     failed = record(status="failed", failed_stage="fidelity")
     assert "(failed at `fidelity`)" in render_review(failed)

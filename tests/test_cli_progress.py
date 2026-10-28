@@ -12,6 +12,7 @@ from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
 from odfa11y.config import Config
 from odfa11y.errors import OutputError
+from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt
@@ -74,10 +75,10 @@ def test_progress_is_append_only_and_safe(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr("sys.stderr", terminal)
     callback = progress_callback("text")
     assert callback is not None
-    callback("export-source", "running")
-    callback("label\x1b", "passed")
+    callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.RUNNING))
+    callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.PASSED))
     assert terminal.getvalue() == (
-        "Progress: export-source: running\nProgress: label\\x1b: passed\n"
+        "Progress: Export source: running\nProgress: Export source: passed\n"
     )
 
 
@@ -86,7 +87,8 @@ def test_pipeline_progress_precedes_work_and_publication(tmp_path: Path) -> None
     output = tmp_path / "evidence"
     events: list[tuple[str, str]] = []
 
-    def observe(name: str, status: str) -> None:
+    def observe(event: ProgressEvent) -> None:
+        name, status = event.step, event.state
         if name == "identify-source" and status == "running":
             assert not output.exists()
         if name == "publish-evidence":
@@ -124,7 +126,7 @@ def test_failed_progress_stream_does_not_prevent_evidence(
     assert (output / "run.json").exists()
 
 
-def test_batch_progress_contains_ids_and_published_status_only(tmp_path: Path) -> None:
+def test_batch_progress_contains_fixed_steps_and_published_status_only(tmp_path: Path) -> None:
     make_minimal_odt(tmp_path / "doc.odt")
     (tmp_path / "plan.toml").write_text('[document]\ntitle="T"\nlanguage="en"')
     manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
@@ -133,9 +135,10 @@ def test_batch_progress_contains_ids_and_published_status_only(tmp_path: Path) -
         manifest,
         tmp_path / "batch",
         PipelineOptions(profile="inspect"),
-        on_item=lambda name, status: events.append((name, status)),
+        on_progress=lambda event: events.append((event.step, event.state)),
     )
-    assert events == [("one", "running"), ("one", record.items[0]["status"])]
+    assert events == [("batch-item", "running"), ("batch-item", "passed")]
+    assert record.items[0]["status"] == "completed"
     assert str(tmp_path) not in str(events)
 
 
@@ -157,7 +160,8 @@ def test_publication_failure_never_emits_passed_progress(
             Config().fidelity,
             tmp_path / "evidence",
             PipelineOptions(
-                profile="inspect", on_progress=lambda name, status: events.append((name, status))
+                profile="inspect",
+                on_progress=lambda event: events.append((event.step, event.state)),
             ),
         )
     assert events[-2:] == [("publish-evidence", "running"), ("publish-evidence", "failed")]
@@ -180,16 +184,16 @@ def test_batch_interruption_emits_no_completion(
         manifest,
         tmp_path / "batch",
         PipelineOptions(profile="inspect"),
-        on_item=lambda name, status: events.append((name, status)),
+        on_progress=lambda event: events.append((event.step, event.state)),
     )
-    assert events == [("one", "running"), ("one", "interrupted")]
+    assert events == [("batch-item", "running"), ("batch-item", "failed")]
     assert record.exit_status == 3
     assert (tmp_path / "batch" / "batch.json").exists()
 
 
 def test_observer_is_excluded_from_options_identity() -> None:
     plain = PipelineOptions(profile="inspect")
-    observed = PipelineOptions(profile="inspect", on_progress=lambda _name, _status: None)
+    observed = PipelineOptions(profile="inspect", on_progress=lambda _event: None)
     assert plain == observed
     assert repr(plain) == repr(observed)
     assert plain.assurance == observed.assurance
@@ -197,7 +201,7 @@ def test_observer_is_excluded_from_options_identity() -> None:
 
 @pytest.mark.parametrize(
     ("failure", "status"),
-    [(OutputError("Unsafe publication"), "failed"), (KeyboardInterrupt(), "interrupted")],
+    [(OutputError("Unsafe publication"), "failed"), (KeyboardInterrupt(), "failed")],
 )
 def test_publication_observes_domain_failure_and_interruption_without_replacing_exception(
     tmp_path: Path,
@@ -219,7 +223,8 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
             Config().fidelity,
             tmp_path / "evidence",
             PipelineOptions(
-                profile="inspect", on_progress=lambda name, value: events.append((name, value))
+                profile="inspect",
+                on_progress=lambda event: events.append((event.step, event.state)),
             ),
         )
     assert caught.value is failure

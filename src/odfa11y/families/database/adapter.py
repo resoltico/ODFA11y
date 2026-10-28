@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 
 from odfa11y.adapter import FamilyAdapter, ReviewItem, config_tables
 from odfa11y.content import protected_xml
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_database
 from .descriptions import DatabaseDescription, SetObjectDescriptions, description_attributes
@@ -28,12 +29,12 @@ def _parse(data: dict[str, object]) -> list[Operation]:
     for target, raw in config_tables.table(data, "descriptions").items():
         if not isinstance(raw, dict):
             msg = "database.descriptions entries must be tables"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         config_tables.known(raw, {"text", "fingerprint"}, "database description")
         values = config_tables.typed(raw, str, "database description")
         if not values.get("text", "").strip():
             msg = "database descriptions require nonblank text"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         entries[target] = DatabaseDescription(values["text"], values.get("fingerprint"))
     return [SetObjectDescriptions(entries)] if entries else []
 
@@ -96,15 +97,15 @@ ADAPTER = FamilyAdapter(
     template=_template,
     review_items=(
         ReviewItem(
-            "database meaning",
+            ReviewTopic.DATABASE_MEANING,
             "Whether object descriptions explain queries, tables, forms and reports.",
         ),
         ReviewItem(
-            "privacy and execution",
+            ReviewTopic.PRIVACY_AND_EXECUTION,
             "Review credentials, bindings, SQL and macros offline before trusted native use.",
         ),
         ReviewItem(
-            "source boundary",
+            ReviewTopic.SOURCE_BOUNDARY,
             "Storage stays opaque; connections and PDF export are unsupported.",
         ),
     ),

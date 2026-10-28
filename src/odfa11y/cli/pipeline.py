@@ -9,6 +9,7 @@ from textwrap import fill
 from typing import TYPE_CHECKING
 
 from odfa11y.config import load_config
+from odfa11y.outcomes import StageName
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.report import render_reports, terminal_text
 
@@ -87,11 +88,13 @@ def _render_pipeline(record: RunRecord, output_dir: object) -> str:
                     break_on_hyphens=False,
                 )
             )
-    remediated = any(stage.name == "audit-remediated" and stage.report for stage in record.stages)
+    remediated = any(
+        stage.name == StageName.AUDIT_REMEDIATED and stage.report for stage in record.stages
+    )
     for stage in record.stages:
         if not stage.report or not (stage.report.error_count or stage.report.warning_count):
             continue
-        if not stage.gate and (stage.name != "audit-source" or remediated):
+        if not stage.gate and (stage.name != StageName.AUDIT_SOURCE or remediated):
             continue
         label = "Before remediation" if not stage.gate else "Gate findings"
         lines.extend(["", f"{label}: {stage.name}", render_reports([stage.report])])

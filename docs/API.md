@@ -21,7 +21,7 @@ rendering, JSON/SARIF serialization and strict warning policy.
 | `pipeline.run_pipeline` | Source, operations, policy, absent/empty destination, optional `PipelineOptions`; `RunRecord`. | Records domain/OS stage failures and skips, publishing evidence when safely writable. Inspect `exit_status`, stages and required review. Unsafe destination/publication failures may raise. |
 | `evidence.check_bundle` | Bundle directory; list of integrity problems. | Read-only static unsafe-path/hash checks. Bundle/ancestor namespace must stay stable. Integrity is not authenticity/review. |
 
-Expected domain failures use `OdfA11yError` subclasses: `ConfigError` for invalid choices
+Expected domain failures use `OdfA11yError` subclasses: `PlanError` for invalid choices
 (including invalid timeout values), `PackageError` for unreadable inputs,
 `RemediationError` for unsupported edits/postconditions, `UnsupportedKindError` for unavailable
 family/native contexts, and `ToolError` subclasses for native failures, including elapsed
@@ -29,7 +29,7 @@ tool deadlines. Ordinary filesystem errors can propagate. Audit generators can r
 consumed. There is no universal result wrapper; respect each operation's error boundary.
 
 `NativeOptions` supplies native settings; `PipelineOptions` also selects assurance profile.
-Observers are optional synchronous callbacks with fixed labels/statuses and no document
+Observers are optional synchronous callbacks with typed ProgressEvent values and no document
 payload/paths. They must not raise. Display labels are not a frozen machine protocol;
 observers do not affect execution identity or persisted evidence. Rendering elsewhere
 keeps machine JSON/SARIF clean.

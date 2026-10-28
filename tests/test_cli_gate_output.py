@@ -11,6 +11,7 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
+from odfa11y.outcomes import StageName, StageStatus
 from odfa11y.pipeline import RunRecord, StageResult
 from odfa11y.pipeline.profiles import PROFILES
 from odfa11y.report import Report, rules
@@ -111,7 +112,7 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
 
 @pytest.mark.parametrize("failure", ["validation failed", "executable unavailable"])
 def test_review_does_not_claim_a_failed_validator_was_not_run(failure: str) -> None:
-    data = record(status="failed", failed_stage="verapdf")
+    data = record(status="failed", failed_stage="validate-pdf")
     data["profile"] = {"name": "production"}
     data["stages"][1].update(status="failed", reason=failure)
     text = render_review(data)
@@ -129,10 +130,10 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     source.add(rules.TXT030)
     data = RunRecord(document={}, operations=(), policy={}, profile=PROFILES["inspect"])
     data.stages = [
-        StageResult("audit-source", "passed", report=source, gate=False),
+        StageResult(StageName.AUDIT_SOURCE, StageStatus.PASSED, report=source, gate=False),
         StageResult(
-            "remediate",
-            "failed",
+            StageName.REMEDIATE,
+            StageStatus.FAILED,
             "native tool failed",
             error=True,
             details="untrusted\x1b[31m\nCommand: completed",

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from odfa11y.adapter import Outcome, Status, config_tables
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.report import Location
 
@@ -215,7 +215,7 @@ def link_descriptions(table: dict[str, object], label: str) -> dict[str, LinkDes
 
     Raises
     ------
-    ConfigError
+    PlanError
         The source context or supplied decision cannot be established safely.
 
     """
@@ -227,7 +227,7 @@ def link_descriptions(table: dict[str, object], label: str) -> dict[str, LinkDes
         texts = config_tables.typed(value, str, entry_label)
         if not texts.get("description", "").strip() or not texts.get("fingerprint", "").strip():
             msg = f"{entry_label} requires nonblank description and fingerprint strings"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         entries[target] = LinkDescription(texts["description"], texts["fingerprint"])
     return entries
 

@@ -13,7 +13,7 @@ from odfa11y.adapter import Operation, Outcome, Status
 from odfa11y.audit import audit_odf
 from odfa11y.config import load_config
 from odfa11y.content import GraphicAlternative, GraphicIdentity
-from odfa11y.errors import ConfigError, RemediationError
+from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.image import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
@@ -137,7 +137,7 @@ def test_image_configuration_is_family_bound_and_strict(tmp_path: Path) -> None:
     plan.write_text('[image.graphics."Fruit illustration"]\ndescription = "Fruit"\n')
     assert isinstance(load_config(plan).operations[0], SetGraphicAlternatives)
     plan.write_text('[image]\nalt_text = "Fruit"\n')
-    with pytest.raises(ConfigError):
+    with pytest.raises(PlanError):
         load_config(plan)
 
 

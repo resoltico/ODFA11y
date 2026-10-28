@@ -19,7 +19,7 @@ from odfa11y.content import (
     pages,
 )
 from odfa11y.content.links import link_fingerprint, link_location
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 from odfa11y.families import drawing, image, presentation, spreadsheet, text
 from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
@@ -138,7 +138,7 @@ def test_family_link_configuration_requires_review_and_reaches_operations(
         'description = "Read the guide"\nfingerprint = "reviewed"\nname = "Target"',
     ):
         config.write_text(f'[{family}.links."content/link[1]"]\n{invalid}\n', encoding="utf-8")
-        with pytest.raises(ConfigError):
+        with pytest.raises(PlanError):
             load_config(config)
 
 
@@ -166,7 +166,7 @@ def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: s
         config.write_text(
             f"[{family}.graphics.Picture]\ndecorative = {invalid}\n", encoding="utf-8"
         )
-        with pytest.raises(ConfigError):
+        with pytest.raises(PlanError):
             load_config(config)
 
 

@@ -15,6 +15,7 @@ from odfa11y.content import (
     style_language,
 )
 from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.outcomes import ReviewTopic
 
 from .audit import audit_image
 from .operations import SetGraphicAlternatives
@@ -84,10 +85,11 @@ ADAPTER = FamilyAdapter(
     template=_template,
     review_items=(
         ReviewItem(
-            "image meaning", "Whether the alternative conveys the image's purpose and information."
+            ReviewTopic.IMAGE_MEANING,
+            "Whether the alternative conveys the image's purpose and information.",
         ),
         ReviewItem(
-            "source boundary",
+            ReviewTopic.SOURCE_BOUNDARY,
             "Native standalone image export is unsupported; no Draw conversion is performed.",
         ),
     ),

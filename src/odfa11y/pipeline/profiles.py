@@ -5,21 +5,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
+from odfa11y.outcomes import PIPELINE_STAGES, StageName
 
-STAGE_NAMES = (
-    "identify-source",
-    "audit-source",
-    "remediate",
-    "audit-remediated",
-    "export-source",
-    "export-remediated",
-    "audit-pdf",
-    "verapdf",
-    "fidelity",
-)
-INSPECT_STAGES = STAGE_NAMES[:4]
-VERIFY_STAGES = tuple(name for name in STAGE_NAMES if name != "verapdf")
+INSPECT_STAGES = PIPELINE_STAGES[:4]
+VERIFY_STAGES = tuple(name for name in PIPELINE_STAGES if name != StageName.VALIDATE_PDF)
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,7 +17,7 @@ class Profile:
     """The gates a run enforces; the effective profile is recorded in the evidence."""
 
     name: str
-    stages: tuple[str, ...]
+    stages: tuple[StageName, ...]
     strict: bool
     verapdf_required: bool
 
@@ -51,7 +41,7 @@ class Profile:
 PROFILES = {
     "inspect": Profile("inspect", INSPECT_STAGES, strict=False, verapdf_required=False),
     "verify": Profile("verify", VERIFY_STAGES, strict=False, verapdf_required=False),
-    "production": Profile("production", STAGE_NAMES, strict=True, verapdf_required=True),
+    "production": Profile("production", PIPELINE_STAGES, strict=True, verapdf_required=True),
 }
 DEFAULT_PROFILE = "verify"
 
@@ -66,7 +56,7 @@ def profile_named(name: str) -> Profile:
 
     Raises
     ------
-    ConfigError
+    PlanError
         The name is not a known profile.
 
     """
@@ -74,4 +64,4 @@ def profile_named(name: str) -> Profile:
         return PROFILES[name]
     except KeyError as exc:
         msg = f"Unknown profile {name!r}; use one of {', '.join(PROFILES)}"
-        raise ConfigError(msg) from exc
+        raise PlanError(msg) from exc

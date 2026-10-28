@@ -14,7 +14,7 @@ from pypdf import PdfWriter
 
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
-from odfa11y.errors import ConfigError, ToolFailedError
+from odfa11y.errors import PlanError, ToolFailedError
 from odfa11y.external_tools import MAX_TIMEOUT_SECONDS, run_bounded, validate_timeout
 from odfa11y.pdf import ExportSettings, check_pdfua, validate_pdfua
 from odfa11y.pipeline import NativeOptions, PipelineOptions, audit_document
@@ -44,18 +44,18 @@ def test_invalid_timeouts_launch_nothing(value: object, monkeypatch: pytest.Monk
 
     monkeypatch.setattr("odfa11y.external_tools.subprocess.Popen", forbidden)
     invalid_timeout = cast("float", value)
-    with pytest.raises(ConfigError, match="Timeout"):
+    with pytest.raises(PlanError, match="Timeout"):
         run_bounded([sys.executable], timeout=invalid_timeout)
     for factory in (NativeOptions, PipelineOptions):
-        with pytest.raises(ConfigError, match="Timeout"):
+        with pytest.raises(PlanError, match="Timeout"):
             factory(timeout=invalid_timeout)
-    with pytest.raises(ConfigError, match="Timeout"):
+    with pytest.raises(PlanError, match="Timeout"):
         ExportSettings("writer_pdf_Export", timeout=invalid_timeout)
-    with pytest.raises(ConfigError, match="Timeout"):
+    with pytest.raises(PlanError, match="Timeout"):
         check_pdfua("missing.pdf", subject="missing.pdf", timeout=invalid_timeout)
-    with pytest.raises(ConfigError, match="Timeout"):
+    with pytest.raises(PlanError, match="Timeout"):
         validate_pdfua("missing.pdf", timeout=invalid_timeout)
-    with pytest.raises(ConfigError, match="Timeout"):
+    with pytest.raises(PlanError, match="Timeout"):
         list(audit_document("missing.pdf", timeout=invalid_timeout))
 
 
@@ -67,11 +67,11 @@ def test_valid_fractional_and_portable_boundary_values(value: float) -> None:
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "nan", "1.5", str(10**400), "4294968"])
-def test_cli_timeout_errors_exit_two_before_outputs(tmp_path: Path, value: str) -> None:
+def test_cli_timeout_errors_exit_usage_status_before_outputs(tmp_path: Path, value: str) -> None:
     output = tmp_path / "output.pdf"
     with pytest.raises(SystemExit) as exc:
         main(["export", str(tmp_path / "source.odt"), str(output), "--timeout", value])
-    assert exc.value.code == 2
+    assert exc.value.code == 4
     assert not output.exists()
 
 

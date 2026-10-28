@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from odfa11y.adapter import config_tables
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 
 from .graphics import GraphicAlternative
 from .pages import PageDecision
@@ -51,7 +51,7 @@ def page_decisions(table: dict[str, object], label: str) -> dict[str, PageDecisi
 
     Raises
     ------
-    ConfigError
+    PlanError
         A key/type is invalid or navigation is not a list of nonblank identity strings.
 
     """
@@ -71,7 +71,7 @@ def page_decisions(table: dict[str, object], label: str) -> dict[str, PageDecisi
             or not all(isinstance(identity, str) and identity.strip() for identity in order)
         ):
             msg = f"{entry_label}.navigation must be a list of nonblank shape identities"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         entries[key] = PageDecision(
             texts.get("title"),
             texts.get("description"),

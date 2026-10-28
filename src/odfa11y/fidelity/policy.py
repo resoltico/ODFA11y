@@ -7,7 +7,7 @@ import math
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 
 MAX_CHANNEL_VALUE = 255
 PAGINATION_MODES = ("same", "may-change")
@@ -35,13 +35,13 @@ class FidelityPolicy:
 
         Raises
         ------
-        ConfigError
+        PlanError
             A field has an unsupported type, range or nonfinite value.
 
         """
         if self.pagination not in PAGINATION_MODES:
             msg = f"fidelity.pagination must be one of {', '.join(PAGINATION_MODES)}"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         tolerance = self.raster_tolerance
         try:
             finite = isinstance(tolerance, (int, float)) and math.isfinite(tolerance)
@@ -49,13 +49,13 @@ class FidelityPolicy:
             finite = False
         if isinstance(tolerance, bool) or not finite or tolerance < 0:
             msg = "fidelity.raster_tolerance must be a finite non-negative number"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         if type(self.ink_threshold) is not int or not 0 <= self.ink_threshold <= MAX_CHANNEL_VALUE:
             msg = "fidelity.ink_threshold must be an integer 0-255"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         if type(self.dpi) is not int or self.dpi < 1:
             msg = "fidelity.dpi must be a positive integer"
-            raise ConfigError(msg)
+            raise PlanError(msg)
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize the policy.

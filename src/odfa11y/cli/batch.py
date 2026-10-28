@@ -34,7 +34,7 @@ def batch_command(args: argparse.Namespace) -> int:
         timeout=args.timeout,
     )
     record = run_batch(
-        args.manifest, args.output_dir, options, on_item=progress_callback(args.format)
+        args.manifest, args.output_dir, options, on_progress=progress_callback(args.format)
     )
     if args.format == "json":
         text = json.dumps(record.as_dict(), indent=2, sort_keys=True)

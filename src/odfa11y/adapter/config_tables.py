@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from odfa11y.errors import ConfigError
+from odfa11y.errors import PlanError
 
 
 def table(data: dict[str, object], key: str) -> dict[str, object]:
@@ -18,14 +18,14 @@ def table(data: dict[str, object], key: str) -> dict[str, object]:
 
     Raises
     ------
-    ConfigError
+    PlanError
         The value exists but is not a table.
 
     """
     value = data.get(key, {})
     if not isinstance(value, dict):
         msg = f"[{key}] must be a table"
-        raise ConfigError(msg)
+        raise PlanError(msg)
     return value
 
 
@@ -34,14 +34,14 @@ def known(data: dict[str, object], allowed: set[str], label: str) -> None:
 
     Raises
     ------
-    ConfigError
+    PlanError
         The table has keys that are not allowed.
 
     """
     unknown = data.keys() - allowed
     if unknown:
         msg = f"Unknown {label} keys: {', '.join(sorted(unknown))}"
-        raise ConfigError(msg)
+        raise PlanError(msg)
 
 
 def typed[T](data: dict[str, object], expected: type[T], label: str) -> dict[str, T]:
@@ -54,7 +54,7 @@ def typed[T](data: dict[str, object], expected: type[T], label: str) -> dict[str
 
     Raises
     ------
-    ConfigError
+    PlanError
         A value has another type.
 
     """
@@ -62,6 +62,6 @@ def typed[T](data: dict[str, object], expected: type[T], label: str) -> dict[str
     for key, value in data.items():
         if type(value) is not expected:
             msg = f"{label}.{key} must be {expected.__name__}"
-            raise ConfigError(msg)
+            raise PlanError(msg)
         values[key] = cast("T", value)
     return values
