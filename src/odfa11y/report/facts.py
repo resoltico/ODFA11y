@@ -75,6 +75,19 @@ class FactKeys:
             "Paragraph style usage and effective spacing.",
         )
     )
+    TEXT_REFERENCE_COUNT = _register(
+        FactKey[int](
+            "text.reference_count", int, "Internal links and typed cross-reference fields."
+        )
+    )
+    TEXT_BOOKMARK_COUNT = _register(
+        FactKey[int](
+            "text.bookmark_count", int, "Bookmark destinations in current reading contexts."
+        )
+    )
+    TEXT_NOTE_COUNT = _register(
+        FactKey[int]("text.note_count", int, "Notes anchored in current reading contexts.")
+    )
     TEXT_LIST_COUNT = _register(
         FactKey[int]("text.list_count", int, "Lists in established current reading contexts.")
     )

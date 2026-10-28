@@ -58,6 +58,7 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `NATIVE001` | Warning | Native resource declarations are unresolved or unestablished. |  |
 | `NATIVE002` | Warning | Pipeline export cannot preserve filename/path fields. |  |
 | `NOTE001` | Warning | Notes or annotations need relationship and reading-order review. |  |
+| `NOTE002` | Error | Note anchor, citation or body relationship is incomplete. |  |
 | `ODF001` | Error | Package members declare different ODF versions. | `document.odf_version` |
 | `ODF002` | Error | Manifest root file-entry '/' is missing. |  |
 | `ODF003` | Error | Manifest root file-entry version differs from the document version. | `document.odf_version` |
@@ -107,6 +108,10 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `PKG007` | Error | A ZIP member name is absolute or escapes its directory. |  |
 | `PKG008` | Warning | Declared signatures are unverified. |  |
 | `PKG009` | Error | Manifest encryption prevents complete inspection. |  |
+| `REFERENCE001` | Error | Reference destination is missing. |  |
+| `REFERENCE002` | Error | Reference destination is ambiguous. |  |
+| `REFERENCE003` | Error | Named range has inconsistent endpoints or identity. |  |
+| `REFERENCE004` | Warning | Reference destination requires native scope review. |  |
 | `REVISION001` | Warning | Tracked revision scope requires review. |  |
 | `SCHEMA001` | Warning | A member does not validate against the ODF schema. |  |
 | `SCHEMA002` | Info | No ODF schema is bundled for the declared version. |  |

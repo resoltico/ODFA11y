@@ -4,7 +4,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
-- Audit Writer list structure, continuation relationships and typed marker candidates without rewriting content.
+- Audit Writer lists, internal link targets, bookmark ranges, cross-references and note relationships without guessing repairs.
 
 ### Breaking
 

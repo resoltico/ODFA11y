@@ -152,6 +152,15 @@ TABLE002 = _rule("TABLE002", ERROR, SEM, "Table grid or header bands cannot be r
 TABLE003 = _rule(
     "TABLE003", WARNING, SEM, "Data-like table has no semantic headers.", ("table.headers",)
 )
+REFERENCE001 = _rule("REFERENCE001", ERROR, LNK, "Reference destination is missing.")
+REFERENCE002 = _rule("REFERENCE002", ERROR, LNK, "Reference destination is ambiguous.")
+REFERENCE003 = _rule(
+    "REFERENCE003", ERROR, LNK, "Named range has inconsistent endpoints or identity."
+)
+REFERENCE004 = _rule(
+    "REFERENCE004", WARNING, LNK, "Reference destination requires native scope review."
+)
+NOTE002 = _rule("NOTE002", ERROR, SEM, "Note anchor, citation or body relationship is incomplete.")
 LINK001 = _rule(
     "LINK001",
     WARNING,

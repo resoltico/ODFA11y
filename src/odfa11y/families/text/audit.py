@@ -22,6 +22,7 @@ from .decisions import LINKIFY_ADDRESSES, REMOVE_SPACERS
 from .links import URI_RE, split_trailing_punctuation
 from .lists import audit_lists
 from .prose import prose_slots
+from .references import audit_references
 from .semantics import audit_headings, audit_images, audit_tables
 from .spacers import spacer_candidates
 from .style_properties import paragraph_style_name
@@ -49,6 +50,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     ):
         report.add(rules.HIDDEN001)
     audit_lists(document, report)
+    audit_references(document, report)
     audit_headings(content, report, document)
     audit_images(document, report)
     audit_tables(content, report, document)
@@ -61,7 +63,6 @@ def audit_text(document: OdfDocument, report: Report) -> None:
             )
             report.add_decision(link_decision(document, link, index, rules.LINK003.id))
     _audit_empty_spacers(document, report)
-    _audit_notes(content, report)
     _audit_blinking(document, report)
     _audit_style_summary(document, report)
 
@@ -112,25 +113,6 @@ def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
                 "styles": sorted({style or "(none)" for style in styles}),
             },
         )
-
-
-def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
-    notes = text_nodes(tree, qn("text", "note"))
-    if not notes:
-        return
-    classes: dict[str, int] = {}
-    for note in notes:
-        cls = note.get(qn("text", "note-class")) or "unknown"
-        classes[cls] = classes.get(cls, 0) + 1
-    report.add(
-        rules.NOTE001,
-        (
-            "Footnotes/endnotes are present; verify their reading order "
-            "and PDF/UA export behaviour manually."
-        ),
-        location=Location(Part.CONTENT.value),
-        details={"count": len(notes), "classes": classes},
-    )
 
 
 def _audit_blinking(document: OdfDocument, report: Report) -> None:

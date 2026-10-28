@@ -885,6 +885,10 @@
                       "description": "Graphic objects on sheets.",
                       "type": "integer"
                     },
+                    "text.bookmark_count": {
+                      "description": "Bookmark destinations in current reading contexts.",
+                      "type": "integer"
+                    },
                     "text.graphic_count": {
                       "description": "Graphic objects in current reading contexts.",
                       "type": "integer"
@@ -905,6 +909,10 @@
                       "description": "Deepest counter level, resetting at cells and text boxes.",
                       "type": "integer"
                     },
+                    "text.note_count": {
+                      "description": "Notes anchored in current reading contexts.",
+                      "type": "integer"
+                    },
                     "text.paragraph_styles": {
                       "description": "Paragraph style usage and effective spacing.",
                       "items": {
@@ -912,6 +920,10 @@
                         "type": "object"
                       },
                       "type": "array"
+                    },
+                    "text.reference_count": {
+                      "description": "Internal links and typed cross-reference fields.",
+                      "type": "integer"
                     },
                     "text.simulated_list_count": {
                       "description": "Paragraphs resembling typed list markers; review only.",
