@@ -50,9 +50,9 @@ Conditional heading https://hidden.example
     report, template = prepare_plan(source)
     assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
     assert report.facts[FactKeys.TEXT_TABLE_COUNT] == 0
-    assert "TXT061" in {finding.rule_id for finding in report.findings}
+    assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
     addresses = [
-        finding.details["text"] for finding in report.findings if finding.rule_id == "TXT030"
+        finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
     ]
     assert addresses == ["https://visible.example"]
     assert len(document_links(document)) == 1
@@ -78,7 +78,7 @@ Conditional heading https://hidden.example
     assert etree.tostring(retained) == before
     after = audit_odf(destination)
     assert after.facts[FactKeys.TEXT_HEADING_COUNT] == 1
-    assert "TXT061" in {finding.rule_id for finding in after.findings}
+    assert "HIDDEN001" in {finding.rule_id for finding in after.findings}
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
@@ -95,9 +95,9 @@ def test_span_marker_excludes_its_whole_paragraph_including_sibling_prose(
     document = OdfDocument.open(source)
     assert validate(document).count == 0
     report = audit_odf(source)
-    assert "TXT061" in {finding.rule_id for finding in report.findings}
+    assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
     assert [
-        finding.details["text"] for finding in report.findings if finding.rule_id == "TXT030"
+        finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
     ] == ["https://visible.example"]
     conditional = select_elements(
         document.tree(Part.CONTENT), "//text:hidden-paragraph/ancestor::text:p"

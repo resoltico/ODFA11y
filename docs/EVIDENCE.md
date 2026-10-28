@@ -96,8 +96,8 @@ from capture identity; the recorded digest identifies captured bytes. Private ca
 removed and are not original-input artifacts in evidence.
 
 Capture does not copy/rewrite/fetch dependencies or isolate the network. Guarded native
-work refuses unresolved declarations (`ODF012`) and captured filename/path-sensitive content
-(`ODF013`). Direct original export/comparison can retain logical identity. See the canonical
+work refuses unresolved declarations (`NATIVE001`) and captured filename/path-sensitive content
+(`NATIVE002`). Direct original export/comparison can retain logical identity. See the canonical
 [native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies) and
 [formula policy](ACCESSIBILITY.md#formula-declarations). Relative navigation remains authored
 and may change when a published ODF moves; the candidate is not a bundle of external targets.

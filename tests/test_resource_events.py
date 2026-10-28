@@ -70,4 +70,4 @@ def test_form_input_binding_is_distinct_from_form_submission_navigation(
     assert native_export_limitations(reopened)["rendering_dependencies"] == count
     report = audit_odf(source)
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
-    assert ("ODF012" in {f.rule_id for f in report.findings}) == bool(binding)
+    assert ("NATIVE001" in {f.rule_id for f in report.findings}) == bool(binding)

@@ -51,7 +51,7 @@ def test_valid_named_chains_do_not_multiply_lexical_parser_stack(
 ) -> None:
     source = named_chain(tmp_path, count, wrappers)
     report = audit_odf(source)
-    assert "ODF012" not in {finding.rule_id for finding in report.findings}
+    assert "NATIVE001" not in {finding.rule_id for finding in report.findings}
     calls = []
     monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
     export_document(source, tmp_path / "output.pdf")
@@ -64,7 +64,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     source = named_chain(tmp_path, 80, 8)
     original = source.read_bytes()
     report = audit_odf(source)
-    assert "ODF012" in {finding.rule_id for finding in report.findings}
+    assert "NATIVE001" in {finding.rule_id for finding in report.findings}
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_incomplete"] > 0
     calls = []
     monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
@@ -86,7 +86,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     assert "RecursionError" not in completed.stderr
     assert completed.returncode in {0, 1, 2}
     payload = json.loads(completed.stdout)
-    assert "ODF012" in {finding["rule_id"] for finding in payload["findings"]}
+    assert "NATIVE001" in {finding["rule_id"] for finding in payload["findings"]}
 
 
 def test_remaining_python_stack_exhaustion_is_explicitly_incomplete() -> None:

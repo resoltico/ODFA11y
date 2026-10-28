@@ -1,38 +1,59 @@
 # Rule reference
 
-Every finding comes from the [rule registry](../src/odfa11y/report/rules.py), with a
-stable identifier, severity, category and optional configuration **remedy**. Prefixes group
-domains as shown below. Severity determines [exit status](WORKFLOW.md#exit-statuses).
-The registry is authoritative; a test checks every documented ID, severity, title and remedy.
+Rules define each finding's identity, severity, category and possible decision kinds.
+Findings reference these rules; open decisions carry the human questions.
+The [registry](../src/odfa11y/report/rules.py) is authoritative.
 
-## Package and XML
-
-These apply to every ODF document, whatever its family.
+## Registered rules
 
 | ID | Severity | Finding | Decision kinds |
 | --- | --- | --- | --- |
-| `PKG000` | Error | Source is not a readable ODF package or flat XML document. |  |
-| `PKG001` | Warning | The document does not declare its media type. |  |
-| `PKG002` | Warning | An optional package member is missing. |  |
-| `PKG003` | Error | mimetype is not the first ZIP member. |  |
-| `PKG004` | Error | mimetype is compressed. |  |
-| `PKG005` | Error | A member the document needs is missing. |  |
-| `PKG006` | Error | ZIP member names are duplicated. |  |
-| `PKG007` | Error | A ZIP member name is absolute or escapes its directory. |  |
-| `PKG008` | Warning | Declared signatures are unverified. |  |
-| `PKG009` | Error | Manifest encryption prevents complete inspection. |  |
-| `XML001` | Error | A required XML member cannot be parsed. |  |
-
-## ODF declarations, kind, schema and metadata
-
-Also common to every family. `ODF009` says that a document's family has no semantic audit yet (all eight document families have one): the common checks ran and nothing is implied about the rest.
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
+| `BASE001` | Error | Database body, connection or embedded storage is missing. |  |
+| `BASE002` | Warning | Database has external connection declarations. |  |
+| `BASE003` | Warning | Database stores authentication information requiring privacy review. |  |
+| `BASE004` | Warning | Database object description is missing or ambiguous. | `database.description` |
+| `BASE005` | Warning | Database has executable scripts requiring offline review. |  |
+| `BASE006` | Info | Queries, forms or reports require native semantic review. |  |
+| `CHART001` | Error | Chart body or data series is missing or ambiguous. |  |
+| `CHART002` | Warning | Chart has no identifying title. | `document.metadata` |
+| `CHART003` | Error | Chart has no supplied document description. | `document.metadata` |
+| `CHART004` | Error | Local chart range does not match its declared data grid. |  |
+| `CHART005` | Warning | Chart data provider or range cannot be verified locally. |  |
+| `CHART006` | Warning | Chart labels or data ordering need review. |  |
+| `FID001` | Error | Page count differs. |  |
+| `FID002` | Error | Page dimensions differ. |  |
+| `FID003` | Error | Document text differs. |  |
+| `FID004` | Error | A source link is missing or changed. |  |
+| `FID005` | Error | Rendered page differs beyond the tolerance. |  |
+| `FID006` | Info | Links were added. |  |
+| `FID007` | Error | A page is too large to render for comparison. |  |
+| `GRAPHIC001` | Warning | Graphic decorative role is unresolved or unsafe. |  |
+| `GRAPHIC002` | Warning | Decorative graphic retains authored alternative metadata. |  |
+| `GRAPHIC003` | Error | Graphic has neither accessible title nor description. | `graphic.alternative` |
+| `GRAPHIC005` | Warning | Nontext shape needs a meaning/decorative-content decision. | `graphic.alternative` |
+| `HEADING001` | Error | Heading has no valid outline level. | `heading.level` |
+| `HEADING002` | Error | Heading hierarchy starts too deep or skips a level. | `heading.level` |
+| `HEADING003` | Warning | Heading text resembles manually typed numbering. |  |
+| `HEADING004` | Info | No structural headings were found. |  |
+| `HIDDEN001` | Warning | Hidden or conditional content requires visibility review. |  |
+| `IMAGE001` | Error | Image body does not contain one supported graphic frame. |  |
+| `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
+| `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
+| `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
+| `LAYOUT001` | Info | Empty paragraphs may be visual spacers. | `text.remove_spacers` |
+| `LINK001` | Warning | Visible URL or email address is not a hyperlink. | `text.linkify_addresses` |
+| `LINK002` | Warning | Hyperlink text is a raw address. |  |
+| `LINK003` | Error | Hyperlink has no readable purpose. | `link.description` |
+| `MATH001` | Error | Native mathematical expression is missing or unsupported. |  |
+| `MATH002` | Error | Formula has no spoken alternative. | `formula.alternative` |
+| `MATH003` | Warning | Formula references external content requiring review. |  |
 | `META001` | Error | Document title metadata is missing. | `document.metadata` |
 | `META002` | Error | Document language is not declared. | `document.metadata` |
 | `META003` | Warning | Metadata and default style languages disagree. | `document.metadata` |
 | `META004` | Warning | Document language syntax or default-style target is unresolved. |  |
+| `NATIVE001` | Warning | Native resource declarations are unresolved or unestablished. |  |
+| `NATIVE002` | Warning | Pipeline export cannot preserve filename/path fields. |  |
+| `NOTE001` | Warning | Notes or annotations need relationship and reading-order review. |  |
 | `ODF001` | Error | Package members declare different ODF versions. | `document.odf_version` |
 | `ODF002` | Error | Manifest root file-entry '/' is missing. |  |
 | `ODF003` | Error | Manifest root file-entry version differs from the document version. | `document.odf_version` |
@@ -44,132 +65,10 @@ Also common to every family. `ODF009` says that a document's family has no seman
 | `ODF009` | Info | No semantic audit exists for this document family. |  |
 | `ODF010` | Error | A flat XML document's root is not office:document. |  |
 | `ODF011` | Error | A package's content root is not office:document-content. |  |
-| `ODF012` | Warning | Native resource declarations are unresolved or unestablished. |  |
-| `ODF013` | Warning | Pipeline export cannot preserve filename/path fields. |  |
-| `ODF900` | Warning | A member does not validate against the ODF schema. |  |
-| `ODF905` | Info | No ODF schema is bundled for the declared version. |  |
-
-## Text documents
-
-Owned by the text family (`TXT`). A document of another family never produces them. Remedies are keys of the `[text]` configuration table.
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `TXT001` | Error | Heading has no valid outline level. | `heading.level` |
-| `TXT002` | Error | Heading hierarchy starts too deep or skips a level. | `heading.level` |
-| `TXT003` | Warning | Heading text resembles manually typed numbering. |  |
-| `TXT004` | Info | No structural headings were found. |  |
-| `TXT005` | Warning | Footnotes or endnotes need reading-order review. |  |
-| `TXT010` | Error | Graphic has neither accessible title nor description. | `graphic.alternative` |
-| `TXT020` | Warning | Merged table cells need header-relationship review. |  |
-| `TXT021` | Warning | Data-like table has no semantic headers. | `table.headers` |
-| `TXT022` | Error | Table grid or header bands cannot be resolved safely. |  |
-| `TXT030` | Warning | Visible URL or email address is not a hyperlink. | `text.linkify_addresses` |
-| `TXT031` | Error | Hyperlink has no readable source purpose. | `link.description` |
-| `TXT040` | Info | Empty paragraphs may be visual spacers. | `text.remove_spacers` |
-| `TXT050` | Error | Blinking text styling is declared. |  |
-| `TXT060` | Warning | Tracked revision scope requires review. |  |
-| `TXT061` | Warning | Hidden or conditional content requires visibility review. |  |
-| `TXT062` | Warning | Paragraph style scope or properties are unresolved. |  |
-
-## Spreadsheets
-
-Owned by the spreadsheet family (`SHEET`), which serves `.ods`, `.ots` and flat `.fods`. A document of another family never produces them. Remedies are keys of the `[spreadsheet]` configuration table.
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `SHEET001` | Error | Sheet has no name. |  |
-| `SHEET002` | Warning | Sheet keeps its default name. | `sheet.name` |
-| `SHEET003` | Warning | Data sheet marks no header rows. |  |
-| `SHEET004` | Warning | Data sheet merges cells. |  |
-| `SHEET005` | Error | Picture, chart or object has neither accessible title nor description. | `graphic.alternative` |
-| `SHEET006` | Warning | Hyperlink text is a raw address. |  |
-| `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
-| `SHEET008` | Warning | Hidden sheets, rows or columns are present. |  |
-| `SHEET014` | Error | Hyperlink has no readable source purpose. | `link.description` |
-
-## Presentations
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `PRES001` | Error | Pages are missing, unnamed or ambiguously named. |  |
-| `PRES002` | Warning | Page has no accessible title. | `page.metadata` |
-| `PRES003` | Error | Graphic payload has no accessible description. | `graphic.alternative` |
-| `PRES004` | Warning | Nontext shape needs a meaning/decorative-content decision. | `graphic.alternative` |
-| `PRES005` | Error | Navigation order is incomplete or ambiguous. | `page.navigation` |
-| `PRES006` | Warning | Page has no explicit navigation order. | `page.navigation` |
-| `PRES007` | Warning | Hidden content needs review. |  |
-| `PRES008` | Info | Notes or annotations need relationship and reading-order review. |  |
-| `PRES009` | Error | Hyperlink has no readable purpose. | `link.description` |
-
-## Drawings
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `DRAW001` | Error | Pages are missing, unnamed or ambiguously named. |  |
-| `DRAW002` | Warning | Page has no accessible title. | `page.metadata` |
-| `DRAW003` | Error | Graphic payload has no accessible description. | `graphic.alternative` |
-| `DRAW004` | Warning | Nontext shape needs a meaning/decorative-content decision. | `graphic.alternative` |
-| `DRAW005` | Error | Navigation order is incomplete or ambiguous. | `page.navigation` |
-| `DRAW006` | Warning | Page has no explicit navigation order. | `page.navigation` |
-| `DRAW007` | Warning | Hidden content needs review. |  |
-| `DRAW008` | Info | Notes or annotations need relationship and reading-order review. |  |
-| `DRAW009` | Error | Hyperlink has no readable purpose. | `link.description` |
-
-## Formula
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `MATH001` | Error | Native mathematical expression is missing or unsupported. |  |
-| `MATH002` | Error | Formula has no spoken alternative. | `formula.alternative` |
-| `MATH003` | Warning | Formula references external content requiring review. |  |
-
-## Charts
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `CHART001` | Error | Chart body or data series is missing or ambiguous. |  |
-| `CHART002` | Warning | Chart has no identifying title. | `document.metadata` |
-| `CHART003` | Error | Chart has no supplied document description. | `document.metadata` |
-| `CHART004` | Error | Local chart range does not match its declared data grid. |  |
-| `CHART005` | Warning | Chart data provider or range cannot be verified locally. |  |
-| `CHART006` | Warning | Chart labels or data ordering need review. |  |
-
-## Images
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `IMAGE001` | Error | Image body does not contain one supported graphic frame. |  |
-| `IMAGE002` | Error | Image has no accessible description. | `graphic.alternative` |
-| `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
-| `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
-| `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
-
-## Databases
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `BASE001` | Error | Database body, connection or embedded storage is missing. |  |
-| `BASE002` | Warning | Database has external connection declarations. |  |
-| `BASE003` | Warning | Database stores authentication information requiring privacy review. |  |
-| `BASE004` | Warning | Database object description is missing or ambiguous. | `database.description` |
-| `BASE005` | Warning | Database has executable scripts requiring offline review. |  |
-| `BASE006` | Info | Queries, forms or reports require native semantic review. |  |
-
-## Shared graphic roles
-
-`GRAPHIC` findings apply to graphic-bearing families. Decorative roles remove only the
-missing-alternative requirement; payload, interactivity and navigation checks remain.
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `GRAPHIC001` | Warning | Graphic decorative role is unresolved or unsafe. |  |
-| `GRAPHIC002` | Warning | Decorative graphic retains authored alternative metadata. |  |
-
-## PDF inspection and veraPDF
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
+| `PAGE001` | Error | Pages are missing, unnamed or ambiguously named. |  |
+| `PAGE002` | Warning | Page has no accessible title. | `page.metadata` |
+| `PAGE003` | Error | Navigation order is incomplete or ambiguous. | `page.navigation` |
+| `PAGE004` | Warning | Page has no explicit navigation order. | `page.navigation` |
 | `PDF000` | Error | PDF cannot be opened or strictly inspected. |  |
 | `PDF001` | Error | Document title is missing. |  |
 | `PDF002` | Error | Catalog language is missing. |  |
@@ -194,43 +93,55 @@ missing-alternative requirement; payload, interactivity and navigation checks re
 | `PDF021` | Warning | A structure element refers to marked content its inspected stream does not have. |  |
 | `PDF022` | Warning | Marked content is referenced by more than one element. |  |
 | `PDF023` | Error | Text is shown outside tagged content and artifacts. |  |
+| `PKG000` | Error | Source is not a readable ODF package or flat XML document. |  |
+| `PKG001` | Warning | The document does not declare its media type. |  |
+| `PKG002` | Warning | An optional package member is missing. |  |
+| `PKG003` | Error | mimetype is not the first ZIP member. |  |
+| `PKG004` | Error | mimetype is compressed. |  |
+| `PKG005` | Error | A member the document needs is missing. |  |
+| `PKG006` | Error | ZIP member names are duplicated. |  |
+| `PKG007` | Error | A ZIP member name is absolute or escapes its directory. |  |
+| `PKG008` | Warning | Declared signatures are unverified. |  |
+| `PKG009` | Error | Manifest encryption prevents complete inspection. |  |
+| `REVISION001` | Warning | Tracked revision scope requires review. |  |
+| `SCHEMA001` | Warning | A member does not validate against the ODF schema. |  |
+| `SCHEMA002` | Info | No ODF schema is bundled for the declared version. |  |
+| `SHEET001` | Error | Sheet has no name. |  |
+| `SHEET002` | Warning | Sheet keeps its default name. | `sheet.name` |
+| `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
+| `STYLE001` | Warning | Paragraph style scope or properties are unresolved. |  |
+| `STYLE002` | Error | Blinking text styling is declared. |  |
+| `TABLE001` | Warning | Merged table cells need header-relationship review. |  |
+| `TABLE002` | Error | Table grid or header bands cannot be resolved safely. |  |
+| `TABLE003` | Warning | Data-like table has no semantic headers. | `table.headers` |
+| `TABLE004` | Warning | Data sheet marks no header rows. |  |
+| `TABLE005` | Warning | Data sheet merges cells. |  |
 | `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
 | `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
-
-## Fidelity comparison
-
-| ID | Severity | Finding | Decision kinds |
-| --- | --- | --- | --- |
-| `FID001` | Error | Page count differs. |  |
-| `FID002` | Error | Page dimensions differ. |  |
-| `FID003` | Error | Document text differs. |  |
-| `FID004` | Error | A source link is missing or changed. |  |
-| `FID005` | Error | Rendered page differs beyond the tolerance. |  |
-| `FID006` | Info | Links were added. |  |
-| `FID007` | Error | A page is too large to render for comparison. |  |
+| `XML001` | Error | A required XML member cannot be parsed. |  |
 
 ## Reading findings
 
-`ODF900` is a warning because pristine LibreOffice output often fails the strict ODF
+`SCHEMA001` is a warning because pristine LibreOffice output often fails the strict ODF
 schema (for example in `styles.xml`); the schema matters most as a *regression* gate,
 which `remediate` enforces when a bundled schema is available: it refuses a result with
-a detected violation the source did not already have. The `TXT` link, table, numbering and spacer findings use heuristics; inspect the
-source in context. Graphics need supplied descriptions, and table headers need an unambiguous
+a detected violation the source did not already have. Source link, table, heading-numbering and spacer findings use heuristics; inspect the
+source in context. Graphics need supplied titles or descriptions, and table headers need an unambiguous
 reviewed table target with explicit leading row or column counts; unnamed ordinal targets
-require their fingerprint. `TXT040` is observational: [spacer
+require their fingerprint. `LAYOUT001` is observational: [spacer
 removal](ACCESSIBILITY.md#spacer-removal) is explicit and preserves protected structures.
 The `SHEET` findings are structural: a *default name* is a name of the form `Sheet` and
 digits (other languages' defaults are not recognised); a *data sheet* is one whose first row
 with text holds at least two short labels and which has another row with text, and only such
 sheets are checked for header rows (`table:table-header-rows`, which Calc writes for rows
-repeated on every printed page) and merged cells. `SHEET005` covers eligible frames and
-vector shapes, including pictures, charts and embedded objects; `SHEET006` flags raw-address labels without a native `office:title` description;
+repeated on every printed page) and merged cells. `GRAPHIC003` covers eligible frames and
+vector shapes, including pictures, charts and embedded objects; `LINK002` flags raw-address labels without a native `office:title` description;
 `SHEET007` flags empty sheets after the last one with text or graphics (the first sheet is
-always kept); `SHEET008` reports counts, as hidden content is sometimes intended. Header
+always kept); `HIDDEN001` reports counts, as hidden content is sometimes intended. Header
 rows, merged cells, visible link text and hidden content need a person's decision in Calc.
 Sheet names, eligible graphic alternatives/roles and native link descriptions have explicit
-configuration remedies. `SHEET014` reports links without readable source purpose; a supplied
-`office:title` can establish purpose without rewriting labels or target Names.
+typed decisions. `LINK003` reports links without readable source purpose; a supplied
+`office:title` can establish purpose without rewriting labels or target names.
 `VERA001` appears once per failed veraPDF rule and keeps the standard's clause and test
 number in its details. `PDF` findings are a fast smoke test, not PDF/UA validation.
 

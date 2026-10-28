@@ -149,7 +149,7 @@ def test_hidden_layer_declarations_are_counted_once_across_logical_views(
     )
     source = document.save(tmp_path / ("layers" + document.storage.source.suffix))
     assert validate(OdfDocument.open(source)).count == 0
-    findings = [f for f in audit_odf(source).findings if f.rule_id == "DRAW007"]
+    findings = [f for f in audit_odf(source).findings if f.rule_id == "HIDDEN001"]
     if display == "always":
         assert findings == []
     else:

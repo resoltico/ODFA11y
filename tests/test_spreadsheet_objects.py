@@ -133,7 +133,7 @@ def test_a_fingerprint_binds_the_entry_to_the_frame_that_was_reviewed(
 def _audited_fingerprint(directory: Path, layout: str, frame: str) -> str:
     report = audit_odf(make_spreadsheet(directory, layout, *SHEETS))
     [finding] = [
-        f for f in report.findings if f.rule_id == "SHEET005" and f.details["frame"] == frame
+        f for f in report.findings if f.rule_id == "GRAPHIC003" and f.details["frame"] == frame
     ]
     return str(question_for(report, finding).fingerprint)
 

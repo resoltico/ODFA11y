@@ -41,9 +41,9 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     decorative = audit_graphic_role(document, frame, report)
     if not description.strip() and not decorative:
         report.add(
-            rules.IMAGE002, location=Location(identity.target(frame)), details={"frame": name}
+            rules.GRAPHIC003, location=Location(identity.target(frame)), details={"frame": name}
         )
-        report.add_decision(identity.open_decision(frame, rules.IMAGE002.id))
+        report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
     for image in images:
         problem, review = inspect_payload(document, image)
         if problem:

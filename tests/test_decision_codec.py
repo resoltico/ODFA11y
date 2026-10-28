@@ -91,7 +91,7 @@ def test_targeted_answers_require_fingerprints_and_document_answers_refuse_targe
 def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     plan = parse_tables({"plan": header()}, KINDS)
     open_decision = OpenDecision(
-        HEADING, Location("content/heading[1]"), "b" * 16, {"level": 3}, ("TXT002",)
+        HEADING, Location("content/heading[1]"), "b" * 16, {"level": 3}, ("HEADING002",)
     )
     template = render_plan(plan.header, [open_decision])
     assert not parse_tables(tomllib.loads(template), KINDS).decisions

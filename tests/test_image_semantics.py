@@ -65,7 +65,7 @@ class ChangeImageGeometry(Operation):
 def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_path: Path) -> None:
     before = OdfDocument.open(SOURCE)
     assert validate(before).count == 0
-    assert "IMAGE002" in {f.rule_id for f in audit_odf(SOURCE).findings}
+    assert "GRAPHIC003" in {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odi", tmp_path / "twice.odi"
     assert execute_operations(SOURCE, once, _plan()).changed
     assert not execute_operations(once, twice, _plan()).changed
@@ -219,7 +219,7 @@ def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
     )
     after = OdfDocument.open(destination)
     assert select_elements(after.tree(Part.CONTENT), "//office:binary-data")[0].text == binary
-    assert not {"IMAGE002", "IMAGE003", "IMAGE004"} & {
+    assert not {"GRAPHIC003", "IMAGE003", "IMAGE004"} & {
         f.rule_id for f in audit_odf(destination).findings
     }
 

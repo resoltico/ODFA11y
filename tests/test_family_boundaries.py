@@ -237,7 +237,7 @@ def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -
     source = make_flat(tmp_path, "text")
     source.write_text(source.read_text().replace(' office:version="1.4"', ""), encoding="utf-8")
     report = audit_odf(source, schema=True)
-    finding = next(f for f in report.findings if f.rule_id == "ODF905")
+    finding = next(f for f in report.findings if f.rule_id == "SCHEMA002")
     assert "declares no ODF version" in finding.message
 
 

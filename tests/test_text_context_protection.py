@@ -142,8 +142,8 @@ def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
     assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
-    assert {"TXT060", "TXT061"} <= {f.rule_id for f in report.findings}
-    plain = [f.details["text"] for f in report.findings if f.rule_id == "TXT030"]
+    assert {"REVISION001", "HIDDEN001"} <= {f.rule_id for f in report.findings}
+    plain = [f.details["text"] for f in report.findings if f.rule_id == "LINK001"]
     assert plain == ["https://note.example"]
     destination = tmp_path / "out.fodt"
     result = execute_operations(source, destination, [SetMetadata(title="Reviewed title")])
@@ -176,7 +176,7 @@ def test_inline_hidden_content_and_fields_never_enter_address_prose(tmp_path: Pa
 <text:span>https://visible.example</text:span></text:p></office:text>"""
     source = make_flat(tmp_path, "text", Variant(body=body))
     report = audit_odf(source)
-    assert [f.details["text"] for f in report.findings if f.rule_id == "TXT030"] == [
+    assert [f.details["text"] for f in report.findings if f.rule_id == "LINK001"] == [
         "https://visible.example"
     ]
     destination = tmp_path / "out.fodt"
@@ -199,7 +199,7 @@ def test_foreign_authored_payload_is_not_current_flow(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=body))
     destination = tmp_path / "out.fodt"
     report = audit_odf(source)
-    assert [f.details["text"] for f in report.findings if f.rule_id == "TXT030"] == [
+    assert [f.details["text"] for f in report.findings if f.rule_id == "LINK001"] == [
         "https://current.example"
     ]
     execute_operations(source, destination, [LinkifyAddresses()])

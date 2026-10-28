@@ -121,6 +121,6 @@ def _audit_export_context(document: OdfDocument, report: Report) -> None:
     limits = native_export_limitations(document)
     report.facts[FactKeys.NATIVE_LIMITATIONS] = limits
     if limits["rendering_dependencies"]:
-        report.add(rules.ODF012, details={"count": limits["rendering_dependencies"]})
+        report.add(rules.NATIVE001, details={"count": limits["rendering_dependencies"]})
     if limits["location_fields"]:
-        report.add(rules.ODF013, details={"count": limits["location_fields"]})
+        report.add(rules.NATIVE002, details={"count": limits["location_fields"]})

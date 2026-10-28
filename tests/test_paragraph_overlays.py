@@ -54,7 +54,7 @@ def test_overlay_on_reference_or_target_refuses_before_mutation(
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"retain destination")
     report = audit_odf(source)
-    assert "TXT062" in {finding.rule_id for finding in report.findings}
+    assert "STYLE001" in {finding.rule_id for finding in report.findings}
     with pytest.raises(RemediationError, match="class overlays"):
         style_usage(source)
     assert_refused(

@@ -63,7 +63,7 @@ def test_language_preserves_all_subtags_and_replaces_stale_defaults(
     document.save(destination)
     report = audit_odf(destination, schema=True)
     assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == tag
-    assert "ODF900" not in {finding.rule_id for finding in report.findings}
+    assert "SCHEMA001" not in {finding.rule_id for finding in report.findings}
     assert all(outcome.status is Status.UNCHANGED for outcome in operation.apply(document))
     props = document.tree(Part.STYLES).find(
         "office:styles/style:default-style/style:text-properties", NS

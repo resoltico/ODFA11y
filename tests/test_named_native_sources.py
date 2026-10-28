@@ -98,7 +98,7 @@ def _assert_binding(source: Path, monkeypatch: pytest.MonkeyPatch, *, expected: 
     count = 1 if expected else 0
     assert native_export_limitations(document)["rendering_dependencies"] == count
     report = audit_odf(source)
-    assert ("ODF012" in {f.rule_id for f in report.findings}) == expected
+    assert ("NATIVE001" in {f.rule_id for f in report.findings}) == expected
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
     if expected:
         with pytest.raises(ToolFailedError):

@@ -37,7 +37,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
 ) -> None:
     source = make(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
-    finding = next(f for f in report.findings if f.rule_id == "TXT002")
+    finding = next(f for f in report.findings if f.rule_id == "HEADING002")
     assert finding.location is not None
     target = finding.location.path
     assert target == "content/heading[2]"
@@ -46,7 +46,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
     operation = SetHeadingLevels({target: HeadingLevel(2, reviewed_fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
     execute_operations(source, once, [operation])
-    assert "TXT002" not in {f.rule_id for f in audit_odf(once).findings}
+    assert "HEADING002" not in {f.rule_id for f in audit_odf(once).findings}
     assert not execute_operations(once, twice, [operation]).changed
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(twice).tree(Part.CONTENT)
@@ -143,4 +143,4 @@ def test_toml_uses_the_exact_report_target(tmp_path: Path) -> None:
 
 def test_audit_rejects_levels_above_the_supported_range(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(body=BODY.replace('level="4"', 'level="11"')))
-    assert "TXT001" in {f.rule_id for f in audit_odf(source).findings}
+    assert "HEADING001" in {f.rule_id for f in audit_odf(source).findings}

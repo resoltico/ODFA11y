@@ -125,13 +125,13 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "The company logo")}),
     ]
-    assert {"SHEET002", "SHEET005"} <= ids(source)
+    assert {"SHEET002", "GRAPHIC003"} <= ids(source)
     output = tmp_path / f"out{source.suffix}"
     result = execute_operations(source, output, plan)
     assert result.changed
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.new_count == 0
-    assert not {"SHEET002", "SHEET005"} & ids(output)
+    assert not {"SHEET002", "GRAPHIC003"} & ids(output)
     again = execute_operations(output, tmp_path / f"again{source.suffix}", plan)
     assert not again.changed
     assert {o.status for o in again.outcomes} == {Status.UNCHANGED}
@@ -145,7 +145,7 @@ def test_the_language_reaches_the_default_cell_style(tmp_path: Path, layout: str
     report = audit_odf(output, schema=True)
     assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in {f.rule_id for f in report.findings}
-    assert "ODF900" not in {f.rule_id for f in report.findings}
+    assert "SCHEMA001" not in {f.rule_id for f in report.findings}
     again = execute_operations(
         output, tmp_path / f"again{source.suffix}", [SetMetadata(language="fr-FR")]
     )

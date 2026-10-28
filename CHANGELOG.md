@@ -6,6 +6,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Use concept-based rule IDs across families. Missing graphic text uses one title-or-description criterion; notes and annotations consistently warn and can now fail strict page-document runs. Findings reference their registered rules.
+
 - Presentation and drawing share `families.pages`; use `Family.DRAWING` and drawing names. Internal operations declare supported families. Standard ODF media types retain their `graphics` names.
 
 - Family implementations use an abstract contract and typed preservation snapshots; preservation consumes operation outcomes, and generic removed-block accounting is removed.

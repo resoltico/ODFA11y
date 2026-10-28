@@ -38,7 +38,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     """Report the accessibility findings that belong to text documents."""
     content = document.tree(Part.CONTENT)
     if has_revisions(content):
-        report.add(rules.TXT060)
+        report.add(rules.REVISION001)
     if select_elements(
         content,
         (
@@ -46,7 +46,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
             "//text:section[@text:condition or @text:display='none' or @text:display='condition']"
         ),
     ):
-        report.add(rules.TXT061)
+        report.add(rules.HIDDEN001)
     audit_headings(content, report, document)
     audit_images(document, report)
     audit_tables(content, report, document)
@@ -54,16 +54,16 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     for index, link in enumerate(document_links(document), 1):
         if not link_has_description(link):
             report.add(
-                rules.TXT031,
+                rules.LINK003,
                 location=link_location(link, index),
             )
-            report.add_decision(link_decision(document, link, index, rules.TXT031.id))
+            report.add_decision(link_decision(document, link, index, rules.LINK003.id))
     _audit_empty_spacers(document, report)
     _audit_notes(content, report)
     _audit_blinking(document, report)
     _audit_style_summary(document, report)
 
-    for kind, rule in [(LINKIFY_ADDRESSES, rules.TXT030), (REMOVE_SPACERS, rules.TXT040)]:
+    for kind, rule in [(LINKIFY_ADDRESSES, rules.LINK001), (REMOVE_SPACERS, rules.LAYOUT001)]:
         if any(finding.rule_id == rule.id for finding in report.findings):
             report.add_decision(OpenDecision(kind, None, None, {"enabled": False}, (rule.id,)))
 
@@ -78,7 +78,7 @@ def _audit_links(tree: etree._ElementTree, report: Report) -> None:
             for match in URI_RE.finditer(getattr(owner, attr)):
                 token, _suffix = split_trailing_punctuation(match.group(0))
                 report.add(
-                    rules.TXT030,
+                    rules.LINK001,
                     "Visible URL/email address is not represented by a hyperlink element.",
                     location=context_location(block, kind, counts[kind]),
                     details={"text": token},
@@ -98,7 +98,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
         styles.append(name)
     if styles:
         report.add(
-            rules.TXT040,
+            rules.LAYOUT001,
             (
                 "Empty body paragraphs were found. If they are only visual "
                 "spacers, prefer paragraph spacing instead."
@@ -121,7 +121,7 @@ def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
         cls = note.get(qn("text", "note-class")) or "unknown"
         classes[cls] = classes.get(cls, 0) + 1
     report.add(
-        rules.TXT005,
+        rules.NOTE001,
         (
             "Footnotes/endnotes are present; verify their reading order "
             "and PDF/UA export behaviour manually."
@@ -137,7 +137,7 @@ def _audit_blinking(document: OdfDocument, report: Report) -> None:
         for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
     ):
         report.add(
-            rules.TXT050,
+            rules.STYLE002,
             "Blinking text styling is present.",
             location=Location(Part.STYLES.value),
         )
@@ -147,7 +147,9 @@ def _audit_style_summary(document: OdfDocument, report: Report) -> None:
     rows, problems = _style_rows(document)
     report.facts[FactKeys.TEXT_PARAGRAPH_STYLES] = rows
     if problems:
-        report.add(rules.TXT062, location=Location(Part.STYLES.value), details={"styles": problems})
+        report.add(
+            rules.STYLE001, location=Location(Part.STYLES.value), details={"styles": problems}
+        )
 
 
 def style_summary(document: OdfDocument) -> list[StyleUsage]:

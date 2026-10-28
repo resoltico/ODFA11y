@@ -154,5 +154,5 @@ and skipping fidelity. Optional audit validation absence retains `VERA000` warni
 | `PDF019` | Inspect the exported link description. Existing Writer Names can matter, but renaming targets requires reference review. |
 | Probe reports `unsupported` | Native `office:title` did not establish a PDF description; source success does not clear PDF failures. |
 | LibreOffice rejected/unidentified | Install LibreOffice 26.8 or newer, expose its CLI, or select `--soffice`. |
-| `ODF012` / `ODF013` | Read [native-context limits](ACCESSIBILITY.md#native-document-context-and-declared-dependencies); source-only inspect remains available. |
+| `NATIVE001` / `NATIVE002` | Read [native-context limits](ACCESSIBILITY.md#native-document-context-and-declared-dependencies); source-only inspect remains available. |
 | `FID005` after deliberate movement | Review diffs; choose `fidelity.pagination = "may-change"` only if page/ink changes are intended. |

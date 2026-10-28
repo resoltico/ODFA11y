@@ -138,8 +138,11 @@ def test_libreoffice_authored_packages_are_recognised_and_audited(
     assert document.kind.family.value == "spreadsheet"
     report = audit_odf(source, schema=True)
     spreadsheet_rules = {f.rule_id for f in report.findings if f.rule_id.startswith("SHEET")}
-    assert spreadsheet_rules == {f"SHEET00{n}" for n in (2, 3, 4, 5, 6, 7, 8)}
-    hidden = next(f for f in report.findings if f.rule_id == "SHEET008")
+    assert spreadsheet_rules == {"SHEET002", "SHEET007"}
+    assert {"TABLE004", "TABLE005", "GRAPHIC003", "LINK002", "HIDDEN001"} <= {
+        finding.rule_id for finding in report.findings
+    }
+    hidden = next(f for f in report.findings if f.rule_id == "HIDDEN001")
     assert hidden.details == {"sheets": ["Data"], "rows": 1, "columns": 0}
     assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "spreadsheet"
     assert report.facts[FactKeys.SHEET_COUNT] == 3
@@ -169,7 +172,7 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
         namespaces={"config": "urn:oasis:names:tc:opendocument:xmlns:config:1.0"},
     ) == ["Fruit prices", "Data", "Spare"]
     after = {f.rule_id for f in audit_odf(output, schema=True).findings}
-    assert not {"SHEET002", "SHEET005"} & after
+    assert not {"SHEET002", "GRAPHIC003"} & after
     export = ExportSettings("calc_pdf_Export", soffice, profile_dir=tmp_path / "profile")
     before_text = pdf_text(export_pdfua(source, tmp_path / "source.pdf", export))
     after_text = pdf_text(export_pdfua(output, tmp_path / "remediated.pdf", export))
@@ -274,7 +277,7 @@ def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(
     source = author(
         tmp_path, external_tool("soffice", "libreoffice"), data_sheet("Prices", header_rows=1)
     )
-    assert "SHEET003" not in {f.rule_id for f in audit_odf(source).findings}
+    assert "TABLE004" not in {f.rule_id for f in audit_odf(source).findings}
 
 
 def validation_failures(pdf: Path, verapdf: str) -> set[tuple[str, str]]:
