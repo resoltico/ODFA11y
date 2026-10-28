@@ -287,3 +287,9 @@ GRAPHIC001 = _rule("GRAPHIC001", WARNING, SEM, "Graphic decorative role is unres
 GRAPHIC002 = _rule(
     "GRAPHIC002", WARNING, SEM, "Decorative graphic retains authored alternative metadata."
 )
+
+
+LIST001 = _rule("LIST001", ERROR, SEM, "List membership or nesting is structurally invalid.")
+LIST002 = _rule("LIST002", ERROR, SEM, "List continuation target is broken, ambiguous or cyclic.")
+LIST003 = _rule("LIST003", WARNING, SEM, "List counter continuation requires native review.")
+LIST004 = _rule("LIST004", WARNING, SEM, "Paragraph resembles a manually simulated list.")

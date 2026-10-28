@@ -75,6 +75,26 @@ class FactKeys:
             "Paragraph style usage and effective spacing.",
         )
     )
+    TEXT_LIST_COUNT = _register(
+        FactKey[int]("text.list_count", int, "Lists in established current reading contexts.")
+    )
+    TEXT_LIST_MAX_LEVEL = _register(
+        FactKey[int](
+            "text.list_max_level", int, "Deepest counter level, resetting at cells and text boxes."
+        )
+    )
+    TEXT_LIST_CONTINUATION_COUNT = _register(
+        FactKey[int](
+            "text.list_continuation_count", int, "Resolved list continuation relationships."
+        )
+    )
+    TEXT_SIMULATED_LIST_COUNT = _register(
+        FactKey[int](
+            "text.simulated_list_count",
+            int,
+            "Paragraphs resembling typed list markers; review only.",
+        )
+    )
     TEXT_HEADING_COUNT = _register(
         FactKey[int]("text.heading_count", int, "Structural headings in current reading contexts.")
     )
