@@ -16,18 +16,13 @@ from odfa11y import __version__
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.evidence import check_bundle
-from odfa11y.external_tools import ToolIdentity
 from odfa11y.families.text import write_link_probe
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.export import ExportSettings, export_pdfua, identify_soffice
+from odfa11y.native.link_capability import link_descriptions_supported
+from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import Family, OdfDocument, PackageStorage, validate
-from odfa11y.pdf import (
-    ExportSettings,
-    audit_pdfua,
-    export_pdfua,
-    identify_soffice,
-    link_descriptions_supported,
-    validate_pdfua,
-)
+from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt

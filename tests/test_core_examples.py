@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.errors import ToolFailedError, UnsupportedKindError
-from odfa11y.external_tools import run_bounded
 from odfa11y.families import style_usage
+from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.pipeline import NativeOptions
 from tools import core_examples

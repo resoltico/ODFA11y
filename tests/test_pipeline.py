@@ -17,8 +17,8 @@ from odfa11y.families.text import (
     SetGraphicAlternatives,
     TableHeaders,
 )
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import PackageStorage
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PIPELINE_STAGES, PROFILES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 

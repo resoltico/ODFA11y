@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Shared ODF content vocabulary, without document-family decisions."""
 
-from .export_context import native_export_limitations, require_native_context
 from .graphic_identity import GraphicIdentity, graphic_keys, graphic_selector, graphics_fingerprint
-from .graphic_style_identity import normalized_graphic_tree, normalized_role_attributes
-from .graphic_styles import audit_graphic_role, effective_graphic_role
+from .graphic_styles import (
+    audit_graphic_role,
+    effective_graphic_role,
+    normalized_graphic_tree,
+    normalized_role_attributes,
+)
 from .graphics import GraphicAlternative, GraphicEditor, set_description
 from .language import set_style_language, style_language
 from .links import (
@@ -29,7 +32,6 @@ from .pages import (
     shape_identity,
 )
 from .protection import opaque_payloads
-from .resources import local_resource_path
 from .table_identity import table_content_fingerprint, table_fingerprint
 from .tables import (
     AXES,
@@ -68,8 +70,6 @@ __all__ = [
     "link_fingerprint",
     "link_has_description",
     "link_location",
-    "local_resource_path",
-    "native_export_limitations",
     "navigation_problem",
     "normalized_graphic_tree",
     "normalized_role_attributes",
@@ -82,7 +82,6 @@ __all__ = [
     "protected_xml",
     "reading_context_path",
     "repeated",
-    "require_native_context",
     "require_safe_boundary",
     "set_description",
     "set_style_language",

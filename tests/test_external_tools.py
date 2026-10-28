@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from odfa11y import external_tools
 from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.external_tools import ToolRun, identify, run_bounded
+from odfa11y.native import process
+from odfa11y.native.process import ToolRun, identify, run_bounded
 from odfa11y.odf import PackageStorage
 from odfa11y.pipeline import PipelineOptions
 
@@ -112,7 +112,7 @@ def test_an_interruption_kills_the_tool_instead_of_orphaning_it(tmp_path: Path) 
     marker = tmp_path / "pid"
     program = (
         "import os, signal, sys\n"
-        "from odfa11y.external_tools import run_bounded\n"
+        "from odfa11y.native.process import run_bounded\n"
         "signal.signal(signal.SIGALRM, lambda *_: os.kill(os.getpid(), signal.SIGINT))\n"
         "signal.alarm(1)\n"
         f"run_bounded(['sh', '-c', 'echo $$ > {marker}; exec sleep 25'], timeout=60)\n"
@@ -141,9 +141,9 @@ def test_windows_identification_reads_the_file_version_instead_of_running_the_to
         assert timeout > 0
         return ToolRun(0, "26.2.6.2\r\n", "", stdout_truncated=False, stderr_truncated=False)
 
-    monkeypatch.setattr(external_tools, "run_bounded", fake)
+    monkeypatch.setattr(process, "run_bounded", fake)
     monkeypatch.setattr(sys, "platform", "win32")
-    identity = external_tools.identify_running_or_by_file(
+    identity = process.identify_running_or_by_file(
         "LibreOffice", "C:\\Program Files\\O'Neil\\soffice.exe", ("--version",)
     )
     assert identity.version == "26.2.6.2"
@@ -183,7 +183,7 @@ def _native_command(
 
         return start
 
-    patch.setattr(external_tools.subprocess, "Popen", observe(external_tools.subprocess.Popen))
+    patch.setattr(process.subprocess, "Popen", observe(process.subprocess.Popen))
     try:
         if mode == "standalone":
             sys.exit(main(["export", source, output, "--soffice", tool]))

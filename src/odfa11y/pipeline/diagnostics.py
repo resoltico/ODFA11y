@@ -16,17 +16,13 @@ from lxml import etree
 
 from odfa11y import __version__
 from odfa11y.errors import OdfA11yError, ToolNotFoundError, UnsupportedKindError
-from odfa11y.external_tools import identify
 from odfa11y.families import REGISTRY
+from odfa11y.native.export import ExportSettings, find_soffice, identify_soffice
+from odfa11y.native.link_capability import link_descriptions_supported
+from odfa11y.native.process import identify
 from odfa11y.odf import SUPPORTED_VERSIONS, Family
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
-from odfa11y.pdf import (
-    ExportSettings,
-    find_soffice,
-    find_verapdf,
-    identify_soffice,
-    link_descriptions_supported,
-)
+from odfa11y.pdf import find_verapdf
 from odfa11y.records import DoctorRecord, Toolchain
 
 from .native import NativeOptions
@@ -34,7 +30,7 @@ from .native import NativeOptions
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from odfa11y.external_tools import ToolIdentity
+    from odfa11y.native.process import ToolIdentity
 
 
 def inspect_tools(

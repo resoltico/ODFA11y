@@ -11,12 +11,13 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.content import table_fingerprint
-from odfa11y.external_tools import run_bounded
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.fidelity.snapshot import read_snapshot
+from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
 

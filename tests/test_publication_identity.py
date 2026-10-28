@@ -18,8 +18,8 @@ import pytest
 from lxml import etree
 
 from odfa11y.evidence import Redactor, check_bundle, write_bundle
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, PackageStorage
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .documents import make_flat

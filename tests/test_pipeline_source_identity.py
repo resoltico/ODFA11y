@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.evidence import sha256_file
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import PackageStorage
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt

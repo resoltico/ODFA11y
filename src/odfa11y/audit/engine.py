@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from odfa11y.content import native_export_limitations
 from odfa11y.errors import PackageError
 from odfa11y.families import adapter_for
+from odfa11y.native.export_context import native_export_limitations
 from odfa11y.odf import OdfDocument, Part, Use
 from odfa11y.plans.registry import document_decisions
 from odfa11y.report import FactKeys, Report, rules

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from pypdf.generic import ArrayObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_limits import MAX_CONTENT_BYTES
+from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
 from odfa11y.report import FactKeys, rules
 
 from .form_content import FormScanner

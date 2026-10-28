@@ -9,7 +9,7 @@ from urllib.parse import urlsplit, urlunsplit
 from pypdf.errors import PdfReadError
 from pypdf.generic import DictionaryObject, TextStringObject
 
-from odfa11y.pdf_consumption import resolve
+from odfa11y.pdf.reading.consumption import resolve
 
 _UNRESERVED_SUBDELIMS = r"(?:[A-Za-z0-9._~!$&'()*+,;=-]|%[0-9A-Fa-f]{2})"
 _PCHAR = rf"(?:{_UNRESERVED_SUBDELIMS}|[:@])"

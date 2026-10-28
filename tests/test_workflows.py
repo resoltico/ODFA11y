@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.pdf.export import MINIMUM_LIBREOFFICE_VERSION
+from odfa11y.native.export import MINIMUM_LIBREOFFICE_VERSION
 
 WORKFLOWS = sorted((Path(__file__).resolve().parents[1] / ".github/workflows").glob("*.yml"))
 

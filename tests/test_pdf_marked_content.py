@@ -12,7 +12,7 @@ from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObjec
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
-from odfa11y.pdf_content import scan_content
+from odfa11y.pdf.reading.content import scan_content
 from odfa11y.report import FactKeys
 
 from .pdf_fixtures import dictionary, marked_text, set_page_content, tagged_writer, text_pdf

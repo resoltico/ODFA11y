@@ -10,8 +10,7 @@ from pathlib import Path
 from odfa11y.adapter import Outcome, ReviewItem, Status
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
-from odfa11y.external_tools import ToolIdentity
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.process import ToolIdentity
 from odfa11y.outcomes import (
     BatchStatus,
     ExitStatus,
@@ -21,6 +20,7 @@ from odfa11y.outcomes import (
     StageStatus,
     ViolationKind,
 )
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import Profile, RunRecord, StageResult
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema

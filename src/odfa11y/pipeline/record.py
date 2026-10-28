@@ -13,7 +13,8 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Literal
 
 from odfa11y import __version__
-from odfa11y.external_tools import validate_timeout
+from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
+from odfa11y.native.process import validate_timeout
 from odfa11y.odf import provenance
 from odfa11y.outcomes import (
     ExitStatus,
@@ -21,13 +22,12 @@ from odfa11y.outcomes import (
     StageStatus,
     combine_statuses,
 )
-from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
 from odfa11y.plans import Plan
 from odfa11y.records import Toolchain
 from odfa11y.report import exit_status
 from odfa11y.serialization import JsonProperty, record_dict
 lazy from odfa11y.adapter import ReviewItem
-lazy from odfa11y.fidelity import FidelityPolicy
+lazy from odfa11y.pdf.fidelity import FidelityPolicy
 
 from .profiles import DEFAULT_PROFILE, profile_named
 

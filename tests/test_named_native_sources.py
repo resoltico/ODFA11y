@@ -9,8 +9,8 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.content import native_export_limitations, require_native_context
 from odfa11y.errors import ToolFailedError
+from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.report import FactKeys
 
@@ -19,7 +19,7 @@ from .documents import TABLE_BODY, Variant, make_package
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.pdf import ExportSettings
+    from odfa11y.native.export import ExportSettings
 
 TEXT_FIELDS = ["display", "name", "next", "row-number", "row-select"]
 TABLE_SOURCES = {"sql": "sql-statement", "table": "database-table-name", "query": "query-name"}

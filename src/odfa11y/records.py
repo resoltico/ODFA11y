@@ -10,7 +10,7 @@ from odfa11y.serialization import record_dict
 lazy from odfa11y.outcomes import StageStatus
 
 if TYPE_CHECKING:
-    from odfa11y.external_tools import ToolIdentity
+    from odfa11y.native.process import ToolIdentity
     from odfa11y.serialization import JsonObject
 
 

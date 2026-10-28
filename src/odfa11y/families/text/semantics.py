@@ -27,7 +27,6 @@ from odfa11y.report import FactKeys, Location, rules
 from .contexts import context_location, text_nodes
 from .decisions import HEADING_LEVEL, TABLE_HEADERS
 from .headings import MAX_HEADING_LEVEL, heading_fingerprint, heading_location
-from .text import element_text
 
 if TYPE_CHECKING:
     from lxml import etree
@@ -52,7 +51,7 @@ def audit_headings(
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
         raw = heading.get(qn("text", "outline-level"))
-        text = element_text(heading)
+        text = visible_words(heading)
         try:
             level = int(raw) if raw is not None else 0
         except ValueError:
@@ -211,7 +210,9 @@ def _looks_like_data_table(rows: list[etree._Element], row_count: int) -> bool:
     cells = sum(repeated(cell, "number-columns-repeated") for cell in first)
     if cells < MIN_DATA_TABLE_DIMENSION:
         return False
-    first_text = [(element_text(cell), repeated(cell, "number-columns-repeated")) for cell in first]
+    first_text = [
+        (visible_words(cell), repeated(cell, "number-columns-repeated")) for cell in first
+    ]
     if sum(count for text, count in first_text if text.strip()) < MIN_DATA_TABLE_DIMENSION:
         return False
     # Conservative: long narrative cells are more likely to belong to a layout table.

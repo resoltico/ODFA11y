@@ -12,7 +12,7 @@ import pytest
 
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .native_resource_fixtures import png_bytes

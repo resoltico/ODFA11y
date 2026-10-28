@@ -17,9 +17,7 @@ from odfa11y.odf import Part, qn, select_elements
 from odfa11y.report import Location
 
 from .graphic_identity import SHAPE_TAGS, GraphicIdentity
-from .graphic_style_identity import (
-    normalized_graphic_tree,
-)
+from .graphic_styles import normalized_graphic_tree
 from .text import eligible_text_node, reading_context_path, visible_words
 from .xml import protected_xml
 

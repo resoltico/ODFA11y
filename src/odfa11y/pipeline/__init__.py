@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """The assurance workflow: audit, remediate, export, validate, compare, keep evidence."""
 
+from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.outcomes import PIPELINE_STAGES
-from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS
 
 from .comparison import compare_documents, is_pdf
 from .diagnostics import inspect_tools

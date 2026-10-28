@@ -10,7 +10,7 @@ from typing import Never
 
 from odfa11y import __version__
 from odfa11y.errors import PlanError
-from odfa11y.external_tools import validate_timeout
+from odfa11y.native.process import validate_timeout
 from odfa11y.outcomes import ExitStatus
 from odfa11y.pipeline import DEFAULT_PROFILE, DEFAULT_TIMEOUT_SECONDS, PROFILES
 from odfa11y.report import FORMATS, terminal_text

@@ -12,8 +12,8 @@ from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_consumption import check_consumption
-from odfa11y.pdf_limits import check_file_size, check_limits
+from odfa11y.pdf.reading.consumption import check_consumption
+from odfa11y.pdf.reading.limits import check_file_size, check_limits
 from odfa11y.report import FactKeys, Report, rules
 from odfa11y.safe_xml import parse_secure
 

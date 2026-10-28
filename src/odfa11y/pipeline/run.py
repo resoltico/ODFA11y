@@ -13,7 +13,8 @@ from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
-from odfa11y.fidelity import compare_pdfs
+from odfa11y.native.export import ExportSettings, export_pdfua, find_soffice, identify_soffice
+from odfa11y.native.link_capability import link_descriptions_supported
 from odfa11y.odf import OdfDocument, Use, declared_version
 from odfa11y.outcomes import (
     PIPELINE_STAGES,
@@ -23,16 +24,8 @@ from odfa11y.outcomes import (
     StepName,
     StepState,
 )
-from odfa11y.pdf import (
-    ExportSettings,
-    audit_pdfua,
-    check_pdfua,
-    export_pdfua,
-    find_soffice,
-    identify_soffice,
-    link_descriptions_supported,
-    list_fonts,
-)
+from odfa11y.pdf import audit_pdfua, check_pdfua, list_fonts
+from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.records import DocumentIdentity
 from odfa11y.remediation import remediate
 from odfa11y.report import exit_status

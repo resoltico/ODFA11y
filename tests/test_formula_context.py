@@ -9,9 +9,10 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.content import native_export_limitations, require_native_context
-from odfa11y.content.formula_context import FORMULA_ATTRIBUTES
-from odfa11y.content.formula_syntax import (
+from odfa11y.errors import ToolFailedError
+from odfa11y.native.export_context import native_export_limitations, require_native_context
+from odfa11y.native.formula_context import FORMULA_ATTRIBUTES
+from odfa11y.native.formula_syntax import (
     CELL_QUERIES,
     INFO_QUERIES,
     MAX_CHARACTERS,
@@ -19,7 +20,6 @@ from odfa11y.content.formula_syntax import (
     FormulaFacts,
     classify_formula,
 )
-from odfa11y.errors import ToolFailedError
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.pipeline import export_document
 from odfa11y.report import FactKeys

@@ -16,7 +16,7 @@ from pypdf.generic import (
 )
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_consumption import check_consumption
+from odfa11y.pdf.reading.consumption import check_consumption
 
 from .pdf_fixtures import register, set_page_content, tagged_writer
 

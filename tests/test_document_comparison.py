@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.errors import PackageError, ToolFailedError
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import NativeOptions, compare_documents, export_document, is_pdf
 
 from .fixtures import make_minimal_odt
@@ -21,7 +21,7 @@ from .pdf_fixtures import text_pdf
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from odfa11y.pdf import ExportSettings
+    from odfa11y.native.export import ExportSettings
 
 
 def test_core_comparison_preflights_both_inputs_before_export(

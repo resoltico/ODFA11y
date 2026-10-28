@@ -13,10 +13,9 @@ from pypdf.errors import PdfReadError, PyPdfError
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_consumption import check_consumption, resolve
-from odfa11y.pdf_limits import check_file_size, check_limits
-
-from .uri import effective_uri, uri_base
+from odfa11y.pdf.fidelity.uri import effective_uri, uri_base
+from odfa11y.pdf.reading.consumption import check_consumption, resolve
+from odfa11y.pdf.reading.limits import check_file_size, check_limits
 
 if TYPE_CHECKING:
     from pypdf import PageObject

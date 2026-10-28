@@ -173,7 +173,7 @@ while direct export/comparison of original inputs can retain their logical ident
 Source-only `inspect` and preservation remain available. See
 [evidence capture](EVIDENCE.md#source-capture) for private copies and stable directories.
 
-The authoritative policy is [content/export_context.py](../src/odfa11y/content/export_context.py).
+The authoritative policy is [content/export_context.py](../src/odfa11y/native/export_context.py).
 It covers content/styles/meta, reachable embedded ODF content/styles, auto-reload documents,
 unused fill/bullet images, chart symbols, SVG definitions/fonts and form image data.
 File targets require an exact non-directory member; decoded separators remain meaningful.
@@ -197,7 +197,7 @@ retains PDFs, decoded-pixel controls, options and tool identities for supported-
 experiments; observations on one runtime/OS do not establish other combinations.
 
 Core `export_document`, `compare_documents` and pipeline stages own these guards. Raw
-`pdf.export_pdfua()` requires caller-owned resource/protection policy and native isolation;
+`native.export.export_pdfua()` requires caller-owned resource/protection policy and native isolation;
 see [API ownership](API.md).
 
 ## Formula declarations
@@ -219,7 +219,7 @@ function-like words in strings are inert.
 `CELL("FILENAME")` and `INFO("directory")` depend on original identity and refuse captured
 pipeline export. Other supported literal CELL/INFO queries classify normally; dynamic or
 unsupported queries refuse. The ODF 1.4 Part 4 function/query table is bundled with its
-[source and digest](../src/odfa11y/content/formula_data/functions.toml); runtime processing
+[source and digest](../src/odfa11y/native/formula_data/functions.toml); runtime processing
 does not download it.
 
 Each expression is bounded to 32,768 characters, 4,096 lexical tokens and depth 64.

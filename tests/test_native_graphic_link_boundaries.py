@@ -14,9 +14,10 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative, LinkDescription, graphics_fingerprint
 from odfa11y.content.links import document_links, link_fingerprint, link_location
 from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.report import FactKeys
 
 from .native_resource_fixtures import PIXELS, decoded_images, writer_resource

@@ -15,8 +15,8 @@ from odfa11y.audit import audit_odf
 from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.plans import load_plan
 from odfa11y.remediation import SetMetadata

@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from odfa11y.external_tools import run_bounded
+from odfa11y.native.process import run_bounded
 from tools import check_quality
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from odfa11y.audit import prepare_plan
 from odfa11y.evidence import check_bundle
 from odfa11y.families import style_usage
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import (
     PipelineOptions,
     audit_document,

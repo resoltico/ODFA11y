@@ -6,8 +6,8 @@ from __future__ import annotations
 from dataclasses import replace
 
 from odfa11y.families.text import ADAPTER
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import StageName, StageStatus
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PROFILES, RunRecord, StageResult
 from odfa11y.records import DocumentIdentity
 from odfa11y.report import FactKeys, FactSet, Report, rules

@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
-from odfa11y.external_tools import termination_interrupt
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.process import termination_interrupt
 from odfa11y.outcomes import (
     BatchStatus,
     ExitStatus,
@@ -20,6 +19,7 @@ from odfa11y.outcomes import (
     StepState,
     failure_status,
 )
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, RunRecord, StageResult, run_pipeline
 from odfa11y.plans import load_plan
 from odfa11y.records import DocumentIdentity

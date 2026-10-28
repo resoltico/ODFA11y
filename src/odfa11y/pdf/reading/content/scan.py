@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from .inline_image import inline_image_end
+from odfa11y.pdf.reading.content.inline_image import inline_image_end
 
 if TYPE_CHECKING:
     from collections.abc import Callable

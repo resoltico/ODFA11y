@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Operation-specific protected XML facts for supported Writer edits."""
+"""Protect Writer content and normalize only the metadata each operation may change."""
 
 from __future__ import annotations
 
@@ -14,22 +14,21 @@ from odfa11y.content import (
     link_location,
     normalized_role_attributes,
     protected_xml,
+    repeated,
 )
 from odfa11y.errors import XmlParseError
-from odfa11y.odf import Part, qn
+from odfa11y.odf import NS, Part, qn
 
 from .contexts import context_location, text_nodes
-from .derived_styles import is_generated_from
 from .graphics import SetGraphicAlternatives, SetLinkDescriptions
 from .headings import SetHeadingLevels, heading_location
 from .linkify import LinkifyAddresses
+from .links import URI_RE, split_trailing_punctuation
 from .prose import address_wrapper_scope
-from .protection_metadata import normalize_metadata
-from .protection_structure import normalize_headers, unwrap_address
 from .remove_spacers import RemoveEmptySpacers
 from .spacers import spacer_candidates
-from .spacing import NO_STYLE, NormalizeSpacing, derived_style_name
-from .styles import catalog_of
+from .spacing import NormalizeSpacing
+from .styles import NO_STYLE, catalog_of, derived_style_name, is_generated_from
 from .tables import MarkTableHeaders
 
 if TYPE_CHECKING:
@@ -262,3 +261,179 @@ def protect_edit(document: OdfDocument, operation: Operation) -> Callable[[], bo
 
     """
     return ProtectedEdit(document, operation).intact
+
+
+LANGUAGE_ATTRIBUTES = frozenset(
+    [qn("fo", name) for name in ("language", "country", "script")]
+    + [
+        qn("style", name)
+        for name in (
+            "rfc-language-tag",
+            "rfc-language-tag-asian",
+            "rfc-language-tag-complex",
+            "language-asian",
+            "country-asian",
+            "script-asian",
+            "language-complex",
+            "country-complex",
+            "script-complex",
+        )
+    ]
+)
+
+
+def normalize_metadata(
+    root: etree._Element, operation: Operation, *, creating_metadata: bool
+) -> None:
+    """Normalize supported metadata effects without masking unrelated styles."""
+    if (
+        operation.name == "set_odf_version"
+        and type(operation).__module__ == "odfa11y.remediation.version"
+    ):
+        _version(root)
+    if (
+        operation.name != "set_metadata"
+        or type(operation).__module__ != "odfa11y.remediation.metadata"
+    ):
+        return
+    if creating_metadata:
+        _metadata_entry(root)
+    parameters = operation.as_dict()
+    fields = {
+        qn("dc", key)
+        for key in ("title", "description", "language")
+        if parameters.get(key) is not None
+    }
+    for meta in root.findall("office:meta", NS):
+        for tag in fields:
+            node = meta.find(tag)
+            if node is not None:
+                meta.remove(node)
+        if not len(meta) and not meta.attrib and (parent := meta.getparent()) is not None:
+            parent.remove(meta)
+    if parameters.get("language") is not None:
+        _language_defaults(root)
+
+
+def _version(root: etree._Element) -> None:
+    root.attrib.pop(qn("office", "version"), None)
+    if root.tag == qn("manifest", "manifest"):
+        root.attrib.pop(qn("manifest", "version"), None)
+        for entry in root.findall("manifest:file-entry", NS):
+            if entry.get(qn("manifest", "full-path")) == "/":
+                entry.attrib.pop(qn("manifest", "version"), None)
+
+
+def _language_defaults(root: etree._Element) -> None:
+    for default in root.findall("office:styles/style:default-style", NS):
+        if default.get(qn("style", "family")) != "paragraph":
+            continue
+        _default_properties(default)
+    for styles in root.findall("office:styles", NS):
+        if not len(styles) and not styles.attrib and (parent := styles.getparent()) is not None:
+            parent.remove(styles)
+
+
+def _metadata_entry(root: etree._Element) -> None:
+    if root.tag != qn("manifest", "manifest"):
+        return
+    for entry in list(root):
+        if (
+            entry.tag == qn("manifest", "file-entry")
+            and dict(entry.attrib)
+            == {qn("manifest", "full-path"): "meta.xml", qn("manifest", "media-type"): "text/xml"}
+            and not len(entry)
+        ):
+            root.remove(entry)
+
+
+def _default_properties(default: etree._Element) -> None:
+    for props in list(default.findall("style:text-properties", NS)):
+        for attr in list(props.attrib):
+            if attr in LANGUAGE_ATTRIBUTES:
+                props.attrib.pop(attr)
+        if not props.attrib and not len(props):
+            default.remove(props)
+    if (
+        len(default) == 0
+        and dict(default.attrib) == {qn("style", "family"): "paragraph"}
+        and (parent := default.getparent()) is not None
+    ):
+        parent.remove(default)
+
+
+def unwrap_address(source: etree._Element, target: etree._Element) -> None:
+    """Remove only a newly created exact address wrapper in a protected copy."""
+    token = source.text or ""
+    match = URI_RE.fullmatch(token)
+    if not match or len(source):
+        return
+    address, punctuation = split_trailing_punctuation(token)
+    expected = f"mailto:{address}" if match.group("email") else address
+    if punctuation or dict(source.attrib) != {
+        qn("xlink", "type"): "simple",
+        qn("xlink", "href"): expected,
+    }:
+        return
+    parent = target.getparent()
+    if parent is None:
+        return
+    value = token + (target.tail or "")
+    previous = target.getprevious()
+    if previous is None:
+        parent.text = (parent.text or "") + value
+    else:
+        previous.tail = (previous.tail or "") + value
+    parent.remove(target)
+
+
+def normalize_headers(table: etree._Element) -> None:
+    """Ignore this table's header wrappers and coalesce proven identical repeated runs."""
+    for node in list(
+        table.iter(qn("table", "table-header-rows"), qn("table", "table-header-columns"))
+    ):
+        parent = node.getparent()
+        owner = next(node.iterancestors(qn("table", "table")), None)
+        if parent is None or owner is not table:
+            continue
+        position = parent.index(node)
+        for offset, child in enumerate(list(node)):
+            parent.insert(position + offset, child)
+        parent.remove(node)
+    for parent in table.iter():
+        owner = (
+            parent
+            if parent.tag == qn("table", "table")
+            else next(parent.iterancestors(qn("table", "table")), None)
+        )
+        if owner is not table:
+            continue
+        _coalesce_declarations(parent)
+
+
+def _coalesce_declarations(parent: etree._Element) -> None:
+    previous = None
+    for child in list(parent):
+        if child.tag not in {qn("table", "table-row"), qn("table", "table-column")}:
+            previous = None
+            continue
+        repeat = qn(
+            "table",
+            "number-rows-repeated"
+            if child.tag == qn("table", "table-row")
+            else "number-columns-repeated",
+        )
+        count = str(repeated(child, repeat.rsplit("}", 1)[-1]))
+        child.attrib.pop(repeat, None)
+        if child.tail and not child.tail.strip():
+            child.tail = None
+        if previous is not None:
+            old_count = previous.attrib.pop(repeat, "1")
+            equal = protected_xml(previous) == protected_xml(child)
+            previous.set(repeat, old_count)
+            if equal:
+                previous.set(repeat, str(int(old_count) + int(count)))
+                parent.remove(child)
+                continue
+        child.set(repeat, count)
+        previous = child

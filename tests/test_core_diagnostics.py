@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.errors import ToolFailedError, ToolNotFoundError, UnsupportedKindError
-from odfa11y.external_tools import ToolIdentity
 from odfa11y.families import REGISTRY
+from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import Family, OdfDocument
 from odfa11y.pipeline import diagnostics
 from odfa11y.pipeline.native import NativeOptions
@@ -17,7 +17,7 @@ from odfa11y.pipeline.native import NativeOptions
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.pdf import ExportSettings
+    from odfa11y.native.export import ExportSettings
 
 
 def identities(monkeypatch: pytest.MonkeyPatch) -> None:

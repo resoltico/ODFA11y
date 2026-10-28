@@ -15,7 +15,7 @@ from odfa11y.adapter import Outcome, Status
 from odfa11y.odf import Part, qn, select_elements
 
 from .graphic_identity import SHAPE_TAGS, GraphicIdentity, graphic_style_dependencies
-from .graphic_style_identity import normalized_graphic_tree
+from .graphic_styles import normalized_graphic_tree
 from .graphics import GraphicAlternative, set_description
 from .locations import page_location
 from .xml import protected_xml

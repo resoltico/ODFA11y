@@ -9,10 +9,10 @@ import pytest
 from lxml import etree
 
 from odfa11y.evidence import check_bundle
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.fidelity.snapshot import read_snapshot
+from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.pdf import ExportSettings, export_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 

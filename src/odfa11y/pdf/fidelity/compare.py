@@ -12,13 +12,12 @@ import pypdfium2
 from PIL import Image, ImageChops
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.report import FactKeys, Report, rules
 
-from .snapshot import read_snapshot
-
 if TYPE_CHECKING:
-    from .policy import FidelityPolicy
-    from .snapshot import PdfSnapshot
+    from odfa11y.pdf.fidelity.policy import FidelityPolicy
+    from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
 
 MAX_RENDER_PIXELS = 20_000_000
 EXCERPT_CONTEXT = 40

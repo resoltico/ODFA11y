@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import OutputError, ToolFailedError
-from odfa11y.external_tools import (
+from odfa11y.native.process import (
     find_executable,
     identify_running_or_by_file,
     run_bounded,
@@ -21,7 +21,7 @@ from odfa11y.external_tools import (
 from odfa11y.staging import staging_sibling
 
 if TYPE_CHECKING:
-    from odfa11y.external_tools import ToolIdentity
+    from odfa11y.native.process import ToolIdentity
 
 DEFAULT_TIMEOUT_SECONDS = 120
 MINIMUM_LIBREOFFICE_VERSION = (26, 8)

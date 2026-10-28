@@ -12,7 +12,7 @@ from odfa11y import source_capture as capture
 from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .documents import make_flat

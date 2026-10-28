@@ -15,9 +15,10 @@ from odfa11y.errors import PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.formula import SetFormulaAlternative
 from odfa11y.families.formula.expression import fingerprint
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.plans import load_plan
 from odfa11y.remediation import SetMetadata

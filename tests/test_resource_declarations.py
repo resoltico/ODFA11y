@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.content import native_export_limitations, require_native_context
 from odfa11y.errors import ToolFailedError
+from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.report import FactKeys
 

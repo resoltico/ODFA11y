@@ -15,7 +15,7 @@ from odfa11y.content import GraphicAlternative
 from odfa11y.evidence import check_bundle
 from odfa11y.evidence.redact import ABSOLUTE_PATH
 from odfa11y.families.text import SetGraphicAlternatives
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 

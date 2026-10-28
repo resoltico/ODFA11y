@@ -18,7 +18,7 @@ from odfa11y.decisions import (
     decode_answer,
 )
 from odfa11y.errors import PlanError
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.report import Location
 from odfa11y.serialization import record_dict, schema_for
 

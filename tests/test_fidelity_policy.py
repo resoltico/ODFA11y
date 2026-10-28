@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.cli import main
 from odfa11y.errors import PlanError
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
 
 from .fixtures import make_minimal_odt

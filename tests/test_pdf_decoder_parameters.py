@@ -14,9 +14,9 @@ from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
 from odfa11y.evidence import check_bundle
-from odfa11y.external_tools import ToolIdentity
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf import audit_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
@@ -26,7 +26,7 @@ from .reviewed_plans import plan_header
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.pdf import ExportSettings
+    from odfa11y.native.export import ExportSettings
 
 
 def predictor_pdf(path: Path, predictor: object) -> Path:

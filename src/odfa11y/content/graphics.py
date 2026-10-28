@@ -17,8 +17,7 @@ if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
 
 from .graphic_identity import GraphicIdentity
-from .graphic_roles import GraphicRoleEditor
-from .graphic_styles import decorative_problem
+from .graphic_styles import GraphicRoleEditor, decorative_problem
 from .text import eligible_text_node
 
 MIN_CONFLICTING_VALUES = 2

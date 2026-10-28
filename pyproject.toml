@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.15"
 # Code uses MPL-2.0; bundled ODF and MathML grammars retain OASIS and W3C notices.
 license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
-license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt", "src/odfa11y/content/formula_data/NOTICE.txt"]
+license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt", "src/odfa11y/native/formula_data/NOTICE.txt"]
 authors = [
   { name = "Ervins Strauhmanis" }
 ]

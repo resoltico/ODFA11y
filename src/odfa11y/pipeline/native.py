@@ -6,13 +6,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from odfa11y.content import require_native_context
 from odfa11y.errors import UnsupportedKindError
-from odfa11y.external_tools import validate_timeout
 from odfa11y.families import adapter_for
+from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS, ExportSettings, export_pdfua
+from odfa11y.native.export_context import require_native_context
+from odfa11y.native.process import validate_timeout
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
-from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, ExportSettings, export_pdfua
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -8,11 +8,10 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from odfa11y.errors import PackageError, ToolFailedError
+from odfa11y.native.formula_context import FormulaContext
+from odfa11y.native.formula_syntax import FormulaFacts
+from odfa11y.native.resources import ResourceIdentity, local_resource_path
 from odfa11y.odf import PackageStorage, Part, qn
-
-from .formula_context import FormulaContext
-from .formula_syntax import FormulaFacts
-from .resources import ResourceIdentity, local_resource_path
 
 if TYPE_CHECKING:
     from lxml import etree
