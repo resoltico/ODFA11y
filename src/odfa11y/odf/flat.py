@@ -42,7 +42,7 @@ class FlatXmlStorage(OdfStorage):
             raise PackageError(msg)
         self._data = self.source.read_bytes()
 
-    def member_for(self, part: Part) -> str | None:
+    def member_for(self, part: Part) -> str | None:  # noqa: PLR6301  Implement the shared storage instance interface.
         """Name the member holding a part.
 
         Returns
@@ -53,7 +53,7 @@ class FlatXmlStorage(OdfStorage):
         """
         return None if part is Part.MANIFEST else FLAT_MEMBER
 
-    def has(self, name: str) -> bool:
+    def has(self, name: str) -> bool:  # noqa: PLR6301  Implement the shared storage instance interface.
         """Return whether the member exists.
 
         Returns

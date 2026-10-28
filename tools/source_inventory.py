@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import subprocess
+import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
@@ -46,8 +46,8 @@ def source_files(root: Path) -> dict[str, bytes]:
 
     """
     if (root / ".git").exists():
-        result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "-z"],
+        result = subprocess.run(  # noqa: S603  Arguments select a local tool without a shell.
+            ["git", "-C", str(root), "ls-files", "-z"],  # noqa: S607  System tool is resolved through PATH.
             capture_output=True,
             check=True,
             timeout=30,

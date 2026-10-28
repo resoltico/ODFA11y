@@ -56,7 +56,7 @@ root exposes only `__version__`; `__main__` is the explicit caller of the CLI. U
 files inherit the root's empty dependency list, and unregistered top-level modules cannot
 import project packages.
 
-The policy checker also rejects literal family XML selection in orchestration, including
+The architecture tests also reject literal family XML selection in orchestration, including
 qualified-name calls, ordinary aliases and XPath literals. Shared `content` primitives
 may name their vocabulary. Storage dispatch, namespace declarations and normative schema
 selection remain core responsibilities. Static checks cannot establish semantic cohesion:
@@ -64,8 +64,7 @@ design review must assess responsibilities, state ownership and downstream effec
 
 The authored-file inventory includes hidden and Git-ignored Python. Generated environments,
 caches and root distribution/build outputs are excluded; nested domain directories named
-`build` or `dist` remain authored source. [pyproject.toml](../pyproject.toml) owns file-size,
-function-complexity, lint and type policy. See [Development](DEVELOPING.md#required-checks).
+`build` or `dist` remain authored source. [pyproject.toml](../pyproject.toml) owns function-complexity, lint and type settings. See [Development](DEVELOPING.md#required-checks).
 
 ## The document model
 

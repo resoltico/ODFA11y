@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import email
 import hashlib
-import subprocess
+import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
 import sys
 import tarfile
 import tomllib

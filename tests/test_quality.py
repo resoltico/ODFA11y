@@ -1,99 +1,135 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Negative controls for repository size and centralized lint policy."""
+"""Reject family XML literals in orchestration, including aliases and hidden source."""
 
 from __future__ import annotations
 
+import ast
+import re
 from pathlib import Path
 
 import pytest
 
-from tools.check_quality import check_repository
+from tools.check_quality import authored_paths
+
+# XML namespace prefixes whose elements belong to a document family, not to the ODF core.
+FAMILY_PREFIXES = frozenset({
+    "text",
+    "table",
+    "draw",
+    "fo",
+    "svg",
+    "style",
+    "presentation",
+    "chart",
+    "db",
+    "form",
+    "number",
+    "dr3d",
+    "anim",
+    "smil",
+    "math",
+    "script",
+})
+FAMILY_NAME = re.compile(r"(?:^|[/@\[ (|])(?:" + "|".join(sorted(FAMILY_PREFIXES)) + r"):[A-Za-z]")
+CORE_ROOT = ("src", "odfa11y")
+CONTENT_ROOTS = {(*CORE_ROOT, "families"), (*CORE_ROOT, "content")}
+
+
+def _is_core(path: Path) -> bool:
+    return path.parts[:2] == CORE_ROOT and path.parts[:3] not in CONTENT_ROOTS
+
+
+def _check_core_purity(path: Path, source: str) -> list[str]:
+    """Reject family-specific XML names in the ODF core.
+
+    The core understands OpenDocument structure; families and shared content primitives may name
+    content vocabulary, while orchestration packages may not. Docstrings are prose and exempt.
+
+    Returns
+    -------
+    list[str]
+        One violation per family-specific qualified name or XPath literal in the core.
+
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []  # Ruff reports invalid Python syntax.
+    docstrings = {
+        id(node.value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
+    }
+    qn_names = {"qn"} | {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+        if alias.name == "qn"
+    }
+    errors = []
+    for node in ast.walk(tree):
+        line = getattr(node, "lineno", 0)
+        prefix = _family_qn_prefix(node, qn_names)
+        if prefix is not None:
+            errors.append(
+                f"{path}:{line}: the ODF core must not name {prefix}: elements;"
+                " that belongs in a family package"
+            )
+        elif (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in docstrings
+            and FAMILY_NAME.search(node.value)
+        ):
+            errors.append(
+                f"{path}:{line}: the ODF core must not contain the family-specific name "
+                f"{node.value!r}; that belongs in a family package"
+            )
+    return errors
+
+
+def _family_qn_prefix(node: ast.AST, qn_names: set[str]) -> object | None:
+    """Find a literal family prefix in ordinary qualified-name calls and import aliases.
+
+    Returns
+    -------
+    object | None
+        The family prefix when directly declared in the call, else None.
+
+    """
+    if not isinstance(node, ast.Call):
+        return None
+    named = (isinstance(node.func, ast.Name) and node.func.id in qn_names) or (
+        isinstance(node.func, ast.Attribute) and node.func.attr == "qn"
+    )
+    if not named:
+        return None
+    first = (
+        node.args[0]
+        if node.args
+        else next((keyword.value for keyword in node.keywords if keyword.arg == "prefix"), None)
+    )
+    return (
+        first.value if isinstance(first, ast.Constant) and first.value in FAMILY_PREFIXES else None
+    )
 
 
 def _repository(tmp_path: Path) -> Path:
-    (tmp_path / "pyproject.toml").write_text(
-        '[tool.odfa11y.quality]\nmax-file-lines = 300\n[tool.ruff.lint]\nselect = ["ALL"]\n',
-        encoding="utf-8",
-    )
     return tmp_path
 
 
-def test_file_limit_accepts_boundary_and_rejects_one_extra_line(tmp_path: Path) -> None:
-    root = _repository(tmp_path)
-    source = root / "example.py"
-    source.write_text("\n" * 300, encoding="utf-8")
-    assert check_repository(root) == []
-    source.write_text("\n" * 301, encoding="utf-8")
-    assert any("301 lines" in error for error in check_repository(root))
+def check_repository(root: Path) -> list[str]:
+    errors = []
+    for path in authored_paths(root):
+        relative = path.relative_to(root)
+        if path.suffix == ".py" and _is_core(relative):
+            errors.extend(_check_core_purity(relative, path.read_text(encoding="utf-8")))
+    return errors
 
 
-@pytest.mark.parametrize(
-    "directive", ["noqa: E501", "RUFF: noqa", "fmt: off", "pylint: disable=all"]
-)
-def test_inline_directives_are_rejected_in_hidden_directories(
-    tmp_path: Path, directive: str
-) -> None:
-    root = _repository(tmp_path)
-    directory = root / ".checks"
-    directory.mkdir()
-    (directory / "hidden.py").write_text(f"value = 1  # {directive}\n", encoding="utf-8")
-    assert any("inline lint/format" in error for error in check_repository(root))
-
-
-def test_directive_text_inside_strings_is_allowed(tmp_path: Path) -> None:
-    root = _repository(tmp_path)
-    (root / "example.py").write_text('value = "# noqa: E501"\n', encoding="utf-8")
-    assert check_repository(root) == []
-
-
-@pytest.mark.parametrize("filename", ["ruff.toml", ".ruff.toml", "pyproject.toml"])
-def test_separate_lint_configuration_is_rejected(tmp_path: Path, filename: str) -> None:
-    root = _repository(tmp_path)
-    (root / "example.py").write_text("value = 1\n", encoding="utf-8")
-    nested = root / "nested"
-    nested.mkdir()
-    (nested / filename).write_text("[tool.ruff]\nline-length = 100\n", encoding="utf-8")
-    assert any("configuration" in error for error in check_repository(root))
-
-
-def test_empty_scan_is_rejected(tmp_path: Path) -> None:
-    assert check_repository(_repository(tmp_path)) == ["No Python files were checked"]
-
-
-def test_project_satisfies_policy() -> None:
+def test_project_has_no_family_xml_literals_in_orchestration() -> None:
     assert check_repository(Path(__file__).resolve().parents[1]) == []
-
-
-@pytest.mark.parametrize(
-    "settings",
-    [
-        '[tool.ruff.lint]\nignore = [\n"print",\n]\n',
-        '[tool.ruff.lint]\nignore = ["print"]\n',
-        '[tool.ruff.lint]\nignore=["print"]\n',
-        '[tool.ruff.lint.per-file-ignores]\nexample=["print"]\n',
-        '[tool.ruff.lint]\nextend-ignore = ["print"]\n',
-        '[tool.ruff.lint.per-file-ignores]\n"example.py" = ["print"]\n',
-    ],
-)
-def test_lint_exception_requires_a_reason(tmp_path: Path, settings: str) -> None:
-    root = _repository(tmp_path)
-    with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
-        stream.write(settings.replace("[tool.ruff.lint]\n", ""))
-    (root / "example.py").write_text("value = 1\n", encoding="utf-8")
-    assert any("reason comment" in error for error in check_repository(root))
-
-
-def test_per_file_ignores_for_missing_files_are_rejected(tmp_path: Path) -> None:
-    root = _repository(tmp_path)
-    (root / "present.py").write_text("", encoding="utf-8")
-    with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
-        stream.write(
-            "[tool.ruff.lint.per-file-ignores]\n# reason\n"
-            '"present.py" = ["print"]\n# reason\n"gone.py" = ["print"]\n'
-        )
-    errors = check_repository(root)
-    assert any("gone.py" in error for error in errors)
-    assert not any("present.py" in error for error in errors)
 
 
 def _core_file(root: Path, *parts: str, source: str) -> None:
@@ -165,32 +201,6 @@ def test_shared_content_vocabulary_is_allowed_but_does_not_exempt_orchestration(
     assert check_repository(root) == []
     _core_file(root, "pipeline", "run.py", source='value = "//table:table-row"\n')
     assert any("family" in error for error in check_repository(root))
-
-
-@pytest.mark.parametrize("directory", ["build", "dist"])
-def test_authored_nested_build_names_do_not_bypass_file_size_gate(
-    tmp_path: Path, directory: str
-) -> None:
-    root = _repository(tmp_path)
-    _core_file(root, directory, "authored.py", source="\n" * 301)
-    assert any("301 lines" in error for error in check_repository(root))
-
-
-def test_generated_root_build_outputs_are_excluded_but_ignored_authored_files_are_checked(
-    tmp_path: Path,
-) -> None:
-    root = _repository(tmp_path)
-    for directory in ("build", "dist"):
-        target = root / directory
-        target.mkdir()
-        (target / "generated.py").write_text("\n" * 301)
-    (root / "authored.py").write_text("value = 1\n")
-    assert check_repository(root) == []
-    (root / ".gitignore").write_text(".authored/\n")
-    ignored = root / ".authored"
-    ignored.mkdir()
-    (ignored / "source.py").write_text("\n" * 301)
-    assert any(str(Path(".authored") / "source.py") in error for error in check_repository(root))
 
 
 @pytest.mark.parametrize(

@@ -8,7 +8,7 @@ import os
 import re
 import shutil
 import signal
-import subprocess
+import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
 import sys
 import threading
 import time
@@ -96,7 +96,7 @@ def run_bounded(
         The exit status and the captured heads of stdout and stderr.
     """
     timeout = validate_timeout(timeout)
-    process = subprocess.Popen(
+    process = subprocess.Popen(  # noqa: S603  Arguments select a local tool without a shell.
         command,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
@@ -161,8 +161,8 @@ class _Capture:
 
 def _kill_tree(process: subprocess.Popen[bytes]) -> None:
     if os.name == "nt":
-        subprocess.run(
-            ["taskkill", "/T", "/F", "/PID", str(process.pid)],
+        subprocess.run(  # noqa: S603  Arguments select a local tool without a shell.
+            ["taskkill", "/T", "/F", "/PID", str(process.pid)],  # noqa: S607  System tool is resolved through PATH.
             capture_output=True,
             check=False,
         )

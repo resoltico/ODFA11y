@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
+import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +16,7 @@ def _api(repository: str, endpoint: str, *, paginate: bool = False) -> object:
     args = ["gh", "api", f"repos/{repository}/{endpoint}"]
     if paginate:
         args.extend(["--paginate", "--slurp"])
-    response = subprocess.run(args, check=True, capture_output=True, timeout=120)
+    response = subprocess.run(args, check=True, capture_output=True, timeout=120)  # noqa: S603  Arguments select a local tool without a shell.
     return json.loads(response.stdout)
 
 
@@ -135,8 +135,8 @@ def verify_release(repository: str, tag: str, expected: ReleaseExpectation, *, d
         if type(identity) is not int or asset.get("size") != len(expected.assets[asset["name"]]):
             msg = "Release asset identity or size is malformed"
             raise ValueError(msg)
-        response = subprocess.run(
-            [
+        response = subprocess.run(  # noqa: S603  Arguments select a local tool without a shell.
+            [  # noqa: S607  System tool is resolved through PATH.
                 "gh",
                 "api",
                 f"repos/{repository}/releases/assets/{identity}",

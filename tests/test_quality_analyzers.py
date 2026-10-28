@@ -106,3 +106,57 @@ def test_type_gate_rejects_missing_authoritative_configuration(
     (tmp_path / "valid.py").write_text("value: int = 1\n")
     assert check_quality.check_types(tmp_path) == 1
     assert "Cannot read authoritative analyzer configuration" in capsys.readouterr().err
+
+
+def test_dash_named_python_file_is_analyzed_as_literal_path(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[tool.ty]\n")
+    (tmp_path / "--exclude=example.py").write_text('value: int = "wrong type"\n')
+    assert check_quality.check_types(tmp_path) != 0
+
+
+@pytest.mark.parametrize("analyzer", ["ruff", "ty"])
+def test_stale_inline_suppressions_fail_the_selected_analyzer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, analyzer: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[tool.ty]\n")
+    source = tmp_path / "example.py"
+    if analyzer == "ruff":
+        command = [
+            sys.executable,
+            "-m",
+            "ruff",
+            "check",
+            "--isolated",
+            "--select",
+            "F401,RUF100",
+            "--",
+            str(source),
+        ]
+        needed = "import sys  # noqa: F401  Control for an intentional unused import.\n"
+        stale = needed + "value = sys.version\n"
+        diagnostic = "RUF100"
+    else:
+        command = [
+            sys.executable,
+            "-m",
+            "ty",
+            "check",
+            "--project",
+            str(tmp_path),
+            "--error",
+            "unused-ignore-comment",
+            "--",
+            str(source),
+        ]
+        needed = 'value: int = "wrong"  # ty: ignore[invalid-assignment]  Control.\n'
+        stale = needed.replace('"wrong"', "1")
+        diagnostic = "unused-ignore-comment"
+    source.write_text(needed)
+    assert run_bounded(command, timeout=20).returncode == 0
+    source.write_text(stale)
+    result = run_bounded(command, timeout=20)
+    assert result.returncode == 1
+    assert diagnostic in result.stdout + result.stderr
+    source.write_text("\n".join(line.split("  #", 1)[0] for line in stale.splitlines()) + "\n")
+    assert run_bounded(command, timeout=20).returncode == 0

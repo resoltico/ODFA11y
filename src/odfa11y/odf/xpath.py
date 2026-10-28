@@ -22,4 +22,4 @@ def select_elements(
     result = node.xpath(expression, namespaces=NS)
     if not isinstance(result, list):
         return []
-    return [item for item in result if isinstance(item, etree._Element)]
+    return [item for item in result if isinstance(item, etree._Element)]  # noqa: SLF001  lxml exposes element types with a private name.

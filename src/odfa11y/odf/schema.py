@@ -179,7 +179,7 @@ def _locate(tree: etree._ElementTree, path: str | None) -> etree._Element | None
         found = tree.xpath(path, namespaces=namespaces)
     except etree.XPathError:
         return None
-    if isinstance(found, list) and found and isinstance(found[0], etree._Element):
+    if isinstance(found, list) and found and isinstance(found[0], etree._Element):  # noqa: SLF001  lxml exposes element types with a private name.
         return found[0]
     return None
 

@@ -35,10 +35,9 @@ remain vulnerability signals; version-update PRs are not release-version sources
 Run inexpensive static checks before the complete test/build gates:
 
 ```bash
-uv run --no-sync python -m tools.check_quality
-uv run --no-sync ruff check . --ignore-noqa
+uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
-uv run --no-sync python -m tools.check_quality --types
+uv run --no-sync python -m tools.check_quality
 uv run --no-sync tach check
 uv run --no-sync tach check-external
 uv run --no-sync pytest -m 'not integration' --cov --durations=10
@@ -58,19 +57,17 @@ verification batch. Record failures, skips, tool identities and unavailable plat
 
 ### Policy, lint and types
 
-Ruff enables its pinned complete rule set, including preview rules. Public APIs use NumPy
-docstrings; the formatter owns trailing commas. All exceptions live in root
-`pyproject.toml`, with specific reasons, exact current rules, authored scopes and actual
-suppressed diagnostics. The policy gate probes the unsuppressed configuration and rejects
-unused/overlapping masks, inherited analyzer configuration, reduced rule selection,
-disabled type rules and inline lint/format/type/security suppressions.
+Ruff selects its pinned complete rule set, including preview rules. Public APIs use NumPy
+docstrings; the formatter owns trailing commas. Narrow inline `# noqa: CODE  reason` and
+`# ty: ignore[rule]  reason` suppressions are allowed. Ruff's `RUF100` and ty's
+`unused-ignore-comment` reject stale suppressions. File-level ignores are reserved for tests.
+Ruff's stylistic `RUF105` preference for its alternative comment syntax is disabled.
 
-The shared inventory includes hidden and Git-ignored authored Python. Generated
-environments/caches and root build/distribution outputs are excluded; a nested domain
-directory named `dist` or `build` remains authored. Type checking receives explicit paths;
-Ruff uses explicit project exclusions. Every authored file must fit the physical-line
-limit, including blanks/docstrings, and function complexity limits apply to source, tests
-and tools. Fix responsibility or code issues rather than hiding files or diagnostics.
+Type checking receives explicit authored paths, including hidden and Git-ignored Python;
+Ruff also checks ignored source. Generated environments, caches and root build/distribution
+outputs are excluded; nested domain directories named `build` or `dist` remain authored.
+Cyclomatic complexity and branch limits stay at 10. Module cohesion is a review criterion;
+file length, argument, return and statement counts have no caps.
 
 Apply routine fixes with `uv run --no-sync ruff check . --fix` and
 `uv run --no-sync ruff format .`; review unsafe fixes before accepting them.
@@ -79,7 +76,7 @@ Apply routine fixes with `uv run --no-sync ruff check . --fix` and
 through `odfa11y.odf.select_elements` so callers receive element nodes rather than lxml's
 XPath union type. [Tach](https://github.com/tach-org/tach) enforces declared dependencies
 and public interfaces in [tach.toml](../tach.toml). Review the design before changing an
-edge. The policy checker also rejects family-specific XML selection in orchestration;
+edge. The architecture tests also reject family-specific XML selection in orchestration;
 shared vocabulary belongs in `content`, family semantics in its adapter. See
 [Architecture](ARCHITECTURE.md#packages-and-dependency-rules).
 

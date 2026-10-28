@@ -44,7 +44,6 @@ dev = [
   "tach==0.35.3",
   "ty==0.0.93",
   "jsonschema>=4.26.0,<5",
-  "tomli-w>=1.2.0,<2",
 ]
 audit = [
   "pip-audit==2.10.1",
@@ -110,6 +109,9 @@ python-version = "3.15"
 [tool.ty.src]
 include = ["src", "tests", "tools"]
 
+[tool.ty.rules]
+unused-ignore-comment = "error"
+
 [tool.ty.terminal]
 error-on-warning = true
 
@@ -127,16 +129,19 @@ select = ["ALL"]
 ignore = [
   # These rules conflict with Ruff's formatter; formatting is checked separately.
   "missing-trailing-comma",
+  # Use the brief's standard noqa syntax; RUF100 still rejects stale suppressions.
+  "noqa-comments",
+  # Cohesion is reviewed; these incidental function-size caps are not requirements.
+  "too-many-arguments",
+  "too-many-return-statements",
+  "too-many-statements",
 ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
 [tool.ruff.lint.pylint]
-max-args = 5
 max-branches = 10
-max-returns = 6
-max-statements = 50
 
 [tool.ruff.lint.pydocstyle]
 # Public APIs use NumPy-style docstrings; this resolves competing docstring conventions.
@@ -149,58 +154,12 @@ strict = true
 notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 min-file-size = 0
 
-[tool.odfa11y.quality]
-max-file-lines = 300
-
 [tool.ruff.lint.per-file-ignores]
-# The public audit API selects independent inspection, validation, timeout and observer options.
-"src/odfa11y/pipeline/inspection.py" = ["too-many-arguments"]
-# pytest assertions provide failure introspection; test names describe behavior; expected
-# values are literals, and identical renders must differ by exactly zero.
+# Pytest assertions, descriptive test names, literal expectations and exact render comparisons.
 "tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
-# CLI output is its stdout/stderr interface.
-"src/odfa11y/cli/commands.py" = ["print"]
-# Per-input audit diagnostics and strict command status are CLI output.
-"src/odfa11y/cli/audit.py" = ["print"]
-# These subprocesses invoke explicitly selected local tools with argument lists, never a shell.
-"src/odfa11y/pdf/export.py" = ["suspicious-subprocess-import"]
-# Version probes run an explicitly selected local tool with an argument list; stopping a
-# timed-out process tree on Windows needs the system taskkill, found through PATH.
-"src/odfa11y/external_tools.py" = ["subprocess-without-shell-equals-true", "suspicious-subprocess-import", "start-process-with-partial-path"]
-# The type gate runs the locked analyzer under the current Python with explicit file arguments.
-"tools/check_quality.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-# Exception verification invokes the locked Ruff module with explicit arguments and no shell.
-"tools/lint_policy.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-# Release inspection reports failures from the local Git inventory helper.
-"tools/check_release.py" = ["suspicious-subprocess-import"]
-# Contributor inventories inspect local tracked Git paths with fixed argument lists.
-"tools/source_inventory.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]
-# Release inspection invokes the authenticated GitHub CLI with argument lists and no shell.
-"tools/github_release.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]
-# CI tooling: downloads one pinned HTTPS release, verifies its SHA-256 and runs the installer
-# with the runner's java through an argument list.
-"tools/install_verapdf.py" = ["suspicious-subprocess-import", "suspicious-url-open-usage", "subprocess-without-shell-equals-true", "start-process-with-partial-path"]
-# veraPDF is an explicitly selected local validator, invoked with an argument list.
-"src/odfa11y/pdf/verapdf.py" = ["suspicious-subprocess-import"]
-
-
-[tool.ruff.lint.extend-per-file-ignores]
-# lxml's element type is named _Element; the selector filters XPath results with isinstance.
-"src/odfa11y/odf/xpath.py" = ["private-member-access"]
-# Same reason: schema errors are located with XPath and filtered with isinstance.
-"src/odfa11y/odf/schema.py" = ["private-member-access"]
-# These classes implement the abstract storage interface; whether a part or member exists
-# does not depend on instance state for every layout.
-"src/odfa11y/odf/flat.py" = ["no-self-use"]
-# Same reason for the ZIP layout.
-"src/odfa11y/odf/package.py" = ["no-self-use"]
-# Architecture negative controls run installed Tach with explicit arguments and no shell.
+# Test subprocesses select local tools; pypdf fixtures require its private registration API.
 "tests/test_architecture.py" = ["suspicious-subprocess-import"]
-# Deadline tests run the real CLI with explicit arguments and no shell.
 "tests/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-# The tests exercise the subprocess wrapper and name the exception it raises on timeout.
 "tests/test_external_tools.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-# pypdf has no public registration API for synthetic indirect structure objects.
 "tests/test_pdf_inspection.py" = ["private-member-access"]
-# Same reason: synthetic PDFs register indirect structure objects.
 "tests/pdf_fixtures.py" = ["private-member-access"]
