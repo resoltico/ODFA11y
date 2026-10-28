@@ -49,6 +49,10 @@ REVIEW_ITEMS = (
         "Whether link purposes and internal destinations match their wording and context.",
     ),
     ReviewItem(
+        ReviewTopic.LANGUAGE,
+        "Whether default and local western, Asian and complex languages match the authored text.",
+    ),
+    ReviewItem(
         ReviewTopic.COLOUR,
         "Whether colour conveys information that is not available any other way.",
     ),

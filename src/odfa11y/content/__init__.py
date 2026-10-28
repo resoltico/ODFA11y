@@ -9,7 +9,7 @@ from .graphic_styles import (
     normalized_role_attributes,
 )
 from .graphics import GraphicAlternative, GraphicEditor, set_description
-from .language import set_style_language, style_language
+from .language import CHANNEL_ATTRIBUTES, set_style_language, style_language
 from .links import (
     LinkDescription,
     LinkEditor,
@@ -47,6 +47,7 @@ from .xml import protected_xml
 
 __all__ = [
     "AXES",
+    "CHANNEL_ATTRIBUTES",
     "SHAPE_TAGS",
     "GraphicAlternative",
     "GraphicEditor",

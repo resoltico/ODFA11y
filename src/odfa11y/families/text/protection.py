@@ -22,6 +22,8 @@ from odfa11y.odf import NS, Part, qn
 from .contexts import context_location, text_nodes
 from .graphics import SetGraphicAlternatives, SetLinkDescriptions
 from .headings import SetHeadingLevels, heading_location
+from .language.operations import SetTargetLanguages
+from .language.styles import STYLE_NAME
 from .linkify import LinkifyAddresses
 from .links import URI_RE, split_trailing_punctuation
 from .prose import address_wrapper_scope
@@ -55,13 +57,17 @@ class ProtectedEdit:
         self.spacing_targets: set[etree._Element] = set()
         self.links = set(document.tree(Part.CONTENT).iter(qn("text", "a")))
         self.roles: set[etree._Element] = set()
+        self.language_targets: dict[etree._Element, tuple[str | None, str]] = {}
+        self.language_styles: dict[str, str] = {}
         self._establish()
         self.before = self._facts()
 
     def _establish(self) -> None:
         tree = self.document.tree(Part.CONTENT)
         op = self.operation
-        if type(op) is SetHeadingLevels:
+        if type(op) is SetTargetLanguages:
+            self._establish_language(op)
+        elif type(op) is SetHeadingLevels:
             for index, node in enumerate(text_nodes(tree, qn("text", "h"), main_only=True), 1):
                 if heading_location(node, index).path in op.entries:
                     self.allowed[node] = {qn("text", "outline-level")}
@@ -82,19 +88,31 @@ class ProtectedEdit:
                 in op.entries
             }
         elif type(op) is NormalizeSpacing:
-            for base in op.target_styles:
-                self.spacing[derived_style_name(base)] = base
-            tags = (qn("text", "p"), qn("text", "h")) if op.include_headings else (qn("text", "p"),)
-            self.spacing_targets = {
-                node
-                for node in text_nodes(tree, *tags, main_only=True)
-                if (node.get(qn("text", "style-name")) or NO_STYLE)
-                in {*op.target_styles, *self.spacing}
-            }
+            self._establish_spacing(op)
         elif type(op) is SetGraphicAlternatives:
             self._alternatives(op)
         elif type(op) is SetLinkDescriptions:
             self._links(op)
+
+    def _establish_spacing(self, operation: NormalizeSpacing) -> None:
+        tree = self.document.tree(Part.CONTENT)
+        for base in operation.target_styles:
+            self.spacing[derived_style_name(base)] = base
+        tags = (
+            (qn("text", "p"), qn("text", "h")) if operation.include_headings else (qn("text", "p"),)
+        )
+        self.spacing_targets = {
+            node
+            for node in text_nodes(tree, *tags, main_only=True)
+            if (node.get(qn("text", "style-name")) or NO_STYLE)
+            in {*operation.target_styles, *self.spacing}
+        }
+
+    def _establish_language(self, operation: SetTargetLanguages) -> None:
+        for item in operation.prepare(self.document):
+            if item.changed:
+                self.language_targets[item.node] = (item.node.get(STYLE_NAME), item.binding.name)
+                self.language_styles[item.binding.name] = protected_xml(item.style)
 
     def _alternatives(self, operation: SetGraphicAlternatives) -> None:
         frames = text_nodes(self.document.tree(Part.CONTENT), *SHAPE_TAGS)
@@ -160,6 +178,14 @@ class ProtectedEdit:
                 and (parent := style.getparent()) is not None
             ):
                 parent.remove(style)
+        for style in list(clone.iter(qn("style", "style"))):
+            name = style.get(qn("style", "name"))
+            if (
+                name in self.language_styles
+                and protected_xml(style) == self.language_styles[name]
+                and (parent := style.getparent()) is not None
+            ):
+                parent.remove(style)
         normalize_metadata(clone, self.operation, creating_metadata=self.creating_metadata)
         for container in list(clone.iter(qn("office", "automatic-styles"))):
             if (
@@ -177,6 +203,7 @@ class ProtectedEdit:
         return protected_xml(clone)
 
     def _node(self, source: etree._Element, target: etree._Element) -> set[str]:
+        self._language_reference(source, target)
         for attr in self.allowed.get(source, ()):
             target.attrib.pop(attr, None)
         if source in self.descriptions:
@@ -198,6 +225,14 @@ class ProtectedEdit:
         ):
             unwrap_address(source, target)
         return self._role(source, target) if source in self.roles else set()
+
+    def _language_reference(self, source: etree._Element, target: etree._Element) -> None:
+        if source in self.language_targets:
+            before, desired = self.language_targets[source]
+            if source.get(STYLE_NAME) == desired:
+                target.attrib.pop(STYLE_NAME, None)
+                if before is not None:
+                    target.set(STYLE_NAME, before)
 
     def _role(self, source: etree._Element, target: etree._Element) -> set[str]:
         original = normalized_role_attributes(self.document, source)

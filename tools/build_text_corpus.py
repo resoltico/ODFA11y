@@ -24,6 +24,27 @@ LIST_STYLE = (
     '<text:list-level-style-number text:level="2" style:num-format="a"/></text:list-style>'
 )
 CASES = {
+    "language-positive": (
+        (
+            '<office:text><text:p text:style-name="English">English wording. '
+            '<text:span text:style-name="French">Bonjour.</text:span></text:p></office:text>'
+        ),
+        (
+            '<style:style style:name="English" style:family="paragraph">'
+            '<style:text-properties fo:language="en" fo:country="GB" '
+            'style:language-asian="ja" style:language-complex="ar"/></style:style>'
+            '<style:style style:name="French" style:family="text">'
+            '<style:text-properties fo:language="fr" fo:country="FR"/></style:style>'
+        ),
+    ),
+    "language-negative": (
+        '<office:text><text:p text:style-name="Unknown">Bonjour.</text:p></office:text>',
+        (
+            '<style:style style:name="Unknown" style:family="paragraph">'
+            '<style:text-properties fo:language="none" fo:country="none" '
+            'style:language-asian="none" style:language-complex="none"/></style:style>'
+        ),
+    ),
     "references-positive": (
         (
             '<office:text><text:p><text:bookmark text:name="fruit"/>Fruit destination.</text:p>'

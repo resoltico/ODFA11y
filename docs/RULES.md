@@ -40,6 +40,8 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
 | `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
 | `IMAGE005` | Warning | SVG declares active or external content requiring native review. |  |
+| `LANG004` | Warning | Target has no established language declaration. | `language.target` |
+| `LANG005` | Warning | Effective target language cannot be resolved safely. |  |
 | `LAYOUT001` | Info | Empty paragraphs may be visual spacers. | `text.remove_spacers` |
 | `LINK001` | Warning | Visible URL or email address is not a hyperlink. | `text.linkify_addresses` |
 | `LINK002` | Warning | Hyperlink text is a raw address. |  |

@@ -266,6 +266,96 @@
           },
           "type": "object"
         },
+        "language.target": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "properties": {
+                  "western": {
+                    "not": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "required": [
+                  "western"
+                ]
+              },
+              {
+                "properties": {
+                  "asian": {
+                    "not": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "required": [
+                  "asian"
+                ]
+              },
+              {
+                "properties": {
+                  "complex": {
+                    "not": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "required": [
+                  "complex"
+                ]
+              }
+            ],
+            "properties": {
+              "asian": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "format": "odfa11y-language-tag"
+              },
+              "complex": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "format": "odfa11y-language-tag"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "western": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "format": "odfa11y-language-tag"
+              }
+            },
+            "required": [
+              "fingerprint"
+            ],
+            "type": "object"
+          },
+          "propertyNames": {
+            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+          },
+          "type": "object"
+        },
         "link.description": {
           "additionalProperties": {
             "additionalProperties": false,

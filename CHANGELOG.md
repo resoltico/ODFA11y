@@ -4,7 +4,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
-- Audit Writer lists, internal link targets, bookmark ranges, cross-references and note relationships without guessing repairs.
+- Audit Writer lists, references, notes and effective script-channel languages; apply source-bound language decisions to individual paragraphs and inline targets.
 
 ### Breaking
 
