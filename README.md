@@ -44,7 +44,7 @@ uv sync --locked
 uv run --no-sync odfa11y audit original.odt
 ```
 
-Python 3.14 is the baseline; [.python-version](.python-version) selects the development
+Python 3.15 is the baseline; [.python-version](.python-version) selects the development
 interpreter and [pyproject.toml](pyproject.toml) holds the supported range and
 dependencies. Commands use a POSIX shell. External applications are optional:
 [LibreOffice 26.8 or newer](https://www.libreoffice.org/) for export and comparison, and
