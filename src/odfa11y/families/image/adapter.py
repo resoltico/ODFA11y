@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.content import (
     normalized_graphic_tree,
     protected_xml,
@@ -33,10 +33,6 @@ def _snapshot(document: OdfDocument) -> tuple[str, ...]:
     )
 
 
-def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed: int) -> bool:
-    return removed == 0 and before == after
-
-
 def _language(document: OdfDocument) -> str | None:
     return style_language(document, "paragraph")
 
@@ -45,17 +41,17 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
     return set_style_language(document, tag, "paragraph")
 
 
-ADAPTER = FamilyAdapter(
-    name="image",
-    family=Family.IMAGE,
-    audit=audit_image,
-    default_language=_language,
-    set_default_language=_set_language,
-    snapshot=_snapshot,
-    preserved=_preserved,
-    decision_kinds=DECISION_KINDS,
-    operations=operations,
-    review_items=(
+class ImageAdapter(FamilyAdapter):
+    """Implement the image family contract."""
+
+    name = "image"
+    family = Family.IMAGE
+    audit = staticmethod(audit_image)
+    default_language = staticmethod(_language)
+    set_default_language = staticmethod(_set_language)
+    decision_kinds = DECISION_KINDS
+    operations = staticmethod(operations)
+    review_items = (
         ReviewItem(
             ReviewTopic.IMAGE_MEANING,
             "Whether the alternative conveys the image's purpose and information.",
@@ -64,5 +60,19 @@ ADAPTER = FamilyAdapter(
             ReviewTopic.SOURCE_BOUNDARY,
             "Native standalone image export is unsupported; no Draw conversion is performed.",
         ),
-    ),
-)
+    )
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(_snapshot(document))
+
+
+ADAPTER = ImageAdapter()

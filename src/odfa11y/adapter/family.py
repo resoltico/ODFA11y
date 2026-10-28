@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
+from odfa11y.errors import PlanError, UnsupportedKindError
 lazy from odfa11y.outcomes import ReviewTopic
 
 if TYPE_CHECKING:
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
     from odfa11y.odf import Family, OdfDocument
     from odfa11y.report import Report
 
-    from .operation import Operation
+    from .operation import Operation, Outcome
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,26 +39,140 @@ class StyleUsage(TypedDict):
 
 
 @dataclass(frozen=True, slots=True)
-class FamilyAdapter:
-    """Everything the generic ODF core needs to know about one document family.
+class PreservationSnapshot:
+    """The family's immutable protected-content representation."""
 
-    The core understands OpenDocument structure; an adapter understands what a family's
-    documents mean. ``family`` is None for the generic adapter that serves every kind
-    without an implementation.
-    """
+    content: tuple[str, ...]
+
+
+class FamilyAdapter(ABC):
+    """Required family semantics and explicit defaults for optional capabilities."""
 
     name: str
     family: Family | None
-    audit: Callable[[OdfDocument, Report], None]
-    default_language: Callable[[OdfDocument], str | None]
-    set_default_language: Callable[[OdfDocument, str], bool]
-    snapshot: Callable[[OdfDocument], tuple[str, ...]]
-    preserved: Callable[[tuple[str, ...], tuple[str, ...], int], bool]
-    review_items: tuple[ReviewItem, ...]
+    review_items: tuple[ReviewItem, ...] = ()
     decision_kinds: tuple[DecisionKind, ...] = ()
-    operations: Callable[[OdfDocument, Sequence[Decision]], tuple[Operation, ...]] | None = None
     pdf_filter: str | None = None
-    style_report: Callable[[OdfDocument], list[StyleUsage]] | None = None
-    link_probe: Callable[[Path], Path] | None = None
-    preflight: Callable[[OdfDocument, Sequence[Operation]], None] | None = None
-    protect_edit: Callable[[OdfDocument, Operation], Callable[[], bool]] | None = None
+
+    @abstractmethod
+    def audit(self, document: OdfDocument, report: Report) -> None:
+        """Inspect the family's source semantics without mutation."""
+
+    @staticmethod
+    def default_language(document: OdfDocument) -> str | None:
+        """Read the default language when the family has such a target.
+
+        Returns
+        -------
+        str | None
+            The declared language, or None when no default-style target exists.
+
+        """
+        del document
+        return None
+
+    @staticmethod
+    def set_default_language(document: OdfDocument, tag: str) -> bool:
+        """Set a supported default-language target.
+
+        Returns
+        -------
+        bool
+            Whether a family-specific style changed.
+
+        """
+        del document, tag
+        return False
+
+    @abstractmethod
+    def snapshot(self, document: OdfDocument) -> PreservationSnapshot:
+        """Capture the family's protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            Family-owned protected content facts.
+
+        """
+
+    @staticmethod
+    def preserved(
+        before: PreservationSnapshot, after: PreservationSnapshot, outcomes: Sequence[Outcome]
+    ) -> bool:
+        """Compare protected content; families may interpret their own typed outcomes.
+
+        Returns
+        -------
+        bool
+            Whether protected meaning survived every operation.
+
+        """
+        del outcomes
+        return before == after
+
+    def operations(
+        self, document: OdfDocument, decisions: Sequence[Decision]
+    ) -> tuple[Operation, ...]:
+        """Translate supported human answers into executable changes.
+
+        Returns
+        -------
+        tuple[Operation, ...]
+            No family operations for adapters supporting only common document answers.
+
+        Raises
+        ------
+        PlanError
+            A family answer has no implementation.
+
+        """
+        del document
+        if decisions:
+            msg = f"No decision operation implementation for {self.name}"
+            raise PlanError(msg)
+        return ()
+
+    @staticmethod
+    def style_report(document: OdfDocument) -> list[StyleUsage]:
+        """Inspect supported paragraph styles.
+
+        Raises
+        ------
+        UnsupportedKindError
+            The family has no paragraph-style inspection.
+
+        """
+        kind = document.kind.name if document.kind is not None else "unrecognised"
+        msg = f"A style report is not defined for {kind} documents."
+        raise UnsupportedKindError(msg)
+
+    @staticmethod
+    def link_probe(directory: Path) -> Path | None:
+        """Prepare a link capability fixture when this family declares one.
+
+        Returns
+        -------
+        Path | None
+            The probe input, or None when no link probe is declared.
+
+        """
+        del directory
+        return None
+
+    @staticmethod
+    def preflight(document: OdfDocument, operations: Sequence[Operation]) -> None:
+        """Establish additional family constraints before any edit."""
+        del document, operations
+
+    @staticmethod
+    def protect_edit(document: OdfDocument, operation: Operation) -> Callable[[], bool] | None:
+        """Establish operation-specific protected facts.
+
+        Returns
+        -------
+        Callable[[], bool] | None
+            A post-edit guard, or None when the family needs only its whole-run snapshot.
+
+        """
+        del document, operation
+        return None

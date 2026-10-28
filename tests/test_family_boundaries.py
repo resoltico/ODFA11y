@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import json
 from typing import TYPE_CHECKING
 
@@ -12,7 +11,8 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.content import GraphicAlternative
-from odfa11y.families import REGISTRY, adapter_for
+from odfa11y.families import REGISTRY
+from odfa11y.families.generic import GenericAdapter
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
@@ -174,7 +174,7 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     monkeypatch.setitem(
         REGISTRY,
         Family.PRESENTATION,
-        dataclasses.replace(adapter_for(None), family=Family.PRESENTATION),
+        SourceOnlyPresentation(),
     )
     source = make_package(tmp_path, "presentation")
     record = run_pipeline(
@@ -202,7 +202,7 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     monkeypatch.setitem(
         REGISTRY,
         Family.PRESENTATION,
-        dataclasses.replace(adapter_for(None), family=Family.PRESENTATION),
+        SourceOnlyPresentation(),
     )
     record = run_pipeline(
         make_package(tmp_path, "presentation"),
@@ -222,9 +222,11 @@ def test_a_new_family_needs_only_a_registry_entry(
     def audit(_document: OdfDocument, report: Report) -> None:
         report.add(rules.ODF009, "Presentation adapter ran.", location=Location("document"))
 
-    presentation = dataclasses.replace(
-        adapter_for(None), name="presentation", family=Family.PRESENTATION, audit=audit
-    )
+    class CustomPresentation(SourceOnlyPresentation):
+        name = "presentation"
+
+    presentation = CustomPresentation()
+    monkeypatch.setattr(presentation, "audit", audit)
     monkeypatch.setitem(REGISTRY, Family.PRESENTATION, presentation)
     report = audit_odf(make_package(tmp_path, "presentation"))
     assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "presentation"
@@ -237,3 +239,9 @@ def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -
     report = audit_odf(source, schema=True)
     finding = next(f for f in report.findings if f.rule_id == "ODF905")
     assert "declares no ODF version" in finding.message
+
+
+class SourceOnlyPresentation(GenericAdapter):
+    """Exercise an implemented source family without a native export capability."""
+
+    family = Family.PRESENTATION

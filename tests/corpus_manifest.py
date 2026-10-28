@@ -73,7 +73,7 @@ def visible_text(path: Path) -> tuple[str, ...]:
         The non-empty text blocks, each with all whitespace removed.
 
     """
-    blocks = (_squeezed(block) for block in ADAPTER.snapshot(OdfDocument.open(path)))
+    blocks = (_squeezed(block) for block in ADAPTER.snapshot(OdfDocument.open(path)).content)
     return tuple(block for block in blocks if block)
 
 

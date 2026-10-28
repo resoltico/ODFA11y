@@ -96,12 +96,15 @@ def _link_descriptions(options: NativeOptions) -> str:
 
     """
     adapter = REGISTRY[Family.TEXT]
-    if adapter.pdf_filter is None or adapter.link_probe is None:
+    if adapter.pdf_filter is None:
         msg = "No link-description PDF export probe is defined for text documents."
         raise UnsupportedKindError(msg)
     settings = ExportSettings(adapter.pdf_filter, options.soffice, options.timeout)
     with tempfile.TemporaryDirectory(prefix="odfa11y-doctor-") as scratch:
         probe = adapter.link_probe(Path(scratch))
+        if probe is None:
+            msg = "No link-description PDF export probe is defined for text documents."
+            raise UnsupportedKindError(msg)
         return "supported" if link_descriptions_supported(probe, settings) else "unsupported"
 
 

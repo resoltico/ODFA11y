@@ -23,7 +23,7 @@ from .result import RemediationResult, Violation
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from odfa11y.adapter import FamilyAdapter, Operation
+    from odfa11y.adapter import FamilyAdapter, Operation, PreservationSnapshot
     from odfa11y.odf import SchemaResult
     from odfa11y.plans import Plan
 
@@ -112,8 +112,7 @@ def _run_operations(
     state = _Execution()
     try:
         _require_matching_family(document, adapter, operations)
-        if adapter.preflight is not None:
-            adapter.preflight(document, operations)
+        adapter.preflight(document, operations)
     except (RemediationError, UnsupportedKindError) as exc:
         state.violations.append(Violation(ViolationKind.FOREIGN_OPERATION, str(exc)))
         state.outcomes.extend(
@@ -139,7 +138,7 @@ def _run_operation(
     before = document.checkpoint()
     protected = None
     try:
-        protected = adapter.protect_edit(document, operation) if adapter.protect_edit else None
+        protected = adapter.protect_edit(document, operation)
         produced = operation.apply(document)
     except (RemediationError, UnsupportedKindError) as exc:
         produced = (Outcome(operation.name, Status.FAILED, str(exc)),)
@@ -172,7 +171,7 @@ def _run_operation(
 def _postconditions(
     document: OdfDocument,
     adapter: FamilyAdapter,
-    before: tuple[str, ...],
+    before: PreservationSnapshot,
     opaque_before: tuple[tuple[str, str], ...],
     schema_before: SchemaResult,
     *,
@@ -187,8 +186,7 @@ def _postconditions(
             None,
             None,
         )
-    removed = sum(outcome.removed_blocks for outcome in state.outcomes)
-    if not adapter.preserved(before, adapter.snapshot(document), removed):
+    if not adapter.preserved(before, adapter.snapshot(document), state.outcomes):
         state.violations.append(
             Violation(
                 ViolationKind.PROTECTED_CONTENT,

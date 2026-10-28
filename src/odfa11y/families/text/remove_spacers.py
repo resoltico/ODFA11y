@@ -39,7 +39,7 @@ class RemoveEmptySpacers(Operation):
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No removable spacer paragraphs."),)
         message = f"Removed {count} empty spacer paragraph(s) without break semantics."
-        return (Outcome(self.name, Status.APPLIED, message, count=count, removed_blocks=count),)
+        return (Outcome(self.name, Status.APPLIED, message, count=count),)
 
 
 def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatalog) -> int:

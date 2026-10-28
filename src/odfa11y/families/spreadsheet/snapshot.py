@@ -38,23 +38,19 @@ def sheet_snapshot(document: OdfDocument) -> tuple[str, ...]:
     return tuple(entries)
 
 
-def sheets_preserved(before: tuple[str, ...], after: tuple[str, ...], removed_blocks: int) -> bool:
+def sheets_preserved(before: tuple[str, ...], after: tuple[str, ...]) -> bool:
     """Allow sheet names to change and nothing else to differ.
 
     Returns
     -------
     bool
         Whether both snapshots have the same sheets in the same order with the same protected
-        content; no empty block may have been removed.
+        content; sheet content must remain identical.
 
     """
-    return (
-        removed_blocks == 0
-        and len(before) == len(after)
-        and all(
-            old == new or (old.startswith(SHEET_TAG) and new.startswith(SHEET_TAG))
-            for old, new in zip(before, after, strict=True)
-        )
+    return len(before) == len(after) and all(
+        old == new or (old.startswith(SHEET_TAG) and new.startswith(SHEET_TAG))
+        for old, new in zip(before, after, strict=True)
     )
 
 

@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from typing import TYPE_CHECKING
+
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.odf import Family
 from odfa11y.outcomes import ReviewTopic
 
@@ -41,16 +43,53 @@ REVIEW_ITEMS = (
     ),
 )
 
-ADAPTER = FamilyAdapter(
-    name="spreadsheet",
-    family=Family.SPREADSHEET,
-    audit=audit_spreadsheet,
-    default_language=default_language,
-    set_default_language=set_default_language,
-    snapshot=sheet_snapshot,
-    preserved=sheets_preserved,
-    decision_kinds=DECISION_KINDS,
-    operations=operations,
-    review_items=REVIEW_ITEMS,
-    pdf_filter="calc_pdf_Export",
-)
+
+class SpreadsheetAdapter(FamilyAdapter):
+    """Implement the spreadsheet family contract."""
+
+    name = "spreadsheet"
+    family = Family.SPREADSHEET
+    audit = staticmethod(audit_spreadsheet)
+    default_language = staticmethod(default_language)
+    set_default_language = staticmethod(set_default_language)
+    decision_kinds = DECISION_KINDS
+    operations = staticmethod(operations)
+    review_items = REVIEW_ITEMS
+    pdf_filter = "calc_pdf_Export"
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(sheet_snapshot(document))
+
+    @staticmethod
+    def preserved(
+        before: PreservationSnapshot, after: PreservationSnapshot, outcomes: Sequence[Outcome]
+    ) -> bool:
+        """Compare protected meaning using the family outcome contract.
+
+        Returns
+        -------
+        bool
+            Whether protected meaning survived.
+
+        """
+        del outcomes
+        return sheets_preserved(before.content, after.content)
+
+
+ADAPTER = SpreadsheetAdapter()
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from odfa11y.adapter import Outcome
+    from odfa11y.odf import OdfDocument

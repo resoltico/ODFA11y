@@ -83,7 +83,7 @@ depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
 
 [[modules]]
 path = "odfa11y.adapter"
-depends_on = ["odfa11y.outcomes"]
+depends_on = ["odfa11y.errors", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.content"
@@ -123,7 +123,7 @@ depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.repo
 
 [[modules]]
 path = "odfa11y.families"
-depends_on = ["odfa11y.errors", "odfa11y.adapter", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.drawing", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.presentation", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
+depends_on = ["odfa11y.adapter", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.drawing", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.presentation", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
 
 [[modules]]
 path = "odfa11y.audit"

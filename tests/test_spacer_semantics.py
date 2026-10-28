@@ -103,9 +103,7 @@ def test_spacer_guard_rejects_identity_loss_before_publication(
         parent = node.getparent()
         assert parent is not None
         parent.remove(node)
-        return (
-            Outcome("remove_empty_spacers", Status.APPLIED, "Removed", count=1, removed_blocks=1),
-        )
+        return (Outcome("remove_empty_spacers", Status.APPLIED, "Removed", count=1),)
 
     monkeypatch.setattr(RemoveEmptySpacers, "apply", damage)
     assert_refused(

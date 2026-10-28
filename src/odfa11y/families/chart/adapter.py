@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.content import protected_xml
 from odfa11y.odf import Family, Part, select_elements
 from odfa11y.outcomes import ReviewTopic
@@ -21,29 +21,13 @@ def _snapshot(document: OdfDocument) -> tuple[str, ...]:
     return tuple(protected_xml(body) for body in bodies)
 
 
-def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed: int) -> bool:
-    return removed == 0 and before == after
+class ChartAdapter(FamilyAdapter):
+    """Implement the chart family contract."""
 
-
-def _language(document: OdfDocument) -> str | None:
-    del document
-    return None
-
-
-def _set_language(document: OdfDocument, tag: str) -> bool:
-    del document, tag
-    return False
-
-
-ADAPTER = FamilyAdapter(
-    name="chart",
-    family=Family.CHART,
-    audit=audit_chart,
-    default_language=_language,
-    set_default_language=_set_language,
-    snapshot=_snapshot,
-    preserved=_preserved,
-    review_items=(
+    name = "chart"
+    family = Family.CHART
+    audit = staticmethod(audit_chart)
+    review_items = (
         ReviewItem(
             ReviewTopic.CHART_MEANING,
             "Whether the document description conveys the chart's trends, values and conclusion.",
@@ -56,5 +40,19 @@ ADAPTER = FamilyAdapter(
             ReviewTopic.SOURCE_ASSURANCE,
             "Native Chart PDF export is unsupported; review it in its embedding application.",
         ),
-    ),
-)
+    )
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(_snapshot(document))
+
+
+ADAPTER = ChartAdapter()

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -112,7 +111,7 @@ def test_registry_without_probe_returns_partial_unsupported_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     identities(monkeypatch)
-    monkeypatch.setitem(REGISTRY, Family.TEXT, replace(REGISTRY[Family.TEXT], link_probe=None))
+    monkeypatch.setattr(REGISTRY[Family.TEXT], "link_probe", lambda _directory: None)
     facts, error = diagnostics.inspect_tools()
     assert isinstance(error, UnsupportedKindError)
     assert facts.capabilities["pdfua_link_descriptions"] is None

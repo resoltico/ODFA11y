@@ -232,20 +232,19 @@ def test_the_snapshot_detects_data_and_reference_changes_without_changed_words(
     before = sheet_snapshot(document)
     cell = select_elements(document.tree(Part.CONTENT), "//table:table-cell")[0]
     cell.set(qn(*attribute), "changed")
-    assert not sheets_preserved(before, sheet_snapshot(document), 0)
+    assert not sheets_preserved(before, sheet_snapshot(document))
 
 
 def test_only_sheet_names_may_differ_between_snapshots() -> None:
     before = ("sheet\tA", "cell\t1,1\tx", "sheet\tB", "cell\t1,1\ty")
     renamed = ("sheet\tC", "cell\t1,1\tx", "sheet\tD", "cell\t1,1\ty")
-    assert sheets_preserved(before, before, 0)
-    assert sheets_preserved(before, renamed, 0)
-    assert not sheets_preserved(before, renamed, 1)
+    assert sheets_preserved(before, before)
+    assert sheets_preserved(before, renamed)
     edited = ("sheet\tA", "cell\t1,1\tchanged", "sheet\tB", "cell\t1,1\ty")
-    assert not sheets_preserved(before, edited, 0)
-    assert not sheets_preserved(before, before[:2], 0)
-    assert not sheets_preserved(before, (*before, "sheet\tC"), 0)
+    assert not sheets_preserved(before, edited)
+    assert not sheets_preserved(before, before[:2])
+    assert not sheets_preserved(before, (*before, "sheet\tC"))
     moved = ("sheet\tA", "cell\t2,1\tx", "sheet\tB", "cell\t1,1\ty")
-    assert not sheets_preserved(before, moved, 0)
+    assert not sheets_preserved(before, moved)
     swapped = ("sheet\tA", "sheet\tB", "cell\t1,1\tx", "cell\t1,1\ty")
-    assert not sheets_preserved(before, swapped, 0)
+    assert not sheets_preserved(before, swapped)
