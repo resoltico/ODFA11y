@@ -1,7 +1,5 @@
 # Changelog
 
-Notable changes to this project are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [Unreleased]
 
 - Requires Python 3.15+; restore the refreshed lockfile, including major dependency upgrades and patched PDF/image handling.
@@ -17,7 +15,6 @@ Notable changes to this project are documented in this file. The format is based
 - Exporter probes record scoped results and cache conclusive observations per batch. Native limitations never waive document-level PDF checks.
 - Content checkpoints detect namespace-sensitive XML edits and refresh derived caches. Inspection and execution bind to the same captured bytes.
 - Flat drawing layers count once; graphic style cascades handle absent names. Contributor checks retain complexity and dependency boundaries without file/function size caps.
-
 - Redact Windows tool-failure paths before Markdown escaping so review sheets do not expose local directories.
 
 ## [0.7.0] - 2026-10-16
