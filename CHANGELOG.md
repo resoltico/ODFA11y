@@ -14,6 +14,7 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Internal
 
+- Replaced file/function size caps and lint-policy probing with cohesion review, local justified suppressions and stale-suppression diagnostics; retained complexity and architecture checks.
 - Native CI uses checksum-pinned LibreOffice 26.8.1.1 on every platform and Go 1.27.3. Dependency updates use primary sources; security alerts remain enabled.
 
 ## [0.7.0] - 2026-10-16

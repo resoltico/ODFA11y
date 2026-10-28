@@ -57,7 +57,7 @@ def audit_command(args: argparse.Namespace) -> int:
         except (OdfA11yError, OSError, ValueError) as exc:
             if args.format == "sarif":
                 raise
-            print(
+            print(  # noqa: T201  CLI output is the command interface.
                 f"error: Cannot audit {terminal_text(source)}: {terminal_text(exc)}",
                 file=sys.stderr,
             )
@@ -65,9 +65,9 @@ def audit_command(args: argparse.Namespace) -> int:
     status = max(status, exit_status(reports, strict=args.strict))
     command_gate(args, status)
     if reports:
-        print(render_reports(reports, output_format=args.format, source_root=args.source_root))
+        print(render_reports(reports, output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output is the command interface.
     if args.format == "text" and (next_step := audit_next_step(args, reports)):
-        print(next_step)
+        print(next_step)  # noqa: T201  CLI output is the command interface.
     return status
 
 
@@ -79,8 +79,8 @@ def command_gate(
 ) -> None:
     """Show the actual text outcome while retaining machine-format stderr contracts."""
     if args.format == "text":
-        print(render_command_outcome(status, strict=args.strict))
-        print(f"Scope: {terminal_text(scope)}")
+        print(render_command_outcome(status, strict=args.strict))  # noqa: T201  CLI output is the command interface.
+        print(f"Scope: {terminal_text(scope)}")  # noqa: T201  CLI output is the command interface.
     elif args.strict:
         outcome = "PASS" if status == 0 else "FAIL"
-        print(f"Command gate (--strict): {outcome} (exit {status})", file=sys.stderr)
+        print(f"Command gate (--strict): {outcome} (exit {status})", file=sys.stderr)  # noqa: T201  CLI output is the command interface.

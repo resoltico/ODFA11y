@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import subprocess
+import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
 import sys
 import tempfile
 import urllib.request
@@ -84,15 +84,15 @@ def install(version: str, sha256: str, destination: Path) -> Path:
     with tempfile.TemporaryDirectory(prefix="odfa11y-verapdf-") as scratch:
         work = Path(scratch)
         archive = work / "verapdf.zip"
-        with urllib.request.urlopen(release_url(version), timeout=TIMEOUT_SECONDS) as response:
+        with urllib.request.urlopen(release_url(version), timeout=TIMEOUT_SECONDS) as response:  # noqa: S310  Download the pinned HTTPS vendor release.
             archive.write_bytes(response.read())
         verify_sha256(archive, sha256)
         with zipfile.ZipFile(archive) as bundle:
             bundle.extractall(work / "installer")
         (work / "install.xml").write_text(configuration(destination), encoding="utf-8")
         jar = work / "installer" / INSTALLER.format(version=version)
-        subprocess.run(
-            ["java", "-jar", str(jar), str(work / "install.xml")],
+        subprocess.run(  # noqa: S603  Arguments select a local tool without a shell.
+            ["java", "-jar", str(jar), str(work / "install.xml")],  # noqa: S607  System tool is resolved through PATH.
             check=True,
             timeout=TIMEOUT_SECONDS,
         )

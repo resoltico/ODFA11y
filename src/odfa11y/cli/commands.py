@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
         with termination_interrupt():
             if sarif:
                 if args.source_root is None:
-                    print(
+                    print(  # noqa: T201  CLI output is the command interface.
                         "error: SARIF requires an explicit source root (--source-root); "
                         "all inputs must be files within it.",
                         file=sys.stderr,
@@ -72,22 +72,22 @@ def main(argv: list[str] | None = None) -> int:
                 _preflight_sarif(args)
             return handlers[args.command](args)
     except KeyboardInterrupt:
-        print("error: command interrupted", file=sys.stderr)
+        print("error: command interrupted", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         return EXECUTION_FAILURE
     except (OdfA11yError, OSError, ValueError) as exc:
         if sarif:
-            print(
+            print(  # noqa: T201  CLI output is the command interface.
                 "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
             )
             return EXECUTION_FAILURE
-        print(f"error: {terminal_text(exc)}", file=sys.stderr)
+        print(f"error: {terminal_text(exc)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if isinstance(exc, ConfigError) and getattr(args, "config", None):
-            print(f"Configuration: {terminal_text(args.config)}", file=sys.stderr)
+            print(f"Configuration: {terminal_text(args.config)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         details = getattr(exc, "details", "")
         if details:
-            print(terminal_text(details), file=sys.stderr)
+            print(terminal_text(details), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if hint := error_hint(args, exc):
-            print(hint, file=sys.stderr)
+            print(hint, file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         return EXECUTION_FAILURE
 
 
@@ -100,10 +100,10 @@ def _preflight_sarif(args: argparse.Namespace) -> None:
 def _template(args: argparse.Namespace) -> int:
     report, template = prepare_template(args.source)
     if template is None:
-        print("No template: the document cannot be read well enough to plan.", file=sys.stderr)
-        print(render_reports([report]), file=sys.stderr)
+        print("No template: the document cannot be read well enough to plan.", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+        print(render_reports([report]), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         return exit_status([report])
-    print(template, end="")
+    print(template, end="")  # noqa: T201  CLI output is the command interface.
     return 0
 
 
@@ -111,29 +111,29 @@ def _remediate(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     result = remediate(args.source, args.destination, config.operations, dry_run=args.dry_run)
     if args.format == "json":
-        print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
         return 0
-    print(
+    print(  # noqa: T201  CLI output is the command interface.
         "Dry run; proposed changes only. Nothing written."
         if args.dry_run
         else f"Wrote: {terminal_text(result.destination)}"
     )
     for outcome in result.outcomes:
         key = f" [{terminal_text(outcome.key)}]" if outcome.key else ""
-        print(
+        print(  # noqa: T201  CLI output is the command interface.
             f"- {outcome.status.value:9} {terminal_text(outcome.operation)}{key}: "
             f"{terminal_text(outcome.message)}"
         )
     if not result.outcomes:
-        print("- No operations were configured. Enable reviewed decisions in your TOML plan.")
-    print(f"Schema: {terminal_text(result.schema_check)}")
+        print("- No operations were configured. Enable reviewed decisions in your TOML plan.")  # noqa: T201  CLI output is the command interface.
+    print(f"Schema: {terminal_text(result.schema_check)}")  # noqa: T201  CLI output is the command interface.
     return 0
 
 
 def _export(args: argparse.Namespace) -> int:
     output = export_document(args.source, args.destination, _native_options(args))
-    print(f"Wrote PDF: {terminal_text(output)}")
-    print("Next: audit the PDF with --verapdf --strict and review its accessibility.")
+    print(f"Wrote PDF: {terminal_text(output)}")  # noqa: T201  CLI output is the command interface.
+    print("Next: audit the PDF with --verapdf --strict and review its accessibility.")  # noqa: T201  CLI output is the command interface.
     return 0
 
 
@@ -144,7 +144,7 @@ def _compare(args: argparse.Namespace) -> int:
     )
     status = exit_status([report], strict=args.strict)
     command_gate(args, status, scope="fidelity checks under the selected policy.")
-    print(render_reports([report], output_format=args.format, source_root=args.source_root))
+    print(render_reports([report], output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output is the command interface.
     return status
 
 
@@ -159,13 +159,13 @@ def _native_options(args: argparse.Namespace) -> NativeOptions:
 def _check_evidence(args: argparse.Namespace) -> int:
     problems = check_bundle(args.directory)
     for problem in problems:
-        print(terminal_text(problem))
-    print(
+        print(terminal_text(problem))  # noqa: T201  CLI output is the command interface.
+    print(  # noqa: T201  CLI output is the command interface.
         "Evidence integrity: verified against the recorded manifest."
         if not problems
         else f"Evidence integrity: failed ({len(problems)} problem(s))."
     )
-    print("This checks recorded files and hashes. It does not establish accessibility or review.")
+    print("This checks recorded files and hashes. It does not establish accessibility or review.")  # noqa: T201  CLI output is the command interface.
     return 2 if problems else 0
 
 
@@ -173,13 +173,13 @@ def _doctor(args: argparse.Namespace) -> int:
     info, error = inspect_tools(_native_options(args))
     status = EXECUTION_FAILURE if error else 0
     if error:
-        print(f"error: {terminal_text(error)}", file=sys.stderr)
+        print(f"error: {terminal_text(error)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if details := getattr(error, "details", ""):
-            print(terminal_text(details), file=sys.stderr)
+            print(terminal_text(details), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         if args.format == "text" and (hint := error_hint(args, error)):
-            print(hint, file=sys.stderr)
+            print(hint, file=sys.stderr)  # noqa: T201  CLI output is the command interface.
     if args.format == "json":
-        print(json.dumps(info, indent=2, sort_keys=True))
+        print(json.dumps(info, indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
     else:
         for key, value in info.items():
             missing = (
@@ -187,8 +187,8 @@ def _doctor(args: argparse.Namespace) -> int:
                 if key == "pdfua_link_descriptions"
                 else "not found"
             )
-            print(f"{key}: {terminal_text(value) if value is not None else missing}")
-        print(
+            print(f"{key}: {terminal_text(value) if value is not None else missing}")  # noqa: T201  CLI output is the command interface.
+        print(  # noqa: T201  CLI output is the command interface.
             "Scope: dependency identities and a link-description export probe; "
             "no conformance verdict."
         )

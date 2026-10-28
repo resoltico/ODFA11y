@@ -115,7 +115,7 @@ class PackageStorage(OdfStorage):
                 self.order.append(info.filename)
                 self.members[info.filename] = Member(info=info, data=_read_member(zf, info))
 
-    def member_for(self, part: Part) -> str | None:
+    def member_for(self, part: Part) -> str | None:  # noqa: PLR6301  Implement the shared storage instance interface.
         """Name the package member holding a part.
 
         Returns
