@@ -73,7 +73,11 @@ def derive(document: OdfDocument, family: str, binding: Binding) -> etree._Eleme
     if binding.base and base is None:
         message = "The original language style is missing."
         raise RemediationError(message)
-    style = deepcopy(base) if base is not None else etree.Element(qn("style", "style"))
+    style = (
+        deepcopy(base)
+        if base is not None
+        else etree.Element(qn("style", "style"), nsmap=catalog.content_tree.getroot().nsmap)
+    )
     style.set(qn("style", "name"), binding.name)
     style.set(qn("style", "family"), family)
     props = style.find("style:text-properties", NS)

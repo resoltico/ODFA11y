@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, cast
 import pytest
 from lxml import etree
 
-from odfa11y.families.text import SetTargetLanguages, TargetLanguage
+from odfa11y.families.text import (
+    LinkifyAddresses,
+    MarkTableHeaders,
+    RemoveEmptySpacers,
+    SetTargetLanguages,
+    TableHeaders,
+    TargetLanguage,
+)
 from odfa11y.families.text.language import effective_languages
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
@@ -22,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from odfa11y.adapter import Outcome
+    from odfa11y.adapter import Operation, Outcome
 
 STYLES = (
     '<style:style style:name="Body" style:family="paragraph"><style:text-properties '
@@ -281,3 +288,56 @@ def test_nonwestern_declarations_are_not_misreported_as_absent(
     )
     report = audit_odf(source)
     assert "LANG004" not in {finding.rule_id for finding in report.findings}
+
+
+def test_unstyled_target_derivation_uses_document_namespace_bindings(tmp_path: Path) -> None:
+    source = make_flat(
+        tmp_path, "text", Variant(body="<office:text><text:p>Bonjour</text:p></office:text>")
+    )
+    document = OdfDocument.open(source)
+    target, node = next(iter(language_targets(document).items()))
+    operation = SetTargetLanguages({
+        target: TargetLanguage(western="fr-FR", fingerprint=language_fingerprint(document, node))
+    })
+    output = tmp_path / "unstyled.fodt"
+    result = execute_operations(source, output, [operation])
+    assert result.published, result.as_dict()
+    after = OdfDocument.open(output)
+    assert effective_languages(after, next(iter(language_targets(after).values())))[0] == "fr-FR"
+    assert not execute_operations(output, tmp_path / "again.fodt", [operation]).changed
+
+
+@pytest.mark.parametrize(
+    "structural",
+    [LinkifyAddresses(), RemoveEmptySpacers(), MarkTableHeaders({"Data": TableHeaders(rows=1)})],
+)
+def test_ordinal_language_targets_cannot_move_during_a_structural_plan(
+    tmp_path: Path, structural: Operation
+) -> None:
+    link = '<text:a xlink:type="simple" xlink:href="https://example.test/">https://example.test/</text:a>'
+    body = (
+        '<office:text><table:table table:name="Data"><table:table-column/>'
+        '<table:table-row table:number-rows-repeated="2"><table:table-cell '
+        'office:value-type="float" office:value="3"><text:p>3</text:p>'
+        "</table:table-cell></table:table-row></table:table><text:p/>"
+        "<text:p>https://example.test/</text:p><text:p>" + link + link + "</text:p></office:text>"
+    )
+    source = make_flat(tmp_path, "text", Variant(body=body))
+    document = OdfDocument.open(source)
+    target, node = list(language_targets(document).items())[-1]
+    output = tmp_path / "refused.fodt"
+    result = execute_operations(
+        source,
+        output,
+        [
+            structural,
+            SetTargetLanguages({
+                target: TargetLanguage(
+                    western="fr", fingerprint=language_fingerprint(document, node)
+                )
+            }),
+        ],
+    )
+    assert_refused(result, match="separate reviewed structural plan")
+    assert not result.changed
+    assert not output.exists()

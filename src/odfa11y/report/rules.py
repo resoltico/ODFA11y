@@ -135,6 +135,16 @@ HEADING004 = _rule("HEADING004", INFO, SEM, "No structural headings were found."
 NOTE001 = _rule(
     "NOTE001", WARNING, SEM, "Notes or annotations need relationship and reading-order review."
 )
+REVISION002 = _rule(
+    "REVISION002", ERROR, SEM, "Tracked-region identity or change-mark relationship is broken."
+)
+REVISION003 = _rule(
+    "REVISION003", WARNING, SEM, "Tracked declaration has no established current-flow anchor."
+)
+HIDDEN002 = _rule(
+    "HIDDEN002", WARNING, SEM, "Visibility declarations are incomplete or contradictory."
+)
+ORDER001 = _rule("ORDER001", WARNING, SEM, "Declared layout requires native reading-order review.")
 REVISION001 = _rule("REVISION001", WARNING, SEM, "Tracked revision scope requires review.")
 HIDDEN001 = _rule(
     "HIDDEN001", WARNING, SEM, "Hidden or conditional content requires visibility review."

@@ -75,6 +75,27 @@ class FactKeys:
             "Paragraph style usage and effective spacing.",
         )
     )
+    TEXT_REVISION_RELATIONSHIPS = _register(
+        FactKey[dict[str, int]](
+            "text.revision_relationships",
+            dict[str, int],
+            "Tracked declarations, authored markers and unresolved relationships.",
+        )
+    )
+    TEXT_VISIBILITY_CONTEXTS = _register(
+        FactKey[list[dict[str, object]]](
+            "text.visibility_contexts",
+            list[dict[str, object]],
+            "Visibility conditions and cached states, without evaluation.",
+        )
+    )
+    TEXT_READING_ORDER_COUNTS = _register(
+        FactKey[dict[str, int]](
+            "text.reading_order_counts",
+            dict[str, int],
+            "Declared layout conditions needing native reading-order review.",
+        )
+    )
     TEXT_TABLE_CLASSIFICATIONS = _register(
         FactKey[list[dict[str, object]]](
             "text.table_classifications",

@@ -61,6 +61,10 @@ fidelity (`FID003`); edit/remove the header in Calc first or remediate and revie
 printed result. Failed gates leave later stages skipped. Successful tests of correct
 rejection do not establish an accessible export.
 
+Target-language ordinals require a separate reviewed plan from address linkification,
+spacer removal and table-header changes. Those edits can move physical targets, including
+identical links whose content fingerprints cannot distinguish a shifted ordinal.
+
 ## Writer table headers
 
 Explicit row/column header decisions establish source semantics separately from PDF
@@ -87,6 +91,11 @@ supplied-description and missing-title controls both retain `PDF019`/veraPDF fai
 Existing meaningful Writer Names can affect export, but changing them can break targets
 and is outside automatic remediation. See the [reproduction](../tests/reproductions/README.md)
 and [LibreOffice bug 161583](https://bugs.documentfoundation.org/show_bug.cgi?id=161583#c17).
+
+The Writer internal-bookmark fixture has a real destination and readable source label,
+but its exported annotation lacks a description (`PDF019`, veraPDF 7.18.1-2/7.18.5-2).
+The broken-target control triggers built-in `PDF017` even though veraPDF accepts it.
+Source relationships, PDF checks and human review remain separate gates.
 
 ## Graphic roles
 
@@ -161,6 +170,11 @@ opaque payloads have separate guards. These are not render comparisons; use
   annotations/revisions and hidden/conditional branches. Graphics, links, tables and
   address linkification include eligible current notes/text boxes with qualified locations,
   excluding annotation/revision/conditional branches. `REVISION001`/`HIDDEN001` retain review needs.
+
+Writer 26.8.1.1 exported tracked deleted words in the structure fixture's current view,
+while excluding its hidden section. Source inspection retains revision/visibility review;
+it does not accept changes or predict which tracked text will be painted. Inspect the
+actual PDF and review the document in Writer.
 
 ## Native document context and declared dependencies
 
@@ -286,7 +300,10 @@ Before distribution, review:
 
 - **Headings:** actual hierarchy and navigation.
 - **Alt text (`alt-text`):** meaning in context.
-- **Reading order (`reading-order`):** notes, floating objects, tables, graphics and sheets/rows/columns.
+- **Reading order (`reading-order`):** columns, floating frames, sections, notes, tables and spreadsheet order.
+- **Lists (`lists`):** intended grouping, nesting and continued numbering.
+- **Language (`language`):** applicable western, Asian and complex channels match the wording.
+- **Hidden content (`hidden-content`):** revision history and conditional branches preserve intended meaning.
 - **Table headers (`table-headers`):** correct data relationships, including spreadsheet header cells.
 - **Sheet names and hidden content:** clear names and no inaccessible required information.
 - **Link purpose (`link-purpose`):** understandable destinations in context.

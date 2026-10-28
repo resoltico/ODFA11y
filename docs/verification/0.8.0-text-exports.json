@@ -1,0 +1,186 @@
+{
+  "fixtures": {
+    "language-negative.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Standard": 1
+      },
+      "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "language-positive.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Span": 2,
+        "Standard": 1
+      },
+      "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "lists-negative.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Standard": 2
+      },
+      "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "lists-positive.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "L": 3,
+        "LBody": 4,
+        "LI": 4,
+        "Lbl": 4,
+        "Standard": 5
+      },
+      "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "references-negative.odt": {
+      "pdf_findings": [
+        "PDF017",
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Link": 1,
+        "Standard": 1
+      },
+      "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "references-positive.odt": {
+      "pdf_findings": [
+        "PDF019",
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Div": 1,
+        "Document": 1,
+        "Footnote": 1,
+        "Lbl": 1,
+        "Link": 3,
+        "Note": 1,
+        "Standard": 2
+      },
+      "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
+      "verapdf_compliant": false,
+      "verapdf_failed_rules": [
+        [
+          "ISO 14289-1:2014",
+          "7.18.1",
+          "2"
+        ],
+        [
+          "ISO 14289-1:2014",
+          "7.18.5",
+          "2"
+        ]
+      ]
+    },
+    "tables-data-no-headers.odt": {
+      "pdf_findings": [
+        "PDF008",
+        "PDF015"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Standard": 4,
+        "TD": 4,
+        "TR": 2,
+        "Table": 1
+      },
+      "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "tables-negative.odt": {
+      "pdf_findings": [
+        "PDF008",
+        "PDF015"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Standard": 4,
+        "TD": 4,
+        "TR": 2,
+        "Table": 1
+      },
+      "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "tables-positive.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Standard": 8,
+        "TD": 3,
+        "TH": 5,
+        "TR": 3,
+        "Table": 1
+      },
+      "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "visibility-negative.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Div": 1,
+        "Document": 1,
+        "Frame contents": 1,
+        "Sect": 1,
+        "Span": 1,
+        "Standard": 2
+      },
+      "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    },
+    "visibility-positive.odt": {
+      "pdf_findings": [
+        "PDF008"
+      ],
+      "pdf_tags": {
+        "Document": 1,
+        "Standard": 1
+      },
+      "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
+      "verapdf_compliant": true,
+      "verapdf_failed_rules": []
+    }
+  },
+  "libreoffice": {
+    "name": "LibreOffice",
+    "version": "26.8.1.1"
+  },
+  "odfa11y": "0.8.0",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "verapdf": {
+    "name": "veraPDF",
+    "version": "1.30.3"
+  }
+}

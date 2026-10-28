@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> None:
-    """Reject revision editing and unstable ordinal link combinations.
+    """Reject revision editing and unstable ordinal target combinations.
 
     Raises
     ------
@@ -35,6 +35,13 @@ def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> No
         msg = "Tracked revisions permit only title/description metadata edits; nothing was written."
         raise RemediationError(msg)
     names = {operation.name for operation in operations}
+    if "set_target_languages" in names and names & {
+        "linkify_addresses",
+        "mark_table_headers",
+        "remove_empty_spacers",
+    }:
+        message = "Ordinal target languages require a separate reviewed structural plan."
+        raise RemediationError(message)
     if names & {"linkify_addresses", "mark_table_headers"}:
         for operation in operations:
             if operation.name == "set_link_descriptions" and any(

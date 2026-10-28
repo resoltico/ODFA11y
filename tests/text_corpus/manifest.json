@@ -44,6 +44,16 @@
       "schema_violations": 6,
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "source_sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6"
+    },
+    "visibility-negative.odt": {
+      "schema_violations": 6,
+      "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
+      "source_sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6"
+    },
+    "visibility-positive.odt": {
+      "schema_violations": 6,
+      "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
+      "source_sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781"
     }
   },
   "producer": "26.8.1.1"

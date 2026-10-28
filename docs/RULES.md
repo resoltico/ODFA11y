@@ -36,6 +36,7 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `HEADING003` | Warning | Heading text resembles manually typed numbering. |  |
 | `HEADING004` | Info | No structural headings were found. |  |
 | `HIDDEN001` | Warning | Hidden or conditional content requires visibility review. |  |
+| `HIDDEN002` | Warning | Visibility declarations are incomplete or contradictory. |  |
 | `IMAGE001` | Error | Image body does not contain one supported graphic frame. |  |
 | `IMAGE003` | Warning | Image resource is external, unavailable or not embedded. |  |
 | `IMAGE004` | Error | Image payload is malformed or unsafe to inspect. |  |
@@ -72,6 +73,7 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `ODF009` | Info | No semantic audit exists for this document family. |  |
 | `ODF010` | Error | A flat XML document's root is not office:document. |  |
 | `ODF011` | Error | A package's content root is not office:document-content. |  |
+| `ORDER001` | Warning | Declared layout requires native reading-order review. |  |
 | `PAGE001` | Error | Pages are missing, unnamed or ambiguously named. |  |
 | `PAGE002` | Warning | Page has no accessible title. | `page.metadata` |
 | `PAGE003` | Error | Navigation order is incomplete or ambiguous. | `page.navigation` |
@@ -115,6 +117,8 @@ The [registry](../src/odfa11y/report/rules.py) is authoritative.
 | `REFERENCE003` | Error | Named range has inconsistent endpoints or identity. |  |
 | `REFERENCE004` | Warning | Reference destination requires native scope review. |  |
 | `REVISION001` | Warning | Tracked revision scope requires review. |  |
+| `REVISION002` | Error | Tracked-region identity or change-mark relationship is broken. |  |
+| `REVISION003` | Warning | Tracked declaration has no established current-flow anchor. |  |
 | `SCHEMA001` | Warning | A member does not validate against the ODF schema. |  |
 | `SCHEMA002` | Info | No ODF schema is bundled for the declared version. |  |
 | `SHEET001` | Error | Sheet has no name. |  |

@@ -27,8 +27,8 @@ sha256 = "1334647db20f6c1fbbcc33c766b684b7f29c49aa96d4d6a88851461c0e4b3276"
 
 [[document]]
 file = "frames-textbox.odt"
-rules = []
-rules_after_plan = []
+rules = ["ORDER001"]
+rules_after_plan = ["ORDER001"]
 schema_violations = 11
 sha256 = "839ecd92f4879c44bbca7ba224c83e0363e64fa78231d651841c307fcbe4c9ef"
 
