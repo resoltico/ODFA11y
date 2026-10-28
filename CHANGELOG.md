@@ -11,8 +11,9 @@ Draft; release date pending.
 ### Breaking
 
 - Use Python 3.15+ and restore the refreshed lockfile, including major dependency upgrades. Call the root application API with `Tools` and `Profile`; results own their effective exit status.
-- Generate and review source-bound decision plans with `plan`; use explicit `--rebind` for changed sources. Use `verify` and profile `source`; paragraph styles appear in audit output.
-- Consume typed records/facts and the [published schemas](docs/SCHEMAS.md), with concept-based rule IDs. Invalid arguments/plans exit 4; precedence is 3 > 4 > 2 > 1 > 0. Refused remediation exits 2; a passing dry run exits 0 without publication.
+- Generate and review source-bound decision plans with `plan`/`--plan`; use explicit `--rebind` for changed sources. Use `verify` and profile `source`; paragraph styles appear in audit output.
+- Consume typed records/facts and the [published schemas](docs/SCHEMAS.md), with concept-based rule IDs; page annotations now warn and fail strict profiles. Progress observers receive typed events, and the validator stage is `validate-pdf`.
+- Invalid arguments/plans exit 4; aggregation precedence is 3 > 4 > 2 > 1 > 0. Refused remediation exits 2; a passing dry run exits 0 without publication.
 - Presentation/drawing share page semantics; native process/export and PDF reading/fidelity have distinct owners. XML content checkpoints replace edit declarations, and family implementations use abstract contracts and typed preservation snapshots.
 
 ### Added
