@@ -15,6 +15,7 @@ from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 from .corpus_manifest import CORPUS
 from .fixtures import make_minimal_odt
@@ -46,7 +47,9 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
         edited, tmp_path / "headings.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
-    assert {role: report.metadata["structure_tags"].get(role) for role in ("H1", "H2", "H3")} == {
+    assert {
+        role: report.facts[FactKeys.PDF_STRUCTURE_TAGS].get(role) for role in ("H1", "H2", "H3")
+    } == {
         "H1": 1,
         "H2": 1,
         "H3": 1,
@@ -71,7 +74,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
         edited, tmp_path / "columns.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
-    assert report.metadata["structure_tags"].get("TH", 0) == 0
+    assert report.facts[FactKeys.PDF_STRUCTURE_TAGS].get("TH", 0) == 0
     assert "PDF015" in {f.rule_id for f in report.findings}
     # The independent validator does not detect this missing header semantics property.
     assert validate_pdfua(pdf, executable=verapdf).compliant

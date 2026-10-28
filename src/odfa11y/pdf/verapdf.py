@@ -11,7 +11,7 @@ from lxml import etree
 
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.external_tools import ToolIdentity, find_executable, run_bounded, validate_timeout
-from odfa11y.report import Report, rules
+from odfa11y.report import FactKeys, Report, rules
 from odfa11y.safe_xml import parse_secure
 
 from .export import DEFAULT_TIMEOUT_SECONDS
@@ -136,7 +136,7 @@ def check_pdfua(
 
 def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:
     """Record the verdict, validator identity and one finding per failed rule."""
-    report.metadata["veraPDF"] = {
+    report.facts[FactKeys.VERAPDF_IDENTITY] = {
         "version": result.identity.version,
         "profile": result.profile,
         "compliant": result.compliant,

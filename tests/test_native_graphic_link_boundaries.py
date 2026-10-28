@@ -17,6 +17,7 @@ from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.report import FactKeys
 
 from .native_resource_fixtures import PIXELS, decoded_images, writer_resource
 
@@ -94,8 +95,8 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     pdf = export_pdfua(edited, tmp_path / "decorative-role.pdf", settings)
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
-    assert report.metadata["extractable_text_characters"] > 0
-    assert report.metadata["described_graphics"] >= 1
+    assert report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] > 0
+    assert report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] >= 1
     assert ((4, 4), PIXELS) in decoded_images(pdf)
     assert compare_pdfs(control_pdf, pdf, FidelityPolicy(raster_tolerance=0.0)).passed
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
@@ -138,7 +139,7 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     pdf = export_pdfua(described, tmp_path / "link-title.pdf", settings)
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
-    assert report.metadata["link_annotations"] == 1
+    assert report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] == 1
     assert compare_pdfs(control_pdf, pdf, FidelityPolicy()).passed
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:

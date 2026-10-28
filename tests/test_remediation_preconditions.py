@@ -13,6 +13,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.errors import RemediationError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 from .documents import OASIS, Variant, make_flat, make_package
 
@@ -45,7 +46,7 @@ def test_explicit_metadata_creates_a_missing_optional_package_part(tmp_path: Pat
                 cut.writestr(member, full.read(member.filename))
     destination = tmp_path / "out.odt"
     assert remediate(source, destination, [SetMetadata(title="x")]).changed
-    assert audit_odf(destination).metadata["title"] == "x"
+    assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "x"
     with zipfile.ZipFile(destination) as created:
         manifest = created.read("META-INF/manifest.xml")
         assert manifest.count(b'manifest:full-path="meta.xml"') == 1
@@ -110,7 +111,7 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
     source.write_text(text[:start] + text[end:], encoding="utf-8")
     destination = tmp_path / "out.fodt"
     remediate(source, destination, [SetMetadata(title="Added")])
-    assert audit_odf(destination).metadata["title"] == "Added"
+    assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "Added"
     assert "ODF900" not in ids(audit_odf(destination, schema=True))
 
 
@@ -129,7 +130,7 @@ def test_language_tags_are_normalised_or_private_use_and_stay_schema_valid(
     source = make_package(tmp_path, "text")
     destination = tmp_path / "out.odt"
     remediate(source, destination, [SetMetadata(language=given)])
-    assert audit_odf(destination).metadata["language"] == written
+    assert audit_odf(destination).facts[FactKeys.DOCUMENT_LANGUAGE] == written
 
 
 def test_remediation_refuses_a_document_whose_parts_contradict_each_other(tmp_path: Path) -> None:

@@ -21,7 +21,7 @@ from odfa11y.content import (
     visible_words,
 )
 from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument
@@ -39,7 +39,7 @@ def audit_document(document: OdfDocument, report: Report) -> None:
         for node in document.tree(Part.CONTENT).iter()
         if (identity := node.get(XML_ID) or node.get(qn("draw", "id")))
     )
-    report.metadata["page_count"] = len(available)
+    report.facts[FactKeys.PAGE_COUNT] = len(available)
     if not available:
         report.add(rules.PRES001, location=Location(Part.CONTENT))
     for index, page in enumerate(available, 1):
@@ -77,7 +77,7 @@ def _graphics(document: OdfDocument, report: Report) -> None:
         if node.tag in SHAPE_TAGS
     ]
     identity = GraphicIdentity(document, shapes)
-    report.metadata["shape_count"] = len(shapes)
+    report.facts[FactKeys.PAGE_SHAPE_COUNT] = len(shapes)
     for index, shape in enumerate(shapes, 1):
         decorative = audit_graphic_role(document, shape, report)
         if decorative or shape.tag == qn("draw", "g"):
@@ -114,7 +114,7 @@ def _graphics(document: OdfDocument, report: Report) -> None:
 
 def _links(document: OdfDocument, report: Report) -> None:
     links = document_links(document)
-    report.metadata["link_count"] = len(links)
+    report.facts[FactKeys.PAGE_LINK_COUNT] = len(links)
     for index, link in enumerate(links, 1):
         if not link_has_description(link):
             report.add(

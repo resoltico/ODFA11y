@@ -15,6 +15,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pipeline import NativeOptions, export_document
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -28,7 +29,7 @@ def test_writer_revision_reload_and_rendered_word_boundaries(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     before = OdfDocument.open(FIXTURE)
-    assert audit_odf(FIXTURE).metadata["heading_count"] == 1
+    assert audit_odf(FIXTURE).facts[FactKeys.TEXT_HEADING_COUNT] == 1
     edited = tmp_path / "reviewed.odt"
     remediate(FIXTURE, edited, [SetMetadata(title="Reviewed context fixture")])
     after = OdfDocument.open(edited)

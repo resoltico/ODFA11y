@@ -18,6 +18,7 @@ from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, Part, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 from .spreadsheet_fixtures import LAYOUTS, make_spreadsheet, picture, row, sheet, text_cell
 
@@ -122,7 +123,7 @@ def test_the_language_reaches_the_default_cell_style(tmp_path: Path, layout: str
     output = tmp_path / f"out{source.suffix}"
     remediate(source, output, [SetMetadata(language="fr-FR")])
     report = audit_odf(output, schema=True)
-    assert report.metadata["language"] == "fr-FR"
+    assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in {f.rule_id for f in report.findings}
     assert "ODF900" not in {f.rule_id for f in report.findings}
     again = remediate(output, tmp_path / f"again{source.suffix}", [SetMetadata(language="fr-FR")])

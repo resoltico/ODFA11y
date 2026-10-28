@@ -14,7 +14,7 @@ from odfa11y.content import (
 )
 from odfa11y.errors import RemediationError
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .contexts import context_location, has_revisions, text_nodes
 from .links import URI_RE, split_trailing_punctuation
@@ -139,7 +139,7 @@ def _audit_blinking(document: OdfDocument, report: Report) -> None:
 
 def _audit_style_summary(document: OdfDocument, report: Report) -> None:
     rows, problems = _style_rows(document)
-    report.metadata["paragraph_styles"] = rows
+    report.facts[FactKeys.TEXT_PARAGRAPH_STYLES] = rows
     if problems:
         report.add(rules.TXT062, location=Location(Part.STYLES.value), details={"styles": problems})
 

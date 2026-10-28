@@ -15,6 +15,7 @@ from odfa11y.errors import RemediationError
 from odfa11y.families.text import LinkifyAddresses, NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
+from odfa11y.report import FactKeys
 
 from .documents import Variant, make_flat
 
@@ -134,7 +135,7 @@ def test_revision_edit_refuses_before_first_metadata_edit(
 def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
-    assert report.metadata["heading_count"] == 1
+    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
     assert {"TXT060", "TXT061"} <= {f.rule_id for f in report.findings}
     plain = [f.details["text"] for f in report.findings if f.rule_id == "TXT030"]
     assert plain == ["https://note.example"]

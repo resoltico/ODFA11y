@@ -16,6 +16,7 @@ from pypdf.generic import (
 )
 
 from odfa11y.pdf import audit_pdfua
+from odfa11y.report import FactKeys
 
 from .pdf_fixtures import annotation_references, dictionary, link_elements, map_link, tagged_writer
 
@@ -57,9 +58,9 @@ def test_valid_markers_and_indirect_preferences_are_detected(tmp_path: Path) -> 
     report = audit(tmp_path, tagged_writer())
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
     assert report.warning_count == 0
-    assert report.metadata["pdfua_part"] == 1
-    assert report.metadata["structure_tags"] == {"H1": 1}
-    assert report.metadata["extractable_text_characters"] > 0
+    assert report.facts[FactKeys.PDF_UA_PART] == 1
+    assert report.facts[FactKeys.PDF_STRUCTURE_TAGS] == {"H1": 1}
+    assert report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] > 0
 
 
 @pytest.mark.parametrize(
@@ -106,7 +107,7 @@ def test_cyclic_structure_arrays_do_not_repeat_traversal(tmp_path: Path) -> None
     children = structure["/K"]
     assert isinstance(children, ArrayObject)
     children.append(writer._add_object(children))
-    assert audit(tmp_path, writer).metadata["structure_tags"] == {"H1": 1}
+    assert audit(tmp_path, writer).facts[FactKeys.PDF_STRUCTURE_TAGS] == {"H1": 1}
 
 
 def test_skipped_heading_levels_are_reported(tmp_path: Path) -> None:
@@ -164,8 +165,8 @@ def test_a_link_element_that_refers_to_its_annotation_passes(tmp_path: Path) -> 
     map_link(writer, link_elements(writer)[0], annotation_references(writer)[0])
     report = audit(tmp_path, writer)
     assert not ids(report) & {"PDF016", "PDF017", "PDF018"}
-    assert report.metadata["link_annotations"] == 1
-    assert report.metadata["link_structure_elements"] == 1
+    assert report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] == 1
+    assert report.facts[FactKeys.PDF_LINK_STRUCTURE_ELEMENT_COUNT] == 1
 
 
 def test_one_mapped_link_among_many_annotations_is_not_a_pass(tmp_path: Path) -> None:
@@ -240,7 +241,7 @@ def test_malformed_annotation_entries_are_skipped_not_fatal(tmp_path: Path) -> N
     ])
     report = audit(tmp_path, writer)
     assert "PDF000" not in ids(report)
-    assert report.metadata["link_annotations"] == 0
+    assert report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] == 0
 
 
 def test_malformed_annotation_entries_do_not_abort_the_audit(tmp_path: Path) -> None:

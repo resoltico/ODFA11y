@@ -11,6 +11,7 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.odf import KINDS, Family, OdfDocument, validate
+from odfa11y.report import FactKeys
 
 from .documents import KIND_SPECS, make_flat, make_package
 
@@ -56,12 +57,14 @@ def test_every_kind_audits_without_errors_and_only_its_own_family_has_semantic_r
 ) -> None:
     report = audit_odf(LAYOUTS[layout](tmp_path, name), schema=True)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
-    assert report.metadata["layout"] == layout
+    assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
     family = KIND_SPECS[name].family
-    assert report.metadata["family"] == family
+    assert report.facts[FactKeys.DOCUMENT_FAMILY] == family
     has_adapter = family in SEMANTIC_PREFIXES
     expected_adapter = "drawing" if family == "graphics" else family
-    assert report.metadata["adapter"] == (expected_adapter if has_adapter else "generic")
+    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == (
+        expected_adapter if has_adapter else "generic"
+    )
     assert ("ODF009" in ids(report)) is (not has_adapter)
     foreign = set(SEMANTIC_PREFIXES.values()) - {SEMANTIC_PREFIXES.get(family)}
     assert not {i for i in ids(report) if i.startswith(tuple(foreign))}
@@ -109,7 +112,7 @@ def test_a_damaged_mimetype_member_is_reported_and_the_audit_continues(
     report = audit_odf(damaged)
     assert "PKG001" in {f.rule_id for f in report.findings}
     assert "ODF005" not in {f.rule_id for f in report.findings}
-    assert report.metadata["document_kind"] == "text"
+    assert report.facts[FactKeys.DOCUMENT_KIND] == "text"
 
 
 def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path) -> None:

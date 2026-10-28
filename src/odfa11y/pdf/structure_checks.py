@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from odfa11y.report import rules
+from odfa11y.report import FactKeys, rules
 
 from .link_structure import check_link_structure
 from .marked_content import check_marked_content
@@ -52,10 +52,10 @@ def audit_structure(
     top = build_tree(root)
     nodes = [node for node in top.walk() if node is not top]
     counts = Counter(node.tag for node in nodes)
-    report.metadata["structure_tags"] = dict(sorted(counts.items()))
+    report.facts[FactKeys.PDF_STRUCTURE_TAGS] = dict(sorted(counts.items()))
     role_map = role_map_of(root)
     if role_map:
-        report.metadata["role_map"] = dict(sorted(role_map.items()))
+        report.facts[FactKeys.PDF_ROLE_MAP] = dict(sorted(role_map.items()))
     check_link_structure(annotations, nodes, report)
     graphic_count = check_marked_content(pages, nodes, report)
     _check_roles(nodes, report)

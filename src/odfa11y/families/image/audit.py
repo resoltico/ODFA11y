@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.content import GraphicIdentity, audit_graphic_role, local_resource_path
 from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .payload import inspect_payload
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 def audit_image(document: OdfDocument, report: Report) -> None:
     """Check the mandatory frame, description and local/embedded resource boundary."""
     frames = select_elements(document.tree(Part.CONTENT), "//office:body/office:image/draw:frame")
-    report.metadata["image_frame_count"] = len(frames)
+    report.facts[FactKeys.IMAGE_GRAPHIC_COUNT] = len(frames)
     if len(frames) != 1:
         report.add(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
         return

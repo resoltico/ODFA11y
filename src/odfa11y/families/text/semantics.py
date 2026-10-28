@@ -22,7 +22,7 @@ from odfa11y.content import (
 )
 from odfa11y.errors import RemediationError
 from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .contexts import context_location, text_nodes
 from .headings import MAX_HEADING_LEVEL, heading_fingerprint, heading_location
@@ -47,7 +47,7 @@ def audit_headings(
 ) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
     headings = text_nodes(tree, qn("text", "h"), main_only=True)
-    report.metadata["heading_count"] = len(headings)
+    report.facts[FactKeys.TEXT_HEADING_COUNT] = len(headings)
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
         raw = heading.get(qn("text", "outline-level"))
@@ -110,7 +110,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)
-    report.metadata["graphic_object_count"] = len(frames)
+    report.facts[FactKeys.TEXT_GRAPHIC_COUNT] = len(frames)
     for index, frame in enumerate(frames, start=1):
         if audit_graphic_role(document, frame, report):
             continue
@@ -146,7 +146,7 @@ def audit_tables(
 ) -> None:
     """Report table structure defects such as missing header rows."""
     tables = text_nodes(tree, qn("table", "table"))
-    report.metadata["table_count"] = len(tables)
+    report.facts[FactKeys.TEXT_TABLE_COUNT] = len(tables)
     for index, table in enumerate(tables, start=1):
         declared_name = table.get(qn("table", "name"))
         location = context_location(table, "table", index, declared_name)

@@ -10,11 +10,28 @@ from pathlib import Path
 import pytest
 
 from odfa11y.errors import ReportError
-from odfa11y.report import RULES, Location, Report, Severity, exit_status, render_reports, rules
+from odfa11y.report import (
+    RULES,
+    FactKeys,
+    FactSet,
+    Location,
+    Report,
+    Severity,
+    exit_status,
+    render_reports,
+    rules,
+)
 
 
 def _report() -> Report:
-    report = Report(kind="odf", subject="sample.odt", metadata={"title": "T", "styles": [1, 2]})
+    report = Report(
+        kind="odf",
+        subject="sample.odt",
+        facts=FactSet({
+            FactKeys.DOCUMENT_TITLE: "T",
+            FactKeys.FIDELITY_RASTER_CHANGED_RATIOS: [0.0, 1.0],
+        }),
+    )
     report.add(
         rules.TXT030,
         "Needs review",
@@ -31,8 +48,8 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
         "Check: no errors",
         "Findings: 0 error(s), 1 warning(s), 0 info",
     ]
-    assert "  title: T" in lines
-    assert "  styles: 2 record(s)" in lines
+    assert "  document.title: T" in lines
+    assert "  fidelity.raster_changed_ratios: 2 record(s)" in lines
     assert "  WARNING TXT030: Needs review" in lines
     assert "    location: content/paragraph[2]" in lines
     assert any(line.strip() == "remedy: text.remediation.linkify_plain_addresses" for line in lines)
@@ -41,7 +58,7 @@ def test_text_report_shows_result_metadata_finding_and_remedy() -> None:
 
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     single = json.loads(render_reports([_report()], output_format="json"))
-    assert single["format"] == 5
+    assert single["format"] == 6
     assert single["kind"] == "odf"
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]

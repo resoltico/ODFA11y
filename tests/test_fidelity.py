@@ -10,6 +10,7 @@ import pytest
 from odfa11y.errors import ToolFailedError
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.fidelity import compare as comparison
+from odfa11y.report import FactKeys
 
 from .pdf_fixtures import text_pdf
 
@@ -52,7 +53,7 @@ def test_identical_documents_pass_with_zero_difference(tmp_path: Path) -> None:
     right = text_pdf(tmp_path / "b.pdf", [LINES])
     report = compare(tmp_path, left, right)
     assert report.findings == []
-    assert report.metadata["raster_max_changed_ratio"] == 0.0
+    assert report.facts[FactKeys.FIDELITY_RASTER_MAX_CHANGED_RATIO] == 0.0
     assert not (tmp_path / "diff").exists()
 
 

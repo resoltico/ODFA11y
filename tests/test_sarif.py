@@ -13,7 +13,16 @@ from jsonschema import Draft7Validator
 from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, ReportError
 from odfa11y.pdf import check_pdfua
-from odfa11y.report import Finding, Location, Report, Severity, render_reports, rules
+from odfa11y.report import (
+    FactKeys,
+    FactSet,
+    Finding,
+    Location,
+    Report,
+    Severity,
+    render_reports,
+    rules,
+)
 
 from .documents import Variant, make_flat, make_package
 from .test_verapdf import report_xml, stub
@@ -118,7 +127,10 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
     source = _source(tmp_path, "sample.odb")
     connection = "postgres://alice:super-secret@database/private"
     report = Report(
-        kind="odf", subject=str(source), sources=(source,), metadata={"url": connection}
+        kind="odf",
+        subject=str(source),
+        sources=(source,),
+        facts=FactSet({FactKeys.DOCUMENT_DESCRIPTION: connection}),
     )
     report.add(rules.META001, f"{connection} at {source}", details={"connection": connection})
     rendered = render_reports([report], output_format="sarif", source_root=tmp_path)

@@ -16,6 +16,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt
 from .native_resource_fixtures import writer_resource
@@ -37,7 +38,7 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
     source = writer_resource(tmp_path, href)
     report = audit_odf(source)
     assert "ODF012" in {finding.rule_id for finding in report.findings}
-    assert report.metadata["native_export_limitations"]["rendering_dependencies"] == 1
+    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
     with pytest.raises(ToolFailedError, match="rendering dependencies"):
         require_native_context(OdfDocument.open(source))
     # Verify reaches the explicit native refusal even without any installed application.

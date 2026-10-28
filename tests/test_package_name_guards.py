@@ -84,7 +84,7 @@ def _assert_guarded_refusal(
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == [rule]
     assert "complete inspection" in report.findings[0].message
-    assert not report.metadata
+    assert not report.facts
     planned, template = prepare_template(source)
     assert [finding.rule_id for finding in planned.findings] == [rule]
     assert template is None

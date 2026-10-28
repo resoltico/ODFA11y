@@ -19,7 +19,7 @@ from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
-from odfa11y.report import Location, Severity, rules
+from odfa11y.report import FactKeys, Location, Severity, rules
 
 from .documents import OASIS, Variant, make_flat, make_package
 
@@ -38,7 +38,7 @@ def test_an_unrecognised_media_type_stops_the_audit_with_one_finding(tmp_path: P
     path = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
     report = audit_odf(path)
     assert "ODF005" in ids(report)
-    assert report.metadata.get("adapter") is None
+    assert report.facts.get(FactKeys.DOCUMENT_ADAPTER) is None
 
 
 def test_a_body_that_contradicts_the_media_type_is_an_error(tmp_path: Path) -> None:
@@ -58,7 +58,7 @@ def test_a_misleading_extension_is_only_a_warning(tmp_path: Path) -> None:
     report = audit_odf(make_package(tmp_path, "text", Variant(extension=".ods")))
     finding = next(f for f in report.findings if f.rule_id == "ODF007")
     assert finding.severity is Severity.WARNING
-    assert report.metadata["document_kind"] == "text"  # the extension never selects the kind
+    assert report.facts[FactKeys.DOCUMENT_KIND] == "text"  # the extension never selects the kind
 
 
 def test_a_package_without_mimetype_falls_back_to_the_manifest(tmp_path: Path) -> None:
@@ -143,7 +143,7 @@ def test_setting_the_language_on_a_flat_text_document_edits_its_default_style(
     destination = tmp_path / "out.fodt"
     remediate(source, destination, [SetMetadata(language="fr-FR")])
     report = audit_odf(destination)
-    assert report.metadata["language"] == "fr-FR"
+    assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in ids(report)
 
 
@@ -220,7 +220,7 @@ def test_a_new_family_needs_only_a_registry_entry(
     )
     monkeypatch.setitem(REGISTRY, Family.PRESENTATION, presentation)
     report = audit_odf(make_package(tmp_path, "presentation"))
-    assert report.metadata["adapter"] == "presentation"
+    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "presentation"
     assert any(f.message == "Presentation adapter ran." for f in report.findings)
 
 

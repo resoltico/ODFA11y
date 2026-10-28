@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import Part, qn
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .expression import expression, fingerprint
 
@@ -72,7 +72,7 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
         )
         return
     nodes = [node for node in root.iter() if isinstance(node.tag, str)]
-    report.metadata["mathml_element_count"] = len(nodes)
+    report.facts[FactKeys.FORMULA_ELEMENT_COUNT] = len(nodes)
     if not any(_meaningful(node) for node in nodes):
         report.add(rules.MATH001, "The mathematical expression is empty.", location=location)
     if not (root.get("alttext") or "").strip():

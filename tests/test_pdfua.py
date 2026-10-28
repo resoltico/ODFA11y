@@ -12,6 +12,7 @@ from odfa11y.errors import OutputError, ToolFailedError, ToolNotFoundError
 from odfa11y.external_tools import ToolIdentity
 from odfa11y.odf import PackageStorage
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, find_soffice, validate_pdfua
+from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt
 
@@ -57,8 +58,8 @@ def test_libreoffice_pdfua_export_has_core_markers(
     )
     report = audit_pdfua(pdf)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
-    assert report.metadata["pdfua_part"] == 1
-    assert report.metadata["language"] == "en-GB"
+    assert report.facts[FactKeys.PDF_UA_PART] == 1
+    assert report.facts[FactKeys.PDF_LANGUAGE] == "en-GB"
     assert not [p for p in tmp_path.iterdir() if p.name.startswith(".doc.pdf")]
 
 
@@ -79,7 +80,7 @@ def test_libreoffice_export_content_is_fully_tagged(
     pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
     assert not {f.rule_id for f in report.findings} & {"PDF020", "PDF021", "PDF022", "PDF023"}
-    assert report.metadata["marked_content_ids"] >= 1
+    assert report.facts[FactKeys.PDF_MARKED_CONTENT_ID_COUNT] >= 1
 
 
 @pytest.mark.integration
@@ -124,7 +125,7 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
         "PDF017",
         "PDF018",
     }
-    assert report.metadata["link_structure_elements"] >= 1
+    assert report.facts[FactKeys.PDF_LINK_STRUCTURE_ELEMENT_COUNT] >= 1
     result = validate_pdfua(pdf, executable=verapdf)
     failed = {(f.clause, f.test_number) for f in result.failures}
     assert "PDF019" in {f.rule_id for f in report.findings}
@@ -149,7 +150,7 @@ def test_a_hyperlink_wrapped_over_several_lines_is_one_correct_link(
     wrapped = package.save(tmp_path / "wrapped.odt")
     pdf = export_pdfua(wrapped, tmp_path / "wrapped.pdf", ExportSettings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
-    assert report.metadata["link_annotations"] >= 2  # one annotation per wrapped line
+    assert report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] >= 2  # one annotation per wrapped line
     assert not {f.rule_id for f in report.findings} & {"PDF016", "PDF017", "PDF018"}
 
 

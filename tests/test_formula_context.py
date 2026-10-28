@@ -22,6 +22,7 @@ from odfa11y.content.formula_syntax import (
 from odfa11y.errors import ToolFailedError
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.pipeline import export_document
+from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt
 
@@ -131,8 +132,8 @@ def test_every_standard_formula_attribute_reaches_the_native_guard(
     assert not (tmp_path / "destination.pdf").exists()
     report = audit_odf(source)
     assert "ODF012" in {f.rule_id for f in report.findings}
-    assert "credentials" not in str(report.metadata)
-    assert report.metadata["native_export_limitations"]["formula_declarations"] == 1
+    assert "credentials" not in str(report.facts)
+    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_declarations"] == 1
     assert source.read_bytes() == original
 
 

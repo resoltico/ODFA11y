@@ -43,7 +43,7 @@ def test_audit_prints_json_for_one_file_and_an_array_for_several(
     second = make_minimal_odt(tmp_path / "b.odt")
     assert main(["audit", str(first), "--format", "json"]) == 0
     one = json.loads(capsys.readouterr().out)
-    assert (one["kind"], one["passed"], one["metadata"]["title"]) == (
+    assert (one["kind"], one["passed"], one["facts"]["document.title"]) == (
         "odf",
         True,
         "Synthetic accessible document",
@@ -80,7 +80,7 @@ def test_audit_with_schema_flag_validates(
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
     assert main(["audit", str(source), "--schema", "--format", "json"]) == 0
-    assert json.loads(capsys.readouterr().out)["metadata"]["schema_violations"] == 0
+    assert json.loads(capsys.readouterr().out)["facts"]["schema.violation_count"] == 0
 
 
 def test_missing_verapdf_is_a_warning_not_a_crash(
@@ -249,7 +249,7 @@ def test_export_compare_and_pipeline_with_real_libreoffice(
     assert (
         main(["compare", str(source), str(source), "--soffice", soffice, "--format", "json"]) == 0
     )
-    assert json.loads(capsys.readouterr().out)["metadata"]["raster_max_changed_ratio"] == 0.0
+    assert json.loads(capsys.readouterr().out)["facts"]["fidelity.raster_max_changed_ratio"] == 0.0
     assert main(["audit", str(pdf)]) == 0
     capsys.readouterr()
     arguments = ["pipeline", str(source), "--config", str(config(tmp_path)), "--soffice", soffice]

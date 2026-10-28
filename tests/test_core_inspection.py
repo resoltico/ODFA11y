@@ -9,6 +9,7 @@ import pytest
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pipeline import audit_document, inspection
+from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import tagged_writer
@@ -24,7 +25,7 @@ def test_core_dispatch_uses_content_and_applies_odf_schema(
     reports = list(audit_document(odf, schema=True, verapdf=True))
     assert len(reports) == 1
     assert reports[0].kind == "odf"
-    assert reports[0].metadata["schema_violations"] == 0
+    assert reports[0].facts[FactKeys.SCHEMA_VIOLATION_COUNT] == 0
     assert reports[0].sources == (odf,)
     output = capsys.readouterr()
     assert not output.out

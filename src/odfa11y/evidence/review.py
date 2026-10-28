@@ -85,9 +85,9 @@ def _facts(stages: list[dict[str, Any]]) -> list[str]:
     facts = []
     for stage in stages:
         report = stage.get("report")
-        if not report or not report["metadata"]:
+        if not report or not report["facts"]:
             continue
-        for key, value in sorted(report["metadata"].items()):
+        for key, value in sorted(report["facts"].items()):
             if isinstance(value, (str, int, float, bool)):
                 facts.append(f"- `{stage['name']}` {key}: {value}")
     return facts

@@ -13,6 +13,7 @@ from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
 from odfa11y.pdf_content import scan_content
+from odfa11y.report import FactKeys
 
 from .pdf_fixtures import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
 
@@ -83,7 +84,7 @@ def set_content(writer: PdfWriter, operators: str) -> None:
 def test_content_that_every_element_and_sequence_agrees_on_has_no_findings(tmp_path: Path) -> None:
     report = audit(tmp_path, tagged_writer(["H1", ("L", [("LI", ["P"])]), "P"]))
     assert not content_findings(report)
-    assert report.metadata["marked_content_ids"] == 3
+    assert report.facts[FactKeys.PDF_MARKED_CONTENT_ID_COUNT] == 3
 
 
 def test_marked_content_no_structure_element_refers_to_is_an_error(tmp_path: Path) -> None:

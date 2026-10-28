@@ -9,7 +9,7 @@ from odfa11y.content import native_export_limitations
 from odfa11y.errors import PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.report import Report, rules
+from odfa11y.report import FactKeys, Report, rules
 
 from .metadata import audit_metadata
 from .package import (
@@ -71,7 +71,7 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
     if not _parseable(document, report):
         return report
     adapter = adapter_for(document.kind)
-    report.metadata["adapter"] = adapter.name
+    report.facts[FactKeys.DOCUMENT_ADAPTER] = adapter.name
     audit_versions(document, report)
     audit_metadata(document, adapter, report)
     adapter.audit(document, report)
@@ -113,7 +113,7 @@ def _describe(exc: PackageError | OSError, source: Path) -> str:
 
 def _audit_export_context(document: OdfDocument, report: Report) -> None:
     limits = native_export_limitations(document)
-    report.metadata["native_export_limitations"] = limits
+    report.facts[FactKeys.NATIVE_LIMITATIONS] = limits
     if limits["rendering_dependencies"]:
         report.add(rules.ODF012, details={"count": limits["rendering_dependencies"]})
     if limits["location_fields"]:

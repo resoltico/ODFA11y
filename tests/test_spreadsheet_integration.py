@@ -19,6 +19,7 @@ from odfa11y.odf import OdfDocument, Part
 from odfa11y.pdf import ExportSettings, export_pdfua, validate_pdfua
 from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 from .spreadsheet_fixtures import (
     HIDDEN_SHEET_STYLE,
@@ -138,8 +139,8 @@ def test_libreoffice_authored_packages_are_recognised_and_audited(
     assert spreadsheet_rules == {f"SHEET00{n}" for n in (2, 3, 4, 5, 6, 7, 8)}
     hidden = next(f for f in report.findings if f.rule_id == "SHEET008")
     assert hidden.details == {"sheets": ["Data"], "rows": 1, "columns": 0}
-    assert report.metadata["adapter"] == "spreadsheet"
-    assert report.metadata["sheet_count"] == 3
+    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "spreadsheet"
+    assert report.facts[FactKeys.SHEET_COUNT] == 3
 
 
 def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_name(
