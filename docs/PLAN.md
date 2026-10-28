@@ -316,6 +316,93 @@ Use the audit's canonical target and mandatory fingerprint.
 }
 ```
 
+### `language.target`
+
+Scope: target.
+
+Use the audit's canonical target and mandatory fingerprint.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "western": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "format": "odfa11y-language-tag"
+    },
+    "asian": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "format": "odfa11y-language-tag"
+    },
+    "complex": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "format": "odfa11y-language-tag"
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "western"
+      ],
+      "properties": {
+        "western": {
+          "not": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "required": [
+        "asian"
+      ],
+      "properties": {
+        "asian": {
+          "not": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "required": [
+        "complex"
+      ],
+      "properties": {
+        "complex": {
+          "not": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
 ### `link.description`
 
 Scope: target.

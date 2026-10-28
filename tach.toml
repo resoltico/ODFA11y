@@ -82,7 +82,7 @@ depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.repor
 
 [[modules]]
 path = "odfa11y.families.text"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions", "odfa11y.native.probes", "odfa11y.native.probe_sources", "odfa11y.native.probe_pdf"]
+depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions", "odfa11y.native.probes", "odfa11y.native.probe_sources", "odfa11y.native.probe_pdf", "odfa11y.language_tags"]
 
 [[modules]]
 path = "odfa11y.families.spreadsheet"

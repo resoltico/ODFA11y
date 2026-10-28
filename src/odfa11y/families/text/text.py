@@ -14,6 +14,7 @@ from odfa11y.content import table_content_fingerprint, visible_words
 from odfa11y.odf import qn
 
 from .contexts import text_nodes
+from .language.styles import normalized_language_tree
 from .spacing import normalized_spacing_tree
 
 INERT_ATTRIBUTES = {
@@ -63,7 +64,11 @@ def visible_text_snapshot(
         if any(parent.tag == qn("table", "table") for parent in node.iterancestors()):
             continue
         if node.tag == qn("table", "table"):
-            table = normalized_spacing_tree(document, node) if document is not None else node
+            table = (
+                normalized_spacing_tree(document, normalized_language_tree(document, node))
+                if document is not None
+                else node
+            )
             blocks.append("table:" + table_content_fingerprint(table, document))
         else:
             text = visible_words(node)

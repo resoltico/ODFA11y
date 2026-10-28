@@ -75,6 +75,13 @@ class FactKeys:
             "Paragraph style usage and effective spacing.",
         )
     )
+    TEXT_EFFECTIVE_LANGUAGES = _register(
+        FactKey[list[dict[str, object]]](
+            "text.effective_languages",
+            list[dict[str, object]],
+            "Per-target effective western, Asian and complex languages or refusal reasons.",
+        )
+    )
     TEXT_REFERENCE_COUNT = _register(
         FactKey[int](
             "text.reference_count", int, "Internal links and typed cross-reference fields."

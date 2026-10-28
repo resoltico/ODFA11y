@@ -366,7 +366,18 @@ def is_generated_from(
 
 
 def adopt_style(catalog: StyleCatalog, style: etree._Element) -> None:
-    """Insert a derived style among the content part's automatic styles and index it."""
+    """Insert a derived style among the content part's automatic styles and index it.
+
+    Raises
+    ------
+    RemediationError
+        The style does not declare its family.
+
+    """
+    family = style.get(qn("style", "family"))
+    if not family:
+        message = "An adopted style must declare its family."
+        raise RemediationError(message)
     auto_styles = catalog.content_tree.find("office:automatic-styles", NS)
     if auto_styles is None:
         root = catalog.content_tree.getroot()
@@ -375,7 +386,7 @@ def adopt_style(catalog: StyleCatalog, style: etree._Element) -> None:
         insert_at = root.index(body) if body is not None else len(root)
         root.insert(insert_at, auto_styles)
     auto_styles.append(style)
-    catalog.register("paragraph", style)
+    catalog.register(family, style)
 
 
 def set_spacing(style: etree._Element, spacing: dict[str, str]) -> None:

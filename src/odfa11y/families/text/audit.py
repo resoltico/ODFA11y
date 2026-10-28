@@ -19,6 +19,7 @@ from odfa11y.report import FactKeys, Location, rules
 
 from .contexts import context_location, has_revisions, text_nodes
 from .decisions import LINKIFY_ADDRESSES, REMOVE_SPACERS
+from .language.audit import audit_languages
 from .links import URI_RE, split_trailing_punctuation
 from .lists import audit_lists
 from .prose import prose_slots
@@ -49,6 +50,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
         ),
     ):
         report.add(rules.HIDDEN001)
+    audit_languages(document, report)
     audit_lists(document, report)
     audit_references(document, report)
     audit_headings(content, report, document)

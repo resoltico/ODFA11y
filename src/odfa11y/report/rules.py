@@ -152,6 +152,14 @@ TABLE002 = _rule("TABLE002", ERROR, SEM, "Table grid or header bands cannot be r
 TABLE003 = _rule(
     "TABLE003", WARNING, SEM, "Data-like table has no semantic headers.", ("table.headers",)
 )
+LANG004 = _rule(
+    "LANG004",
+    WARNING,
+    SEM,
+    "Target has no established language declaration.",
+    ("language.target",),
+)
+LANG005 = _rule("LANG005", WARNING, SEM, "Effective target language cannot be resolved safely.")
 REFERENCE001 = _rule("REFERENCE001", ERROR, LNK, "Reference destination is missing.")
 REFERENCE002 = _rule("REFERENCE002", ERROR, LNK, "Reference destination is ambiguous.")
 REFERENCE003 = _rule(

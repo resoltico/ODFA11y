@@ -10,10 +10,12 @@ from odfa11y.content import GraphicAlternative, LinkDescription
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import GraphicAlternativeAnswer, LinkDescriptionAnswer, SwitchAnswer
 from odfa11y.decisions.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
+from odfa11y.decisions.validation import LANGUAGE_TAG_FORMAT
 from odfa11y.odf import Family
 
 from .graphics import SetGraphicAlternatives, SetLinkDescriptions
 from .headings import MAX_HEADING_LEVEL, HeadingLevel, SetHeadingLevels
+from .language.operations import SetTargetLanguages, TargetLanguage
 from .linkify import LinkifyAddresses
 from .remove_spacers import RemoveEmptySpacers
 from .spacing import NormalizeSpacing
@@ -25,6 +27,16 @@ if TYPE_CHECKING:
     from odfa11y.adapter import Operation
     from odfa11y.decisions import Decision
     from odfa11y.odf import OdfDocument
+
+
+@dataclass(frozen=True, slots=True)
+class TargetLanguageAnswer:
+    """Explicit language overrides for one paragraph or inline reading target."""
+
+    western: str | None = field(default=None, metadata={"schema": {"format": LANGUAGE_TAG_FORMAT}})
+    asian: str | None = field(default=None, metadata={"schema": {"format": LANGUAGE_TAG_FORMAT}})
+    complex: str | None = field(default=None, metadata={"schema": {"format": LANGUAGE_TAG_FORMAT}})
+    required_any: ClassVar[tuple[str, ...]] = ("western", "asian", "complex")
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +119,9 @@ TABLE_HEADERS = DecisionKind(
 TEXT_SPACING = DecisionKind(
     "text.spacing", DecisionScope.DOCUMENT, TextSpacingAnswer, FAMILIES, NormalizeSpacing.name
 )
+TARGET_LANGUAGE = DecisionKind(
+    "language.target", DecisionScope.TARGET, TargetLanguageAnswer, FAMILIES, SetTargetLanguages.name
+)
 DECISION_KINDS = (
     LINKIFY_ADDRESSES,
     REMOVE_SPACERS,
@@ -115,6 +130,7 @@ DECISION_KINDS = (
     TABLE_HEADERS,
     TEXT_SPACING,
     LINK_DESCRIPTION,
+    TARGET_LANGUAGE,
 )
 
 
@@ -172,6 +188,15 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
                     exact_reference=answer.exact_reference,
                     include_headings=answer.include_headings,
                 )
+            )
+        elif decision.kind == TARGET_LANGUAGE:
+            answer = decision.answer_as(TargetLanguageAnswer)
+            result.append(
+                SetTargetLanguages({
+                    decision.target_path: TargetLanguage(
+                        answer.western, answer.asian, answer.complex, decision.fingerprint
+                    )
+                })
             )
         elif decision.kind == LINK_DESCRIPTION:
             answer = decision.answer_as(LinkDescriptionAnswer)

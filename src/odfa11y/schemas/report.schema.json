@@ -266,6 +266,58 @@
                 "type": "string"
               },
               "kind": {
+                "const": "language.target"
+              },
+              "rule_ids": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kind",
+              "target",
+              "fingerprint",
+              "current",
+              "rule_ids"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "current": {
+                "type": "object"
+              },
+              "fingerprint": {
+                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                "type": "string"
+              },
+              "kind": {
                 "const": "link.description"
               },
               "rule_ids": {
@@ -837,6 +889,14 @@
         "text.bookmark_count": {
           "description": "Bookmark destinations in current reading contexts.",
           "type": "integer"
+        },
+        "text.effective_languages": {
+          "description": "Per-target effective western, Asian and complex languages or refusal reasons.",
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
         },
         "text.graphic_count": {
           "description": "Graphic objects in current reading contexts.",
