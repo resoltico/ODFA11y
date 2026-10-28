@@ -61,8 +61,8 @@ uv run --no-sync python -m tools.generate_reference --check
 ```
 
 One module generates rules, plan fields, CLI/options/exits, schema listing and measured
-capabilities. Refresh the committed doctor measurement deliberately after actual native
-qualification; generation/checking itself never runs native tools. Keep task guides short
+capabilities. The current [doctor measurement](measurements/doctor.json) supplies the capability matrix;
+update it only from an actual qualified native run. Generation never runs native tools. Keep task guides short
 and link to the canonical [boundaries](ACCESSIBILITY.md). Check Markdown links/anchors.
 
 ## Native document fixtures
@@ -82,7 +82,7 @@ is not an accessible publication. Fixtures/hashes alone do not establish semanti
   authoring macros. Inspection itself executes no macros, SQL or connections.
 
 Shared fixtures live under `tests/fixtures`; tests follow owner packages and `tests/native`.
-Moves retain assertions/markers; eight-family conformance covers the shared contracts.
+Eight-family conformance covers the shared contracts.
 Hypothesis uses the deterministic required profile; `--hypothesis-profile=smoke` is for
 iteration only. Successful pytest scratch is cleaned best-effort; failed/abrupt runs can
 retain evidence. These settings do not impose a disk quota or OS sandbox.

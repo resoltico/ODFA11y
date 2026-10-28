@@ -33,8 +33,8 @@ pagination = "same"
 Each registered decision kind defines its fields. Document decisions bind through
 the header. Targeted decisions additionally require the canonical target path and
 16-character fingerprint printed by the audit or plan command. Do not invent
-fingerprints or infer answers from filenames. Unknown fields, old configuration
-tables, invalid types and missing binding metadata are rejected.
+fingerprints or infer answers from filenames. Only registered decision tables and declared
+fields are accepted; invalid types and missing binding metadata are rejected.
 
 `--rebind` explicitly permits a different source digest. It does not bypass target
 fingerprints or preservation checks. Reapplying a reviewed answer to a remediated

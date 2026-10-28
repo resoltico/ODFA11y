@@ -42,7 +42,7 @@ no destination. Production runs reject warnings and require veraPDF; review the 
 - [Fidelity](docs/FIDELITY.md): text, URI and rendered-ink comparison policy.
 - [Accessibility](docs/ACCESSIBILITY.md) and [measured capabilities](docs/CAPABILITIES.md): source, native, PDF and human boundaries.
 - [Development](docs/DEVELOPING.md), [architecture](docs/ARCHITECTURE.md) and [releases](docs/RELEASING.md): contribute and qualify artifacts.
-- [Rules](docs/RULES.md), [roadmap](docs/ROADMAP.md) and [changelog](CHANGELOG.md).
+- [Rules](docs/RULES.md) and [changelog](CHANGELOG.md).
 
 ## License
 

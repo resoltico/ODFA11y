@@ -1,6 +1,0 @@
-{
-  "published": true,
-  "exit_status": 0,
-  "unreviewed_body_published": true,
-  "condition": "Replace source after model load, before source digest check"
-}
