@@ -55,7 +55,7 @@ def test_renames_apply_once_then_report_unchanged_and_stay_schema_valid(
     assert statuses(operation, document) == (Status.APPLIED,)
     assert sheet_names(document) == ["Budget", "Notes"]
     assert statuses(operation, document) == (Status.UNCHANGED,)
-    assert document.edit_count == 1
+    assert document.dirty == frozenset({document.member_name(Part.CONTENT)})
     assert validate(document).count == before.count
 
 
@@ -67,7 +67,7 @@ def test_an_unknown_sheet_fails_the_whole_operation_before_any_edit(
     outcomes = SetSheetNames({"Sheet1": "Budget", "Missing": "Other"}).apply(document)
     assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Missing")]
     assert "No unique sheet is named 'Missing'" in outcomes[0].message
-    assert document.edit_count == 0
+    assert not document.dirty
     assert sheet_names(document) == ["Sheet1", "Notes"]
 
 
@@ -80,7 +80,7 @@ def test_a_new_name_that_collides_with_another_sheet_is_refused_whatever_its_cas
         outcomes = SetSheetNames({"Sheet1": new}).apply(document)
         assert outcomes[0].status is Status.FAILED
         assert "already named" in outcomes[0].message
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 @by_layout
@@ -99,7 +99,7 @@ def test_names_a_spreadsheet_application_rejects_are_refused(tmp_path: Path, new
     [outcome] = SetSheetNames({"Sheet1": new}).apply(document)
     assert outcome.status is Status.FAILED
     assert "not a usable sheet name" in outcome.message
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 @pytest.mark.parametrize("new", ["Budget 2024", "It's", "Ünïcode", "1", "a.b"])
@@ -123,7 +123,7 @@ def test_swaps_chains_and_shared_targets_are_refused(
     outcomes = SetSheetNames(entries).apply(document)
     assert outcomes
     assert {o.status for o in outcomes} == {Status.FAILED}
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 def test_two_sheets_with_one_name_cannot_be_addressed(tmp_path: Path) -> None:
@@ -151,7 +151,7 @@ def test_a_sheet_a_formula_refers_to_by_name_is_not_renamed(
     [outcome] = SetSheetNames({"Notes": "Memo"}).apply(document)
     assert outcome.status is Status.FAILED
     assert "may refer to it by name" in outcome.message
-    assert document.edit_count == 0
+    assert not document.dirty
     assert "Notes" in sheet_names(document)
 
 
@@ -204,7 +204,7 @@ def test_a_document_with_embedded_charts_refuses_every_rename(tmp_path: Path) ->
     [outcome] = SetSheetNames({"Sheet1": "Budget"}).apply(document)
     assert outcome.status is Status.FAILED
     assert "embeds charts" in outcome.message
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 def test_a_failed_rename_is_reported_with_every_other_failure(tmp_path: Path) -> None:
@@ -229,14 +229,14 @@ def test_dynamic_reference_functions_block_a_rename(
     formula = referencing(f"of:={function}(&quot;Notes&quot;&amp;&quot;.A1&quot;)")
     document = open_sheets(tmp_path, layout, *PLAIN, formula)
     assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 def test_embedded_scripts_block_a_rename(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
     document.storage.write_member("Basic/Standard/Module1.xml", b"script")
     assert statuses(SetSheetNames({"Notes": "Memo"}), document) == (Status.FAILED,)
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 def test_duplicate_targets_are_not_treated_as_a_completed_rename(tmp_path: Path) -> None:

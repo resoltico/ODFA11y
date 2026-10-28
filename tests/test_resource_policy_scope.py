@@ -24,7 +24,7 @@ def test_form_operation_navigation_is_not_the_graphical_resource(tmp_path: Path,
     source = declaration(tmp_path, kind, "Pictures/asset.png")
     document = OdfDocument.open(source)
     document.storage.write_member("Pictures/asset.png", b"asset")
-    node = document.edit(Part.CONTENT).find(".//" + qn("form", kind.removeprefix("form-")))
+    node = document.tree(Part.CONTENT).find(".//" + qn("form", kind.removeprefix("form-")))
     assert node is not None
     node.set(qn("xlink", "href"), "https://example.test/operate")
     document.save(source)
@@ -40,7 +40,7 @@ def test_metadata_template_provenance_differs_from_replacement_document(
 ) -> None:
     source = make_package(tmp_path, "text")
     document = OdfDocument.open(source)
-    parent = document.edit(Part.META).find(qn("office", "meta"))
+    parent = document.tree(Part.META).find(qn("office", "meta"))
     assert parent is not None
     node = etree.SubElement(parent, qn("meta", kind))
     node.set(qn("xlink", "type"), "simple")
@@ -65,7 +65,7 @@ def test_chart_self_data_is_a_context_not_an_image_file(tmp_path: Path, href: st
     )
     document = OdfDocument.open(source)
     if href is None:
-        node = document.edit(Part.CONTENT).find(".//" + qn("chart", "chart"))
+        node = document.tree(Part.CONTENT).find(".//" + qn("chart", "chart"))
         assert node is not None
         node.attrib.pop(qn("xlink", "href"))
         node.attrib.pop(qn("xlink", "type"))

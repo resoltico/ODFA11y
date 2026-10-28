@@ -63,10 +63,10 @@ def test_nested_graphic_visual_drift_rejects_group_link_and_page_decisions(
     assert graphics_fingerprint(document, [group]) != graphic
     assert link_fingerprint(document, link) != hyperlink
     assert page_fingerprint(page, document) != overview
-    before = document.edit_count
+    before = document.checkpoint()
     for operation in operations:
         assert operation.apply(document)[0].status == Status.FAILED
-    assert document.edit_count == before
+    assert not document.changed_since(before)
 
 
 @pytest.mark.parametrize("make", [make_package, make_flat])
@@ -172,12 +172,12 @@ def test_valid_conditional_graphic_style_context_refuses_all_reviewed_metadata(
     assert properties is not None
     properties.set(qn("draw", "fill-color"), "#ffffff")
     assert validate(document).count == 0
-    before = document.edit_count
+    before = document.checkpoint()
     for operation in operations:
         outcomes = operation.apply(document)
         assert outcomes[0].status == Status.FAILED
         assert "Conditional graphic style mapping is not established" in outcomes[0].message
-    assert document.edit_count == before
+    assert not document.changed_since(before)
 
 
 @pytest.mark.parametrize("make", [make_package, make_flat])
@@ -233,8 +233,8 @@ def test_page_style_conditional_mapping_refuses_reviewed_metadata(
             title="Reviewed page", fingerprint=page_fingerprint(page, document)
         )
     })
-    before = document.edit_count
+    before = document.checkpoint()
     outcome = operation.apply(document)[0]
     assert outcome.status == Status.FAILED
     assert "Conditional graphic style mapping is not established" in outcome.message
-    assert document.edit_count == before
+    assert not document.changed_since(before)

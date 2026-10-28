@@ -14,7 +14,7 @@ from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.fidelity import compare_pdfs
-from odfa11y.odf import OdfDocument, declared_version
+from odfa11y.odf import OdfDocument, Use, declared_version
 from odfa11y.outcomes import (
     PIPELINE_STAGES,
     ProgressEvent,
@@ -80,7 +80,9 @@ class _Run:
             return StageResult(
                 StageName.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False
             )  # audit-source explains
-        if document.protection.inspection_blocked:
+        try:
+            document.require(Use.AUDIT)
+        except PackageError:
             return StageResult(
                 StageName.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False
             )  # audit-source explains

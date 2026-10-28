@@ -56,9 +56,8 @@ class NormalizeSpacing(Operation):
         if isinstance(plan, tuple):
             return plan
         catalog = catalog_of(document)
-        changed = sum(_ensure_style(document, catalog, base, plan.spacing) for base in plan.needed)
+        changed = sum(_ensure_style(catalog, base, plan.spacing) for base in plan.needed)
         for paragraph in plan.direct:
-            document.edit(Part.CONTENT)
             paragraph.set(qn("text", "style-name"), derived_style_name(_style_key(paragraph)))
             changed += 1
         if not changed:
@@ -146,18 +145,14 @@ def _conflict(catalog: StyleCatalog, base: str) -> str | None:
     )
 
 
-def _ensure_style(
-    document: OdfDocument, catalog: StyleCatalog, base: str, spacing: dict[str, str]
-) -> int:
+def _ensure_style(catalog: StyleCatalog, base: str, spacing: dict[str, str]) -> int:
     name = derived_style_name(base)
     existing = catalog.style("paragraph", name)
     if existing is not None:
         if catalog.own_spacing(name) == spacing:
             return 0
-        document.edit(Part.CONTENT)
         set_spacing(existing, spacing)
         return 1
-    document.edit(Part.CONTENT)
     adopt_style(
         catalog,
         derive_paragraph_style(catalog, None if base == NO_STYLE else base, name, spacing),

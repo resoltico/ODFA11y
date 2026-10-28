@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 def _style(document: OdfDocument, name: str, *, automatic: bool = False) -> etree._Element:
-    tree = document.edit(Part.CONTENT if automatic else Part.STYLES)
+    tree = document.tree(Part.CONTENT if automatic else Part.STYLES)
     container = tree.find("office:automatic-styles" if automatic else "office:styles", NS)
     assert container is not None
     return etree.SubElement(
@@ -39,14 +39,14 @@ def _style(document: OdfDocument, name: str, *, automatic: bool = False) -> etre
 
 
 def _empty(document: OdfDocument, style: str) -> etree._Element:
-    body = document.edit(Part.CONTENT).find("office:body/office:text", NS)
+    body = document.tree(Part.CONTENT).find("office:body/office:text", NS)
     assert body is not None
     return etree.SubElement(body, qn("text", "p"), {qn("text", "style-name"): style})
 
 
 def test_foreign_style_cannot_shadow_a_real_page_break(tmp_path: Path) -> None:
     document = OdfDocument.open(make_minimal_odt(tmp_path / "original.odt"))
-    authored = document.edit(Part.STYLES).find("office:styles/style:style[@style:name='Body']", NS)
+    authored = document.tree(Part.STYLES).find("office:styles/style:style[@style:name='Body']", NS)
     assert authored is not None
     props = authored.find("style:paragraph-properties", NS)
     assert props is not None
@@ -135,7 +135,7 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
 
 def test_spacing_refuses_conditional_target_before_creating_a_style(tmp_path: Path) -> None:
     document = OdfDocument.open(make_minimal_odt(tmp_path / "original.odt"))
-    target = document.edit(Part.STYLES).find(
+    target = document.tree(Part.STYLES).find(
         "office:styles/style:style[@style:name='BodyTight']", NS
     )
     assert target is not None
@@ -174,9 +174,9 @@ def _ambiguous_style(document: OdfDocument, style: etree._Element, problem: str)
         for _ in range(2):
             etree.SubElement(style, qn("style", "paragraph-properties"))
     elif problem == "containers":
-        etree.SubElement(document.edit(Part.STYLES).getroot(), qn("office", "styles"))
+        etree.SubElement(document.tree(Part.STYLES).getroot(), qn("office", "styles"))
     elif problem == "default":
-        container = document.edit(Part.STYLES).find("office:styles", NS)
+        container = document.tree(Part.STYLES).find("office:styles", NS)
         assert container is not None
         etree.SubElement(
             container, qn("style", "default-style"), {qn("style", "family"): "paragraph"}
@@ -190,7 +190,7 @@ def test_inherited_page_number_reset_protects_empty_paragraphs(
 ) -> None:
     document = OdfDocument.open(make_minimal_odt(tmp_path / "original.odt"))
     if scope == "default":
-        style = document.edit(Part.STYLES).find("office:styles/style:default-style", NS)
+        style = document.tree(Part.STYLES).find("office:styles/style:default-style", NS)
         assert style is not None
     else:
         style = _style(document, "PageControl", automatic=scope == "automatic")
@@ -239,7 +239,7 @@ def test_optional_styles_absence_is_distinct_from_an_unrecognized_styles_root(
                     cut.writestr(member, full.read(member.filename))
     else:
         document = OdfDocument.open(original)
-        document.edit(Part.STYLES).getroot().tag = qn("office", "document-content")
+        document.tree(Part.STYLES).getroot().tag = qn("office", "document-content")
         document.save(source)
     output = tmp_path / "out.odt"
     if missing:

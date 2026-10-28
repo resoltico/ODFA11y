@@ -95,14 +95,12 @@ class GraphicRoleEditor(GraphicStyles):
             problem = self._existing_problem(shape, style, found)
             if problem:
                 raise ValueError(problem)
-            self.document.edit(Part.CONTENT)
             props = found[0].find("style:graphic-properties", NS)
             if props is None:
                 props = etree.SubElement(found[0], qn("style", "graphic-properties"))
             props.set(ROLE, str(decorative).lower())
         else:
             self._adopt(style)
-        self.document.edit(Part.CONTENT)
         original = normalized_role_attributes(self.document, shape)
         for attr in STYLE_ATTRIBUTES:
             shape.attrib.pop(attr, None)
@@ -159,7 +157,7 @@ class GraphicRoleEditor(GraphicStyles):
     def _adopt(self, style: etree._Element) -> None:
         family = style.get(qn("style", "family"), "")
         name = style.get(qn("style", "name"), "")
-        root = self.document.edit(Part.CONTENT).getroot()
+        root = self.document.tree(Part.CONTENT).getroot()
         auto = root.find("office:automatic-styles", NS)
         if auto is None:
             auto = etree.Element(qn("office", "automatic-styles"))

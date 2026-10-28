@@ -86,7 +86,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     soffice = external_tool("soffice", "libreoffice")
     source = make_minimal_odt(tmp_path / "story.odt")
     document = OdfDocument.open(source)
-    paragraph = document.edit(Part.CONTENT).find(".//text:p", NS)
+    paragraph = document.tree(Part.CONTENT).find(".//text:p", NS)
     assert paragraph is not None
     paragraph.text = "Filename: "
     field = etree.SubElement(paragraph, qn("text", "file-name"))
@@ -130,7 +130,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
 
 def _set_navigation_base(source: Path) -> None:
     document = OdfDocument.open(source)
-    link = document.edit(Part.CONTENT).find(".//text:a", NS)
+    link = document.tree(Part.CONTENT).find(".//text:a", NS)
     assert link is not None
     link.set("{http://www.w3.org/XML/1998/namespace}base", "https://example.test/docs/")
     document.save(source)

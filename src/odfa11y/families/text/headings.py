@@ -62,7 +62,6 @@ class SetHeadingLevels(Operation):
         for target, heading, level in decisions:
             changed = heading.get(qn("text", "outline-level")) != str(level)
             if changed:
-                document.edit(Part.CONTENT)
                 heading.set(qn("text", "outline-level"), str(level))
             outcomes.append(
                 Outcome(

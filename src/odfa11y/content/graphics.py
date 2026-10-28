@@ -73,7 +73,7 @@ class GraphicEditor:
         for key, text in self.entries.items():
             changed = 0
             for frame in matched[key]:
-                edited = set_description(document, frame, text)
+                edited = set_description(frame, text)
                 if text.decorative is not None:
                     edited = roles.set_role(frame, decorative=text.decorative) or edited
                 changed += edited
@@ -223,7 +223,7 @@ class GraphicEditor:
                 )
 
 
-def set_description(document: OdfDocument, frame: etree._Element, text: GraphicAlternative) -> bool:
+def set_description(frame: etree._Element, text: GraphicAlternative) -> bool:
     """Edit supplied description fields in the standard order for the element.
 
     Returns
@@ -240,7 +240,6 @@ def set_description(document: OdfDocument, frame: etree._Element, text: GraphicA
         node = frame.find(tag)
         if node is not None and (node.text or "") == value:
             continue
-        document.edit(Part.CONTENT)
         if node is None:
             node = etree.Element(tag)
             frame.insert(_accessibility_position(frame, tag), node)

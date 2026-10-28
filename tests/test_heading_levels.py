@@ -64,7 +64,7 @@ def test_all_targets_are_preflighted_before_an_edit(tmp_path: Path) -> None:
         "content/heading[2]": HeadingLevel(2, "stale"),
     })
     assert all(o.status is Status.FAILED for o in operation.apply(doc))
-    assert doc.edit_count == 0
+    assert not doc.dirty
     assert etree.tostring(doc.tree(Part.CONTENT)) == original
     headings[1].text = "Edited after review"
     stale = SetHeadingLevels({"content/heading[2]": HeadingLevel(2, "stale")})
@@ -76,7 +76,7 @@ def test_direct_api_rejects_invalid_levels(tmp_path: Path, level: object) -> Non
     doc = OdfDocument.open(make_package(tmp_path, "text", Variant(body=BODY)))
     operation = SetHeadingLevels({"content/heading[id=first]": HeadingLevel(cast("int", level))})
     assert operation.apply(doc)[0].status is Status.FAILED
-    assert doc.edit_count == 0
+    assert not doc.dirty
 
 
 def test_duplicate_xml_identity_and_unreviewed_ordinals_are_rejected(tmp_path: Path) -> None:
@@ -85,13 +85,15 @@ def test_duplicate_xml_identity_and_unreviewed_ordinals_are_rejected(tmp_path: P
         SetHeadingLevels({"content/heading[2]": HeadingLevel(2)}).apply(doc)[0].status
         is Status.FAILED
     )
+    assert not doc.dirty
     headings = select_elements(doc.tree(Part.CONTENT), "//text:h")
     headings[1].set("{http://www.w3.org/XML/1998/namespace}id", "first")
+    checkpoint = doc.checkpoint()
     assert (
         SetHeadingLevels({"content/heading[id=first]": HeadingLevel(2)}).apply(doc)[0].status
         is Status.FAILED
     )
-    assert doc.edit_count == 0
+    assert not doc.changed_since(checkpoint)
 
 
 def test_named_identity_is_escaped_and_ordinal_fingerprint_detects_reordering(

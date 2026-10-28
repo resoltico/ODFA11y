@@ -23,7 +23,7 @@ def _style(
     automatic: bool = False,
 ) -> etree._Element:
     part = Part.CONTENT if automatic else Part.STYLES
-    root = document.edit(part).getroot()
+    root = document.tree(part).getroot()
     styles = root.find("office:automatic-styles" if automatic else "office:styles", NS)
     if styles is None:
         styles = etree.Element(qn("office", "automatic-styles" if automatic else "styles"))

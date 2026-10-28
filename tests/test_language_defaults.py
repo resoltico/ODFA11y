@@ -48,7 +48,7 @@ def test_language_preserves_all_subtags_and_replaces_stale_defaults(
     source = (make_flat if flat else make_package)(tmp_path, "text")
     document = OdfDocument.open(source)
     SetMetadata(language="en-GB").apply(document)
-    default = document.edit(Part.STYLES).find("office:styles/style:default-style", NS)
+    default = document.tree(Part.STYLES).find("office:styles/style:default-style", NS)
     assert default is not None
     props = default.find("style:text-properties", NS)
     assert props is not None
@@ -112,7 +112,7 @@ def test_malformed_tags_fail_before_other_metadata_changes(tmp_path: Path, tag: 
 def test_ambiguous_defaults_fail_before_metadata_changes(tmp_path: Path, target: str) -> None:
     document = OdfDocument.open(make_package(tmp_path, "text"))
     SetMetadata(language="en-GB").apply(document)
-    styles = document.edit(Part.STYLES)
+    styles = document.tree(Part.STYLES)
     node = styles.find(
         "office:styles" if target == "styles" else "office:styles/style:default-style", NS
     )
@@ -152,7 +152,7 @@ def test_native_reload_measures_three_defaults_and_preserves_named_override(
     soffice = external_tool("soffice", "libreoffice")
     document = OdfDocument.open(make_minimal_odt(tmp_path / "original.odt"))
     SetMetadata(language="en-GB").apply(document)
-    container = document.edit(Part.STYLES).find("office:styles", NS)
+    container = document.tree(Part.STYLES).find("office:styles", NS)
     assert container is not None
     named = etree.SubElement(container, qn("style", "style"))
     named.set(qn("style", "name"), "AuthoredLanguage")
@@ -160,7 +160,7 @@ def test_native_reload_measures_three_defaults_and_preserves_named_override(
     props = etree.SubElement(named, qn("style", "text-properties"))
     props.set(qn("fo", "language"), "fr")
     props.set(qn("fo", "country"), "FR")
-    paragraph = document.edit(Part.CONTENT).find(".//text:p", NS)
+    paragraph = document.tree(Part.CONTENT).find(".//text:p", NS)
     assert paragraph is not None
     paragraph.set(qn("text", "style-name"), "AuthoredLanguage")
     assert SetMetadata(language=tag).apply(document)[0].status is Status.APPLIED
@@ -228,14 +228,14 @@ def test_family_defaults_keep_authored_named_and_automatic_overrides(
 ) -> None:
     document = OdfDocument.open(make_package(tmp_path, kind))
     SetMetadata(language="en-GB").apply(document)
-    container = document.edit(Part.STYLES).find("office:styles", NS)
+    container = document.tree(Part.STYLES).find("office:styles", NS)
     assert container is not None
     named = etree.SubElement(container, qn("style", "style"))
     named.set(qn("style", "name"), "ReviewedLanguage")
     named.set(qn("style", "family"), family)
     props = etree.SubElement(named, qn("style", "text-properties"))
     props.set(qn("style", "rfc-language-tag"), "de-1996")
-    content = document.edit(Part.CONTENT)
+    content = document.tree(Part.CONTENT)
     automatic = etree.Element(qn("office", "automatic-styles"))
     content.getroot().insert(0, automatic)
     automatic.append(etree.fromstring(etree.tostring(named)))

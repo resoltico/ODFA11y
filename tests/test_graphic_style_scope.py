@@ -30,7 +30,7 @@ def test_nested_foreign_style_payload_never_suppresses_real_graphic_alternatives
     tmp_path: Path, kind: str
 ) -> None:
     document, frame = _graphic(tmp_path)
-    body = document.edit(Part.CONTENT).find("office:body/office:text", NS)
+    body = document.tree(Part.CONTENT).find("office:body/office:text", NS)
     assert body is not None
     foreign = etree.SubElement(body, "{urn:example:opaque}payload")
     container = etree.SubElement(foreign, qn("office", kind))
@@ -52,13 +52,13 @@ def test_duplicate_applicable_style_containers_refuse_role_edits(
     tmp_path: Path, part: Part, kind: str
 ) -> None:
     document, frame = _graphic(tmp_path)
-    etree.SubElement(document.edit(part).getroot(), qn("office", kind))
+    etree.SubElement(document.tree(part).getroot(), qn("office", kind))
     role = effective_graphic_role(document, frame)
     assert role.problem
     operation = _decision(document, frame, decorative=True)
-    before = document.edit_count
+    before = document.checkpoint()
     assert operation.apply(document)[0].status == Status.FAILED
-    assert document.edit_count == before
+    assert not document.changed_since(before)
 
 
 def test_common_generated_name_is_not_proven_output_and_cannot_shadow_a_peer(
@@ -70,7 +70,7 @@ def test_common_generated_name_is_not_proven_output_and_cannot_shadow_a_peer(
     frame.set(qn("draw", "style-name"), "Visual")
     parent = frame.getparent()
     assert parent is not None
-    document.edit(Part.CONTENT)
+    document.tree(Part.CONTENT)
     peer = deepcopy(frame)
     peer.set(qn("draw", "name"), "Peer")
     parent.append(peer)
@@ -79,7 +79,7 @@ def test_common_generated_name_is_not_proven_output_and_cannot_shadow_a_peer(
     props = candidate.find("style:graphic-properties", NS)
     assert props is not None
     props.set(qn("draw", "decorative"), "false")
-    common = document.edit(Part.STYLES).find("office:styles", NS)
+    common = document.tree(Part.STYLES).find("office:styles", NS)
     assert common is not None
     common.append(candidate)
     peer.set(qn("draw", "style-name"), name)
@@ -107,7 +107,7 @@ def test_duplicate_graphic_properties_are_unresolved_and_cannot_hide_alternative
 
     document, frame = _graphic(tmp_path)
     if default:
-        common = document.edit(Part.STYLES).find("office:styles", NS)
+        common = document.tree(Part.STYLES).find("office:styles", NS)
         assert common is not None
         style = etree.SubElement(
             common, qn("style", "default-style"), {qn("style", "family"): "graphic"}
@@ -117,14 +117,14 @@ def test_duplicate_graphic_properties_are_unresolved_and_cannot_hide_alternative
         )
     else:
         style = _style(document, "Role", role="true")
-        document.edit(Part.CONTENT)
+        document.tree(Part.CONTENT)
         frame.set(qn("draw", "style-name"), "Role")
     etree.SubElement(style, qn("style", "graphic-properties"), {qn("draw", "decorative"): "false"})
     assert effective_graphic_role(document, frame).problem
     operation = _decision(document, frame, decorative=False)
-    before = document.edit_count
+    before = document.checkpoint()
     assert operation.apply(document)[0].status == Status.FAILED
-    assert document.edit_count == before
+    assert not document.changed_since(before)
     source = document.save(tmp_path / "ambiguous-properties.odt")
     assert {"GRAPHIC001", "TXT010"} <= {finding.rule_id for finding in audit_odf(source).findings}
 
@@ -135,7 +135,7 @@ def test_odf13_decorative_declaration_is_unresolved_and_retains_missing_alternat
 
     document, frame = _graphic(tmp_path, "1.3")
     _style(document, "Role", role="true")
-    document.edit(Part.CONTENT)
+    document.tree(Part.CONTENT)
     frame.set(qn("draw", "style-name"), "Role")
     assert effective_graphic_role(document, frame).problem
     source = document.save(tmp_path / "unsupported-role.odt")

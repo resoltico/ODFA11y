@@ -31,7 +31,7 @@ pytestmark = pytest.mark.integration
 def _writer_bullets(directory: Path) -> Path:
     source = writer_resource(directory)
     document = OdfDocument.open(source)
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     styles = etree.Element(qn("office", "styles"))
     meta = root.find(qn("office", "meta"))
     assert meta is not None
@@ -68,7 +68,7 @@ def test_real_native_declaration_renders_the_expected_asset(
         source = declaration(tmp_path, "fill", "Pictures/control.png", active=True)
         document = OdfDocument.open(source)
         document.storage.write_member("Pictures/control.png", png_bytes())
-        manifest = document.edit(Part.MANIFEST)
+        manifest = document.tree(Part.MANIFEST)
         entry = etree.SubElement(manifest.getroot(), qn("manifest", "file-entry"))
         entry.set(qn("manifest", "full-path"), "Pictures/control.png")
         entry.set(qn("manifest", "media-type"), "image/png")

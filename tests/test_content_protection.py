@@ -32,7 +32,7 @@ class DamagePayload(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        tree = document.edit(Part.CONTENT)
+        tree = document.tree(Part.CONTENT)
         if self.member is None:
             select_elements(tree, "//office:binary-data")[0].text = "YmFk"
         else:
@@ -49,7 +49,7 @@ class DamageCellValue(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        cell = select_elements(document.edit(Part.CONTENT), "//table:table-cell")[0]
+        cell = select_elements(document.tree(Part.CONTENT), "//table:table-cell")[0]
         cell.set(qn("office", "value"), "99")
         return (Outcome(self.name, Status.APPLIED, "Damaged value", count=1),)
 
@@ -98,7 +98,7 @@ def test_direct_graphic_api_rejects_nonstring_metadata_before_any_edit(
     doc = OdfDocument.open(source)
     operation = SetGraphicAlternatives({"Logo": GraphicAlternative(description=cast("str", value))})
     assert operation.apply(doc)[0].status is Status.FAILED
-    assert doc.edit_count == 0
+    assert not doc.dirty
 
 
 def test_protected_xml_retains_qname_value_bindings_and_ignores_unused_metadata_bindings() -> None:

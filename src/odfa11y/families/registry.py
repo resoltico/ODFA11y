@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import UnsupportedKindError
-from odfa11y.odf import Family, OdfDocument
+from odfa11y.odf import Family, OdfDocument, Use
 
 from .chart import ADAPTER as CHART_ADAPTER
 from .database import ADAPTER as DATABASE_ADAPTER
@@ -80,9 +80,7 @@ def style_usage(source: str | Path) -> list[StyleUsage]:
 
     """
     document = OdfDocument.open(source)
-    if document.protection.inspection_blocked:
-        msg = "Protected, ambiguous, unsafe or malformed package cannot establish style inspection."
-        raise UnsupportedKindError(msg)
+    document.require(Use.STYLE)
     style_report = adapter_for(document.kind).style_report
     if style_report is None:
         kind = document.kind.name if document.kind is not None else "unrecognised"

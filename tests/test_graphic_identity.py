@@ -99,11 +99,12 @@ def test_payload_drift_is_detected_before_any_graphic_edit(
     reviewed = graphics_fingerprint(document, [frame])
     document.storage.write_member(member, b"changed resource")
     assert graphics_fingerprint(document, [frame]) != reviewed
+    checkpoint = document.checkpoint()
     result = SetGraphicAlternatives({
         "Logo": GraphicAlternative("Title", fingerprint=reviewed)
     }).apply(document)
     assert result[0].status is Status.FAILED
-    assert document.edit_count == 0
+    assert not document.changed_since(checkpoint)
     assert frame.find(qn("svg", "title")) is None
 
 

@@ -70,14 +70,26 @@ caches and root distribution/build outputs are excluded; nested domain directori
 
 [OdfStorage](../src/odfa11y/odf/storage.py) exposes logical parts (`content`, `styles`,
 `meta`, `settings`, `manifest`) over package members or one flat XML tree.
-[OdfDocument](../src/odfa11y/odf/document.py) parses a member once and shares that tree
-between checks and operations. `tree(part)` provides the mutable cached tree for reading;
-callers must use `edit(part)` before modification so the member is marked for serialization.
-This is caller discipline, not an immutable-tree API. Audits neither edit nor save sources.
+[OdfDocument](../src/odfa11y/odf/document.py) parses a member once and shares its mutable
+cached tree between checks and operations. `tree(part)` needs no edit declaration:
+checkpoints compare full XML serialization digests before/after each operation. Newly
+parsed unchanged parts do not count as edits. Full serialization retains namespace
+bindings used only in attribute values, which C14N 2.0 can discard; see the
+[measurement and counterexample](verification/0.8.0-digests.json).
 
-`save()` serializes only edited members. Untouched package members remain byte-identical;
-flat logical parts share one serialized tree. Storage validates output and replaces the
-destination atomically. Package output keeps `mimetype` first and uncompressed.
+Checkpoints invalidate derived family state when observed trees change. An operation may
+update its own catalogue while it runs; the next operation receives fresh derived state.
+Replacing stored XML behind an already cached tree refuses and requires reopening the
+model. The parsed tree and its raw identity come from one securely parsed byte buffer.
+
+`save()` serializes only changed trees; untouched member payloads remain byte-identical.
+Flat logical parts share one tree. Storage validates output and publishes atomically;
+package output keeps `mimetype` first and uncompressed. Corpus tests assert that audits
+change neither live trees nor source bytes.
+
+`document.require(Use)` owns protection/access decisions for audit, planning, remediation,
+native export and style inspection. Blocked views raise `PackageError`; audit translates
+those declarations into source findings without inspecting protected body content.
 
 Protection declarations are inspected before semantic XML selection. Signed packages can
 be inspected without establishing signature validity, but remediation refuses them even
@@ -148,8 +160,8 @@ that would duplicate structural objects or XML/drawing identities also refuses.
 
 The [executor](../src/odfa11y/remediation/apply.py) checks family applicability and optional
 whole-plan preflight, then checks operation-specific protection after each operation.
-Edit accounting applies per operation: reporting any applied outcome requires a recorded
-edit, while an unchanged operation must record none. Failed outcomes prevent publication.
+Edit accounting applies per operation: reporting an applied outcome requires an actual
+XML change, while an unchanged operation must make none. Failed outcomes prevent publication.
 Final checks compare family snapshots, counted inert-spacer removals and opaque resources.
 Opaque package members outside standard editable parts and flat embedded binary payloads
 are protected separately.

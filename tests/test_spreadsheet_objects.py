@@ -60,7 +60,7 @@ def test_alt_text_is_applied_once_then_unchanged_and_stays_schema_valid(
         ("desc", "The company logo"),
     ]
     assert statuses(operation, document) == (Status.UNCHANGED,)
-    assert document.edit_count == 2
+    assert document.dirty == frozenset({document.member_name(Part.CONTENT)})
     assert validate(document).count == before.count
 
 
@@ -102,7 +102,7 @@ def test_a_selector_that_matches_nothing_fails_everything_before_any_edit(
     })
     outcomes = operation.apply(document)
     assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Nowhere")]
-    assert document.edit_count == 0
+    assert not document.dirty
     assert frame_text(document, "Logo") == [("image", None)]
 
 
@@ -117,7 +117,7 @@ def test_a_fingerprint_binds_the_entry_to_the_frame_that_was_reviewed(
     [outcome] = wrong.apply(document)
     assert outcome.status is Status.FAILED
     assert "no longer the object" in outcome.message
-    assert document.edit_count == 0
+    assert not document.dirty
     assert statuses(right, document) == (Status.APPLIED,)
     assert statuses(right, document) == (Status.UNCHANGED,)
 

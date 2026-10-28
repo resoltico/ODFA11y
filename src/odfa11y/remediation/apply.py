@@ -10,7 +10,7 @@ from odfa11y.adapter import Status
 from odfa11y.content import opaque_payloads
 from odfa11y.errors import OutputError, RemediationError
 from odfa11y.families import adapter_for
-from odfa11y.odf import OdfDocument, regressions, validate
+from odfa11y.odf import OdfDocument, Use, regressions, validate
 from odfa11y.outcomes import StageStatus
 from odfa11y.records import SchemaCheck
 
@@ -56,9 +56,7 @@ def remediate(
     source, destination = Path(source), Path(destination)
     _require_distinct(source, destination)
     document = OdfDocument.open(source)
-    if document.protection.signatures or document.protection.inspection_blocked:
-        msg = "Protected, ambiguous or malformed package cannot be remediated; nothing was written."
-        raise RemediationError(msg)
+    document.require(Use.REMEDIATE)
     if document.kind is None:
         msg = f"{source.name} is not a recognised OpenDocument document; nothing was written."
         raise RemediationError(msg)
@@ -71,7 +69,12 @@ def remediate(
     payloads_before = opaque_payloads(document)
     schema_before = validate(document)
 
-    outcomes = _apply_operations(document, adapter, operations)
+    outcomes, accounting_failures = _apply_operations(document, adapter, operations)
+    if opaque_payloads(document) != payloads_before:
+        msg = "Opaque document resources changed during remediation; nothing was written."
+        raise RemediationError(msg)
+    if accounting_failures:
+        raise RemediationError("\n".join(accounting_failures))
     failures = [o for o in outcomes if o.status is Status.FAILED]
     if failures:
         lines = [f"{o.operation}{f' [{o.key}]' if o.key else ''}: {o.message}" for o in failures]
@@ -81,9 +84,6 @@ def remediate(
     removed = sum(o.removed_blocks for o in outcomes)
     if not adapter.preserved(snapshot_before, adapter.snapshot(document), removed):
         msg = "Visible document content changed during remediation; nothing was written."
-        raise RemediationError(msg)
-    if opaque_payloads(document) != payloads_before:
-        msg = "Opaque document resources changed during remediation; nothing was written."
         raise RemediationError(msg)
     schema_check = _schema_check(schema_before, validate(document))
 
@@ -137,14 +137,17 @@ def _require_distinct(source: Path, destination: Path) -> None:
         raise OutputError(msg)
 
 
-def _check_edit_accounting(operation: Operation, outcomes: Sequence[Outcome], edits: int) -> None:
+def _check_edit_accounting(
+    operation: Operation, outcomes: Sequence[Outcome], changed: frozenset[str]
+) -> str | None:
     applied = any(o.status is Status.APPLIED for o in outcomes)
-    if applied != (edits > 0) and not any(o.status is Status.FAILED for o in outcomes):
-        msg = (
+    if applied != bool(changed) and not any(o.status is Status.FAILED for o in outcomes):
+        return (
             f"Internal error: operation {operation.name!r} reported "
-            f"{'a change' if applied else 'no change'} but made {edits} edit(s)."
+            f"{'a change' if applied else 'no change'} but changed {len(changed)} XML member(s)."
         )
-        raise RemediationError(msg)
+
+    return None
 
 
 def _schema_check(before: SchemaResult, after: SchemaResult) -> SchemaCheck:
@@ -192,15 +195,18 @@ def _schema_check(before: SchemaResult, after: SchemaResult) -> SchemaCheck:
 
 def _apply_operations(
     document: OdfDocument, adapter: FamilyAdapter, operations: Sequence[Operation]
-) -> list[Outcome]:
+) -> tuple[list[Outcome], list[str]]:
     outcomes: list[Outcome] = []
+    accounting_failures = []
     for operation in operations:
+        before = document.checkpoint()
         protected = adapter.protect_edit(document, operation) if adapter.protect_edit else None
-        edits_before = document.edit_count
         produced = operation.apply(document)
-        _check_edit_accounting(operation, produced, document.edit_count - edits_before)
+        problem = _check_edit_accounting(operation, produced, document.changed_since(before))
+        if problem:
+            accounting_failures.append(problem)
         outcomes.extend(produced)
         if protected is not None and not protected():
             msg = "Protected document content changed during remediation; nothing was written."
             raise RemediationError(msg)
-    return outcomes
+    return outcomes, accounting_failures

@@ -169,13 +169,10 @@ class PageEditor:
             return tuple(failures)
         outcomes = []
         for name, page, entry in decisions:
-            changed = set_description(
-                document, page, GraphicAlternative(entry.title, entry.description)
-            )
+            changed = set_description(page, GraphicAlternative(entry.title, entry.description))
             if entry.navigation is not None:
                 value = " ".join(entry.navigation)
                 if page.get(qn("draw", "nav-order")) != value:
-                    document.edit(Part.CONTENT)
                     page.set(qn("draw", "nav-order"), value)
                     changed = True
             outcomes.append(

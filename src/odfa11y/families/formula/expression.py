@@ -79,6 +79,5 @@ def set_language(document: OdfDocument, tag: str) -> bool:
     root = expression(document)
     if root is None or root.get(XML_LANGUAGE) == tag:
         return False
-    document.edit(Part.CONTENT)
     root.set(XML_LANGUAGE, tag)
     return True

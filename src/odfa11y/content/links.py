@@ -166,7 +166,6 @@ class LinkEditor:
         for target, link, entry in decisions:
             changed = link.get(qn("office", "title")) != entry.description
             if changed:
-                document.edit(Part.CONTENT)
                 link.set(qn("office", "title"), entry.description)
             outcomes.append(
                 Outcome(

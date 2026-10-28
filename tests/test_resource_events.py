@@ -26,7 +26,7 @@ def test_presentation_events_classify_the_consumed_target_by_action(
 ) -> None:
     source = declaration(tmp_path, "image", None)
     document = OdfDocument.open(source)
-    frame = document.edit(Part.CONTENT).find(".//" + qn("draw", "frame"))
+    frame = document.tree(Part.CONTENT).find(".//" + qn("draw", "frame"))
     assert frame is not None
     listeners = etree.Element(qn("office", "event-listeners"))
     frame.insert(1, listeners)
@@ -58,7 +58,7 @@ def test_form_input_binding_is_distinct_from_form_submission_navigation(
     source = declaration(tmp_path, "form-image", "Pictures/asset.png")
     document = OdfDocument.open(source)
     document.storage.write_member("Pictures/asset.png", b"asset")
-    form = document.edit(Part.CONTENT).find(".//" + qn("form", "form"))
+    form = document.tree(Part.CONTENT).find(".//" + qn("form", "form"))
     assert form is not None
     form.set(qn("form", "datasource"), binding)
     form.set(qn("xlink", "href"), "https://example.test/submit")

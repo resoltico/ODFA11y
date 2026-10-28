@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Read and edit ODF documents: storage, parts, kinds, detection, XML and schema validity."""
 
+from .access import Use
 from .archive import is_unsafe_member_name
 from .body import body_text_snapshot
 from .detect import Detection, declared_version, detect
-from .document import OdfDocument
+from .document import DocumentCheckpoint, OdfDocument
 from .flat import FLAT_MEMBER, FlatXmlStorage
 from .kinds import KINDS, DocumentKind, Family, kind_for_media_type
 from .metadata_part import ensure_metadata_part
@@ -28,6 +29,7 @@ __all__ = [
     "NS",
     "SUPPORTED_VERSIONS",
     "Detection",
+    "DocumentCheckpoint",
     "DocumentKind",
     "Family",
     "FlatXmlStorage",
@@ -36,6 +38,7 @@ __all__ = [
     "PackageStorage",
     "Part",
     "SchemaResult",
+    "Use",
     "Violation",
     "body_text_snapshot",
     "declared_version",

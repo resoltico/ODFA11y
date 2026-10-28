@@ -1,33 +1,52 @@
 # SPDX-License-Identifier: MPL-2.0
-"""A parsed ODF document: trees parsed once, edits tracked, only edited members rewritten."""
+"""Detect live XML changes by content and keep derived state coherent between operations."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import hashlib
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 from lxml import etree
 
-from odfa11y.errors import MissingMemberError
+from odfa11y.errors import MissingMemberError, PackageError
 
+from .access import require_access
 from .detect import detect
 from .opening import open_storage
 from .protection import inspect_protection
+from .storage import Part, parse_member_xml
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from os import PathLike
     from pathlib import Path
 
+    from .access import Use
     from .detect import Detection
     from .kinds import DocumentKind
-    from .storage import OdfStorage, Part
+    from .storage import OdfStorage
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentCheckpoint:
+    """The observed live XML and stored-member identities at an operation boundary."""
+
+    trees: dict[str, str]
+    members: dict[str, str]
+
+
+def _tree_digest(tree: etree._ElementTree) -> str:
+    # C14N 2.0 discards namespace bindings used only by QName-valued attributes.
+    return hashlib.sha256(etree.tostring(tree, encoding="UTF-8")).hexdigest()
 
 
 class OdfDocument:
     """Share one set of parsed XML trees between checks and operations.
 
-    Read with :meth:`tree`; call :meth:`edit` before changing a part so that only edited
-    members are re-serialized and untouched members stay byte-identical.
+    Mutations through :meth:`tree` are detected from serialized content, including
+    namespace bindings used only by attribute values. Untouched members stay byte-identical.
+    Checkpoints invalidate derived caches at operation boundaries.
     """
 
     def __init__(self, storage: OdfStorage) -> None:
@@ -35,10 +54,12 @@ class OdfDocument:
         self.storage = storage
         self.protection = inspect_protection(storage)
         self._trees: dict[str, etree._ElementTree] = {}
-        self._dirty: set[str] = set()
-        self._edits = 0
+        self._original: dict[str, str] = {}
+        self._parsed_sources: dict[str, str] = {}
+        self._observed: dict[str, str] = {}
+        self._initial_members = self._member_digests()
         self._detection: Detection | None = None
-        self._derived: dict[str, Any] = {}
+        self._derived: dict[str, object] = {}
 
     @classmethod
     def open(cls, source: str | PathLike[str]) -> OdfDocument:
@@ -99,24 +120,13 @@ class OdfDocument:
             msg = f"Document has no {part.value} part"
             raise MissingMemberError(msg)
         if name not in self._trees:
-            self._trees[name] = self.storage.parse_xml(name)
+            payload = self.storage.read(name)
+            self._trees[name] = parse_member_xml(name, payload)
+            digest = _tree_digest(self._trees[name])
+            self._original[name] = digest
+            self._parsed_sources[name] = hashlib.sha256(payload).hexdigest()
+            self._observed[name] = digest
         return self._trees[name]
-
-    def edit(self, part: Part) -> etree._ElementTree:
-        """Return a part's tree for modification and record its member as edited.
-
-        Returns
-        -------
-        etree._ElementTree
-            The cached tree.
-
-        """
-        tree = self.tree(part)
-        name = self.member_name(part)
-        if name is not None:
-            self._dirty.add(name)
-        self._edits += 1
-        return tree
 
     def distinct_trees(self, *parts: Part) -> Iterator[etree._ElementTree]:
         """Yield each underlying tree once for the parts that exist.
@@ -138,13 +148,68 @@ class OdfDocument:
 
     @property
     def dirty(self) -> frozenset[str]:
-        """Members that were opened for editing."""
-        return frozenset(self._dirty)
+        """XML members whose live or stored content differs from the initial view."""
+        return self.changed_since(DocumentCheckpoint({}, self._initial_members))
 
-    @property
-    def edit_count(self) -> int:
-        """How many times :meth:`edit` has been called."""
-        return self._edits
+    def require(self, use: Use) -> None:
+        """Establish one protected-content access policy before semantic work.
+
+        The shared access policy raises PackageError for blocked package views.
+
+        """
+        require_access(self.protection, use)
+        self.checkpoint()
+
+    def checkpoint(self) -> DocumentCheckpoint:
+        """Capture XML content and invalidate derived state after observed mutations.
+
+        Returns
+        -------
+        DocumentCheckpoint
+            Digests of live trees and stored standard XML members.
+
+        Raises
+        ------
+        PackageError
+            Stored XML was replaced behind an already parsed tree.
+
+        """
+        members = self._member_digests()
+        if any(members.get(name) != digest for name, digest in self._parsed_sources.items()):
+            msg = "Stored XML changed behind a cached tree; reopen the document before proceeding."
+            raise PackageError(msg)
+        trees = {name: _tree_digest(tree) for name, tree in self._trees.items()}
+        if any(self._observed.get(name) != digest for name, digest in trees.items()):
+            self._derived.clear()
+            self._detection = None
+        self._observed = trees.copy()
+        return DocumentCheckpoint(trees, members)
+
+    def changed_since(self, before: DocumentCheckpoint) -> frozenset[str]:
+        """Compare actual XML content, without treating lazy parsing as an edit.
+
+        Returns
+        -------
+        frozenset[str]
+            Members with changed live trees or stored XML bytes.
+
+        """
+        current = self.checkpoint()
+        changed = {
+            name
+            for name, digest in current.trees.items()
+            if digest != before.trees.get(name, self._original[name])
+        }
+        changed.update(
+            name
+            for name in before.members.keys() | current.members.keys()
+            if before.members.get(name) != current.members.get(name)
+        )
+        return frozenset(changed)
+
+    def _member_digests(self) -> dict[str, str]:
+        names = {name for part in Part if (name := self.member_name(part)) is not None}
+        return {name: hashlib.sha256(self.storage.read(name)).hexdigest() for name in names}
 
     @property
     def detection(self) -> Detection:
@@ -159,7 +224,7 @@ class OdfDocument:
         return self.detection.kind
 
     def derived[T](self, key: str, factory: Callable[[], T]) -> T:
-        """Return state a family derives from the live trees, creating it once.
+        """Return family state cached for the observed tree generation.
 
         Returns
         -------
@@ -169,7 +234,7 @@ class OdfDocument:
         """
         if key not in self._derived:
             self._derived[key] = factory()
-        return self._derived[key]
+        return cast("T", self._derived[key])
 
     def save(self, destination: str | PathLike[str]) -> Path:
         """Serialize edited members and atomically publish the document.
@@ -180,13 +245,15 @@ class OdfDocument:
             The saved destination.
 
         """
-        for name in self._trees:
-            if name in self._dirty:
+        current = self.checkpoint()
+        for name, tree in self._trees.items():
+            if current.trees[name] != self._original[name]:
                 payload = etree.tostring(
-                    self._trees[name],
+                    tree,
                     xml_declaration=True,
                     encoding="UTF-8",
                     standalone=None,
                 )
                 self.storage.write_member(name, payload)
+                self._parsed_sources[name] = hashlib.sha256(payload).hexdigest()
         return self.storage.save(destination)

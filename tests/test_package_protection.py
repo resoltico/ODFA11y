@@ -11,7 +11,7 @@ from lxml import etree
 
 import odfa11y.odf
 from odfa11y.audit import audit_odf, prepare_template
-from odfa11y.errors import RemediationError, UnsupportedKindError
+from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
 from odfa11y.pipeline import export_document
 from odfa11y.remediation import SetMetadata, remediate
@@ -43,7 +43,7 @@ def test_declared_signature_is_unverified_and_all_remediation_refuses(
     destination.write_bytes(b"existing")
     for operations in ([], [SetMetadata(title="Changed")], [SetMetadata()]):
         for dry_run in (False, True):
-            with pytest.raises(RemediationError, match="Protected"):
+            with pytest.raises(PackageError, match="Protected"):
                 remediate(source, destination, operations, dry_run=dry_run)
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"existing"
@@ -138,9 +138,9 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
     destination.write_bytes(b"existing destination")
     for operations in ([], [SetMetadata(title="Changed")], [SetMetadata()]):
         for dry_run in (False, True):
-            with pytest.raises(RemediationError, match="Protected"):
+            with pytest.raises(PackageError, match="Protected"):
                 remediate(source, destination, operations, dry_run=dry_run)
-    with pytest.raises(UnsupportedKindError, match="Encrypted"):
+    with pytest.raises(PackageError, match="encrypted"):
         export_document(source, tmp_path / "out.pdf")
     assert calls == []
     assert source.read_bytes() == original
@@ -155,7 +155,7 @@ def test_malformed_manifest_is_not_protection_absence(tmp_path: Path) -> None:
     storage.save(source)
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == ["XML001"]
-    with pytest.raises(RemediationError, match="malformed"):
+    with pytest.raises(PackageError, match="malformed"):
         remediate(source, tmp_path / "out.odt", [])
 
 
@@ -175,5 +175,5 @@ def test_well_formed_non_manifest_root_is_not_protection_absence(tmp_path: Path)
     storage.save(source)
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == ["XML001"]
-    with pytest.raises(RemediationError, match="malformed"):
+    with pytest.raises(PackageError, match="malformed"):
         remediate(source, tmp_path / "out.odt", [])

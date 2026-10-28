@@ -34,7 +34,7 @@ def test_new_exact_address_wrapper_inside_field_is_rejected(
 
     def corrupt(operation: LinkifyAddresses, document: OdfDocument) -> tuple[Outcome, ...]:
         outcomes = original_apply(operation, document)
-        field = select_elements(document.edit(Part.CONTENT), "//text:page-number")[0]
+        field = select_elements(document.tree(Part.CONTENT), "//text:page-number")[0]
         link = etree.SubElement(field, qn("text", "a"))
         link.set(qn("xlink", "type"), "simple")
         assert field.text is not None
@@ -60,7 +60,7 @@ def test_metadata_normalization_does_not_mask_history_or_foreign_metadata(
 
     def corrupt(operation: SetMetadata, document: OdfDocument) -> tuple[Outcome, ...]:
         outcomes = original_apply(operation, document)
-        tree = document.edit(Part.CONTENT)
+        tree = document.tree(Part.CONTENT)
         node = (
             next(tree.iter("{urn:example:authored}title"))
             if expression == "//foreign:title"
@@ -87,7 +87,7 @@ def test_selected_outer_table_cannot_mask_unselected_nested_header_change(
 
     def corrupt(operation: MarkTableHeaders, document: OdfDocument) -> tuple[Outcome, ...]:
         outcomes = original_apply(operation, document)
-        inner = select_elements(document.edit(Part.CONTENT), "//table:table[@table:name='Inner']")[
+        inner = select_elements(document.tree(Part.CONTENT), "//table:table[@table:name='Inner']")[
             0
         ]
         row = inner.find(qn("table", "table-row"))

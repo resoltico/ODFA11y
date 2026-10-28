@@ -37,7 +37,7 @@ class SetOdfVersion(Operation):
             if document.has(part):
                 root = document.tree(part).getroot()
                 if is_office_element(root) and root.get(qn("office", "version")) != self.version:
-                    document.edit(part).getroot().set(qn("office", "version"), self.version)
+                    document.tree(part).getroot().set(qn("office", "version"), self.version)
                     changed += 1
         changed += self._relabel_manifest(document)
         if not changed:
@@ -60,7 +60,6 @@ class SetOdfVersion(Operation):
         stale = [node for node in targets if node.get(qn("manifest", "version")) != self.version]
         if not stale:
             return 0
-        document.edit(Part.MANIFEST)
         for node in stale:
             node.set(qn("manifest", "version"), self.version)
         return len(stale)

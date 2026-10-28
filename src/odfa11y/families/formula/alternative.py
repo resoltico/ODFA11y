@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.odf import Family, Part
+from odfa11y.odf import Family
 
 from .expression import expression, fingerprint
 
@@ -46,7 +46,6 @@ class SetFormulaAlternative(Operation):
         value = self.text.strip()
         if root.get("alttext") == value:
             return (Outcome(self.name, Status.UNCHANGED, "Formula alternative already matches."),)
-        document.edit(Part.CONTENT)
         root.set("alttext", value)
         return (
             Outcome(self.name, Status.APPLIED, "Set the supplied formula alternative.", count=1),

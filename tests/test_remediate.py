@@ -39,7 +39,7 @@ class Misbehaving(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        content = document.edit(Part.CONTENT)
+        content = document.tree(Part.CONTENT)
         paragraph = select_elements(content, "//text:p")[0]
         if self.action == "change-text":
             paragraph.text = "Different words"

@@ -148,7 +148,7 @@ def test_violations_without_a_location_fall_back_to_counts() -> None:
 
 
 def _bogus(document: OdfDocument, *, at_start: bool) -> etree._Element:
-    body = select_elements(document.edit(Part.CONTENT), "//office:text")[0]
+    body = select_elements(document.tree(Part.CONTENT), "//office:text")[0]
     element = etree.Element(qn("text", "bogus"))
     body.insert(0, element) if at_start else body.append(element)
     return element
@@ -169,6 +169,6 @@ def test_an_unrelated_edit_does_not_turn_an_old_violation_into_a_new_one(tmp_pat
     _bogus(before, at_start=False)
     after = OdfDocument.open(make_minimal_odt(tmp_path / "after.odt"))
     _bogus(after, at_start=False)
-    body = select_elements(after.edit(Part.CONTENT), "//office:text")[0]
+    body = select_elements(after.tree(Part.CONTENT), "//office:text")[0]
     body.insert(0, etree.Element(qn("text", "p")))  # far from the violation
     assert regressions(validate(before), validate(after)) == {}

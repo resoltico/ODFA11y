@@ -78,7 +78,7 @@ def test_a_repeated_merged_cell_crossing_a_boundary_is_rejected(tmp_path: Path, 
     outcome = operation.apply(doc)[0]
     assert outcome.status is Status.FAILED
     assert "merged cell crosses" in outcome.message
-    assert doc.edit_count == 0
+    assert not doc.dirty
 
 
 def test_no_earlier_table_is_mutated_when_a_later_target_fails(tmp_path: Path) -> None:
@@ -91,9 +91,10 @@ def test_no_earlier_table_is_mutated_when_a_later_target_fails(tmp_path: Path) -
     parent.append(second)
     original = etree.tostring(doc.tree(Part.CONTENT))
     operation = MarkTableHeaders({"Data": TableHeaders(columns=1), "Other": TableHeaders(rows=9)})
+    checkpoint = doc.checkpoint()
     assert operation.apply(doc)[0].status is Status.FAILED
     assert etree.tostring(doc.tree(Part.CONTENT)) == original
-    assert doc.edit_count == 0
+    assert not doc.changed_since(checkpoint)
 
 
 def test_nonleading_header_bands_are_rejected_without_rewriting_groups(tmp_path: Path) -> None:
@@ -106,7 +107,7 @@ def test_nonleading_header_bands_are_rejected_without_rewriting_groups(tmp_path:
     outcome = MarkTableHeaders({"Data": TableHeaders(rows=1)}).apply(doc)[0]
     assert outcome.status is Status.FAILED
     assert "Non-leading" in outcome.message
-    assert doc.edit_count == 0
+    assert not doc.dirty
 
 
 @pytest.mark.parametrize("attribute", ["value", "formula", "number-columns-spanned"])
@@ -119,8 +120,9 @@ def test_reviewed_fingerprint_detects_protected_cell_changes(
     cell = select_elements(table, ".//table:table-cell")[0]
     cell.set(qn("office" if attribute == "value" else "table", attribute), "changed")
     operation = MarkTableHeaders({"Data": TableHeaders(columns=1, fingerprint=fingerprint)})
+    checkpoint = doc.checkpoint()
     assert operation.apply(doc)[0].status is Status.FAILED
-    assert doc.edit_count == 0
+    assert not doc.changed_since(checkpoint)
 
 
 @pytest.mark.parametrize(
@@ -139,7 +141,7 @@ def test_repeat_splitting_rejects_duplicate_structural_identity(
     outcome = MarkTableHeaders({"Data": TableHeaders(rows=2)}).apply(doc)[0]
     assert outcome.status is Status.FAILED
     assert "duplicate structural" in outcome.message
-    assert doc.edit_count == 0
+    assert not doc.dirty
 
 
 @pytest.mark.parametrize("repeat", ["0", "-2", "not-a-number"])

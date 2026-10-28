@@ -45,8 +45,8 @@ def test_internal_reference_with_explicit_base_is_unestablished(
     document = OdfDocument.open(source)
     document.storage.write_member("Pictures/asset.png", b"controlled bytes")
     attribute = qn("form", "image-data") if kind == "form-image" else qn("xlink", "href")
-    document.edit(Part.CONTENT)
-    document.edit(Part.STYLES)
+    document.tree(Part.CONTENT)
+    document.tree(Part.STYLES)
     nodes = [
         n
         for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)

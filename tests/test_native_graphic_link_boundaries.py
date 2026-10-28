@@ -37,9 +37,9 @@ def _mixed_graphics(document: OdfDocument) -> etree._Element:
         The peer needing the explicit role decision.
 
     """
-    frame = document.edit(Part.CONTENT).find(".//draw:frame", NS)
+    frame = document.tree(Part.CONTENT).find(".//draw:frame", NS)
     assert frame is not None
-    root = document.edit(Part.CONTENT).getroot()
+    root = document.tree(Part.CONTENT).getroot()
     auto = root.find("office:automatic-styles", NS)
     if auto is None:
         auto = etree.Element(qn("office", "automatic-styles"))
@@ -118,7 +118,7 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     source = writer_resource(tmp_path)
     document = OdfDocument.open(source)
     link = document_links(document)[0]
-    document.edit(Part.CONTENT)
+    document.tree(Part.CONTENT)
     link.attrib.pop(qn("office", "name"), None)
     link.attrib.pop(qn("office", "title"), None)
     missing = document.save(tmp_path / "missing-title.fodt")
@@ -184,9 +184,9 @@ def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
             decorative=False, fingerprint=graphics_fingerprint(document, [group])
         )
     })
-    before = document.edit_count
+    before = document.checkpoint()
     assert operation.apply(document)[0].status == Status.FAILED
-    assert document.edit_count == before
+    assert not document.changed_since(before)
     pdf = export_pdfua(
         source, tmp_path / "nested-group.pdf", ExportSettings("writer_pdf_Export", soffice)
     )

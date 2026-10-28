@@ -89,15 +89,29 @@ class OdfStorage(ABC):
         etree._ElementTree
             The parsed tree.
 
-        Raises
-        ------
-        XmlParseError
-            The member is not well-formed XML.
+        Malformed XML raises XmlParseError from the shared secure parser.
 
         """
-        try:
-            root = parse_secure(self.read(name))
-        except etree.XMLSyntaxError as exc:
-            msg = f"Malformed XML in {name}: {exc}"
-            raise XmlParseError(msg) from exc
-        return root.getroottree()
+        return parse_member_xml(name, self.read(name))
+
+
+def parse_member_xml(name: str, data: bytes) -> etree._ElementTree:
+    """Parse acquired member bytes with the common secure parser and contextual errors.
+
+    Returns
+    -------
+    etree._ElementTree
+        The parsed member tree.
+
+    Raises
+    ------
+    XmlParseError
+        The acquired member is not well-formed XML.
+
+    """
+    try:
+        root = parse_secure(data)
+    except etree.XMLSyntaxError as exc:
+        msg = f"Malformed XML in {name}: {exc}"
+        raise XmlParseError(msg) from exc
+    return root.getroottree()

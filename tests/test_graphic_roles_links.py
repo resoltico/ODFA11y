@@ -111,9 +111,9 @@ def test_unresolved_roles_refuse_without_mutation(tmp_path: Path, problem: str) 
         style.set(qn("style", "family"), "presentation")
         frame.set(qn("presentation", "style-name"), "Presentation")
     operation = _decision(document, frame, decorative=True)
-    edits = document.edit_count
+    checkpoint = document.checkpoint()
     assert operation.apply(document)[0].status == Status.FAILED
-    assert document.edit_count == edits
+    assert not document.changed_since(checkpoint)
     assert effective_graphic_role(document, frame).problem
 
 
@@ -216,7 +216,7 @@ def test_group_role_refuses_and_does_not_hide_child_findings(tmp_path: Path, dec
     _style(document, "Group", role=declared)
     parent = frame.getparent()
     assert parent is not None
-    document.edit(Part.CONTENT)
+    document.tree(Part.CONTENT)
     parent.remove(frame)
     group = etree.SubElement(
         parent, qn("draw", "g"), {qn("draw", "name"): "Group", qn("draw", "style-name"): "Group"}

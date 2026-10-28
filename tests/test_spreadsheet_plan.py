@@ -54,7 +54,7 @@ class EditCell(Operation):
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         [paragraph] = select_elements(document.tree(Part.CONTENT), "//table:table[1]//text:p")[:1]
-        document.edit(Part.CONTENT)
+        document.tree(Part.CONTENT)
         paragraph.text = "changed"
         return (Outcome(self.name, Status.APPLIED, "Edited a cell."),)
 

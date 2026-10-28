@@ -38,7 +38,7 @@ class ChangeMathematics(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        symbol = select_elements(document.edit(Part.CONTENT), "//math:mi")[0]
+        symbol = select_elements(document.tree(Part.CONTENT), "//math:mi")[0]
         symbol.text = "z"
         return (Outcome(self.name, Status.APPLIED, "Changed a symbol", count=1),)
 
@@ -95,7 +95,7 @@ def test_stale_formula_decision_is_rejected_without_edits() -> None:
     document = OdfDocument.open(SOURCE)
     outcome = SetFormulaAlternative("A chosen alternative", "stale").apply(document)[0]
     assert outcome.status is Status.FAILED
-    assert document.edit_count == 0
+    assert not document.dirty
 
 
 def test_mathml_schema_rejects_invalid_expression_content() -> None:

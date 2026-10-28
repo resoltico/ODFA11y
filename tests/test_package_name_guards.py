@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odf, prepare_template
-from odfa11y.errors import RemediationError, UnsupportedKindError
+from odfa11y.errors import PackageError
 from odfa11y.families import style_usage
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, PackageStorage
@@ -92,13 +92,13 @@ def _assert_guarded_refusal(
     destination.write_bytes(b"existing output")
     for operations in ([], [SetMetadata()], [SetMetadata(title="Reviewed")]):
         for dry_run in (False, True):
-            with pytest.raises(RemediationError, match=r"ambiguous|malformed"):
+            with pytest.raises(PackageError, match=r"ambiguous|malformed"):
                 remediate(source, destination, operations, dry_run=dry_run)
     pdf = directory / "existing.pdf"
     pdf.write_bytes(b"existing PDF")
-    with pytest.raises(UnsupportedKindError, match=r"ambiguous|unsafe"):
+    with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
         export_document(source, pdf)
-    with pytest.raises(UnsupportedKindError, match=r"ambiguous|unsafe"):
+    with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
         style_usage(source)
     record = run_pipeline(
         source, [], FidelityPolicy(), directory / "evidence", PipelineOptions(profile="inspect")

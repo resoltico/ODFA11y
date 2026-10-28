@@ -176,7 +176,7 @@ def set_style_language(document: OdfDocument, tag: str, family: str) -> bool:
     }
     if props is not None and all(props.get(key) == value for key, value in desired.items()):
         return False
-    props = _ensure_text_properties(document.edit(Part.STYLES), family)
+    props = _ensure_text_properties(document.tree(Part.STYLES), family)
     for key, value in desired.items():
         if value is None:
             props.attrib.pop(key, None)

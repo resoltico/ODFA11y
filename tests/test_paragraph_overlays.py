@@ -109,7 +109,7 @@ def test_unselected_overlay_consumer_prevents_creating_or_updating_spacing_style
         assert remediate(source, first, [NormalizeSpacing("First reference", ("Base",))]).changed
         source = first
     document = OdfDocument.open(source)
-    root = select_elements(document.edit(Part.CONTENT), "//office:text")[0]
+    root = select_elements(document.tree(Part.CONTENT), "//office:text")[0]
     consumer = etree.SubElement(root, qn("text", "p"))
     consumer.set(qn("text", "style-name"), "Other")
     consumer.set(qn("text", attribute), derived_style_name("Base"))

@@ -19,7 +19,7 @@ def test_intentional_series_gaps_do_not_imply_type_or_cardinality_mismatch(
     tmp_path: Path, gap: str
 ) -> None:
     document = OdfDocument.open(SOURCE)
-    cell = select_elements(document.edit(Part.CONTENT), "//table:table-cell[@office:value]")[0]
+    cell = select_elements(document.tree(Part.CONTENT), "//table:table-cell[@office:value]")[0]
     if gap == "nan":
         cell.set(qn("office", "value"), "NaN")
     else:
@@ -36,7 +36,7 @@ def test_intentional_series_gaps_do_not_imply_type_or_cardinality_mismatch(
 
 def test_billion_value_series_is_checked_without_materializing_repeats(tmp_path: Path) -> None:
     document = OdfDocument.open(SOURCE)
-    tree = document.edit(Part.CONTENT)
+    tree = document.tree(Part.CONTENT)
     row = select_elements(tree, "//table:table-rows/table:table-row")[0]
     row.set(qn("table", "number-rows-repeated"), "1000000000")
     categories = select_elements(tree, "//chart:categories")[0]
@@ -60,7 +60,7 @@ def test_invalid_interior_row_cell_repeat_produces_range_finding_instead_of_cras
     tmp_path: Path,
 ) -> None:
     document = OdfDocument.open(SOURCE)
-    tree = document.edit(Part.CONTENT)
+    tree = document.tree(Part.CONTENT)
     rows = select_elements(tree, "//table:table-rows/table:table-row")
     rows[0].set(qn("table", "number-rows-repeated"), "2")
     rows[0][1].set(qn("table", "number-columns-repeated"), "0")

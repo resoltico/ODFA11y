@@ -96,7 +96,7 @@ def _meta_node(document: OdfDocument, tag: str) -> etree._Element | None:
 
 def _ensure_meta_node(document: OdfDocument, tag: str) -> etree._Element:
     ensure_metadata_part(document)
-    meta = document.edit(Part.META)
+    meta = document.tree(Part.META)
     office_meta = meta.find("office:meta", NS)
     if office_meta is None:
         office_meta = etree.Element(qn("office", "meta"))

@@ -57,14 +57,14 @@ def declaration(directory: Path, kind: str, href: str | None, *, active: bool = 
 
 
 def _style_resource(document: OdfDocument, kind: str, *, active: bool) -> etree._Element:
-    styles = document.edit(Part.STYLES)
+    styles = document.tree(Part.STYLES)
     parent = styles.find(qn("office", "styles"))
     assert parent is not None
     if kind == "fill":
         node = etree.SubElement(parent, qn("draw", "fill-image"))
         node.set(qn("draw", "name"), "ControlFill")
         if active:
-            properties = document.edit(Part.CONTENT).find(".//" + qn("style", "graphic-properties"))
+            properties = document.tree(Part.CONTENT).find(".//" + qn("style", "graphic-properties"))
             assert properties is not None
             properties.set(qn("draw", "fill"), "bitmap")
             properties.set(qn("draw", "fill-image-name"), "ControlFill")
@@ -91,7 +91,7 @@ def _style_resource(document: OdfDocument, kind: str, *, active: bool) -> etree.
 
 def _content_resource(document: OdfDocument, kind: str) -> etree._Element:
     if kind.startswith("form-"):
-        page = document.edit(Part.CONTENT).find(".//" + qn("draw", "page"))
+        page = document.tree(Part.CONTENT).find(".//" + qn("draw", "page"))
         assert page is not None
         forms = etree.Element(qn("office", "forms"))
         before_shapes = next(
@@ -110,7 +110,7 @@ def _content_resource(document: OdfDocument, kind: str) -> etree._Element:
         node.set(qn("form", "id"), "control-image")
         node.set("{http://www.w3.org/XML/1998/namespace}id", "control-image")
     else:
-        node = document.edit(Part.CONTENT).find(".//" + qn("draw", "image"))
+        node = document.tree(Part.CONTENT).find(".//" + qn("draw", "image"))
         assert node is not None
         node.tag = qn("draw", kind)
         node[:] = []
