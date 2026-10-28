@@ -3,7 +3,7 @@
 Restore the [locked environment](../README.md#start-here) and keep the original source.
 Commands recognize packaged/flat ODF by declared media type and PDF by content.
 
-## Inspect
+## Audit
 
 ```sh
 uv run --no-sync odfa11y audit original.odt --schema --format json > before.json

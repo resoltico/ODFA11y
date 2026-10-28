@@ -27,7 +27,7 @@ flowchart LR
 | `content` | Shared ODF vocabulary, identities, references, styles and protected XML primitives. |
 | `families.text` | Contexts, lists, references/notes, effective language, classified tables, visibility, headings, graphics and spacing. |
 | Other family packages | Spreadsheet data; shared presentation/drawing pages; MathML; chart data; image payloads; database declarations. |
-| `source_audit`, `remediation` | Read-only inspection/plan preparation and guarded candidate execution. |
+| `source_audit`, `remediation` | Read-only audit/plan preparation and guarded candidate execution. |
 | `native` | Bounded process control, resource/formula preflight, export and scoped capability probes. |
 | `pdf.reading`, `pdf.fidelity`, `pdf` | Shared bounded consumption, structural PDF inspection, comparison and independent validation. |
 | `pipeline`, `batch`, `evidence` | Assurance stages, serial items, review records, redaction and atomic publication/integrity checks. |

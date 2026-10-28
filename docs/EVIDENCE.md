@@ -41,7 +41,7 @@ bundles with the source's confidentiality; do not attach private bundles to publ
 
 ## Source capture
 
-Planning, remediation and pipeline inspection bind to bounded private regular-file captures.
+Planning, remediation and pipeline audits bind to bounded private regular-file captures.
 Pipeline captures beside the resolved source and uses those exact inspected bytes for
 binding and execution. Aliases resolve first; opened descriptor device/inode identity must
 match the selected file. Nonregular/substituted files refuse before reading. POSIX uses

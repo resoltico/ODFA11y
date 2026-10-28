@@ -1,6 +1,6 @@
 # ODFA11y
 
-Inspect OpenDocument sources, record human decisions, apply guarded changes and check
+Audit OpenDocument sources, record human decisions, apply guarded changes and check
 native PDF/UA-1 exports. ODFA11y supports text, spreadsheet, presentation, drawing,
 formula, chart, image and database source audits. Export support and measured limits
 are described in [Accessibility](docs/ACCESSIBILITY.md).
@@ -22,7 +22,7 @@ uv run --no-sync odfa11y verify evidence
 ```
 
 Python 3.15 or newer is required; [.python-version](.python-version) selects the development
-interpreter. Source inspection needs no office application. Native work needs
+interpreter. Source audits need no office application. Native work needs
 LibreOffice 26.8 or newer; PDF validation needs [veraPDF](https://verapdf.org/) and Java.
 Run `uv run --no-sync odfa11y doctor` to identify tools and measure exporter capabilities.
 
@@ -33,7 +33,7 @@ no destination. Production runs reject warnings and require veraPDF; review the 
 
 ## Choose a task
 
-- [Workflow](docs/WORKFLOW.md): inspect, review, remediate, export and compare.
+- [Workflow](docs/WORKFLOW.md): audit, review, remediate, export and compare.
 - [Plans](docs/PLAN.md): source binding, fingerprints and generated answer reference.
 - [Commands and exit statuses](docs/CLI.md): generated options for every CLI command.
 - [Application API](docs/API.md): root use cases, typed results, `Tools` and `Profile`.
