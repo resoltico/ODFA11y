@@ -83,7 +83,7 @@ The measured standard decorative property exports an undescribed Figure on 26.8.
 retaining `PDF007`/veraPDF failures. An all-decorative image cannot establish meaningful content.
 
 [Generated capabilities](CAPABILITIES.md) link exact tool identities/probe observations;
-[text fixture measurements](verification/0.8.0-text-exports.json) retain narrower results.
+[text fixture measurements](measurements/text-exports.json) retain narrower results.
 Neither implies support for every document or runtime combination.
 
 ## ODF schema validation

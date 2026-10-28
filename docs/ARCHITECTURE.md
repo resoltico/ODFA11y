@@ -44,8 +44,8 @@ and module responsibility are reviewed separately; see [development checks](DEVE
 flat logical parts share one tree. Content checkpoints compare full serialization digests,
 including QName-only namespace bindings, and invalidate derived caches between mutations.
 An operation can update its own catalogue while running. Replacing raw storage behind a
-cached tree refuses and requires reopening. [Measurements](verification/0.8.0-digests.json)
-explain the serialization choice.
+cached tree refuses and requires reopening.
+The [document model](../src/odfa11y/odf/document.py) owns checkpoint and cache behavior.
 
 `require(Use)` centralizes audit/plan/remediation/native access. Audits translate blocked
 views into findings without selecting protected body XML. Saving serializes changed trees

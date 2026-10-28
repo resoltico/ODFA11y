@@ -2,8 +2,8 @@
 
 Import `odfa11y` for supported use cases. Results own `exit_status`; core work produces no
 terminal output. Unusable arguments, inputs, tools and output locations can raise domain
-exceptions. [Executable examples](../tools/core_examples.py) are qualified against an
-installed wheel outside the checkout, without importing the CLI.
+exceptions. [Executable examples](../tools/core_examples.py) exercise the root API without
+importing the CLI; release qualification runs them against an installed wheel outside the checkout.
 
 ```python
 import odfa11y
@@ -40,5 +40,5 @@ Inspect `AuditRun.reports` and `.failures` separately. `.render` produces report
 `.as_dict` produces the [per-input record](SCHEMAS.md). SARIF rendering refuses partial logs;
 use `preflight_sarif` before expensive work. `Plan.for_source`, `Decision`, registered kinds
 and `decode_answer` support programmatic answers; `load_plan` reads reviewed TOML.
-Explicit rebind still enforces fingerprints and preservation. Internal packages have no
-compatibility aliases and low-level model/native calls leave guard policy to their caller.
+Explicit rebind enforces fingerprints and preservation. The root package is the supported
+application surface; low-level model/native calls leave guard policy to their caller.

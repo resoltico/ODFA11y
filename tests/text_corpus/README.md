@@ -20,5 +20,5 @@ Writer numeric cells need explicit number formatting to retain their types.
 
 Positive/negative refer to the feature under test. Short fixtures still have an informational PDF heading
 finding; source-valid reference relationships can have failing exported annotations.
-See [measured PDF results](../../docs/verification/0.8.0-text-exports.json) and
+See [measured PDF results](../../docs/measurements/text-exports.json) and
 [accessibility boundaries](../../docs/ACCESSIBILITY.md). No fixture is an accessibility certificate.

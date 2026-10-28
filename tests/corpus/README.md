@@ -7,7 +7,8 @@ released with the project under MPL-2.0.
 [manifest.toml](manifest.toml) identifies the producer and records each stored document's
 expected audit rule IDs (`rules`), remaining rule IDs after the standard remediation plan
 (`rules_after_plan`), bundled-schema violation count (`schema_violations`) and SHA-256.
-The tests in `tests/test_corpus*.py` verify those expectations and byte identities. Hashes
+The tests in `tests/application/test_corpus.py` and
+`tests/application/test_corpus_remediation.py` verify those expectations and byte identities. Hashes
 identify the stored artifacts; they do not establish semantic correctness.
 
 ## Sources and validation
@@ -43,7 +44,7 @@ and flat forms.
 | `page-breaks-spacers.odt` | Two empty spacer paragraphs and a page break set on a paragraph style. |
 | `table-header-row.odt` | A table with a repeating header row. |
 | `table-merged-cells.odt`, `table-merged-cells.fodt` | A table with cells merged across and down. |
-| `table-no-header-row.odt` | A data table without a header row. |
+| `table-no-header-row.odt` | An untyped table without a header row; its data/layout intent requires review. |
 
 Writer's HTML import leaves an empty paragraph after a table, so the three table documents
 also report the spacer rule. Tests verify that no document contains tracked changes.

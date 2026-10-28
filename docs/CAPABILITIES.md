@@ -2,7 +2,7 @@
 
 Recorded with ODFA11y 0.8.0 on `macOS-27.0.1-arm64-arm-64bit-Mach-O`.
 LibreOffice 26.8.1.1; veraPDF 1.30.3.
-[Doctor record](verification/0.8.0-doctor.json) is the measurement authority.
+[Doctor record](measurements/doctor.json) is the measurement authority.
 
 | Probe | Family | Result |
 | --- | --- | --- |
@@ -17,6 +17,6 @@ Unsupported results do not waive document-level PDF gates. Execution failures ar
 reported separately and retried; only conclusive observations are batch-cached.
 Doctor measures every probe; pipelines select relevant family/decision probes.
 
-The [text-structure measurements](verification/0.8.0-text-exports.json) additionally
+The [text-structure measurements](measurements/text-exports.json) additionally
 record fixture-specific roles and independent validator outcomes. Read the
 [accessibility boundaries](ACCESSIBILITY.md) before interpreting a machine pass.

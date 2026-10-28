@@ -4,26 +4,19 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
-## [0.8.0]
-
-Draft; release date pending.
-
-### Breaking
-
-- Use Python 3.15+ and restore the refreshed lockfile, including major dependency upgrades. Call the root application API with `Tools` and `Profile`; results own their effective exit status.
-- Generate and review source-bound decision plans with `plan`/`--plan`; use explicit `--rebind` for changed sources. Use `verify` and profile `source`; paragraph styles appear in audit output.
-- Consume typed records/facts and the [published schemas](docs/SCHEMAS.md), with concept-based rule IDs; page annotations now warn and fail strict profiles. Progress observers receive typed events, and the validator stage is `validate-pdf`.
-- Invalid arguments/plans exit 4; aggregation precedence is 3 > 4 > 2 > 1 > 0. Refused remediation exits 2; a passing dry run exits 0 without publication.
-- Presentation/drawing share page semantics; native process/export and PDF reading/fidelity have distinct owners. XML content checkpoints replace edit declarations, and family implementations use abstract contracts and typed preservation snapshots.
-
-### Added
-
-- Audit Writer lists, references/notes, effective script-channel language, classified table relationships and revision/visibility scope. Apply guarded per-target language answers; ambiguous intent and reading order retain native/human review.
-- Record scoped exporter probes, source binding, every remediation outcome and explicit refusals. Generated command/plan/rule/schema/capability references describe the current interfaces.
-
-### Fixed
-
-- Bind inspection and execution to the same captured bytes; detect namespace-sensitive XML changes and unstable ordinal language combinations. Count flat drawing layers once and handle absent graphic style names at their source.
+- Requires Python 3.15+; restore the refreshed lockfile, including major dependency upgrades and patched PDF/image handling.
+- Use the root application API with `Tools` and `Profile`; results own exit status. Internal workflow imports have no compatibility aliases.
+- Generate source-bound decisions with `plan`/`--plan`; regenerate old configurations. Changed sources require explicit `--rebind`, with target fingerprints and preservation still enforced.
+- Use `verify` and profile `source`. Paragraph style diagnostics appear in `audit`; the separate `styles` command is removed.
+- Update consumers for typed `facts`/`decisions`, concept rule IDs and [published schemas](docs/SCHEMAS.md). Page annotations now warn and fail strict profiles.
+- Invalid arguments/plans exit 4; aggregation uses 3 > 4 > 2 > 1 > 0. Refused remediation exits 2; passing dry runs exit 0 with no published destination.
+- Progress observers receive typed events; the validator stage is `validate-pdf`. Remediation retains all outcomes and refuses failed candidates atomically.
+- Use `Family.DRAWING`; presentation/drawing share page semantics. Family contracts use typed preservation snapshots; native and PDF responsibilities have distinct owners.
+- Audit Writer lists, references/notes, script-channel language, table relationships and revision/visibility scope. Ambiguous intent and reading order retain native/human review.
+- Apply per-target language decisions without changing wording or unrelated overrides. Ordinal language choices require a separate plan from structural edits.
+- Exporter probes record scoped results and cache conclusive observations per batch. Native limitations never waive document-level PDF checks.
+- Content checkpoints detect namespace-sensitive XML edits and refresh derived caches. Inspection and execution bind to the same captured bytes.
+- Flat drawing layers count once; graphic style cascades handle absent names. Contributor checks retain complexity and dependency boundaries without file/function size caps.
 
 ## [0.7.0] - 2026-10-16
 

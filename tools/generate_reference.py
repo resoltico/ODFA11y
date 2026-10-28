@@ -294,7 +294,7 @@ def capability_reference() -> str:
 
     """
     record = json.loads(
-        (SCHEMA_DIRECTORY.parents[2] / "docs/verification/0.8.0-doctor.json").read_text()
+        (SCHEMA_DIRECTORY.parents[2] / "docs/measurements/doctor.json").read_text()
     )
     toolchain = record["toolchain"]
     lines = [
@@ -305,7 +305,7 @@ def capability_reference() -> str:
             f"LibreOffice {toolchain['libreoffice']['version']}; "
             f"veraPDF {toolchain['verapdf']['version']}."
         ),
-        "[Doctor record](verification/0.8.0-doctor.json) is the measurement authority.",
+        "[Doctor record](measurements/doctor.json) is the measurement authority.",
         "",
         "| Probe | Family | Result |",
         "| --- | --- | --- |",
@@ -321,7 +321,7 @@ def capability_reference() -> str:
         "reported separately and retried; only conclusive observations are batch-cached.",
         "Doctor measures every probe; pipelines select relevant family/decision probes.",
         "",
-        "The [text-structure measurements](verification/0.8.0-text-exports.json) additionally",
+        "The [text-structure measurements](measurements/text-exports.json) additionally",
         "record fixture-specific roles and independent validator outcomes. Read the",
         "[accessibility boundaries](ACCESSIBILITY.md) before interpreting a machine pass.",
         "",
