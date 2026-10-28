@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import zipfile
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, override
 
 import pytest
@@ -151,9 +151,7 @@ def test_new_schema_violations_are_rejected_before_publication(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Isolate the schema regression check from the stronger protected-XML check.
-    monkeypatch.setattr(
-        "odfa11y.remediation.apply.adapter_for", lambda _kind: replace(ADAPTER, protect_edit=None)
-    )
+    monkeypatch.setattr(ADAPTER, "protect_edit", lambda _document, _operation: None)
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     assert_refused(

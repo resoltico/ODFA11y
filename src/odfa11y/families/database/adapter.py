@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.content import protected_xml
 from odfa11y.odf import Family, Part, qn, select_elements
 from odfa11y.outcomes import ReviewTopic
@@ -36,10 +36,6 @@ def _snapshot(document: OdfDocument) -> tuple[str, ...]:
     return tuple(facts)
 
 
-def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed: int) -> bool:
-    return removed == 0 and before == after
-
-
 def _language(document: OdfDocument) -> str | None:
     del document
     return None
@@ -50,17 +46,17 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
     return False
 
 
-ADAPTER = FamilyAdapter(
-    name="database",
-    family=Family.DATABASE,
-    audit=audit_database,
-    default_language=_language,
-    set_default_language=_set_language,
-    snapshot=_snapshot,
-    preserved=_preserved,
-    decision_kinds=DECISION_KINDS,
-    operations=operations,
-    review_items=(
+class DatabaseAdapter(FamilyAdapter):
+    """Implement the database family contract."""
+
+    name = "database"
+    family = Family.DATABASE
+    audit = staticmethod(audit_database)
+    default_language = staticmethod(_language)
+    set_default_language = staticmethod(_set_language)
+    decision_kinds = DECISION_KINDS
+    operations = staticmethod(operations)
+    review_items = (
         ReviewItem(
             ReviewTopic.DATABASE_MEANING,
             "Whether object descriptions explain queries, tables, forms and reports.",
@@ -73,5 +69,19 @@ ADAPTER = FamilyAdapter(
             ReviewTopic.SOURCE_BOUNDARY,
             "Storage stays opaque; connections and PDF export are unsupported.",
         ),
-    ),
-)
+    )
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(_snapshot(document))
+
+
+ADAPTER = DatabaseAdapter()

@@ -6,6 +6,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Family implementations use an abstract contract and typed preservation snapshots; preservation consumes operation outcomes, and generic removed-block accounting is removed.
+
 - Replace configuration/templates with strict source-bound decision plans (`plan`, `--plan`, explicit `--rebind`). Audits expose typed questions; remediation retains structured refusals and publishes only passing candidates. Valid dry runs exit 0 without publication; refused runs exit 2.
 
 - Update low-level XML callers to `tree()` and content checkpoints; edit declarations/counters are removed. Reopen a model after replacing cached XML through raw storage.

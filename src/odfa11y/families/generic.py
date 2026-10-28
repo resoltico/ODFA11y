@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.odf import body_text_snapshot
 from odfa11y.outcomes import ReviewTopic
 from odfa11y.report import rules
@@ -39,27 +39,25 @@ def _audit(document: OdfDocument, report: Report) -> None:
     )
 
 
-def _no_default_language(document: OdfDocument) -> str | None:
-    del document
-    return None
+class GenericAdapter(FamilyAdapter):
+    """Implement the generic family contract."""
+
+    name = "generic"
+    family = None
+    audit = staticmethod(_audit)
+    review_items = REVIEW_ITEMS
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(body_text_snapshot(document))
 
 
-def _no_language_target(document: OdfDocument, tag: str) -> bool:
-    del document, tag
-    return False
-
-
-def _unchanged(before: tuple[str, ...], after: tuple[str, ...], removed_blocks: int) -> bool:
-    return removed_blocks == 0 and before == after
-
-
-GENERIC = FamilyAdapter(
-    name="generic",
-    family=None,
-    audit=_audit,
-    default_language=_no_default_language,
-    set_default_language=_no_language_target,
-    snapshot=body_text_snapshot,
-    preserved=_unchanged,
-    review_items=REVIEW_ITEMS,
-)
+GENERIC = GenericAdapter()

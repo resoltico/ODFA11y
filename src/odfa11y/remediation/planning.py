@@ -62,8 +62,5 @@ def compile_operations(document: OdfDocument, plan: Plan) -> tuple[Operation, ..
         else:
             remaining.append(decision)
     if remaining:
-        if adapter.operations is None:
-            msg = f"No decision operation implementation for {adapter.name}"
-            raise PlanError(msg)
         result.extend(adapter.operations(document, remaining))
     return tuple(result)

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.content import page_snapshot, set_style_language, style_language
 from odfa11y.odf import Family
 from odfa11y.outcomes import ReviewTopic
@@ -25,21 +25,17 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
     return set_style_language(document, tag, "paragraph")
 
 
-def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed_blocks: int) -> bool:
-    return removed_blocks == 0 and before == after
+class PresentationAdapter(FamilyAdapter):
+    """Implement the presentation family contract."""
 
-
-ADAPTER = FamilyAdapter(
-    name="presentation",
-    family=Family.PRESENTATION,
-    audit=audit_document,
-    default_language=_language,
-    set_default_language=_set_language,
-    snapshot=page_snapshot,
-    preserved=_preserved,
-    decision_kinds=DECISION_KINDS,
-    operations=operations,
-    review_items=(
+    name = "presentation"
+    family = Family.PRESENTATION
+    audit = staticmethod(audit_document)
+    default_language = staticmethod(_language)
+    set_default_language = staticmethod(_set_language)
+    decision_kinds = DECISION_KINDS
+    operations = staticmethod(operations)
+    review_items = (
         ReviewItem(ReviewTopic.PAGE_TITLES, "Whether titles identify their pages and topics."),
         ReviewItem(
             ReviewTopic.READING_ORDER,
@@ -56,6 +52,20 @@ ADAPTER = FamilyAdapter(
             ReviewTopic.SLIDES_AND_NOTES,
             "Whether hidden slides, notes, transitions and projected content are intentional.",
         ),
-    ),
-    pdf_filter="impress_pdf_Export",
-)
+    )
+    pdf_filter = "impress_pdf_Export"
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(page_snapshot(document))
+
+
+ADAPTER = PresentationAdapter()

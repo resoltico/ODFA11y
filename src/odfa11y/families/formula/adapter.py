@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from odfa11y.adapter import FamilyAdapter, ReviewItem
+from typing import TYPE_CHECKING
+
+from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
 from odfa11y.odf import Family
 from odfa11y.outcomes import ReviewTopic
 
@@ -12,21 +14,17 @@ from .decisions import DECISION_KINDS, operations
 from .expression import language, set_language, snapshot
 
 
-def _preserved(before: tuple[str, ...], after: tuple[str, ...], removed: int) -> bool:
-    return removed == 0 and before == after
+class FormulaAdapter(FamilyAdapter):
+    """Implement the formula family contract."""
 
-
-ADAPTER = FamilyAdapter(
-    name="formula",
-    family=Family.FORMULA,
-    audit=audit_formula,
-    default_language=language,
-    set_default_language=set_language,
-    snapshot=snapshot,
-    preserved=_preserved,
-    decision_kinds=DECISION_KINDS,
-    operations=operations,
-    review_items=(
+    name = "formula"
+    family = Family.FORMULA
+    audit = staticmethod(audit_formula)
+    default_language = staticmethod(language)
+    set_default_language = staticmethod(set_language)
+    decision_kinds = DECISION_KINDS
+    operations = staticmethod(operations)
+    review_items = (
         ReviewItem(
             ReviewTopic.MATHEMATICS,
             "Whether the spoken alternative conveys every symbol, relation and grouping correctly.",
@@ -39,6 +37,24 @@ ADAPTER = FamilyAdapter(
             ReviewTopic.EXPORT_BOUNDARY,
             "Native Math export lacks PDF tagging; source correctness is not PDF/UA conformance.",
         ),
-    ),
-    pdf_filter="math_pdf_Export",
-)
+    )
+    pdf_filter = "math_pdf_Export"
+
+    @staticmethod
+    def snapshot(document: OdfDocument) -> PreservationSnapshot:
+        """Capture protected meaning.
+
+        Returns
+        -------
+        PreservationSnapshot
+            The family-owned protected facts.
+
+        """
+        return PreservationSnapshot(snapshot(document))
+
+
+ADAPTER = FormulaAdapter()
+
+
+if TYPE_CHECKING:
+    from odfa11y.odf import OdfDocument

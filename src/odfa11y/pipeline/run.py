@@ -228,9 +228,9 @@ class _Run:
         if self.executable is None:
             self.executable = find_soffice(self.options.soffice)
             self.record.toolchain.libreoffice = identify_soffice(self.executable)
-            if self.adapter.link_probe is not None:
-                with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
-                    probe = self.adapter.link_probe(Path(scratch))
+            with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
+                probe = self.adapter.link_probe(Path(scratch))
+                if probe is not None:
                     supported = link_descriptions_supported(
                         probe,
                         ExportSettings(
@@ -240,9 +240,9 @@ class _Run:
                             self.work / "profile",
                         ),
                     )
-                self.record.toolchain.capabilities["pdfua_link_descriptions"] = (
-                    "supported" if supported else "unsupported"
-                )
+                    self.record.toolchain.capabilities["pdfua_link_descriptions"] = (
+                        "supported" if supported else "unsupported"
+                    )
         export_pdfua(
             document,
             self.work / pdf_name,
