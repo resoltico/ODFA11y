@@ -108,3 +108,26 @@ def test_unused_dependencies_are_rejected(architecture_copy: Path) -> None:
     assert result.returncode != 0, output
     assert "unused" in output.lower(), output
     assert "odfa11y.safe_xml" in output, output
+
+
+@pytest.mark.parametrize(
+    "module",
+    [
+        "odfa11y.pdf.fidelity",
+        "odfa11y.native.link_capability",
+        "odfa11y.content",
+        "odfa11y.families.text.styles",
+        "odfa11y.pipeline",
+    ],
+)
+def test_package_initializers_allow_independent_import_order(module: str) -> None:
+    result = subprocess.run(  # noqa: S603  Module names are fixed test parameters and Python is explicit.
+        [sys.executable, "-c", f"import {module}"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not result.stdout

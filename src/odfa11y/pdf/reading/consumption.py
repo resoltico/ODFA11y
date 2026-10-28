@@ -12,8 +12,8 @@ from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_content import scan_content
-from odfa11y.pdf_limits import MAX_CONTENT_BYTES
+from odfa11y.pdf.reading.content import scan_content
+from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
 
 if TYPE_CHECKING:
     from pypdf import PdfReader

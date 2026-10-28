@@ -1,18 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
-"""PDF/UA export, structural inspection and veraPDF validation."""
+"""PDF structural inspection, veraPDF validation and fidelity reading support."""
 
 from .audit import audit_pdfua
-from .export import (
-    DEFAULT_TIMEOUT_SECONDS,
-    EXPORT_OPTIONS,
-    ExportSettings,
-    export_pdfua,
-    find_soffice,
-    identify_soffice,
-)
 from .fonts import list_fonts
-from .link_capability import link_descriptions_supported
-from .verapdf import (
+from .validate import (
     FailedRule,
     VeraPdfResult,
     add_verapdf_findings,
@@ -22,19 +13,12 @@ from .verapdf import (
 )
 
 __all__ = [
-    "DEFAULT_TIMEOUT_SECONDS",
-    "EXPORT_OPTIONS",
-    "ExportSettings",
     "FailedRule",
     "VeraPdfResult",
     "add_verapdf_findings",
     "audit_pdfua",
     "check_pdfua",
-    "export_pdfua",
-    "find_soffice",
     "find_verapdf",
-    "identify_soffice",
-    "link_descriptions_supported",
     "list_fonts",
     "validate_pdfua",
 ]

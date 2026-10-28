@@ -10,9 +10,10 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.families.text import HeadingLevel, MarkTableHeaders, SetHeadingLevels, TableHeaders
 from odfa11y.families.text.headings import heading_fingerprint, heading_location
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys

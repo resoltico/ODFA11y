@@ -8,8 +8,13 @@ from typing import TYPE_CHECKING
 from pypdf.generic import NumberObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_consumption import MAX_FORM_DEPTH, MAX_FORM_INVOCATIONS, dictionary, resolve
-from odfa11y.pdf_content import ContentScan, scan_content
+from odfa11y.pdf.reading.consumption import (
+    MAX_FORM_DEPTH,
+    MAX_FORM_INVOCATIONS,
+    dictionary,
+    resolve,
+)
+from odfa11y.pdf.reading.content import ContentScan, scan_content
 
 from .graphic_presence import page_images
 

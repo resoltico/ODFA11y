@@ -7,9 +7,8 @@ from collections import defaultdict
 from functools import partial
 from typing import TYPE_CHECKING
 
+from odfa11y.native.formula_syntax import FormulaFacts, classify_formula
 from odfa11y.odf import qn
-
-from .formula_syntax import FormulaFacts, classify_formula
 
 if TYPE_CHECKING:
     from lxml import etree

@@ -10,11 +10,10 @@ from pathlib import Path
 from lxml import etree
 
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
-from odfa11y.external_tools import ToolIdentity, find_executable, run_bounded, validate_timeout
+from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
+from odfa11y.native.process import ToolIdentity, find_executable, run_bounded, validate_timeout
 from odfa11y.report import FactKeys, Report, rules
 from odfa11y.safe_xml import parse_secure
-
-from .export import DEFAULT_TIMEOUT_SECONDS
 
 MAX_REPORTED_CHECKS = 3
 MAX_REPORT_BYTES = 32 * 1024 * 1024

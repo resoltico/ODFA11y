@@ -17,8 +17,8 @@ from pypdf.generic import (
 
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.fidelity.snapshot import read_snapshot
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity.snapshot import read_snapshot
 
 from .pdf_fixtures import register, tagged_writer
 

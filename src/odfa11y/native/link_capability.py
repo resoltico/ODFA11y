@@ -8,15 +8,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.native.export import export_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.report import FactKeys
-
-from .audit import audit_pdfua
-from .export import export_pdfua
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from .export import ExportSettings
+    from odfa11y.native.export import ExportSettings
 
     Exporter = Callable[[Path, Path, ExportSettings], Path]
 

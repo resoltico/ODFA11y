@@ -10,7 +10,7 @@ import pytest
 from lxml import etree
 
 from odfa11y.cli import main
-from odfa11y.content import require_native_context
+from odfa11y.native.export_context import require_native_context
 from odfa11y.odf import OdfDocument, Part, qn, validate
 
 from .native_resource_fixtures import (

@@ -17,7 +17,7 @@ from pypdf.generic import (
 )
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_limits import MAX_STRUCTURE_NODES
+from odfa11y.pdf.reading.limits import MAX_STRUCTURE_NODES
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

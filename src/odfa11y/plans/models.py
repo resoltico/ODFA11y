@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Literal
 
 from odfa11y.decisions import validate_answer
 from odfa11y.errors import PackageError, PlanError
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.serialization import record_dict
 
 if TYPE_CHECKING:

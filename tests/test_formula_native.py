@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 from pypdf import PdfReader
 
-from odfa11y.content import native_export_limitations
+from odfa11y.native.export_context import native_export_limitations
 from odfa11y.odf import OdfDocument
 from odfa11y.pipeline import NativeOptions, export_document
 

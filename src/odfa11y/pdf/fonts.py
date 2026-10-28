@@ -11,7 +11,7 @@ from pypdf.errors import PdfReadError, PyPdfError
 from pypdf.generic import ArrayObject
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pdf_limits import MAX_PDF_PAGES, check_file_size
+from odfa11y.pdf.reading.limits import MAX_PDF_PAGES, check_file_size
 
 from .structure_walk import pdf_dictionary
 

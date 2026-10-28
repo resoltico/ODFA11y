@@ -45,7 +45,7 @@ They do not imply executor safeguards or whole-plan atomicity. Multi-target oper
 preflight their own targets; guarded `remediate()` enforces final preservation/schema and
 atomic publication across the plan.
 
-`pdf.export_pdfua()` is a raw native boundary. Its caller establishes resource/protection
+`native.export.export_pdfua()` is a raw native boundary. Its caller establishes resource/protection
 policy and OS isolation. Guarded `export_document()`, `compare_documents()` and
 `run_pipeline()` establish the shared declaration policy; they still do not sandbox native
 tools. Direct original export/comparison preserve logical identity; pipeline capture has

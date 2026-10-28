@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.content import GraphicIdentity, audit_graphic_role, local_resource_path
+from odfa11y.content import GraphicIdentity, audit_graphic_role
+from odfa11y.native.resources import local_resource_path
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.report import FactKeys, Location, rules
 

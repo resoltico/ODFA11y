@@ -14,7 +14,7 @@ from odfa11y.content import table_content_fingerprint, visible_words
 from odfa11y.odf import qn
 
 from .contexts import text_nodes
-from .spacing_snapshot import normalized_spacing_tree
+from .spacing import normalized_spacing_tree
 
 INERT_ATTRIBUTES = {
     qn("text", "p"): frozenset({qn("text", "style-name")}),
@@ -39,24 +39,12 @@ def is_empty_paragraph(p: etree._Element) -> bool:
         True when the paragraph is empty.
 
     """
-    if element_text(p).strip():
+    if visible_words(p).strip():
         return False
     return all(
         (allowed := INERT_ATTRIBUTES.get(str(node.tag))) is not None and set(node.attrib) <= allowed
         for node in p.iter()
     )
-
-
-def element_text(element: etree._Element) -> str:
-    """Concatenate an element's text with non-breaking spaces normalized.
-
-    Returns
-    -------
-    str
-        The stripped text.
-
-    """
-    return visible_words(element)
 
 
 def visible_text_snapshot(

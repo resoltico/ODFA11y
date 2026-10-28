@@ -20,10 +20,10 @@ from odfa11y.families.text import (
     RemoveEmptySpacers,
     TableHeaders,
 )
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.fidelity import compare as compare_module
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.outcomes import StageStatus
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare as compare_module
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, SetOdfVersion
 

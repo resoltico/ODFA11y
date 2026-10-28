@@ -11,12 +11,11 @@ from urllib.parse import quote
 
 from odfa11y.decisions import OpenDecision
 from odfa11y.decisions.kinds import GRAPHIC_ALTERNATIVE
+from odfa11y.native.resources import ResourceIdentity
 from odfa11y.odf import NS, qn, select_elements
 from odfa11y.report import Location
 
-from .graphic_style_identity import graphic_style_fingerprint, normalized_graphic_tree
-from .graphic_styles import GraphicStyles
-from .resources import ResourceIdentity
+from .graphic_styles import GraphicStyles, graphic_style_fingerprint, normalized_graphic_tree
 from .tables import AXES, declarations, repeated
 from .text import reading_context_path
 from .xml import protected_xml

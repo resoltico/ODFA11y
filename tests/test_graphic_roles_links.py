@@ -12,10 +12,10 @@ from lxml import etree
 from odfa11y.adapter import Status
 from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative, LinkDescription, graphics_fingerprint
-from odfa11y.content.graphic_style_identity import normalized_role_attributes
 from odfa11y.content.graphic_styles import (
     GraphicStyles,
     effective_graphic_role,
+    normalized_role_attributes,
 )
 from odfa11y.content.links import link_fingerprint, link_has_description, link_location
 from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions

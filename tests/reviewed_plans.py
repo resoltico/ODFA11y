@@ -27,8 +27,8 @@ from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.headings import heading_fingerprint, heading_location
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import Plan, PlanHeader, SourceBinding, registered_kinds
 from odfa11y.report import Location
 

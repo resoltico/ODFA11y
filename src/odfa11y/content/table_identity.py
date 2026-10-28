@@ -12,7 +12,7 @@ from lxml import etree
 
 from odfa11y.odf import qn, select_elements
 
-from .graphic_style_identity import normalized_graphic_tree
+from .graphic_styles import normalized_graphic_tree
 from .tables import declarations, repeated
 from .text import visible_words
 from .xml import attribute_bindings, protected_xml

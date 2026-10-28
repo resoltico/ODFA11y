@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.fidelity import compare as comparison
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare as comparison
 from odfa11y.report import FactKeys
 
 from .pdf_fixtures import text_pdf

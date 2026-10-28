@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.content.formula_syntax import OPENFORMULA, FormulaFacts, classify_formula
 from odfa11y.errors import ToolFailedError
-from odfa11y.external_tools import run_bounded
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.formula_syntax import OPENFORMULA, FormulaFacts, classify_formula
+from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
 from odfa11y.report import FactKeys
 

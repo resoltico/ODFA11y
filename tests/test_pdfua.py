@@ -9,9 +9,10 @@ import pytest
 from pypdf import PdfWriter
 
 from odfa11y.errors import OutputError, ToolFailedError, ToolNotFoundError
-from odfa11y.external_tools import ToolIdentity
+from odfa11y.native.export import ExportSettings, export_pdfua, find_soffice
+from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import PackageStorage
-from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, find_soffice, validate_pdfua
+from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt
@@ -174,9 +175,9 @@ def test_real_verapdf_reports_the_failed_rules_of_an_untagged_pdf(
 def test_unsupported_runtime_versions_are_refused(
     version: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("odfa11y.pdf.export.find_executable", lambda *_args: "soffice")
+    monkeypatch.setattr("odfa11y.native.export.find_executable", lambda *_args: "soffice")
     monkeypatch.setattr(
-        "odfa11y.pdf.export.identify_soffice",
+        "odfa11y.native.export.identify_soffice",
         lambda _executable: ToolIdentity("LibreOffice", version),
     )
     with pytest.raises(ToolFailedError, match=r"install LibreOffice 26\.8 or newer"):
@@ -187,9 +188,9 @@ def test_unsupported_runtime_versions_are_refused(
 def test_current_runtime_versions_are_accepted(
     version: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("odfa11y.pdf.export.find_executable", lambda *_args: "soffice")
+    monkeypatch.setattr("odfa11y.native.export.find_executable", lambda *_args: "soffice")
     monkeypatch.setattr(
-        "odfa11y.pdf.export.identify_soffice",
+        "odfa11y.native.export.identify_soffice",
         lambda _executable: ToolIdentity("LibreOffice", version),
     )
     assert find_soffice() == "soffice"

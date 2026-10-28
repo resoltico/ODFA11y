@@ -15,10 +15,10 @@ from odfa11y.content import (
     GraphicIdentity,
     graphic_identity,
     graphics_fingerprint,
-    local_resource_path,
 )
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.families.text.semantics import audit_images
+from odfa11y.native.resources import local_resource_path
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.report import Report
 

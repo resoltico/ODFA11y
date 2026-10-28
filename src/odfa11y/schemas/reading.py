@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Published JSON schemas shipped with the installed package."""
+"""Read versioned JSON schema resources from the installed package."""
 
 from __future__ import annotations
 

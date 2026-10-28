@@ -9,8 +9,8 @@ import pytest
 
 from odfa11y.decisions.answers import DocumentMetadataAnswer
 from odfa11y.errors import PlanError
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
 from odfa11y.remediation.planning import compile_operations
 

@@ -11,8 +11,8 @@ import pytest
 from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
 from odfa11y.errors import OutputError
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .fixtures import make_minimal_odt

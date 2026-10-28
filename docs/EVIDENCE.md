@@ -101,7 +101,7 @@ work refuses unresolved declarations (`NATIVE001`) and captured filename/path-se
 [native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies) and
 [formula policy](ACCESSIBILITY.md#formula-declarations). Relative navigation remains authored
 and may change when a published ODF moves; the candidate is not a bundle of external targets.
-Raw `pdf.export_pdfua()` callers own policy and isolation; see [API](API.md).
+Raw `native.export.export_pdfua()` callers own policy and isolation; see [API](API.md).
 
 ## REVIEW.md
 

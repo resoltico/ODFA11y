@@ -13,11 +13,11 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NameObject
 
-from odfa11y import pdf_consumption
 from odfa11y.errors import ToolFailedError
-from odfa11y.fidelity.snapshot import read_snapshot
 from odfa11y.pdf import audit_pdfua
-from odfa11y.pdf_consumption import check_consumption
+from odfa11y.pdf.fidelity.snapshot import read_snapshot
+from odfa11y.pdf.reading import consumption
+from odfa11y.pdf.reading.consumption import check_consumption
 
 from .pdf_fixtures import register, tagged_writer
 
@@ -67,7 +67,7 @@ def test_endpoints_refuse_resource_overflow(
         del writer.root_object["/StructTreeRoot"]
     path = tmp_path / "limited.pdf"
     writer.write(path)
-    monkeypatch.setattr(pdf_consumption, "MAX_CONTENT_BYTES", 10)
+    monkeypatch.setattr(consumption, "MAX_CONTENT_BYTES", 10)
     assert "PDF000" in {f.rule_id for f in audit_pdfua(path).findings}
     with pytest.raises((ToolFailedError, PyPdfError)):
         read_snapshot(path)

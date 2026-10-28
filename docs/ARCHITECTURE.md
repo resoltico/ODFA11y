@@ -33,23 +33,25 @@ flowchart LR
 | `families.<family>` | Family audit rules, explicit operations, protected-content policy, registered answers and native capabilities. |
 | `families` | Adapter registry and supported style inspection. |
 | `audit`, `remediation` | Read-only source inspection/plan preparation and guarded operation execution. |
-| `pdf`, `fidelity` | Native PDF export/inspection/validation and publication comparison. |
+| `pdf` | Structural PDF inspection, validation, shared bounded reading and fidelity comparison. |
 | `evidence` | Manifests, redaction, review sheets and atomic bundle publication/verification. |
 | `decisions`, `plans` | Registered answer contracts, canonical targets, source binding and one strict codec/schema/reference. |
 | `source_capture` | Bounded regular-file snapshots shared by planning, remediation and pipeline execution. |
 | `pipeline`, `batch` | Public document workflows, assurance stages and serial manifest execution. |
 | `report` | Rule registry, findings, reports, rendering, SARIF and command statuses. |
 | `cli` | Argument translation, terminal output, progress and recovery guidance. |
-| `safe_xml`, `external_tools`, `staging` | Secure XML parsing, bounded native processes and atomic output paths. |
-| `pdf_limits`, `pdf_content`, `pdf_consumption` | PDF budgets, bounded token scanning and shared decoded-stream/work preflight. |
+| `safe_xml`, `staging` | Secure XML parsing and atomic output paths. |
+| `native` | Bounded process control, resource/formula export preflight, export and capability checks. |
+| `pdf.reading`, `pdf.fidelity` | Shared PDF budgets/scanning/preflight and publication comparison. |
 | `errors` | Domain exceptions reported by application boundaries. |
 
 [tach.toml](../tach.toml) is the dependency authority. The CLI calls public core
 operations and cannot import family implementations, document storage or the PDF engine.
 The registry selects adapters; families never import one another, and lower layers do
-not import family implementations. Audit, remediation, PDF, fidelity and evidence do not
-import one another. The adapter package has runtime dependencies only on domain errors;
-its ODF/report annotations are type-only references.
+not import family implementations. PDF reading limits, scanning and consumption are explicit
+internal boundaries shared with fidelity. Native resource and process leaves stay below
+export/probe consumers, avoiding package cycles. The adapter depends on shared outcomes and
+domain errors; its ODF/report annotations are type-only references.
 
 Tach rejects undeclared or unused dependencies, cycles and imports that bypass package
 interfaces. An interface exposes the names re-exported by its `__init__.py`. The package
@@ -205,15 +207,15 @@ subdocument directories. Original export and captured pipeline export have diffe
 identity requirements. The authoritative supported declarations, Formula bounds and
 refusals live in [Accessibility](ACCESSIBILITY.md#native-document-context-and-declared-dependencies);
 capture identity and directory-lifetime requirements live in [Evidence](EVIDENCE.md#source-capture).
-The low-level `pdf.export_pdfua()` call requires caller policy and isolation.
+The low-level `native.export.export_pdfua()` call requires caller policy and isolation.
 
 Native processes use argument lists, validated timeouts, bounded output capture and
 temporary LibreOffice profiles. Process cleanup has platform limits; these controls are
-not a sandbox. [external_tools.py](../src/odfa11y/external_tools.py) owns native process
-handling and [pdf/export.py](../src/odfa11y/pdf/export.py) owns LibreOffice export.
+not a sandbox. [process.py](../src/odfa11y/native/process.py) owns native process
+handling and [pdf/export.py](../src/odfa11y/native/export.py) owns LibreOffice export.
 
 The PDF structure walker builds reachable structure and reconciles page/Form marked
-content and link-object references. [pdf_content/scan.py](../src/odfa11y/pdf_content/scan.py)
+content and link-object references. [pdf/reading/content/scan.py](../src/odfa11y/pdf/reading/content/scan.py)
 owns bounded tokenization and inline-image boundaries. Audit and fidelity share decoded
 stream/work preflight. Unsupported content produces explicit incomplete inspection or
 failure. Graphic-presence checks establish inspected painted content rather than pixel

@@ -10,9 +10,9 @@ import pytest
 from odfa11y.adapter import Status
 from odfa11y.content import GraphicAlternative, graphics_fingerprint
 from odfa11y.families.text import SetGraphicAlternatives
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
-from odfa11y.pdf import ExportSettings, export_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 
 from .native_resource_fixtures import PIXELS, decoded_images, writer_resource
 from .operation_execution import assert_refused, execute_operations

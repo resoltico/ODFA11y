@@ -32,7 +32,7 @@ FAMILY_PREFIXES = frozenset({
 })
 FAMILY_NAME = re.compile(r"(?:^|[/@\[ (|])(?:" + "|".join(sorted(FAMILY_PREFIXES)) + r"):[A-Za-z]")
 CORE_ROOT = ("src", "odfa11y")
-CONTENT_ROOTS = {(*CORE_ROOT, "families"), (*CORE_ROOT, "content")}
+CONTENT_ROOTS = {(*CORE_ROOT, "families"), (*CORE_ROOT, "content"), (*CORE_ROOT, "native")}
 
 
 def _is_core(path: Path) -> bool:
@@ -42,8 +42,9 @@ def _is_core(path: Path) -> bool:
 def _check_core_purity(path: Path, source: str) -> list[str]:
     """Reject family-specific XML names in the ODF core.
 
-    The core understands OpenDocument structure; families and shared content primitives may name
-    content vocabulary, while orchestration packages may not. Docstrings are prose and exempt.
+    The core understands OpenDocument structure; families, shared content and native
+    preflight primitives may name content vocabulary, while orchestration packages may not.
+    Docstrings are prose and exempt.
 
     Returns
     -------
@@ -193,11 +194,13 @@ def test_core_prose_and_common_prefixes_are_allowed(tmp_path: Path) -> None:
     assert check_repository(root) == []
 
 
-def test_shared_content_vocabulary_is_allowed_but_does_not_exempt_orchestration(
+@pytest.mark.parametrize("owner", ["content", "native"])
+def test_semantic_boundary_vocabulary_does_not_exempt_orchestration(
     tmp_path: Path,
+    owner: str,
 ) -> None:
     root = _repository(tmp_path)
-    _core_file(root, "content", "tables.py", source='value = "//table:table-row"\n')
+    _core_file(root, owner, "tables.py", source='value = "//table:table-row"\n')
     assert check_repository(root) == []
     _core_file(root, "pipeline", "run.py", source='value = "//table:table-row"\n')
     assert any("family" in error for error in check_repository(root))

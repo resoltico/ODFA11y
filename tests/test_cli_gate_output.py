@@ -12,8 +12,8 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.outcomes import StageName, StageStatus
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import RunRecord, StageResult
 from odfa11y.pipeline.profiles import PROFILES
 from odfa11y.records import DocumentIdentity

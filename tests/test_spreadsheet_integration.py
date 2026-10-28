@@ -11,11 +11,12 @@ from pypdf import PdfReader
 
 from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative
-from odfa11y.external_tools import run_bounded
 from odfa11y.families.spreadsheet import SetGraphicAlternatives
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.pdf import ExportSettings, export_pdfua, validate_pdfua
+from odfa11y.pdf import validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pipeline import PIPELINE_STAGES, PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys

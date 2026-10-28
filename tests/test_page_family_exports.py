@@ -14,9 +14,9 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative, PageDecision
 from odfa11y.evidence import check_bundle
 from odfa11y.families import pages
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys

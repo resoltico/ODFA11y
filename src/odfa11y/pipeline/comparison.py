@@ -10,15 +10,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import PackageError
-from odfa11y.fidelity import compare_pdfs
+from odfa11y.native.export import export_pdfua
 from odfa11y.odf import OdfDocument
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
-from odfa11y.pdf import export_pdfua
+from odfa11y.pdf.fidelity import compare_pdfs
 
 from .native import NativeOptions, native_export_settings
 
 if TYPE_CHECKING:
-    from odfa11y.fidelity import FidelityPolicy
+    from odfa11y.pdf.fidelity import FidelityPolicy
     from odfa11y.report import Report
 
 PDF_MAGIC = b"%PDF"

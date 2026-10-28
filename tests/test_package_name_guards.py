@@ -11,8 +11,8 @@ import pytest
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.families import style_usage
-from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, PackageStorage
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
 from odfa11y.remediation import SetMetadata
 

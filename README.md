@@ -93,7 +93,7 @@ tool settings or `PipelineOptions` for assurance runs. Inspection yields reports
 incrementally, preserving completed checks if a later validator fails.
 `odfa11y.audit.prepare_plan` prepares source-bound decision plans, and
 `odfa11y.remediation.remediate` applies source-bound decision plans. Low-level
-`odfa11y.pdf.export_pdfua` remains available; its callers own native preflight.
+`odfa11y.native.export.export_pdfua` remains available; its callers own native preflight.
 See the [public library contract](docs/API.md) for results, errors, output ownership and
 executable installed-package examples, and [Architecture](docs/ARCHITECTURE.md) for package
 boundaries.

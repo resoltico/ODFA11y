@@ -18,7 +18,7 @@ default and is not part of runtime package metadata.
 Native export/integration also needs the supported LibreOffice and veraPDF installations;
 see [prerequisites](../README.md#start-here) and run `uv run --no-sync odfa11y doctor`.
 The minimum LibreOffice version is enforced by `find_soffice` in
-[pdf/export.py](../src/odfa11y/pdf/export.py). Exact CI tool/installer inputs are declared
+[pdf/export.py](../src/odfa11y/native/export.py). Exact CI tool/installer inputs are declared
 in [Checks](../.github/workflows/checks.yml), with installer checksums where configured.
 
 To refresh dependencies, query PyPI's JSON API, vendor GitHub releases, python.org,

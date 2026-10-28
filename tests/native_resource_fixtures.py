@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from PIL import Image
 from pypdf import PdfReader
 
-from odfa11y.external_tools import run_bounded
+from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn
 
 from .documents import Variant, make_flat

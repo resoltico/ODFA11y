@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from lxml import etree
 from PIL import Image, UnidentifiedImageError
 
-from odfa11y.content import local_resource_path
+from odfa11y.native.resources import local_resource_path
 from odfa11y.odf import NS, qn
 from odfa11y.safe_xml import parse_secure
 

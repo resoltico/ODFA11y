@@ -19,7 +19,7 @@ from .test_sarif import SCHEMA
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.pdf import ExportSettings
+    from odfa11y.native.export import ExportSettings
 
 
 def _run_log(output: str) -> dict:

@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y import pdf_limits
 from odfa11y.errors import ToolFailedError
-from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf import audit_pdfua, list_fonts
 from odfa11y.pdf import structure_walk as walk
+from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.reading import limits
 
 from .pdf_fixtures import tagged_writer, text_pdf
 
@@ -23,7 +23,7 @@ def test_an_oversized_pdf_is_a_finding_not_a_crash(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = text_pdf(tmp_path / "a.pdf", [["x"]])
-    monkeypatch.setattr(pdf_limits, "MAX_PDF_BYTES", 10)
+    monkeypatch.setattr(limits, "MAX_PDF_BYTES", 10)
 
     def parse(_stream: object, *, strict: bool) -> None:
         pytest.fail(f"PDF parser invoked for an oversized file (strict={strict})")
@@ -40,7 +40,7 @@ def test_a_pdf_with_too_many_pages_is_refused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = text_pdf(tmp_path / "a.pdf", [["x"], ["y"], ["z"]])
-    monkeypatch.setattr(pdf_limits, "MAX_PDF_PAGES", 2)
+    monkeypatch.setattr(limits, "MAX_PDF_PAGES", 2)
     assert "pages" in audit_pdfua(path).findings[0].message
     with pytest.raises(ToolFailedError, match="3 pages"):
         compare_pdfs(path, path, FidelityPolicy())

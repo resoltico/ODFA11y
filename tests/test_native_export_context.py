@@ -10,11 +10,11 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.content import native_export_limitations, require_native_context
 from odfa11y.errors import ToolFailedError
 from odfa11y.evidence import check_bundle
-from odfa11y.fidelity import FidelityPolicy
+from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, Part, qn
+from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.report import FactKeys
 
