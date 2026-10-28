@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft7Validator
 
-from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, ReportError
 from odfa11y.pdf import check_pdfua
 from odfa11y.report import (
@@ -25,6 +24,7 @@ from odfa11y.report import (
     render_reports,
     rules,
 )
+from odfa11y.source_audit import audit_odf
 
 from .documents import Variant, make_flat, make_package
 from .test_verapdf import report_xml, stub

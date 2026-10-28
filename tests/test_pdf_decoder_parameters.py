@@ -18,7 +18,7 @@ from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.pipeline import PipelineOptions
+from odfa11y.pipeline.context import RunSettings
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import register, tagged_writer
@@ -105,7 +105,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
         destination.write_bytes((bad if calls <= 2 else good).read_bytes())
         return destination
 
-    runner = importlib.import_module("odfa11y.pipeline.run")
+    runner = importlib.import_module("odfa11y.pipeline.engine")
     monkeypatch.setattr(runner, "find_soffice", lambda _: "synthetic-exporter")
     monkeypatch.setattr(
         runner,
@@ -114,7 +114,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
     )
     monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
     monkeypatch.setattr(runner, "export_pdfua", export)
-    result = run_batch(manifest, tmp_path / "out", PipelineOptions())
+    result = run_batch(manifest, tmp_path / "out", RunSettings())
     assert [item.exit_status for item in result.items] == [2, 0]
     assert result.items[0].failed_stage == "audit-pdf"
     assert result.items[1].status == "completed"

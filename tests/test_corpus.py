@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.content import visible_words
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
+from odfa11y.source_audit import audit_odf
 
 from .corpus_manifest import (
     CORPUS,

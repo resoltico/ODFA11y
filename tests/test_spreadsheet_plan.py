@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, ClassVar, override
 import pytest
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative
 from odfa11y.errors import PlanError
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
@@ -16,11 +15,14 @@ from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternati
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
 from odfa11y.outcomes import StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
 from odfa11y.plans import load_plan
 from odfa11y.remediation import SetMetadata
 from odfa11y.remediation.planning import compile_operations
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .operation_execution import assert_refused, execute_operations
 from .reviewed_plans import plan_header, reviewed_plan
@@ -213,12 +215,12 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
     tmp_path: Path,
 ) -> None:
     source = make_spreadsheet(tmp_path, "package", *SHEETS)
-    options = PipelineOptions(soffice=str(tmp_path / "no-such-soffice"))
+    options = RunSettings(tools=Tools(soffice=str(tmp_path / "no-such-soffice")))
     plan = [
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo")}),
     ]
-    record = run_pipeline(
+    record = execute(
         source, reviewed_plan(source, plan, FidelityPolicy()), tmp_path / "out", options
     )
     statuses = {stage.name.value: stage.status for stage in record.stages}

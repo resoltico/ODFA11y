@@ -8,6 +8,9 @@ import json
 import os
 from typing import TYPE_CHECKING
 
+from odfa11y.pipeline.profiles import profile_named
+from odfa11y.tools import Tools
+
 from .reviewed_plans import reviewed_plan
 
 if TYPE_CHECKING:
@@ -20,7 +23,8 @@ from lxml import etree
 from odfa11y.evidence import Redactor, check_bundle, write_bundle
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
 
 from .documents import make_flat
 from .fixtures import make_minimal_odt
@@ -39,11 +43,11 @@ def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: st
             source.read_bytes().replace(b"</text:p>", b" /private/person/file</text:p>", 1)
         )
     target = tmp_path / "bundle"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     delivered = target / f"remediated{suffix}"
     OdfDocument.open(delivered)
@@ -87,11 +91,11 @@ def test_unwritable_publication_has_no_partial_directory(tmp_path: Path) -> None
 def test_accepted_package_with_xml_suffix_is_copied_unchanged(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.xml")
     target = tmp_path / "bundle"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     OdfDocument.open(target / "remediated.xml")
     assert (target / "remediated.xml").read_bytes() == source.read_bytes()
@@ -108,11 +112,11 @@ def test_flat_document_preserves_declared_encoding(tmp_path: Path) -> None:
         .replace(b"</text:p>", b" caf\xe9</text:p>", 1)
     )
     target = tmp_path / "bundle"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.passed
     delivered = target / f"remediated{source.suffix}"
@@ -132,14 +136,15 @@ def test_native_published_artifact_syntax_content_and_identity(
     )
     package.save(source)
     target = tmp_path / "bundle"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(
-            profile="production",
-            soffice=external_tool("soffice", "libreoffice"),
-            verapdf_path=external_tool("verapdf"),
+        RunSettings(
+            tools=Tools(
+                soffice=external_tool("soffice", "libreoffice"), verapdf=external_tool("verapdf")
+            ),
+            profile=profile_named("production"),
         ),
     )
     assert result.passed, result.as_dict()

@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, qn, validate
+from odfa11y.source_audit import audit_odf
 
 SOURCE = Path(__file__).parent / "family_corpus/sum-formula.odf"
 

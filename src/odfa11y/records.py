@@ -6,10 +6,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from odfa11y.serialization import record_dict
+from odfa11y.outcomes import ExitStatus, failure_status
+from odfa11y.serialization import JsonProperty, record_dict
 lazy from odfa11y.outcomes import StageStatus
 
 if TYPE_CHECKING:
+    from odfa11y.errors import OdfA11yError
     from odfa11y.native.probes import CapabilityResult
     from odfa11y.native.process import ToolIdentity
     from odfa11y.serialization import JsonObject
@@ -72,6 +74,12 @@ class DoctorRecord:
     schema_versions: tuple[str, ...]
     toolchain: Toolchain
     format: Literal[1] = field(default=1, init=False)
+    error: OdfA11yError | None = field(default=None, repr=False, metadata={"serialize": False})
+
+    @JsonProperty
+    def exit_status(self) -> ExitStatus:
+        """The environment inspection execution status."""
+        return failure_status(self.error) if self.error else ExitStatus.PASSED
 
     def as_dict(self) -> JsonObject:
         """Serialize the typed environment record.

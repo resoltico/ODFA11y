@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from odfa11y.errors import PlanError
 from odfa11y.outcomes import PIPELINE_STAGES, StageName
 
-INSPECT_STAGES = PIPELINE_STAGES[:4]
+SOURCE_STAGES = PIPELINE_STAGES[:4]
 VERIFY_STAGES = tuple(name for name in PIPELINE_STAGES if name != StageName.VALIDATE_PDF)
 
 
@@ -20,6 +20,17 @@ class Profile:
     stages: tuple[StageName, ...]
     strict: bool
     verapdf_required: bool
+
+    def __str__(self) -> str:
+        """Display the profile's command-line name.
+
+        Returns
+        -------
+        str
+            The selected profile name.
+
+        """
+        return self.name
 
     def as_dict(self) -> dict[str, object]:
         """Serialize the profile.
@@ -39,11 +50,11 @@ class Profile:
 
 
 PROFILES = {
-    "inspect": Profile("inspect", INSPECT_STAGES, strict=False, verapdf_required=False),
+    "source": Profile("source", SOURCE_STAGES, strict=False, verapdf_required=False),
     "verify": Profile("verify", VERIFY_STAGES, strict=False, verapdf_required=False),
     "production": Profile("production", PIPELINE_STAGES, strict=True, verapdf_required=True),
 }
-DEFAULT_PROFILE = "verify"
+DEFAULT_PROFILE = PROFILES["verify"]
 
 
 def profile_named(name: str) -> Profile:

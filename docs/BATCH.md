@@ -19,7 +19,7 @@ plan = "plans/inventory.toml"
 ```
 
 ```sh
-odfa11y batch batch.toml --output-dir evidence --profile inspect
+odfa11y batch batch.toml --output-dir evidence --profile source
 ```
 
 Use `--profile verify` for native export and built-in PDF/fidelity gates, or
@@ -49,7 +49,7 @@ failure evidence and does not prevent later items from running.
 `evidence/batch.json` records status, exit status, pending IDs and per-item status,
 failed stage and relative evidence directory. It contains no source or plan paths.
 Each item directory is the ordinary atomic pipeline bundle, including `run.json`,
-`REVIEW.md` and a hash manifest; `odfa11y check-evidence evidence/annual-report` verifies
+`REVIEW.md` and a hash manifest; `odfa11y verify evidence/annual-report` verifies
 its integrity. Invalid plans produce the same bundle structure with a failed `load-plan`
 stage. The overall exit status is the strongest result: execution failure 3, usage error 4, audit errors
 2, strict warnings 1, or success 0.

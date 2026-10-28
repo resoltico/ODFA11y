@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
@@ -18,6 +17,7 @@ from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
 from odfa11y.plans import PlanHeader, SourceBinding, render_plan
 from odfa11y.plans.registry import document_decisions
 from odfa11y.report import Report, rules
+from odfa11y.source_audit import audit_odf
 
 from .fixtures import make_minimal_odt
 
@@ -32,8 +32,7 @@ from .fixtures import make_minimal_odt
         "compare",
         "pipeline",
         "batch",
-        "styles",
-        "check-evidence",
+        "verify",
         "doctor",
     ],
 )

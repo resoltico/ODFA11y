@@ -7,16 +7,19 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.families.text import HeadingLevel, MarkTableHeaders, SetHeadingLevels, TableHeaders
 from odfa11y.families.text.headings import heading_fingerprint, heading_location
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .corpus_manifest import CORPUS
 from .fixtures import make_minimal_odt
@@ -85,7 +88,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     clean_columns = tmp_path / "clean-columns.odt"
     execute_operations(clean, clean_columns, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
     assert validate(OdfDocument.open(clean_columns)).count == 0
-    record = run_pipeline(
+    record = execute(
         clean_columns,
         reviewed_plan(
             clean_columns,
@@ -93,7 +96,9 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
             FidelityPolicy(),
         ),
         tmp_path / "evidence",
-        PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+        ),
     )
     assert record.failed_stage == "audit-pdf", "\n".join(
         f"{stage.name}: {stage.reason}\n{stage.details or ''}"

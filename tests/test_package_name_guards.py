@@ -8,13 +8,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y import audit
 from odfa11y.errors import PackageError
-from odfa11y.families import style_usage
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.native import export_document
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.remediation import SetMetadata
+from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf, prepare_plan
 
 from .fixtures import make_minimal_odt
 from .operation_execution import execute_operations
@@ -100,13 +104,14 @@ def _assert_guarded_refusal(
     pdf.write_bytes(b"existing PDF")
     with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
         export_document(source, pdf)
-    with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
-        style_usage(source)
-    record = run_pipeline(
+    style_report = audit(source).reports[0]
+    assert style_report.error_count > 0
+    assert FactKeys.TEXT_PARAGRAPH_STYLES not in style_report.facts
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         directory / "evidence",
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert record.failed_stage == "audit-source"
     assert record.exit_status == 2

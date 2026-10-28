@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, unquote
 
@@ -13,7 +14,6 @@ from .rules import RULES, Severity
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
     from .models import Finding, Report
 
@@ -22,6 +22,29 @@ _LEVELS = {Severity.ERROR: "error", Severity.WARNING: "warning", Severity.INFO: 
 _UNSAFE_LABEL = re.compile(
     r"(?:[a-z][a-z0-9+.-]*://[^/\s]*@|(?:/Users/|/home/|[A-Za-z]:[\\/]))", re.IGNORECASE
 )
+
+
+def preflight_sarif(sources: Iterable[str | Path], source_root: str | Path | None) -> None:
+    """Establish physical identities before a SARIF-producing application operation.
+
+    Raises
+    ------
+    ReportError
+        The root is missing or an input is outside it.
+
+    """
+    if source_root is None:
+        message = "SARIF requires an explicit source root (--source-root)."
+        raise ReportError(message)
+    root = _resolved(Path(source_root))
+    if not root.is_dir():
+        message = "SARIF source root must be an existing directory."
+        raise ReportError(message)
+    for source in sources:
+        selected = _resolved(Path(source))
+        if not selected.is_file() or not selected.is_relative_to(root):
+            message = "SARIF source must be a file within the source root."
+            raise ReportError(message)
 
 
 def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]:
@@ -48,6 +71,7 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
         msg = "SARIF source root must be an existing directory."
         raise ReportError(msg)
     items = list(reports)
+    preflight_sarif((source for report in items for source in report.sources), source_root)
     artifacts: dict[Path, int] = {}
     source_indices: dict[Path, int] = {}
     artifact_records: list[dict[str, Any]] = []

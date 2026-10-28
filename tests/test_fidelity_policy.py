@@ -41,7 +41,7 @@ def test_nonfinite_policy_refuses_cli_before_publication(
             "--output-dir",
             str(output),
             "--profile",
-            "inspect",
+            "source",
             "--format",
             "json",
         ])

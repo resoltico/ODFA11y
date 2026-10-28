@@ -178,7 +178,8 @@ def test_removed_flags_and_commands_are_rejected() -> None:
     for arguments in (
         ["remediate", "a", "b", "--plan", "c", "--title", "x"],
         ["normalize-spacing", "a", "b"],
-        ["verify", "a"],
+        ["check-evidence", "a"],
+        ["styles", "a"],
         ["export-pdfua", "a", "b"],
     ):
         with pytest.raises(SystemExit) as raised:
@@ -188,9 +189,12 @@ def test_removed_flags_and_commands_are_rejected() -> None:
 
 def test_styles_prints_usage(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
-    assert main(["styles", str(source), "--format", "json"]) == 0
-    assert any(row["style"] == "Body" for row in json.loads(capsys.readouterr().out))
-    assert main(["styles", str(source)]) == 0
+    assert main(["audit", str(source), "--format", "json"]) == 0
+    rows = json.loads(capsys.readouterr().out)["facts"]["text.paragraph_styles"]
+    assert any(row["style"] == "Body" for row in rows)
+    assert main(["audit", str(source)]) == 0
+    assert "Paragraph styles:" in capsys.readouterr().out
+    assert main(["audit", str(source)]) == 0
     assert "- Body:" in capsys.readouterr().out
 
 
@@ -213,14 +217,14 @@ def test_compare_pdfs_directly_gates_on_the_policy(
 def test_check_evidence_reports_integrity(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert main(["check-evidence", str(tmp_path)]) == FINDINGS
+    assert main(["verify", str(tmp_path)]) == FINDINGS
     assert "Cannot read manifest.json" in capsys.readouterr().out
 
 
 def test_missing_input_file_is_an_error_not_a_traceback(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert main(["styles", str(tmp_path / "absent.odt")]) == EXECUTION_FAILURE
+    assert main(["audit", str(tmp_path / "absent.odt")]) == EXECUTION_FAILURE
     assert "error:" in capsys.readouterr().err
 
 
@@ -264,7 +268,7 @@ def test_export_compare_and_pipeline_with_real_libreoffice(
     capsys.readouterr()
     arguments = ["pipeline", str(source), "--plan", str(config(tmp_path)), "--soffice", soffice]
     assert main([*arguments, "--output-dir", str(tmp_path / "ev")]) == 0
-    assert main(["check-evidence", str(tmp_path / "ev")]) == 0
+    assert main(["verify", str(tmp_path / "ev")]) == 0
 
 
 def test_verapdf_flag_does_not_swallow_the_next_argument(

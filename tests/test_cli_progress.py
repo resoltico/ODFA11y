@@ -13,7 +13,9 @@ from odfa11y.cli.progress import progress_callback
 from odfa11y.errors import OutputError
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import plan_header, reviewed_plan
@@ -79,7 +81,7 @@ def test_progress_is_append_only_and_safe(monkeypatch: pytest.MonkeyPatch) -> No
     callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.RUNNING))
     callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.PASSED))
     assert terminal.getvalue() == (
-        "Progress: Export source: running\nProgress: Export source: passed\n"
+        "Progress: Export source PDF: running\nProgress: Export source PDF: passed\n"
     )
 
 
@@ -96,11 +98,11 @@ def test_pipeline_progress_precedes_work_and_publication(tmp_path: Path) -> None
             assert output.exists() == (status == "passed")
         events.append((name, status))
 
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, (), FidelityPolicy()),
         output,
-        PipelineOptions(profile="inspect", on_progress=observe),
+        RunSettings(profile=profile_named("source"), on_progress=observe),
     )
     assert events[0] == ("identify-source", "running")
     assert events[-2:] == [("publish-evidence", "running"), ("publish-evidence", "passed")]
@@ -116,11 +118,11 @@ def test_failed_progress_stream_does_not_prevent_evidence(
     source = make_minimal_odt(tmp_path / "doc.odt")
     monkeypatch.setattr("sys.stderr", FailedTerminal())
     output = tmp_path / "evidence"
-    run_pipeline(
+    execute(
         source,
         reviewed_plan(source, (), FidelityPolicy()),
         output,
-        PipelineOptions(profile="inspect", on_progress=progress_callback("text")),
+        RunSettings(profile=profile_named("source"), on_progress=progress_callback("text")),
     )
     assert (output / "run.json").exists()
 
@@ -136,7 +138,7 @@ def test_batch_progress_contains_fixed_steps_and_published_status_only(tmp_path:
     record = run_batch(
         manifest,
         tmp_path / "batch",
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
         on_progress=lambda event: events.append((event.step, event.state)),
     )
     assert events == [("batch-item", "running"), ("batch-item", "passed")]
@@ -156,12 +158,12 @@ def test_publication_failure_never_emits_passed_progress(
 
     monkeypatch.setattr("odfa11y.pipeline.publication.write_bundle", unavailable_bundle)
     with pytest.raises(OSError, match="storage unavailable"):
-        run_pipeline(
+        execute(
             source,
             reviewed_plan(source, (), FidelityPolicy()),
             tmp_path / "evidence",
-            PipelineOptions(
-                profile="inspect",
+            RunSettings(
+                profile=profile_named("source"),
                 on_progress=lambda event: events.append((event.step, event.state)),
             ),
         )
@@ -183,11 +185,11 @@ def test_batch_interruption_emits_no_completion(
     def interrupted_pipeline(*_args: object, **_kwargs: object) -> None:
         raise KeyboardInterrupt
 
-    monkeypatch.setattr("odfa11y.batch.run.run_pipeline", interrupted_pipeline)
+    monkeypatch.setattr("odfa11y.batch.run.execute", interrupted_pipeline)
     record = run_batch(
         manifest,
         tmp_path / "batch",
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
         on_progress=lambda event: events.append((event.step, event.state)),
     )
     assert events == [("batch-item", "running"), ("batch-item", "failed")]
@@ -196,11 +198,11 @@ def test_batch_interruption_emits_no_completion(
 
 
 def test_observer_is_excluded_from_options_identity() -> None:
-    plain = PipelineOptions(profile="inspect")
-    observed = PipelineOptions(profile="inspect", on_progress=lambda _event: None)
+    plain = RunSettings(profile=profile_named("source"))
+    observed = RunSettings(profile=profile_named("source"), on_progress=lambda _event: None)
     assert plain == observed
     assert repr(plain) == repr(observed)
-    assert plain.assurance == observed.assurance
+    assert plain.profile == observed.profile
 
 
 @pytest.mark.parametrize(
@@ -221,12 +223,12 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
 
     monkeypatch.setattr("odfa11y.pipeline.publication.write_bundle", failed_bundle)
     with pytest.raises(type(failure)) as caught:
-        run_pipeline(
+        execute(
             source,
             reviewed_plan(source, (), FidelityPolicy()),
             tmp_path / "evidence",
-            PipelineOptions(
-                profile="inspect",
+            RunSettings(
+                profile=profile_named("source"),
                 on_progress=lambda event: events.append((event.step, event.state)),
             ),
         )

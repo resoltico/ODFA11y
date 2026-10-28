@@ -12,7 +12,6 @@ import pypdf
 import pypdfium2
 from lxml import etree
 
-from odfa11y import __version__
 from odfa11y.errors import ToolNotFoundError, UnsupportedKindError
 from odfa11y.families import REGISTRY
 from odfa11y.native.export import ExportSettings, find_soffice, identify_soffice
@@ -22,18 +21,21 @@ from odfa11y.odf import SUPPORTED_VERSIONS
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf import find_verapdf
 from odfa11y.records import DoctorRecord, Toolchain
-
-from .native import NativeOptions
+from odfa11y.tools import Tools
+from odfa11y.version import __version__
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from odfa11y.errors import OdfA11yError
     from odfa11y.native.process import ToolIdentity
+    from odfa11y.outcomes import ProgressObserver
 
 
 def inspect_tools(
-    options: NativeOptions | None = None,
+    tools: Tools | None = None,
+    *,
+    on_progress: ProgressObserver | None = None,
 ) -> tuple[DoctorRecord, OdfA11yError | None]:
     """Collect identities and test every declared capability, retaining partial facts.
 
@@ -48,13 +50,13 @@ def inspect_tools(
         Dependency/tool facts and the first controlled probe error, if any.
 
     """
-    options = options or NativeOptions()
-    if options.on_progress:
-        options.on_progress(ProgressEvent(StepName.PROBE_TOOLCHAIN, StepState.RUNNING))
+    tools = tools or Tools()
+    if on_progress:
+        on_progress(ProgressEvent(StepName.PROBE_TOOLCHAIN, StepState.RUNNING))
     executable = None
     missing_error = None
     try:
-        executable = find_soffice(options.soffice)
+        executable = find_soffice(tools.soffice)
     except ToolNotFoundError as exc:
         missing_error = exc
     info = DoctorRecord(
@@ -70,7 +72,7 @@ def inspect_tools(
         schema_versions=tuple(SUPPORTED_VERSIONS),
         toolchain=Toolchain(
             libreoffice=identify_soffice(executable) if executable is not None else None,
-            verapdf=_tool(lambda: identify("veraPDF", find_verapdf(), ("--version",))),
+            verapdf=_tool(lambda: identify("veraPDF", find_verapdf(tools.verapdf), ("--version",))),
         ),
     )
     probes = tuple(probe for adapter in REGISTRY.values() for probe in adapter.probes)
@@ -95,8 +97,9 @@ def inspect_tools(
         execution = cache.run(
             probe,
             identity,
-            ExportSettings(probe.export_filter, executable, options.timeout),
-            observer=options.on_progress,
+            ExportSettings(probe.export_filter, executable, tools.timeout),
+            observer=on_progress,
+            verapdf_path=tools.verapdf,
         )
         info.toolchain.capabilities += (execution.result,)
         first_error = first_error or execution.error

@@ -13,7 +13,10 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
+from odfa11y.tools import Tools
 
 from .native_resource_fixtures import png_bytes
 from .resource_declaration_fixtures import declaration
@@ -63,11 +66,11 @@ def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
                 == 3
             )
             output = tmp_path / kind
-            record = run_pipeline(
+            record = execute(
                 source,
                 reviewed_plan(source, [], FidelityPolicy()),
                 output,
-                PipelineOptions(profile="verify", soffice=soffice),
+                RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
             )
             assert record.failed_stage == "export-source"
             assert record.exit_status == 3

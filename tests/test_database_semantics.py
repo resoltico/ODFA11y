@@ -11,16 +11,18 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.audit import audit_odf
 from odfa11y.errors import PlanError
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import load_plan
 from odfa11y.remediation import SetMetadata
 from odfa11y.remediation.planning import compile_operations
+from odfa11y.source_audit import audit_odf
 
 from .operation_execution import assert_refused, execute_operations
 from .reviewed_plans import plan_header, reviewed_plan
@@ -173,18 +175,18 @@ def test_database_configuration_is_strict(tmp_path: Path) -> None:
 
 def test_base_source_assurance_and_pdf_boundary_are_explicit(tmp_path: Path) -> None:
     operations = [SetMetadata(title="Fruit counts", language="en-US")]
-    inspected = run_pipeline(
+    inspected = execute(
         SOURCE,
         reviewed_plan(SOURCE, operations, FidelityPolicy()),
-        tmp_path / "inspect",
-        PipelineOptions(profile="inspect"),
+        tmp_path / "source",
+        RunSettings(profile=profile_named("source")),
     )
     assert inspected.exit_status == 0
-    production = run_pipeline(
+    production = execute(
         SOURCE,
         reviewed_plan(SOURCE, operations, FidelityPolicy()),
         tmp_path / "production",
-        PipelineOptions(profile="production"),
+        RunSettings(profile=profile_named("production")),
     )
     assert production.exit_status != 0
     assert not (tmp_path / "production/candidate.pdf").exists()

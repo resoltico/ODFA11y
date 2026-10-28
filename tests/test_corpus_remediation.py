@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative
 from odfa11y.families.text import (
     LinkifyAddresses,
@@ -20,6 +19,7 @@ from odfa11y.families.text import (
 from odfa11y.odf import OdfDocument, Part, validate
 from odfa11y.outcomes import StageStatus
 from odfa11y.remediation import SetMetadata
+from odfa11y.source_audit import audit_odf
 
 from .corpus_manifest import DOCUMENT_IDS, DOCUMENTS, visible_text
 from .operation_execution import execute_operations

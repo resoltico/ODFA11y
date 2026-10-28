@@ -10,16 +10,19 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.audit import audit_odf
 from odfa11y.content import GraphicAlternative, PageDecision
 from odfa11y.evidence import check_bundle
 from odfa11y.families import pages
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .operation_execution import execute_operations
 from .reviewed_plans import reviewed_plan
@@ -88,11 +91,13 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     suffix, _ = FAMILIES[family]
     source = CORPUS / f"fruit-{family}{suffix}"
     root = tmp_path / "evidence"
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, _plan(family), FidelityPolicy()),
         root,
-        PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+        ),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert all(stage.status == "passed" for stage in record.stages)
@@ -128,11 +133,13 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
             )
         }),
     ]
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, plan, FidelityPolicy()),
         root,
-        PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+        ),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     report = audit_pdfua(root / "remediated.pdf")

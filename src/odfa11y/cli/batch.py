@@ -8,9 +8,8 @@ import sys
 import textwrap
 from typing import TYPE_CHECKING
 
-from odfa11y.batch import run_batch
-from odfa11y.pipeline import PipelineOptions
-from odfa11y.report import terminal_text
+import odfa11y as api
+from odfa11y import terminal_text
 
 from .progress import progress_callback
 
@@ -27,17 +26,12 @@ def batch_command(args: argparse.Namespace) -> int:
         The strongest failure among all entries, or three on interruption.
 
     """
-    options = PipelineOptions(
-        profile=args.profile,
-        soffice=str(args.soffice) if args.soffice else None,
-        verapdf_path=str(args.verapdf_path) if args.verapdf_path else None,
-        timeout=args.timeout,
-    )
-    record = run_batch(
+    record = api.run_batch(
         args.manifest,
         args.output_dir,
-        options,
-        on_progress=progress_callback(args.format),
+        tools=api.Tools(args.soffice, args.verapdf_path, args.timeout),
+        profile=args.profile,
+        observer=progress_callback(args.format),
         rebind=args.rebind,
     )
     if args.format == "json":
@@ -45,7 +39,7 @@ def batch_command(args: argparse.Namespace) -> int:
     else:
         lines = [
             f"Batch: {record.status}",
-            f"Profile: {options.profile}; exit {record.exit_status}",
+            f"Profile: {args.profile}; exit {record.exit_status}",
         ]
         lines.extend(
             f"- {item.id}: {item.status}; exit={item.exit_status}; "

@@ -11,11 +11,12 @@ import pytest
 from lxml import etree
 from pypdf import PdfReader
 
-from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.pipeline import NativeOptions, export_document
+from odfa11y.pipeline.native import export_document
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
+from odfa11y.tools import Tools
 
 from .operation_execution import execute_operations
 
@@ -48,7 +49,7 @@ def test_writer_revision_reload_and_rendered_word_boundaries(
         assert len(left) == len(right)
         assert [etree.tostring(node) for node in left] == [etree.tostring(node) for node in right]
     output = tmp_path / "rendered.pdf"
-    export_document(edited, output, NativeOptions(soffice=soffice))
+    export_document(edited, output, Tools(soffice=soffice))
     text = "\n".join(page.extract_text() for page in PdfReader(output).pages)
     assert re.search(r"One\s+Two\s+Three\s+Four", text)
     assert "Deleted heading" not in text

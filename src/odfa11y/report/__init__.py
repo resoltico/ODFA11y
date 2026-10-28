@@ -6,6 +6,7 @@ from .facts import FACT_REGISTRY, FactKey, FactKeys, FactSet
 from .models import Finding, Location, Report
 from .render import FORMATS, exit_status, render_reports
 from .rules import RULES, Category, Rule, Severity
+from .sarif import preflight_sarif
 from .terminal import terminal_text
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "Rule",
     "Severity",
     "exit_status",
+    "preflight_sarif",
     "render_reports",
     "rules",
     "terminal_text",

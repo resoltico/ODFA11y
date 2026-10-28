@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from odfa11y.errors import ReportError
 from odfa11y.outcomes import ExitStatus
 
+from .facts import FactKeys
 from .sarif import sarif_log
 from .terminal import terminal_text
 
@@ -101,7 +102,32 @@ def _render_text(report: Report) -> str:
         lines.append("Facts:")
         for key in sorted(report.facts, key=lambda item: item.id):
             lines.extend(_field(f"  {terminal_text(key.id)}: ", _summarize(report.facts[key])))
+    lines.extend(_style_lines(report))
     return "\n".join(lines)
+
+
+def _style_lines(report: Report) -> list[str]:
+    lines = []
+    rows = report.facts.get(FactKeys.TEXT_PARAGRAPH_STYLES) or []
+    if rows:
+        lines.append("Paragraph styles:")
+        for row in rows:
+            lines.extend(
+                _field(
+                    f"- {terminal_text(row.get('style', ''))}: ", f"{row.get('count', 0)} use(s)"
+                )
+            )
+            lines.extend(_field("  Parent: ", row.get("parent") or "none"))
+            spacing = row.get("spacing")
+            if isinstance(spacing, dict):
+                lines.extend(
+                    _field(
+                        "  Spacing: ",
+                        "; ".join(f"{key}={value}" for key, value in spacing.items())
+                        or "not declared",
+                    )
+                )
+    return lines
 
 
 def _field(label: str, value: object) -> list[str]:

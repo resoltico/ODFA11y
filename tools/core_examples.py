@@ -1,94 +1,65 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Executable public API examples; run against an installed wheel outside the checkout."""
+"""Executable root-API examples, including outside-checkout installed-wheel qualification."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from odfa11y.audit import prepare_plan
-from odfa11y.evidence import check_bundle
-from odfa11y.families import style_usage
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import (
-    PipelineOptions,
-    audit_document,
-    compare_documents,
-    export_document,
-    inspect_tools,
-    run_pipeline,
-)
-from odfa11y.plans import Plan, parse_tables, registered_kinds
-from odfa11y.remediation import remediate
-from odfa11y.report import exit_status
+import odfa11y as api
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from odfa11y.pipeline import NativeOptions, RunRecord
-    from odfa11y.report import Report
 
-
-def inspect_source(source: Path, work: Path) -> list[Report]:
-    """Audit incrementally, inspect styles, prepare decisions and publish a reviewed edit.
+def inspect_source(source: Path, work: Path) -> list[api.Report]:
+    """Inspect, prepare questions and apply one independently supplied example title.
 
     Returns
     -------
-    list[Report]
-        Completed reports; strict warning policy remains the caller's choice.
+    list[api.Report]
+        Completed source reports; each application result owns its effective status.
+
+    Raises
+    ------
+    OdfA11yError
+        The explicit reviewed edit could not be published.
 
     """
     work.mkdir(parents=True, exist_ok=True)
-    completed = []
-    for report in audit_document(source, schema=True):
-        completed.append(report)
-        # Core operations produce no terminal output. Render or serialize when needed.
-        report.as_dict()
-    style_usage(source)
-    report, template = prepare_plan(source)
-    completed.append(report)
-    if template is not None:
-        (work / "decisions.toml").write_text(template, encoding="utf-8")
-    # This title is an explicit example decision, never inferred from document content.
-    plan = parse_tables(
-        {
-            **Plan.for_source(source).as_dict(),
-            "decisions": {"document.metadata": {"title": "Reviewed example"}},
-        },
-        registered_kinds(),
-    )
-    remediate(source, work / ("reviewed" + source.suffix), plan)
-    exit_status(completed, strict=True)
+    inspected = api.audit(source, schema=True)
+    completed = list(inspected.reports)
+    prepared = api.plan(source)
+    completed.append(prepared.report)
+    if prepared.template is not None:
+        (work / "decisions.toml").write_text(prepared.template, encoding="utf-8")
+    kind = api.registered_kinds()["document.metadata"]
+    answer = api.decode_answer(kind.answer_type, {"title": "Reviewed example"}, kind.id)
+    decision = api.Decision(kind, None, None, answer)
+    reviewed = api.Plan.for_source(source, [decision])
+    result = api.remediate(source, work / ("reviewed" + source.suffix), reviewed)
+    if result.exit_status != api.ExitStatus.PASSED:
+        message = "The reviewed example could not be published."
+        raise api.OdfA11yError(message)
     return completed
 
 
 def native_work(
-    source: Path, work: Path, options: NativeOptions
-) -> tuple[Report, RunRecord, list[str]]:
-    """Export, compare and publish evidence while retaining each independent result.
+    source: Path, work: Path, tools: api.Tools
+) -> tuple[api.Report, api.RunRecord, list[str]]:
+    """Measure tools, export, compare and retain a complete assurance record.
 
     Returns
     -------
     tuple[Report, RunRecord, list[str]]
-        Fidelity, pipeline stages/gates and bundle integrity problems. Inspect all three;
-        successful integrity alone never means the document passed accessibility gates.
+        Independent fidelity, run and recorded-file integrity results.
 
     """
     work.mkdir(parents=True, exist_ok=True)
-    _identities, probe_error = inspect_tools(options)
-    # The partial facts remain available even when the controlled probe error is raised.
-    if probe_error is not None:
-        raise probe_error
-    pdf = export_document(source, work / "publication.pdf", options)
-    comparison = compare_documents(source, pdf, FidelityPolicy(), work / "diff", options)
-    record = run_pipeline(
-        source,
-        Plan.for_source(source),
-        work / "evidence",
-        PipelineOptions(
-            soffice=str(options.soffice) if options.soffice is not None else None,
-            timeout=options.timeout,
-        ),
-    )
-    # A failed gate still leaves evidence. Integrity says nothing about accessibility.
-    problems = check_bundle(work / "evidence")
-    return comparison, record, problems
+    environment = api.doctor(tools=tools)
+    if environment.error is not None:
+        raise environment.error
+    exported = api.export(source, work / "publication.pdf", tools=tools)
+    comparison = api.compare(source, exported.output, tools=tools, diff_dir=work / "diff")
+    record = api.run(source, api.Plan.for_source(source), work / "evidence", tools=tools)
+    integrity = api.verify_evidence(work / "evidence")
+    return comparison.report, record, list(integrity.problems)

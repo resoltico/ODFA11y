@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
-from odfa11y.errors import PlanError, UnsupportedKindError
+from odfa11y.errors import PlanError
 lazy from odfa11y.outcomes import ReviewTopic
 
 if TYPE_CHECKING:
@@ -132,20 +132,6 @@ class FamilyAdapter(ABC):
             msg = f"No decision operation implementation for {self.name}"
             raise PlanError(msg)
         return ()
-
-    @staticmethod
-    def style_report(document: OdfDocument) -> list[StyleUsage]:
-        """Inspect supported paragraph styles.
-
-        Raises
-        ------
-        UnsupportedKindError
-            The family has no paragraph-style inspection.
-
-        """
-        kind = document.kind.name if document.kind is not None else "unrecognised"
-        msg = f"A style report is not defined for {kind} documents."
-        raise UnsupportedKindError(msg)
 
     @staticmethod
     def preflight(document: OdfDocument, operations: Sequence[Operation]) -> None:

@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pipeline import audit_document, inspection
+from odfa11y.pipeline import inspection
+from odfa11y.pipeline.inspection import audit_document
 from odfa11y.report import FactKeys
 
 from .fixtures import make_minimal_odt

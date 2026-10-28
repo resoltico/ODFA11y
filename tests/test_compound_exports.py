@@ -9,7 +9,6 @@ from zipfile import ZipFile
 import pytest
 from lxml import etree
 
-from odfa11y.audit import audit_odf
 from odfa11y.content import table_fingerprint
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.native.export import ExportSettings, export_pdfua
@@ -20,6 +19,7 @@ from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.remediation import SetMetadata
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
 
 from .documents import Variant, make_flat
 from .operation_execution import assert_refused, execute_operations

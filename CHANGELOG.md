@@ -6,6 +6,8 @@ Notable changes to this project are documented in this file. The format is based
 
 ### Breaking
 
+- Call the root application API with `Tools` and `Profile` values; results own effective exit statuses. Use `verify` and profile `source`; paragraph styles appear in `audit` output.
+
 - Native process/export/preflight APIs live in `native`; PDF reading and fidelity live under `pdf`. Size-split graphic-style and Writer style/protection/spacing modules are consolidated, with no forwarding modules.
 
 - Use concept-based rule IDs across families. Missing graphic text uses one title-or-description criterion; notes and annotations consistently warn and can now fail strict page-document runs. Findings reference their registered rules.
@@ -31,6 +33,10 @@ Notable changes to this project are documented in this file. The format is based
 
 - Replaced file/function size caps and lint-policy probing with cohesion review, local justified suppressions and stale-suppression diagnostics; retained complexity and architecture checks.
 - Native CI uses checksum-pinned LibreOffice 26.8.1.1 on every platform and Go 1.27.3. Dependency updates use primary sources; security alerts remain enabled.
+
+## [0.8.0]
+
+Draft: the remaining 0.8.0 work packages and final release qualification are in progress.
 
 ## [0.7.0] - 2026-10-16
 

@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 import pytest
 from lxml import etree
 
-from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf, prepare_plan
 
 from .documents import Variant, make_flat
 from .fixtures import make_minimal_odt

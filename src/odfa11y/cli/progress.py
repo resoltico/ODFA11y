@@ -6,10 +6,33 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from odfa11y.report import terminal_text
+from odfa11y import StepName, terminal_text
 
 if TYPE_CHECKING:
-    from odfa11y.outcomes import ProgressEvent, ProgressObserver
+    from odfa11y import ProgressEvent, ProgressObserver
+
+
+_LABELS = {
+    StepName.IDENTIFY_SOURCE: "Identify source",
+    StepName.AUDIT_SOURCE: "Audit source",
+    StepName.REMEDIATE: "Apply reviewed decisions",
+    StepName.AUDIT_REMEDIATED: "Audit remediated source",
+    StepName.EXPORT_SOURCE: "Export source PDF",
+    StepName.EXPORT_REMEDIATED: "Export remediated PDF",
+    StepName.AUDIT_PDF: "Inspect PDF",
+    StepName.VALIDATE_PDF: "Validate PDF/UA",
+    StepName.FIDELITY: "Compare fidelity",
+    StepName.PUBLISH_EVIDENCE: "Publish evidence",
+    StepName.LOAD_PLAN: "Load reviewed plan",
+    StepName.PIPELINE: "Run assurance workflow",
+    StepName.AUDIT_DOCUMENT: "Audit document",
+    StepName.EXPORT_PDF: "Export PDF",
+    StepName.EXPORT_CANDIDATE: "Export candidate PDF",
+    StepName.COMPARE_FIDELITY: "Compare fidelity",
+    StepName.PROBE_CAPABILITIES: "Measure native capabilities",
+    StepName.PROBE_TOOLCHAIN: "Inspect tools",
+    StepName.BATCH_ITEM: "Process batch item",
+}
 
 
 def progress_callback(output_format: str) -> ProgressObserver | None:
@@ -33,7 +56,7 @@ def progress_callback(output_format: str) -> ProgressObserver | None:
         nonlocal enabled
         if enabled:
             try:
-                label = event.step.value.replace("-", " ").capitalize()
+                label = _LABELS[event.step]
                 stream.write(f"Progress: {terminal_text(label)}: {terminal_text(event.state)}\n")
                 stream.flush()
             except OSError:

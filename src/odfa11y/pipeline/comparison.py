@@ -14,10 +14,12 @@ from odfa11y.native.export import export_pdfua
 from odfa11y.odf import OdfDocument
 from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.tools import Tools
 
-from .native import NativeOptions, native_export_settings
+from .native import native_export_settings
 
 if TYPE_CHECKING:
+    from odfa11y.outcomes import ProgressObserver
     from odfa11y.pdf.fidelity import FidelityPolicy
     from odfa11y.report import Report
 
@@ -58,7 +60,9 @@ def compare_documents(
     candidate: str | Path,
     policy: FidelityPolicy,
     diff_dir: str | Path | None = None,
-    options: NativeOptions | None = None,
+    tools: Tools | None = None,
+    *,
+    on_progress: ProgressObserver | None = None,
 ) -> Report:
     """Preflight both inputs, render ODF inputs privately, and compare PDF fidelity.
 
@@ -72,32 +76,44 @@ def compare_documents(
         Fidelity findings under the supplied policy, with original source identities.
 
     """
-    options = options or NativeOptions()
+    tools = tools or Tools()
     source, candidate = Path(source), Path(candidate)
     source_pdf, candidate_pdf = is_pdf(source), is_pdf(candidate)
     with tempfile.TemporaryDirectory(prefix="odfa11y-compare-") as scratch:
         work = Path(scratch)
-        left = _render_input(source, work, options, pdf=source_pdf, name="source")
-        right = _render_input(candidate, work, options, pdf=candidate_pdf, name="candidate")
-        if options.on_progress is not None:
-            options.on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.RUNNING))
+        left = _render_input(
+            source, work, tools, pdf=source_pdf, name="source", on_progress=on_progress
+        )
+        right = _render_input(
+            candidate, work, tools, pdf=candidate_pdf, name="candidate", on_progress=on_progress
+        )
+        if on_progress is not None:
+            on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.RUNNING))
         report = compare_pdfs(left, right, policy, diff_dir=diff_dir)
-        if options.on_progress is not None:
-            options.on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.PASSED))
+        if on_progress is not None:
+            on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.PASSED))
     report.subject = f"{candidate.name} vs {source.name}"
     report.sources = (candidate, source)
     return report
 
 
-def _render_input(path: Path, work: Path, options: NativeOptions, *, pdf: bool, name: str) -> Path:
+def _render_input(
+    path: Path,
+    work: Path,
+    tools: Tools,
+    *,
+    pdf: bool,
+    name: str,
+    on_progress: ProgressObserver | None,
+) -> Path:
     if pdf:
         return path
     settings = native_export_settings(
-        OdfDocument.open(path), options.soffice, options.timeout, work / "profile"
+        OdfDocument.open(path), tools.soffice, tools.timeout, work / "profile"
     )
-    if options.on_progress is not None:
-        options.on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.RUNNING))
+    if on_progress is not None:
+        on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.RUNNING))
     rendered = export_pdfua(path, work / f"{name}.pdf", settings)
-    if options.on_progress is not None:
-        options.on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.PASSED))
+    if on_progress is not None:
+        on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.PASSED))
     return rendered

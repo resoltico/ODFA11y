@@ -13,8 +13,11 @@ from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 from odfa11y.remediation import SetMetadata
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .native_resource_fixtures import PIXELS, author_package, decoded_images, writer_resource
@@ -54,11 +57,13 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
     baseline = read_snapshot(direct)
     assert baseline.links
     output = tmp_path / "evidence"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [SetMetadata(language="en-GB")], FidelityPolicy()),
         output,
-        PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf),
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+        ),
     )
     assert result.passed, result.as_dict()
     for name in ["source.pdf", "remediated.pdf"]:
@@ -102,22 +107,22 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     assert ".odfa11y-source-" not in read_snapshot(direct).text
     output = tmp_path / "evidence"
     for repeat in [1, 2]:
-        result = run_pipeline(
+        result = execute(
             source,
             reviewed_plan(source, [], FidelityPolicy()),
             output / str(repeat),
-            PipelineOptions(profile="verify", soffice=soffice),
+            RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
         )
         assert result.failed_stage == "export-source"
         assert result.exit_status == 3
         assert not (output / str(repeat) / "source.pdf").exists()
         assert check_bundle(output / str(repeat)) == []
     inspected = tmp_path / "inspected"
-    assert run_pipeline(
+    assert execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         inspected,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     ).passed
     published = inspected / "remediated.odt"
     assert published.read_bytes() == original

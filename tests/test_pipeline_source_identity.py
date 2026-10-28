@@ -11,7 +11,9 @@ import pytest
 from odfa11y.evidence import sha256_file
 from odfa11y.odf import PackageStorage
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import reviewed_plan
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
 def test_source_replacement_uses_captured_bytes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, boundary: str
 ) -> None:
-    runner = importlib.import_module("odfa11y.pipeline.run")
+    runner = importlib.import_module("odfa11y.pipeline.engine")
     source = make_minimal_odt(tmp_path / "original.odt")
     original = source.read_bytes()
     digest = sha256_file(source)
@@ -36,11 +38,11 @@ def test_source_replacement_uses_captured_bytes(
 
     monkeypatch.setattr(runner, boundary, replace)
     target = tmp_path / "bundle"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.passed
     assert result.document.sha256 == digest

@@ -14,7 +14,10 @@ from odfa11y.evidence import check_bundle
 from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import tagged_writer
@@ -29,7 +32,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def successful_exports(monkeypatch: pytest.MonkeyPatch) -> None:
-    runner = importlib.import_module("odfa11y.pipeline.run")
+    runner = importlib.import_module("odfa11y.pipeline.engine")
     monkeypatch.setattr(runner, "find_soffice", lambda _requested: "soffice")
     monkeypatch.setattr(
         runner, "identify_soffice", lambda _path: ToolIdentity("LibreOffice", "26.8.0.3")
@@ -47,11 +50,14 @@ def successful_exports(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_required_validator_failure_reaches_stage_and_retains_evidence(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     target = tmp_path / "evidence"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(profile="production", verapdf_path=str(tmp_path / "missing-verapdf")),
+        RunSettings(
+            tools=Tools(verapdf=str(tmp_path / "missing-verapdf")),
+            profile=profile_named("production"),
+        ),
     )
     assert result.failed_stage == "validate-pdf"
     assert result.exit_status == 3
@@ -128,14 +134,16 @@ def test_real_production_reaches_missing_required_validator(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     target = tmp_path / "evidence"
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         target,
-        PipelineOptions(
-            profile="production",
-            soffice=external_tool("soffice", "libreoffice"),
-            verapdf_path=str(tmp_path / "missing-verapdf"),
+        RunSettings(
+            tools=Tools(
+                soffice=external_tool("soffice", "libreoffice"),
+                verapdf=str(tmp_path / "missing-verapdf"),
+            ),
+            profile=profile_named("production"),
         ),
     )
     assert all(stage.status == "passed" for stage in record.stages[:7]), record.as_dict()

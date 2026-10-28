@@ -57,13 +57,13 @@ uv run --no-sync odfa11y plan original.odt > document.toml   # list open decisio
 # edit document.toml: uncomment and complete only the decisions you have made
 uv run --no-sync odfa11y pipeline original.odt --plan document.toml \
   --output-dir evidence --profile production
-uv run --no-sync odfa11y check-evidence evidence
+uv run --no-sync odfa11y verify evidence
 ```
 
 A passing production run retains the remediated document and PDF, the veraPDF report, a
 run record and `REVIEW.md`. Failed runs retain completed artifacts and failure evidence.
 `REVIEW.md` separates machine-established facts from the human review still required.
-`--profile` selects how much assurance a run requires: `inspect`, `verify` (the default) or
+`--profile` selects how much assurance a run requires: `source`, `verify` (the default) or
 `production` (veraPDF required, warnings fail).
 
 ## Commands
@@ -77,8 +77,7 @@ run record and `REVIEW.md`. Failed runs retain completed artifacts and failure e
 | `compare A B` | Compare two ODF documents or PDFs for pages, text, links and rendered ink. |
 | `pipeline SRC --plan FILE --output-dir DIR [--profile P]` | Remediate, export, validate, compare and keep evidence. |
 | `batch MANIFEST --output-dir DIR` | Independent manifest runs, atomic per-item evidence and aggregate status; see [Batch](docs/BATCH.md). |
-| `styles FILE` | Paragraph-style usage and effective spacing. |
-| `check-evidence DIR` | Verify an evidence directory against its manifest. |
+| `verify DIR` | Verify an evidence directory against its manifest. |
 | `doctor` | Dependency and external-tool versions, and its link-description export probe (`pdfua_link_descriptions`). |
 
 Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
@@ -86,17 +85,11 @@ Use `uv run --no-sync odfa11y COMMAND --help` for options. The staged
 
 ## Library use
 
-The CLI is a presentation layer over public core operations. Libraries can call
-`odfa11y.pipeline.audit_document`, `export_document`, `compare_documents`,
-`inspect_tools` and `run_pipeline` directly, with `NativeOptions` for standalone
-tool settings or `PipelineOptions` for assurance runs. Inspection yields reports
-incrementally, preserving completed checks if a later validator fails.
-`odfa11y.audit.prepare_plan` prepares source-bound decision plans, and
-`odfa11y.remediation.remediate` applies source-bound decision plans. Low-level
-`odfa11y.native.export.export_pdfua` remains available; its callers own native preflight.
-See the [public library contract](docs/API.md) for results, errors, output ownership and
-executable installed-package examples, and [Architecture](docs/ARCHITECTURE.md) for package
-boundaries.
+Import `odfa11y` for the supported application API: `audit`, `plan`, `remediate`,
+`export`, `compare`, `run`, `run_batch`, `doctor` and `verify_evidence`. Select native
+executables with one `Tools` value and assurance with a `Profile` value. Results own
+their effective `exit_status`; independent audit inputs retain completed reports and failures.
+See the [library contract](docs/API.md) and executable [root-only examples](tools/core_examples.py).
 
 ## Documentation
 

@@ -18,9 +18,13 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import PackageStorage
+from odfa11y.outcomes import PIPELINE_STAGES
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PIPELINE_STAGES, PROFILES, PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import PROFILES, profile_named
 from odfa11y.remediation import SetMetadata
+from odfa11y.tools import Tools
 
 from .fixtures import make_minimal_odt
 from .reviewed_plans import reviewed_plan
@@ -29,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from odfa11y.pipeline import RunRecord
+    from odfa11y.pipeline.record import RunRecord
 
 
 def statuses(record: RunRecord) -> dict[str, str]:
@@ -47,7 +51,7 @@ def statuses(record: RunRecord) -> dict[str, str]:
 def test_unreadable_source_stops_everything_but_still_publishes_evidence(tmp_path: Path) -> None:
     source = tmp_path / "broken.odt"
     source.write_bytes(b"not a zip")
-    record = run_pipeline(source, reviewed_plan(source, [], FidelityPolicy()), tmp_path / "out")
+    record = execute(source, reviewed_plan(source, [], FidelityPolicy()), tmp_path / "out")
     assert statuses(record)["audit-source"] == "failed"
     assert statuses(record)["identify-source"] == "passed"
     kept = {"identify-source", "audit-source"}
@@ -63,9 +67,7 @@ def test_remediation_failure_publishes_evidence_without_a_remediated_document(
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     operations = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
-    record = run_pipeline(
-        source, reviewed_plan(source, operations, FidelityPolicy()), tmp_path / "out"
-    )
+    record = execute(source, reviewed_plan(source, operations, FidelityPolicy()), tmp_path / "out")
     assert statuses(record)["remediate"] == "failed"
     assert record.exit_status == 2
     assert not (tmp_path / "out" / "remediated.odt").exists()
@@ -82,7 +84,7 @@ def test_an_occupied_evidence_directory_is_refused_before_any_work(tmp_path: Pat
     target.mkdir()
     (target / "keep.txt").write_text("precious")
     with pytest.raises(OutputError):
-        run_pipeline(source, reviewed_plan(source, [], FidelityPolicy()), target)
+        execute(source, reviewed_plan(source, [], FidelityPolicy()), target)
     assert [p.name for p in target.iterdir()] == ["keep.txt"]
 
 
@@ -90,8 +92,8 @@ def test_a_missing_libreoffice_fails_the_export_stage_and_keeps_earlier_evidence
     tmp_path: Path,
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    options = PipelineOptions(soffice=str(tmp_path / "no-such-soffice"))
-    record = run_pipeline(
+    options = RunSettings(tools=Tools(soffice=str(tmp_path / "no-such-soffice")))
+    record = execute(
         source,
         reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
         tmp_path / "out",
@@ -105,11 +107,11 @@ def test_a_missing_libreoffice_fails_the_export_stage_and_keeps_earlier_evidence
 
 def test_the_record_lists_every_stage_in_order(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    record = run_pipeline(
+    record = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "out",
-        PipelineOptions(soffice="nope"),
+        RunSettings(tools=Tools(soffice="nope")),
     )
     assert tuple(stage.name for stage in record.stages) == PIPELINE_STAGES
 
@@ -129,8 +131,10 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
         MarkTableHeaders({"Data": TableHeaders(1)}),
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "A sample logo")}),
     ]
-    options = PipelineOptions(profile="production", soffice=soffice, verapdf_path=verapdf)
-    record = run_pipeline(
+    options = RunSettings(
+        tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+    )
+    record = execute(
         source, reviewed_plan(source, operations, FidelityPolicy()), tmp_path / "out", options
     )
     why = [
@@ -165,8 +169,8 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     source = _document_with_spacers(tmp_path)
-    options = PipelineOptions(soffice=soffice)
-    failed = run_pipeline(
+    options = RunSettings(tools=Tools(soffice=soffice))
+    failed = execute(
         source,
         reviewed_plan(source, [RemoveEmptySpacers()], FidelityPolicy()),
         tmp_path / "strict",
@@ -176,7 +180,7 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
     assert failed.exit_status == 2
     assert (tmp_path / "strict" / "fidelity" / "page-001-diff.png").is_file()
     allowed = FidelityPolicy(pagination="may-change")
-    passed = run_pipeline(
+    passed = execute(
         source,
         reviewed_plan(source, [RemoveEmptySpacers()], allowed),
         tmp_path / "relaxed",
@@ -191,9 +195,9 @@ def test_repeated_runs_have_equal_logical_results_and_identical_documents(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     source = make_minimal_odt(tmp_path / "doc.odt")
-    options = PipelineOptions(soffice=soffice)
+    options = RunSettings(tools=Tools(soffice=soffice))
     runs = [
-        run_pipeline(
+        execute(
             source,
             reviewed_plan(source, [SetMetadata(title="Same")], FidelityPolicy()),
             tmp_path / f"r{i}",
@@ -225,7 +229,7 @@ def _document_with_spacers(tmp_path: Path) -> Path:
 
 
 def test_an_unreadable_source_still_yields_an_evidence_bundle(tmp_path: Path) -> None:
-    record = run_pipeline(
+    record = execute(
         tmp_path / "absent.odt",
         reviewed_plan(tmp_path / "absent.odt", [], FidelityPolicy()),
         tmp_path / "out",
@@ -250,33 +254,33 @@ def test_an_unreadable_source_still_yields_an_evidence_bundle(tmp_path: Path) ->
 
 def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    options = PipelineOptions(profile="inspect")
-    record = run_pipeline(
+    options = RunSettings(profile=profile_named("source"))
+    record = execute(
         source,
         reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
         tmp_path / "o",
         options,
     )
     expected = {
-        name: "passed" if name in PROFILES["inspect"].stages else "skipped"
+        name: "passed" if name in PROFILES["source"].stages else "skipped"
         for name in PIPELINE_STAGES
     }
     assert statuses(record) == expected
     assert record.exit_status == 0
     skipped = [s for s in record.stages if s.name == "export-source"]
-    assert skipped[0].reason == "not part of the inspect profile"
+    assert skipped[0].reason == "not part of the source profile"
     run = json.loads((tmp_path / "o" / "run.json").read_text())
-    assert run["profile"] == PROFILES["inspect"].as_dict()
+    assert run["profile"] == PROFILES["source"].as_dict()
 
 
 def test_an_unknown_profile_is_a_configuration_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     with pytest.raises(PlanError, match="Unknown profile"):
-        run_pipeline(
+        execute(
             source,
             reviewed_plan(source, [], FidelityPolicy()),
             tmp_path / "o",
-            PipelineOptions(profile="x"),
+            RunSettings(profile=profile_named("x")),
         )
     assert not (tmp_path / "o").exists()
 
@@ -285,9 +289,9 @@ def test_the_production_profile_fails_at_export_when_libreoffice_is_unavailable(
     tmp_path: Path,
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    options = PipelineOptions(profile="production", soffice=str(tmp_path / "none"))
-    record = run_pipeline(
-        source, reviewed_plan(source, [], FidelityPolicy()), tmp_path / "o", options
+    options = RunSettings(
+        tools=Tools(soffice=str(tmp_path / "none")), profile=profile_named("production")
     )
+    record = execute(source, reviewed_plan(source, [], FidelityPolicy()), tmp_path / "o", options)
     assert statuses(record)["export-source"] == "failed"
     assert record.strict

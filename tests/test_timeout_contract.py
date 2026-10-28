@@ -18,7 +18,8 @@ from odfa11y.errors import PlanError, ToolFailedError
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import MAX_TIMEOUT_SECONDS, run_bounded, validate_timeout
 from odfa11y.pdf import check_pdfua, validate_pdfua
-from odfa11y.pipeline import NativeOptions, PipelineOptions, audit_document
+from odfa11y.pipeline.inspection import audit_document
+from odfa11y.tools import Tools
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,9 +48,8 @@ def test_invalid_timeouts_launch_nothing(value: object, monkeypatch: pytest.Monk
     invalid_timeout = cast("float", value)
     with pytest.raises(PlanError, match="Timeout"):
         run_bounded([sys.executable], timeout=invalid_timeout)
-    for factory in (NativeOptions, PipelineOptions):
-        with pytest.raises(PlanError, match="Timeout"):
-            factory(timeout=invalid_timeout)
+    with pytest.raises(PlanError, match="Timeout"):
+        Tools(timeout=invalid_timeout)
     with pytest.raises(PlanError, match="Timeout"):
         ExportSettings("writer_pdf_Export", timeout=invalid_timeout)
     with pytest.raises(PlanError, match="Timeout"):

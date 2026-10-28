@@ -6,10 +6,8 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from odfa11y.errors import OdfA11yError
-from odfa11y.outcomes import ExitStatus, combine_statuses, failure_status
-from odfa11y.pipeline import audit_document
-from odfa11y.report import exit_status, render_reports, terminal_text
+import odfa11y as api
+from odfa11y import terminal_text
 
 from .guidance import audit_next_step
 from .outcomes import render_command_outcome
@@ -17,8 +15,6 @@ from .progress import progress_callback
 
 if TYPE_CHECKING:
     import argparse
-
-    from odfa11y.report import Report
 
 
 def audit_command(args: argparse.Namespace) -> int:
@@ -29,45 +25,26 @@ def audit_command(args: argparse.Namespace) -> int:
     int
         The strongest command status across every input.
 
-    Raises
-    ------
-    OdfA11yError
-        A SARIF inspection fails; no partial log is emitted.
-    OSError
-        A SARIF input cannot be read.
-    ValueError
-        SARIF identity or rendering is invalid.
-
     """
-    reports: list[Report] = []
-    status = ExitStatus.PASSED
-    for source in args.sources:
-        try:
-            reports.extend(
-                audit_document(
-                    source,
-                    schema=args.schema,
-                    verapdf=args.verapdf,
-                    verapdf_path=args.verapdf_path,
-                    timeout=args.timeout,
-                    on_progress=progress_callback(args.format),
-                )
-            )
-        except (OdfA11yError, OSError, ValueError) as exc:
-            if args.format == "sarif":
-                raise
-            print(  # noqa: T201  CLI output is the command interface.
-                f"error: Cannot audit {terminal_text(source)}: {terminal_text(exc)}",
-                file=sys.stderr,
-            )
-            status = combine_statuses([status, failure_status(exc)])
-    status = combine_statuses([status, exit_status(reports, strict=args.strict)])
-    command_gate(args, status)
-    if reports:
-        print(render_reports(reports, output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output is the command interface.
-    if args.format == "text" and (next_step := audit_next_step(args, reports)):
-        print(next_step)  # noqa: T201  CLI output is the command interface.
-    return status
+    result = api.audit(
+        args.sources,
+        tools=api.Tools(verapdf=args.verapdf_path, timeout=args.timeout),
+        schema=args.schema,
+        validate_pdf=args.verapdf,
+        strict=args.strict,
+        observer=progress_callback(args.format),
+    )
+    rendered = result.render(args.format, source_root=args.source_root)
+    for item in result.failures:
+        sys.stderr.write(
+            f"error: Cannot audit {terminal_text(item.source)}: {terminal_text(item.error)}\n"
+        )
+    command_gate(args, result.exit_status)
+    if rendered is not None:
+        print(rendered)  # noqa: T201  CLI output.
+    if args.format == "text" and (next_step := audit_next_step(args, result.reports)):
+        print(next_step)  # noqa: T201  CLI output.
+    return result.exit_status
 
 
 def command_gate(

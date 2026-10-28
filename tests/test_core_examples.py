@@ -8,11 +8,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.errors import ToolFailedError, UnsupportedKindError
-from odfa11y.families import style_usage
+from odfa11y import audit
+from odfa11y.errors import ToolFailedError
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part, qn
-from odfa11y.pipeline import NativeOptions
+from odfa11y.records import DoctorRecord, Toolchain
+from odfa11y.report import FactKeys
+from odfa11y.tools import Tools
 from tools import core_examples
 
 from .documents import make_flat, make_package
@@ -66,8 +68,7 @@ assert not any(n == "odfa11y.cli" or n.startswith("odfa11y.cli.") for n in sys.m
 
 def test_style_example_contract_refuses_unsupported_families(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "spreadsheet")
-    with pytest.raises(UnsupportedKindError, match="style report is not defined"):
-        style_usage(source)
+    assert FactKeys.TEXT_PARAGRAPH_STYLES not in audit(source).reports[0].facts
 
 
 def test_native_example_retains_controlled_probe_failure_before_export(
@@ -75,13 +76,12 @@ def test_native_example_retains_controlled_probe_failure_before_export(
 ) -> None:
     source = make_flat(tmp_path, "text")
     failure = ToolFailedError("Controlled capability probe failure")
-    monkeypatch.setattr(
-        core_examples, "inspect_tools", lambda _options: ({"python": "known"}, failure)
-    )
+    record = DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain(), error=failure)
+    monkeypatch.setattr(core_examples.api, "doctor", lambda **_kwargs: record)
     exports = []
-    monkeypatch.setattr(core_examples, "export_document", lambda *args: exports.append(args))
+    monkeypatch.setattr(core_examples.api, "export", lambda *args, **_kwargs: exports.append(args))
     with pytest.raises(ToolFailedError, match="Controlled capability probe failure") as caught:
-        core_examples.native_work(source, tmp_path / "work", NativeOptions())
+        core_examples.native_work(source, tmp_path / "work", Tools())
     assert caught.value is failure
     assert exports == []
     assert not (tmp_path / "work" / "publication.pdf").exists()
@@ -96,7 +96,7 @@ def test_native_examples_surface_real_fidelity_pipeline_and_integrity_results(
     comparison, record, problems = core_examples.native_work(
         source,
         tmp_path / "work",
-        NativeOptions(soffice=external_tool("soffice", "libreoffice")),
+        Tools(soffice=external_tool("soffice", "libreoffice")),
     )
     assert comparison.passed, comparison.as_dict()
     assert record.passed, record.as_dict()

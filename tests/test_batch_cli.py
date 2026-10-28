@@ -35,7 +35,7 @@ def test_batch_cli_publishes_json_and_returns_aggregate_status(
         "--output-dir",
         str(tmp_path / "out"),
         "--profile",
-        "inspect",
+        "source",
         "--format",
         "json",
     ])
@@ -53,7 +53,7 @@ def test_batch_cli_text_and_global_validation_have_documented_statuses(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     manifest = manifest_file(tmp_path, [("one", "missing.odt", "missing.toml")])
-    args = ["batch", str(manifest), "--output-dir", str(tmp_path / "out"), "--profile", "inspect"]
+    args = ["batch", str(manifest), "--output-dir", str(tmp_path / "out"), "--profile", "source"]
     assert main(args) == 4
     text = capsys.readouterr().out
     assert "Batch: failed" in text

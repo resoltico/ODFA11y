@@ -70,7 +70,7 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
         report.add(rules.META001)
         yield report
 
-    monkeypatch.setattr("odfa11y.cli.audit.audit_document", audit)
+    monkeypatch.setattr("odfa11y.application.audit_document", audit)
     sources = ["invalid", "findings"]
     if execution_failure:
         sources.append("unreadable")

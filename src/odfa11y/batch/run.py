@@ -21,7 +21,9 @@ from odfa11y.outcomes import (
     failure_status,
 )
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, RunRecord, StageResult, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.record import RunRecord, StageResult
 from odfa11y.plans import load_plan
 from odfa11y.records import DocumentIdentity
 
@@ -39,7 +41,7 @@ if TYPE_CHECKING:
 def run_batch(
     manifest: str | Path,
     output_dir: str | Path,
-    options: PipelineOptions | None = None,
+    options: RunSettings | None = None,
     *,
     on_progress: ProgressObserver | None = None,
     rebind: bool = False,
@@ -55,8 +57,8 @@ def run_batch(
 
     """
     manifest, output = Path(manifest), Path(output_dir)
-    options = options or PipelineOptions()
-    _ = options.assurance  # Validate the profile before effects.
+    options = options or RunSettings()
+    _ = options.profile  # Validate the profile before effects.
     items = load_manifest(manifest)
     preflight(manifest, output, items)
     record = BatchRecord(items=[BatchItemResult(item.id) for item in items])
@@ -85,7 +87,7 @@ def _run_items(
     items: tuple[BatchItem, ...],
     record: BatchRecord,
     output: Path,
-    options: PipelineOptions,
+    options: RunSettings,
     on_progress: ProgressObserver | None,
     *,
     rebind: bool,
@@ -115,7 +117,7 @@ def _advance_item(
     item: BatchItem,
     progress: BatchItemResult,
     target: Path,
-    options: PipelineOptions,
+    options: RunSettings,
     *,
     rebind: bool,
     probe_cache: ProbeCache,
@@ -136,7 +138,7 @@ def _advance_item(
 def _run_item(
     item: BatchItem,
     target: Path,
-    options: PipelineOptions,
+    options: RunSettings,
     *,
     rebind: bool,
     probe_cache: ProbeCache,
@@ -146,9 +148,7 @@ def _run_item(
     except (OdfA11yError, OSError) as exc:
         return _failure(item, target, options, StageName.LOAD_PLAN, exc)
     try:
-        return run_pipeline(
-            item.source, plan, target, options, rebind=rebind, probe_cache=probe_cache
-        )
+        return execute(item.source, plan, target, options, rebind=rebind, probe_cache=probe_cache)
     except (OdfA11yError, OSError) as exc:
         return _failure(item, target, options, StageName.PIPELINE, exc)
 
@@ -156,7 +156,7 @@ def _run_item(
 def _failure(
     item: BatchItem,
     target: Path,
-    options: PipelineOptions,
+    options: RunSettings,
     stage: StageName,
     exc: OdfA11yError | OSError,
 ) -> RunRecord:
@@ -164,7 +164,7 @@ def _failure(
         document=DocumentIdentity(item.id),
         operations=(),
         policy=FidelityPolicy(),
-        profile=options.assurance,
+        profile=options.profile,
     )
     reason = str(exc) if isinstance(exc, OdfA11yError) else "Item execution could not complete"
     record.stages.append(

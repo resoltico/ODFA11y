@@ -17,7 +17,9 @@ from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import PipelineOptions, run_pipeline
+from odfa11y.pipeline.context import RunSettings
+from odfa11y.pipeline.engine import execute
+from odfa11y.pipeline.profiles import profile_named
 
 from .documents import make_flat
 from .reviewed_plans import plan_header, reviewed_plan
@@ -74,11 +76,11 @@ def test_growth_after_descriptor_size_check_is_bounded(
 
 
 def _pipeline(source: str, output: str) -> None:
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         output,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     sys.exit(result.exit_status)
 
@@ -172,11 +174,11 @@ def test_descriptor_validation_rejects_replacement_fifo_nonblocking(
 def test_zero_length_input_retains_invalid_document_outcome(tmp_path: Path) -> None:
     source = tmp_path / "empty.odt"
     source.write_bytes(b"")
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         tmp_path / "out",
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.failed_stage == "audit-source"
     assert result.exit_status == 2
@@ -187,11 +189,11 @@ def test_directory_input_has_valid_execution_failure_evidence(tmp_path: Path) ->
     source = tmp_path / "directory.odt"
     source.mkdir()
     output = tmp_path / "evidence"
-    result = run_pipeline(
+    result = execute(
         source,
         reviewed_plan(source, [], FidelityPolicy()),
         output,
-        PipelineOptions(profile="inspect"),
+        RunSettings(profile=profile_named("source")),
     )
     assert result.failed_stage == "identify-source"
     assert result.exit_status == 3
@@ -209,7 +211,9 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
     manifest = manifest_file(
         tmp_path, [("oversized", source.name, "plan.toml"), ("valid", normal.name, "plan.toml")]
     )
-    result = run_batch(manifest, tmp_path / "evidence", PipelineOptions(profile="inspect"))
+    result = run_batch(
+        manifest, tmp_path / "evidence", RunSettings(profile=profile_named("source"))
+    )
     assert [item.exit_status for item in result.items] == [3, 0]
     assert result.items[0].failed_stage == "identify-source"
     for name in ["oversized", "valid"]:
@@ -227,11 +231,11 @@ def test_unwritable_source_directory_publishes_failure_elsewhere(tmp_path: Path)
         if os.access(directory, os.W_OK):
             pytest.skip("The current platform/user does not enforce POSIX directory write modes")
         output = tmp_path / "evidence"
-        result = run_pipeline(
+        result = execute(
             source,
             reviewed_plan(source, [], FidelityPolicy()),
             output,
-            PipelineOptions(profile="inspect"),
+            RunSettings(profile=profile_named("source")),
         )
         assert result.failed_stage == "identify-source"
         assert result.exit_status == 3

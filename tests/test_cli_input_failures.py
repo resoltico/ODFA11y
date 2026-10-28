@@ -13,7 +13,7 @@ import pytest
 from pypdf.generic import EncodedStreamObject, NameObject, StreamObject
 
 from odfa11y.cli import main
-from odfa11y.pipeline import is_pdf
+from odfa11y.pipeline.comparison import is_pdf
 
 from .fixtures import make_minimal_odt
 from .pdf_fixtures import register, tagged_writer, text_pdf

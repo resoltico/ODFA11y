@@ -10,11 +10,11 @@ import pytest
 from lxml import etree
 
 from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.audit import audit_odf
 from odfa11y.families.text import LinkifyAddresses, NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.remediation import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys
+from odfa11y.source_audit import audit_odf
 
 from .documents import Variant, make_flat
 from .operation_execution import assert_refused, execute_operations

@@ -14,7 +14,7 @@ from odfa11y.native.probes import CapabilityStatus, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument
 from odfa11y.pipeline import diagnostics
-from odfa11y.pipeline.native import NativeOptions
+from odfa11y.tools import Tools
 
 from .probe_fixtures import fake_export
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 def identities(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(diagnostics, "find_soffice", lambda requested: requested or "soffice")
-    monkeypatch.setattr(diagnostics, "find_verapdf", lambda: "verapdf")
+    monkeypatch.setattr(diagnostics, "find_verapdf", lambda _requested=None: "verapdf")
     monkeypatch.setattr(
         diagnostics, "identify_soffice", lambda _executable: ToolIdentity("LibreOffice", "26.8")
     )
@@ -62,7 +62,7 @@ def test_core_inspection_uses_real_registered_probe_and_returns_no_ui(
         "odfa11y.native.probe_pdf.validate_pdfua",
         lambda *_args, **_kwargs: SimpleNamespace(compliant=True),
     )
-    facts, error = diagnostics.inspect_tools(NativeOptions(soffice="selected-soffice", timeout=7))
+    facts, error = diagnostics.inspect_tools(Tools(soffice="selected-soffice", timeout=7))
     assert error is None
     assert len(facts.toolchain.capabilities) == len(ProbeId)
     assert all(
