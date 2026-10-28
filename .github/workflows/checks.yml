@@ -11,12 +11,13 @@ on:
         type: boolean
         default: false
 env:
-  ODFA11Y_UV_VERSION: "0.12.23"
+  ODFA11Y_UV_VERSION: "0.13.6"
   ODFA11Y_ACTIONLINT_PACKAGE: "github.com/rhysd/actionlint/cmd/actionlint@v1.7.12"
   ODFA11Y_GITLEAKS_PACKAGE: "github.com/zricethezav/gitleaks/v8@v8.30.1"
-  ODFA11Y_LIBREOFFICE_VERSION: "26.8.0.3"
-  ODFA11Y_LIBREOFFICE_LINUX_SHA256: "d0a6031a3837e48f9854e6d2da6489b9fadbd814afa4741fa32a197741663a22"
-  ODFA11Y_LIBREOFFICE_WINDOWS_SHA256: "4aa6c6e1895f4055104effcb556bd3362d20c6ad707c149543304f395ef9db95"
+  ODFA11Y_LIBREOFFICE_VERSION: "26.8.1.1"
+  ODFA11Y_LIBREOFFICE_LINUX_SHA256: "30903df3b9f61360d9660cd707de48cd2831469114492a5008ed58a0ac77d044"
+  ODFA11Y_LIBREOFFICE_WINDOWS_SHA256: "c6298b10cfa1748bcbedad94c62ce771e240e5021bfd6d7a967cd571b04b5312"
+  ODFA11Y_LIBREOFFICE_MACOS_SHA256: "ca074e0b13571efb30a31fc531c5f95e997030637325e5d5de92d67aefdf0dfc"
   ODFA11Y_VERAPDF_VERSION: "1.30.3"
   ODFA11Y_VERAPDF_SHA256: "b512bf24945503a33fc10738ecffc1f2dccaaf8593a448e94ee9ac86a9559a59"
 permissions:
@@ -37,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
           cache-dependency-glob: |
@@ -65,6 +66,11 @@ jobs:
         run: |
           uv run --no-sync tach check
           uv run --no-sync tach check-external
+      - name: Install pinned Go toolchain
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27.3"
+          cache: false
       - name: Identify Go cache inputs
         id: go-cache
         run: |
@@ -104,7 +110,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
           cache-dependency-glob: |
@@ -210,7 +216,7 @@ jobs:
           "$wheel_python" -m pytest -m 'not integration' --durations=10
       - name: Preserve tested release distributions
         if: runner.os == 'Linux' && github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-distributions
           path: |
@@ -230,7 +236,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
           cache-dependency-glob: |
@@ -261,8 +267,17 @@ jobs:
         # Bound package fetching and installation before native tests.
         timeout-minutes: 10
         run: |
-          brew install --cask --verbose libreoffice
-          echo "/Applications/LibreOffice.app/Contents/MacOS" >> "$GITHUB_PATH"
+          archive="$RUNNER_TEMP/libreoffice.dmg"
+          mount="$RUNNER_TEMP/libreoffice-mount"
+          filename="LibreOffice_${ODFA11Y_LIBREOFFICE_VERSION}_MacOS_aarch64.dmg"
+          curl --fail --location --retry 3 --connect-timeout 30 --max-time 180 \
+            "https://downloadarchive.documentfoundation.org/libreoffice/old/$ODFA11Y_LIBREOFFICE_VERSION/mac/aarch64/$filename" \
+            --output "$archive"
+          echo "$ODFA11Y_LIBREOFFICE_MACOS_SHA256  $archive" | shasum --algorithm 256 --check -
+          hdiutil attach "$archive" -mountpoint "$mount" -nobrowse -readonly
+          trap 'hdiutil detach "$mount"' EXIT
+          ditto "$mount/LibreOffice.app" "$RUNNER_TEMP/LibreOffice.app"
+          echo "$RUNNER_TEMP/LibreOffice.app/Contents/MacOS" >> "$GITHUB_PATH"
       - name: Install LibreOffice on Windows
         if: runner.os == 'Windows'
         timeout-minutes: 15
@@ -328,14 +343,14 @@ jobs:
         with:
           persist-credentials: false
       - name: Install the pinned uv tool
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: ${{ env.ODFA11Y_UV_VERSION }}
           enable-cache: false
       - name: Restore release metadata environment
         run: uv sync --locked
       - name: Download the exact tested distributions
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-distributions
           path: dist

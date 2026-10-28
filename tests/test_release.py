@@ -41,7 +41,7 @@ class Variant:
 def _distributions(directory: Path, variant: Variant | None = None) -> None:
     variant = variant or Variant()
     metadata = (
-        f"Name: odfa11y\nVersion: {variant.version}\nRequires-Python: >=3.14\n"
+        f"Name: odfa11y\nVersion: {variant.version}\nRequires-Python: >=3.15\n"
         f"License-Expression: {variant.license_name}\n"
     )
     files: dict[str, bytes | None] = {

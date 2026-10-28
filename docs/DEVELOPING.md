@@ -21,10 +21,14 @@ The minimum LibreOffice version is enforced by `find_soffice` in
 [pdf/export.py](../src/odfa11y/pdf/export.py). Exact CI tool/installer inputs are declared
 in [Checks](../.github/workflows/checks.yml), with installer checksums where configured.
 
-To refresh dependencies deliberately, review changes from `uv lock --upgrade`, restore
-the environment and repeat required checks. Update project tool constraints when changing
-those tools. Dependabot proposes dependency/action updates and the scheduled
-[Dependency audit](../.github/workflows/audit.yml) checks locked dependencies for advisories.
+To refresh dependencies, query PyPI's JSON API, vendor GitHub releases, python.org,
+documentfoundation.org and verapdf.org directly. Review all current releases, including
+majors; update constraints, exact tool pins and action commit SHAs from those sources.
+Verify native installers against the vendor's published SHA-256 before installation.
+Run `uv lock --upgrade`, restore with `uv sync --locked --group audit`, then repeat the
+static, unit, native, workflow, dependency-audit and distribution checks below.
+Dependabot security alerts and the scheduled [dependency audit](../.github/workflows/audit.yml)
+remain vulnerability signals; version-update PRs are not release-version sources.
 
 ## Required checks
 

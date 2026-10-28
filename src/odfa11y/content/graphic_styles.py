@@ -152,9 +152,8 @@ class GraphicStyles:
             raise ValueError(msg)
         ns = active[0] if active else "draw"
         family = "graphic" if ns == "draw" else "presentation"
-        names = (
-            [shape.get(qn(ns, "style-name"))] if shape.get(qn(ns, "style-name")) else []
-        ) + shape.get(qn(ns, "class-names"), "").split()
+        style_name = shape.get(qn(ns, "style-name"))
+        names = ([style_name] if style_name else []) + shape.get(qn(ns, "class-names"), "").split()
         return ns, family, names
 
     def role(self, shape: etree._Element) -> GraphicRole:

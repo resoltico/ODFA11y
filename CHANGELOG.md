@@ -4,6 +4,18 @@ Notable changes to this project are documented in this file. The format is based
 
 ## [Unreleased]
 
+### Breaking
+
+- Python 3.15 or newer is required; development and CI use 3.15.2. Recreate existing environments after upgrading.
+
+### Fixed
+
+- Updated all dependencies from primary sources, including Pillow 13 and patched PDF handling; graphic style cascades exclude absent style names.
+
+### Internal
+
+- Native CI uses checksum-pinned LibreOffice 26.8.1.1 on every platform and Go 1.27.3. Dependency updates use primary sources; security alerts remain enabled.
+
 ## [0.7.0] - 2026-10-16
 
 ### Breaking
