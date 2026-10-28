@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
+from .facts import FactSet
 from .rules import Severity
 
 if TYPE_CHECKING:
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
     from .rules import Rule
 
-REPORT_FORMAT = 5
+REPORT_FORMAT = 6
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,12 +105,12 @@ class Finding:
 
 @dataclass(slots=True)
 class Report:
-    """Collect findings and metadata about one artifact or comparison."""
+    """Collect findings and registered facts about one artifact or comparison."""
 
     kind: str
     subject: str
     findings: list[Finding] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    facts: FactSet = field(default_factory=FactSet)
     sources: tuple[Path, ...] = ()  # physical identity is internal and never serialized
 
     def add(
@@ -172,6 +173,6 @@ class Report:
                 "warnings": self.warning_count,
                 "info": self.info_count,
             },
-            "metadata": self.metadata,
+            "facts": self.facts.as_dict(),
             "findings": [f.as_dict() for f in self.findings],
         }

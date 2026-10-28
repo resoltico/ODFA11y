@@ -12,6 +12,7 @@ from odfa11y.cli import main
 from odfa11y.content import native_export_limitations, require_native_context
 from odfa11y.errors import ToolFailedError
 from odfa11y.odf import OdfDocument, validate
+from odfa11y.report import FactKeys
 
 from .documents import TABLE_BODY, Variant, make_package
 
@@ -98,7 +99,7 @@ def _assert_binding(source: Path, monkeypatch: pytest.MonkeyPatch, *, expected: 
     assert native_export_limitations(document)["rendering_dependencies"] == count
     report = audit_odf(source)
     assert ("ODF012" in {f.rule_id for f in report.findings}) == expected
-    assert report.metadata["native_export_limitations"]["rendering_dependencies"] == count
+    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
     if expected:
         with pytest.raises(ToolFailedError):
             require_native_context(document)

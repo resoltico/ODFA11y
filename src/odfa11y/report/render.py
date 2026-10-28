@@ -94,10 +94,10 @@ def _render_text(report: Report) -> str:
                 lines.extend(_field("    remedy: ", finding.remedy))
             for key, value in finding.details.items():
                 lines.extend(_field(f"    {terminal_text(key)}: ", value))
-    if report.metadata:
-        lines.append("Metadata:")
-        for key in sorted(report.metadata):
-            lines.extend(_field(f"  {terminal_text(key)}: ", _summarize(report.metadata[key])))
+    if report.facts:
+        lines.append("Facts:")
+        for key in sorted(report.facts, key=lambda item: item.id):
+            lines.extend(_field(f"  {terminal_text(key.id)}: ", _summarize(report.facts[key])))
     return "\n".join(lines)
 
 

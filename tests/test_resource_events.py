@@ -12,6 +12,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.content import native_export_limitations, require_native_context
 from odfa11y.errors import ToolFailedError
 from odfa11y.odf import OdfDocument, Part, qn, validate
+from odfa11y.report import FactKeys
 
 from .resource_declaration_fixtures import declaration
 
@@ -68,5 +69,5 @@ def test_form_input_binding_is_distinct_from_form_submission_navigation(
     count = 1 if binding else 0
     assert native_export_limitations(reopened)["rendering_dependencies"] == count
     report = audit_odf(source)
-    assert report.metadata["native_export_limitations"]["rendering_dependencies"] == count
+    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
     assert ("ODF012" in {f.rule_id for f in report.findings}) == bool(binding)

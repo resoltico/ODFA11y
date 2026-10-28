@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from odfa11y.content import visible_words
 from odfa11y.errors import RemediationError
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .ranges import range_shape, resolve_range
 
@@ -24,20 +24,20 @@ if TYPE_CHECKING:
 def audit_chart(document: OdfDocument, report: Report) -> None:
     """Inspect source semantics without loading external data or inventing an export filter."""
     charts = select_elements(document.tree(Part.CONTENT), "//office:body/office:chart/chart:chart")
-    report.metadata["chart_count"] = len(charts)
+    report.facts[FactKeys.CHART_COUNT] = len(charts)
     location = Location(f"{Part.CONTENT}/chart")
     if len(charts) != 1:
         report.add(rules.CHART001, location=location)
         return
     chart = charts[0]
-    if not report.metadata.get("title") and not any(
+    if not report.facts.get(FactKeys.DOCUMENT_TITLE) and not any(
         visible_words(node) for node in select_elements(chart, "./chart:title")
     ):
         report.add(rules.CHART002, location=location)
-    if not report.metadata.get("description"):
+    if not report.facts.get(FactKeys.DOCUMENT_DESCRIPTION):
         report.add(rules.CHART003, location=Location("meta/description"))
     series = select_elements(chart, "./chart:plot-area/chart:series")
-    report.metadata["series_count"] = len(series)
+    report.facts[FactKeys.CHART_SERIES_COUNT] = len(series)
     if not series:
         report.add(rules.CHART001, "The chart declares no data series.", location=location)
     _ranges(chart, report)

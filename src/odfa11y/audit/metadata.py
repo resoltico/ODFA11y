@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from odfa11y.content import normalize_language
 from odfa11y.odf import NS, Part
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 if TYPE_CHECKING:
     from odfa11y.adapter import FamilyAdapter
@@ -26,13 +26,13 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
             location=Location("meta/title"),
         )
     else:
-        report.metadata["title"] = title.strip()
+        report.facts[FactKeys.DOCUMENT_TITLE] = title.strip()
 
     description = (
         meta.findtext("office:meta/dc:description", namespaces=NS) if meta is not None else None
     )
     if description and description.strip():
-        report.metadata["description"] = description.strip()
+        report.facts[FactKeys.DOCUMENT_DESCRIPTION] = description.strip()
 
     language = meta.findtext("office:meta/dc:language", namespaces=NS) if meta is not None else None
     _audit_language(document, adapter, report, language)
@@ -59,7 +59,7 @@ def _audit_language(
                 location=Location("meta/language"),
             )
         return
-    report.metadata["language"] = language or default_language
+    report.facts[FactKeys.DOCUMENT_LANGUAGE] = language or default_language
     if language and default_language and language.lower() != default_language.lower():
         report.add(
             rules.META003,

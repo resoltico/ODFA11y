@@ -18,7 +18,7 @@ from odfa11y.content import (
     visible_words,
 )
 from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .sheets import cell_text, is_data_sheet, is_empty, sheet_name, sheets
 
@@ -45,7 +45,7 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     """Report the accessibility findings that belong to spreadsheets."""
     content = document.tree(Part.CONTENT)
     all_sheets = sheets(content)
-    report.metadata["sheet_count"] = len(all_sheets)
+    report.facts[FactKeys.SHEET_COUNT] = len(all_sheets)
     _audit_names(all_sheets, report)
     _audit_data_sheets(all_sheets, report)
     _audit_graphics(document, report)
@@ -116,7 +116,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         for node in select_elements(content, "//office:body//*")
         if node.tag in SHAPE_TAGS and node.tag != qn("draw", "g") and eligible_text_node(node)
     ]
-    report.metadata["graphic_object_count"] = len(frames)
+    report.facts[FactKeys.SHEET_GRAPHIC_COUNT] = len(frames)
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)

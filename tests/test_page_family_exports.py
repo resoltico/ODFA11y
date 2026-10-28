@@ -19,6 +19,7 @@ from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -99,7 +100,7 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     assert not damaged.compliant
     assert {(failure.clause, failure.test_number) for failure in damaged.failures} == {("7.3", "1")}
     assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant
-    assert audit_pdfua(root / "remediated.pdf").metadata["structure_tags"]["Figure"] == 1
+    assert audit_pdfua(root / "remediated.pdf").facts[FactKeys.PDF_STRUCTURE_TAGS]["Figure"] == 1
 
 
 @pytest.mark.integration
@@ -134,7 +135,7 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     report = audit_pdfua(root / "remediated.pdf")
-    assert report.metadata["extractable_text_characters"] == 0
-    assert report.metadata["described_graphics"] == 1
+    assert report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] == 0
+    assert report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] == 1
     assert "PDF010" not in {finding.rule_id for finding in report.findings}
     assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant

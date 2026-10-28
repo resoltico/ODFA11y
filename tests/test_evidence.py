@@ -42,7 +42,7 @@ def record(**changes: object) -> dict[str, Any]:
                 "reason": None,
                 "report": {
                     "summary": {"errors": 0, "warnings": 1},
-                    "metadata": {"pages": 2},
+                    "facts": {"pdf.page_count": 2},
                     "findings": [
                         {"severity": "warning", "rule_id": "PDF005", "message": "No title display."}
                     ],

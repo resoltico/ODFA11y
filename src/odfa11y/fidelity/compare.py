@@ -12,7 +12,7 @@ import pypdfium2
 from PIL import Image, ImageChops
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.report import Report, rules
+from odfa11y.report import FactKeys, Report, rules
 
 from .snapshot import read_snapshot
 
@@ -47,9 +47,12 @@ def compare_pdfs(
     report = Report(
         kind="fidelity", subject=f"{candidate.name} vs {source.name}", sources=(candidate, source)
     )
-    report.metadata["policy"] = policy.as_dict()
+    report.facts[FactKeys.FIDELITY_POLICY] = policy.as_dict()
     before, after = read_snapshot(source), read_snapshot(candidate)
-    report.metadata["pages"] = {"source": len(before.pages), "candidate": len(after.pages)}
+    report.facts[FactKeys.FIDELITY_PAGE_COUNT] = {
+        "source": len(before.pages),
+        "candidate": len(after.pages),
+    }
     _compare_text(before, after, report)
     _compare_links(before, after, report)
     if policy.pagination == "same" and _compare_pages(before, after, report):
@@ -80,7 +83,7 @@ def _compare_text(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> No
 def _compare_links(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> None:
     missing = before.links - after.links
     added = after.links - before.links
-    report.metadata["links"] = {
+    report.facts[FactKeys.FIDELITY_LINK_COUNT] = {
         "source": sum(before.links.values()),
         "candidate": sum(after.links.values()),
     }
@@ -131,8 +134,8 @@ def _compare_raster(
     except pypdfium2.PdfiumError as exc:
         msg = f"Cannot render PDF for comparison: {exc}"
         raise ToolFailedError(msg) from exc
-    report.metadata["raster_changed_ratios"] = ratios
-    report.metadata["raster_max_changed_ratio"] = max(ratios, default=0.0)
+    report.facts[FactKeys.FIDELITY_RASTER_CHANGED_RATIOS] = ratios
+    report.facts[FactKeys.FIDELITY_RASTER_MAX_CHANGED_RATIO] = max(ratios, default=0.0)
 
 
 def _difference(

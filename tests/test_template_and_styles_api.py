@@ -12,7 +12,7 @@ from odfa11y.audit import prepare_template, template_blockers
 from odfa11y.errors import UnsupportedKindError
 from odfa11y.families import REGISTRY, style_usage
 from odfa11y.odf import Family
-from odfa11y.report import Report, rules
+from odfa11y.report import FactKeys, Report, rules
 
 from .documents import make_flat, make_package
 from .fixtures import make_minimal_odt
@@ -27,7 +27,7 @@ def test_template_api_prepares_loadable_configuration_for_source_layout(
 ) -> None:
     source = (make_package if layout == "package" else make_flat)(tmp_path, "text")
     report, template = prepare_template(source)
-    assert report.metadata["layout"] == layout
+    assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
     assert template is not None
     assert tomllib.loads(template) == {}
     assert template_blockers(report) is None
@@ -76,7 +76,7 @@ def test_generic_adapter_retains_common_metadata_decisions(
     source = make_minimal_odt(tmp_path / "source.odt", title="")
     monkeypatch.delitem(REGISTRY, Family.TEXT)
     report, template = prepare_template(source)
-    assert report.metadata["adapter"] == "generic"
+    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "generic"
     assert template is not None
     assert '# title = ""  # META001' in template
 

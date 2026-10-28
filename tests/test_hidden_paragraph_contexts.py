@@ -14,6 +14,7 @@ from odfa11y.content import GraphicAlternative, document_links, eligible_text_no
 from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.remediation import remediate
+from odfa11y.report import FactKeys
 
 from .documents import Variant, make_flat, make_package
 
@@ -47,8 +48,8 @@ Conditional heading https://hidden.example
     before = etree.tostring(excluded)
     assert all(not eligible_text_node(node) for node in excluded.iter())
     report, template = prepare_template(source)
-    assert report.metadata["heading_count"] == 1
-    assert report.metadata["table_count"] == 0
+    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
+    assert report.facts[FactKeys.TEXT_TABLE_COUNT] == 0
     assert "TXT061" in {finding.rule_id for finding in report.findings}
     addresses = [
         finding.details["text"] for finding in report.findings if finding.rule_id == "TXT030"
@@ -76,7 +77,7 @@ Conditional heading https://hidden.example
     retained = select_elements(reloaded.tree(Part.CONTENT), "//text:hidden-paragraph/..")[0]
     assert etree.tostring(retained) == before
     after = audit_odf(destination)
-    assert after.metadata["heading_count"] == 1
+    assert after.facts[FactKeys.TEXT_HEADING_COUNT] == 1
     assert "TXT061" in {finding.rule_id for finding in after.findings}
 
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.report import FactKeys
 
 from .audit import audit_pdfua
 from .export import export_pdfua
@@ -46,7 +47,7 @@ def link_descriptions_supported(
     with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
         report = audit_pdfua(export(Path(document), Path(scratch) / "probe.pdf", settings))
     rule_ids = {finding.rule_id for finding in report.findings}
-    if "PDF000" in rule_ids or not report.metadata.get("link_annotations"):
+    if "PDF000" in rule_ids or not report.facts.get(FactKeys.PDF_LINK_ANNOTATION_COUNT):
         msg = "The link probe's PDF cannot be inspected or contains no hyperlink."
         raise ToolFailedError(msg, details="\n".join(f.message for f in report.findings))
     return "PDF019" not in rule_ids

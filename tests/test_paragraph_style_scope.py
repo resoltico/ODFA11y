@@ -17,6 +17,7 @@ from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.families.text.styles import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.remediation import remediate
+from odfa11y.report import FactKeys
 
 from .documents import Variant, make_package
 from .fixtures import make_minimal_odt
@@ -126,9 +127,9 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
     assert not destination.exists()
     report = audit_odf(source)
     assert "TXT062" in {finding.rule_id for finding in report.findings}
-    assert report.metadata["heading_count"] == 1
+    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
     if problem not in {"default", "containers"}:
-        assert any(row["style"] == "Body" for row in report.metadata["paragraph_styles"])
+        assert any(row["style"] == "Body" for row in report.facts[FactKeys.TEXT_PARAGRAPH_STYLES])
 
 
 def test_spacing_refuses_conditional_target_before_creating_a_style(tmp_path: Path) -> None:

@@ -14,7 +14,7 @@ from pypdf.generic import BooleanObject, StreamObject
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf_consumption import check_consumption
 from odfa11y.pdf_limits import check_file_size, check_limits
-from odfa11y.report import Report, rules
+from odfa11y.report import FactKeys, Report, rules
 from odfa11y.safe_xml import parse_secure
 
 from .link_structure import link_annotations
@@ -57,17 +57,17 @@ def _inspect(pdf_path: Path, report: Report) -> None:
 
 
 def _audit_metadata(reader: PdfReader, report: Report) -> DictionaryObject:
-    report.metadata["pages"] = len(reader.pages)
-    report.metadata["pdf_format"] = reader.pdf_header.removeprefix("%")
+    report.facts[FactKeys.PDF_PAGE_COUNT] = len(reader.pages)
+    report.facts[FactKeys.PDF_FORMAT] = reader.pdf_header.removeprefix("%")
     title = (reader.metadata.title or "").strip() if reader.metadata else ""
     if title:
-        report.metadata["title"] = title
+        report.facts[FactKeys.PDF_TITLE] = title
     else:
         report.add(rules.PDF001, "PDF document title metadata is missing.")
     catalog = reader.root_object
     language = catalog.get("/Lang")
     if isinstance(language, str) and language.strip():
-        report.metadata["language"] = language
+        report.facts[FactKeys.PDF_LANGUAGE] = language
     else:
         report.add(rules.PDF002, "PDF catalog /Lang is missing.")
     marked = pdf_dictionary(catalog.get("/MarkInfo")).get("/Marked")
@@ -102,7 +102,7 @@ def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
         except etree.XMLSyntaxError:
             part = None
     if part and part.strip() == "1":
-        report.metadata["pdfua_part"] = 1
+        report.facts[FactKeys.PDF_UA_PART] = 1
     else:
         report.add(rules.PDF006, "PDF XMP metadata does not declare PDF/UA-1.")
 
@@ -112,8 +112,8 @@ def _audit_content(reader: PdfReader, report: Report, graphics: int) -> None:
         report.add(rules.PDF009, "PDF contains no pages.")
         return
     text_chars = sum(len(page.extract_text() or "") for page in reader.pages)
-    report.metadata["extractable_text_characters"] = text_chars
-    report.metadata["described_graphics"] = graphics
+    report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] = text_chars
+    report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] = graphics
     if not text_chars and not graphics:
         report.add(
             rules.PDF010, "No extractable text or inspected described graphical content was found."

@@ -20,6 +20,7 @@ from odfa11y.fidelity.snapshot import read_snapshot
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import ExportSettings, audit_pdfua, export_pdfua, validate_pdfua
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 from .documents import Variant, make_flat
 from .spreadsheet_fixtures import picture, row, sheet, text_cell
@@ -104,7 +105,7 @@ def test_writer_nested_headers_graphic_and_named_link(
         output, tmp_path / "writer.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
-    assert report.metadata["structure_tags"].get("TH", 0) == 0
+    assert report.facts[FactKeys.PDF_STRUCTURE_TAGS].get("TH", 0) == 0
     assert "PDF015" in {f.rule_id for f in report.findings}
     assert not {"PDF000", "PDF007", "PDF010", "PDF019", "PDF023"} & {
         f.rule_id for f in report.findings

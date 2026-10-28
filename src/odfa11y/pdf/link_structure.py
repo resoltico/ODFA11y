@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, IndirectObject, PdfObject
 
-from odfa11y.report import rules
+from odfa11y.report import FactKeys, rules
 
 from .structure_walk import pdf_dictionary
 
@@ -110,8 +110,8 @@ def check_link_structure(
                 mapped[reference.object_xref].append(reference.page_xref)
                 if _has_text(node.element.get("/Alt")):
                     alternates.add(reference.object_xref)
-    report.metadata["link_annotations"] = len(annotations)
-    report.metadata["link_structure_elements"] = len(link_nodes)
+    report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] = len(annotations)
+    report.facts[FactKeys.PDF_LINK_STRUCTURE_ELEMENT_COUNT] = len(link_nodes)
     unmatched = [a for a in annotations if a.xref is None or a.xref not in mapped]
     if unmatched:
         report.add(

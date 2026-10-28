@@ -10,7 +10,7 @@ from pypdf.generic import ArrayObject, StreamObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf_limits import MAX_CONTENT_BYTES
-from odfa11y.report import rules
+from odfa11y.report import FactKeys, rules
 
 from .form_content import FormScanner
 from .graphic_presence import described_graphics
@@ -82,7 +82,7 @@ def check_marked_content(
                     "text_operations": scan.unmarked_text_operations,
                     **stream_details,
                 })
-    report.metadata["marked_content_ids"] = sum(len(ids) for ids in contents.values())
+    report.facts[FactKeys.PDF_MARKED_CONTENT_ID_COUNT] = sum(len(ids) for ids in contents.values())
     _report(report, unreferenced, untagged, _dangling(references, page_numbers, contents))
     duplicated = [
         {

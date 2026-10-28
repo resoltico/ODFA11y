@@ -16,7 +16,7 @@ from odfa11y.odf import (
     select_elements,
     validate,
 )
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 if TYPE_CHECKING:
     from odfa11y.odf import OdfDocument, PackageStorage
@@ -153,8 +153,8 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
     """
     detection = document.detection
     kind = detection.kind
-    report.metadata["layout"] = document.layout
-    report.metadata["media_type"] = detection.media_type
+    report.facts[FactKeys.PACKAGE_LAYOUT] = document.layout
+    report.facts[FactKeys.DOCUMENT_MEDIA_TYPE] = detection.media_type
     if kind is None:
         report.add(
             rules.ODF005,
@@ -162,8 +162,8 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
             details={"media_type": detection.media_type, "declared_by": detection.declared_by},
         )
         return False
-    report.metadata["document_kind"] = kind.name
-    report.metadata["family"] = kind.family.value
+    report.facts[FactKeys.DOCUMENT_KIND] = kind.name
+    report.facts[FactKeys.DOCUMENT_FAMILY] = kind.family.value
     if (
         detection.manifest_media_type is not None
         and detection.media_type is not None
@@ -236,7 +236,7 @@ def audit_versions(document: OdfDocument, report: Report) -> None:
             details={"versions": declared},
         )
     if version is not None:
-        report.metadata["odf_version"] = version
+        report.facts[FactKeys.DOCUMENT_ODF_VERSION] = version
     if document.has(Part.MANIFEST):
         _audit_manifest(document, version, report)
 
@@ -269,7 +269,7 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
 def audit_schema(document: OdfDocument, report: Report) -> None:
     """Report members that violate the bundled ODF schema for the declared version."""
     result = validate(document)
-    report.metadata["schema_version"] = result.version
+    report.facts[FactKeys.SCHEMA_VERSION] = result.version
     if not result.available:
         reason = (
             f"No ODF schema is bundled for declared version {result.version!r}."
@@ -278,8 +278,8 @@ def audit_schema(document: OdfDocument, report: Report) -> None:
         )
         report.add(rules.ODF905, reason)
         return
-    report.metadata["schema_violations"] = result.count
-    report.metadata["schema_violations_unlocated"] = result.unlocated
+    report.facts[FactKeys.SCHEMA_VIOLATION_COUNT] = result.count
+    report.facts[FactKeys.SCHEMA_UNLOCATED_VIOLATION_COUNT] = result.unlocated
     for member, messages in result.messages().items():
         location = storage_location(document, _part_of(document, member))
         report.add(

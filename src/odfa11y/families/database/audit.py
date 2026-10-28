@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING
 
 from odfa11y.odf import PackageStorage, Part, qn, select_elements
-from odfa11y.report import Location, rules
+from odfa11y.report import FactKeys, Location, rules
 
 from .descriptions import description_attribute, fingerprint, targets
 
@@ -53,7 +53,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
         databases[0],
         ".//db:connection-resource | .//db:file-based-database | .//db:server-database",
     )
-    report.metadata["connection_declarations"] = len(resources)
+    report.facts[FactKeys.DATABASE_CONNECTION_DECLARATION_COUNT] = len(resources)
     if not resources:
         report.add(
             rules.BASE001,
@@ -131,7 +131,7 @@ def _objects(document: OdfDocument, report: Report) -> None:
 
 def _executable_content(document: OdfDocument, database: etree._Element, report: Report) -> None:
     queries = select_elements(database, ".//db:query")
-    report.metadata["query_declarations"] = len(queries)
+    report.facts[FactKeys.DATABASE_QUERY_DECLARATION_COUNT] = len(queries)
     if queries:
         report.add(rules.BASE006, details={"query_count": len(queries)})
     scripts = select_elements(document.tree(Part.CONTENT), "//office:scripts/*")

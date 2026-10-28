@@ -16,6 +16,7 @@ from odfa11y.external_tools import run_bounded
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.pipeline import PipelineOptions, export_document, run_pipeline
+from odfa11y.report import FactKeys
 
 from .documents import TABLE_BODY, Variant, make_flat
 
@@ -63,7 +64,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     original = source.read_bytes()
     report = audit_odf(source)
     assert "ODF012" in {finding.rule_id for finding in report.findings}
-    assert report.metadata["native_export_limitations"]["formula_incomplete"] > 0
+    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_incomplete"] > 0
     calls = []
     monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(ToolFailedError, match="formula context"):

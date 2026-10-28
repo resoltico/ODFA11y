@@ -18,6 +18,7 @@ from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.remediation import SetMetadata, remediate
+from odfa11y.report import FactKeys
 
 CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
 SOURCE = Path(__file__).parent / "family_corpus/fruit-database.odb"
@@ -160,7 +161,7 @@ def test_standard_server_database_declaration_is_external_instead_of_missing(
     report = audit_odf(source)
     assert "BASE002" in {finding.rule_id for finding in report.findings}
     assert "BASE001" not in {finding.rule_id for finding in report.findings}
-    assert report.metadata["connection_declarations"] == 1
+    assert report.facts[FactKeys.DATABASE_CONNECTION_DECLARATION_COUNT] == 1
     assert "invalid.example" not in str(report.as_dict())
     assert "private-invented-database" not in str(report.as_dict())
 

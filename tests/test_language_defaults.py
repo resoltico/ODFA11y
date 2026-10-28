@@ -14,6 +14,7 @@ from odfa11y.content import normalize_language, style_language
 from odfa11y.external_tools import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.remediation import SetMetadata
+from odfa11y.report import FactKeys
 
 from .documents import make_flat, make_package
 from .fixtures import make_minimal_odt
@@ -60,7 +61,7 @@ def test_language_preserves_all_subtags_and_replaces_stale_defaults(
     destination = tmp_path / ("changed.fodt" if flat else "changed.odt")
     document.save(destination)
     report = audit_odf(destination, schema=True)
-    assert report.metadata["language"] == tag
+    assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == tag
     assert "ODF900" not in {finding.rule_id for finding in report.findings}
     assert all(outcome.status is Status.UNCHANGED for outcome in operation.apply(document))
     props = document.tree(Part.STYLES).find(
