@@ -1,0 +1,391 @@
+{
+  "$id": "urn:odfa11y:schema:report",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "facts": {
+      "additionalProperties": false,
+      "properties": {
+        "chart.count": {
+          "description": "Native charts in a Chart document.",
+          "type": "integer"
+        },
+        "chart.series_count": {
+          "description": "Declared chart series.",
+          "type": "integer"
+        },
+        "database.connection_declaration_count": {
+          "description": "Database connection declarations.",
+          "type": "integer"
+        },
+        "database.query_declaration_count": {
+          "description": "Declared database queries.",
+          "type": "integer"
+        },
+        "document.adapter": {
+          "description": "Family adapter used for source semantics.",
+          "type": "string"
+        },
+        "document.description": {
+          "description": "Authored document description.",
+          "type": "string"
+        },
+        "document.family": {
+          "description": "Detected ODF family.",
+          "type": "string"
+        },
+        "document.kind": {
+          "description": "Detected ODF document kind.",
+          "type": "string"
+        },
+        "document.language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Effective document language."
+        },
+        "document.media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Declared source media type."
+        },
+        "document.odf_version": {
+          "description": "Declared ODF version.",
+          "type": "string"
+        },
+        "document.title": {
+          "description": "Authored document title.",
+          "type": "string"
+        },
+        "fidelity.link_count": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Source and candidate link counts.",
+          "type": "object"
+        },
+        "fidelity.page_count": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Source and candidate page counts.",
+          "type": "object"
+        },
+        "fidelity.policy": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "description": "Effective comparison policy.",
+          "type": "object"
+        },
+        "fidelity.raster_changed_ratios": {
+          "description": "Changed-pixel ratio for each compared page.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "fidelity.raster_max_changed_ratio": {
+          "description": "Largest changed-pixel ratio.",
+          "type": "number"
+        },
+        "formula.element_count": {
+          "description": "Inspected MathML elements.",
+          "type": "integer"
+        },
+        "image.graphic_count": {
+          "description": "Graphic frames in an Image document.",
+          "type": "integer"
+        },
+        "native.limitations": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Counts of declarations requiring native export refusal or review.",
+          "type": "object"
+        },
+        "package.layout": {
+          "description": "Physical ODF representation.",
+          "type": "string"
+        },
+        "page.count": {
+          "description": "Drawing or presentation pages.",
+          "type": "integer"
+        },
+        "page.link_count": {
+          "description": "Links on drawing or presentation pages.",
+          "type": "integer"
+        },
+        "page.shape_count": {
+          "description": "Shapes on drawing or presentation pages.",
+          "type": "integer"
+        },
+        "pdf.described_graphic_count": {
+          "description": "Inspected graphical content with descriptions.",
+          "type": "integer"
+        },
+        "pdf.format": {
+          "description": "PDF header format declaration.",
+          "type": "string"
+        },
+        "pdf.language": {
+          "description": "PDF catalog language.",
+          "type": "string"
+        },
+        "pdf.link_annotation_count": {
+          "description": "Inspected link annotations.",
+          "type": "integer"
+        },
+        "pdf.link_structure_element_count": {
+          "description": "Link elements in the structure tree.",
+          "type": "integer"
+        },
+        "pdf.marked_content_id_count": {
+          "description": "Marked content identifiers.",
+          "type": "integer"
+        },
+        "pdf.page_count": {
+          "description": "Pages in the inspected PDF.",
+          "type": "integer"
+        },
+        "pdf.role_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "PDF custom-to-standard structure role mapping.",
+          "type": "object"
+        },
+        "pdf.structure_tags": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Reachable structure roles and their counts.",
+          "type": "object"
+        },
+        "pdf.text_character_count": {
+          "description": "Extractable text characters.",
+          "type": "integer"
+        },
+        "pdf.title": {
+          "description": "PDF document title.",
+          "type": "string"
+        },
+        "pdf.ua_part": {
+          "description": "Declared PDF/UA part.",
+          "type": "integer"
+        },
+        "schema.unlocated_violation_count": {
+          "description": "Violations without established element locations.",
+          "type": "integer"
+        },
+        "schema.version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Version of the selected bundled schema."
+        },
+        "schema.violation_count": {
+          "description": "Reported schema violations.",
+          "type": "integer"
+        },
+        "sheet.count": {
+          "description": "Sheets in document order.",
+          "type": "integer"
+        },
+        "sheet.graphic_count": {
+          "description": "Graphic objects on sheets.",
+          "type": "integer"
+        },
+        "text.graphic_count": {
+          "description": "Graphic objects in current reading contexts.",
+          "type": "integer"
+        },
+        "text.heading_count": {
+          "description": "Structural headings in current reading contexts.",
+          "type": "integer"
+        },
+        "text.paragraph_styles": {
+          "description": "Paragraph style usage and effective spacing.",
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "text.table_count": {
+          "description": "Tables in current reading contexts.",
+          "type": "integer"
+        },
+        "verapdf.identity": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "description": "Validator identity, profile, verdict and failed-rule count.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "member": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "member"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "remedy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning",
+              "info"
+            ]
+          }
+        },
+        "required": [
+          "rule_id",
+          "severity",
+          "category",
+          "message",
+          "location",
+          "details",
+          "remedy"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "format": {
+      "enum": [
+        6
+      ]
+    },
+    "kind": {
+      "type": "string"
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "errors": {
+          "type": "integer"
+        },
+        "info": {
+          "type": "integer"
+        },
+        "warnings": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "errors",
+        "warnings",
+        "info"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "kind",
+    "subject",
+    "findings",
+    "facts",
+    "passed",
+    "format",
+    "summary"
+  ],
+  "type": "object"
+}

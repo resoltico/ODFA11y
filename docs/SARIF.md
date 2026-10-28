@@ -21,7 +21,7 @@ packaged and flat documents retain equivalent logical locations. Global findings
 the artifact without claiming an element or physical line.
 
 SARIF messages use the registered rule title. Free-form finding messages, details,
-display labels and report metadata are excluded because they can contain source content,
+display labels and report facts are excluded because they can contain source content,
 database credentials or absolute paths from external-tool diagnostics. Use local JSON
 or text reports when those detailed diagnostics are needed. Logical labels containing
 absolute host paths or URI credentials are rejected. Source-root violations and missing

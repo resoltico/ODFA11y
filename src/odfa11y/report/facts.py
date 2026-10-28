@@ -202,6 +202,8 @@ def _matches(value: object, expected: object) -> bool:
             _matches(key, arguments[0]) and _matches(item, arguments[1])
             for key, item in value.items()
         )
+    if expected is float:
+        return type(value) in {int, float}
     if expected in {int, bool}:
         return type(value) is expected
     return isinstance(expected, type) and isinstance(value, expected)

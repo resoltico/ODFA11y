@@ -10,7 +10,7 @@ import platform
 import sys
 from dataclasses import dataclass, field
 from importlib import metadata
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal
 
 from odfa11y import __version__
 from odfa11y.external_tools import validate_timeout
@@ -22,7 +22,11 @@ from odfa11y.outcomes import (
     combine_statuses,
 )
 from odfa11y.pdf import DEFAULT_TIMEOUT_SECONDS, EXPORT_OPTIONS
+from odfa11y.records import Toolchain
 from odfa11y.report import exit_status
+from odfa11y.serialization import JsonProperty, record_dict
+lazy from odfa11y.adapter import ReviewItem
+lazy from odfa11y.fidelity import FidelityPolicy
 
 from .profiles import DEFAULT_PROFILE, profile_named
 
@@ -31,12 +35,14 @@ if TYPE_CHECKING:
         ProgressObserver,
         StageName,
     )
+    from odfa11y.records import DocumentIdentity
     from odfa11y.remediation import RemediationResult
     from odfa11y.report import Report
+    from odfa11y.serialization import JsonObject
 
     from .profiles import Profile
 
-RECORD_FORMAT = 2
+RECORD_FORMAT = 3
 LOCALE_VARIABLES = ("LANG", "LC_ALL", "LC_MESSAGES")
 LIBRARIES = ("lxml", "pillow", "pypdf", "pypdfium2")
 
@@ -54,42 +60,37 @@ class StageResult:
     reason: str | None = None
     report: Report | None = None
     remediation: RemediationResult | None = None
-    gate: bool = True
-    error: bool = False
+    gate: bool = field(default=True, metadata={"serialize": False})
+    error: bool = field(default=False, metadata={"serialize": False})
     details: str | None = None
-    failure_status: ExitStatus = ExitStatus.EXECUTION_FAILURE
+    failure_status: ExitStatus = field(
+        default=ExitStatus.EXECUTION_FAILURE, metadata={"serialize": False}
+    )
 
-    def as_dict(self) -> dict[str, Any]:
-        """Serialize the stage.
+    def as_dict(self) -> JsonObject:
+        """Serialize the typed execution record.
 
         Returns
         -------
-        dict[str, Any]
-            The stage name, status, reason and attached results.
+        JsonObject
+            Published fields and computed assurance measurements.
 
         """
-        return {
-            "name": self.name,
-            "status": self.status,
-            "reason": self.reason,
-            "details": self.details,
-            "report": self.report.as_dict() if self.report else None,
-            "remediation": self.remediation.as_dict() if self.remediation else None,
-        }
+        return record_dict(self)
 
 
 @dataclass(slots=True)
 class RunRecord:
     """The ordered stage results of a run and the facts that identify it."""
 
-    document: dict[str, Any]
-    operations: tuple[dict[str, Any], ...]
-    policy: dict[str, Any]
+    document: DocumentIdentity
+    operations: tuple[JsonObject, ...]
+    policy: FidelityPolicy = field(metadata={"json_name": "fidelity_policy"})
     profile: Profile
     stages: list[StageResult] = field(default_factory=list)
-    toolchain: dict[str, Any] = field(default_factory=dict)
-    fonts: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    human_review: list[dict[str, str]] = field(default_factory=list)
+    toolchain: Toolchain = field(default_factory=Toolchain)
+    fonts: dict[str, list[dict[str, object]]] = field(default_factory=dict)
+    human_review: tuple[ReviewItem, ...] = ()
     outputs: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -97,8 +98,8 @@ class RunRecord:
         """Whether warnings fail the gates."""
         return self.profile.strict
 
-    @property
-    def failed_stage(self) -> str | None:
+    @JsonProperty
+    def failed_stage(self) -> StageName | None:
         """The first failed stage, if any."""
         return next(
             (stage.name for stage in self.stages if stage.status == StageStatus.FAILED), None
@@ -109,7 +110,7 @@ class RunRecord:
         """Whether no stage failed."""
         return self.failed_stage is None
 
-    @property
+    @JsonProperty
     def exit_status(self) -> ExitStatus:
         """Combine execution, usage and finding outcomes by explicit precedence."""
         reports = [stage.report for stage in self.stages if stage.gate and stage.report]
@@ -118,47 +119,71 @@ class RunRecord:
             *(stage.failure_status for stage in self.stages if stage.error),
         ])
 
-    @property
+    @JsonProperty
     def plan_sha256(self) -> str:
         """Digest of the operations, fidelity policy and profile, independent of file layout."""
         plan = {
             "operations": list(self.operations),
-            "fidelity_policy": self.policy,
+            "fidelity_policy": self.policy.as_dict(),
             "profile": self.profile.as_dict(),
         }
         return hashlib.sha256(json.dumps(plan, sort_keys=True).encode("utf-8")).hexdigest()
 
-    def as_dict(self) -> dict[str, Any]:
-        """Serialize the record without timestamps; paths are redacted when it is written.
+    def as_dict(self) -> JsonObject:
+        """Serialize the typed execution record.
 
         Returns
         -------
-        dict[str, Any]
-            The record written to run.json.
+        JsonObject
+            Published fields and computed assurance measurements.
 
         """
-        return {
-            "format": RECORD_FORMAT,
-            "odfa11y": __version__,
-            "python": sys.version.split()[0],
-            "platform": platform.platform(),
-            "environment": {name: os.environ.get(name) for name in LOCALE_VARIABLES},
-            "libraries": _library_versions(),
-            "toolchain": self.toolchain,
-            "schemas": {name: entry["sha256"] for name, entry in provenance().items()},
-            "export_options": EXPORT_OPTIONS,
-            "document": self.document,
-            "plan_sha256": self.plan_sha256,
-            "profile": self.profile.as_dict(),
-            "operations": list(self.operations),
-            "fidelity_policy": self.policy,
-            "stages": [stage.as_dict() for stage in self.stages],
-            "fonts": self.fonts,
-            "human_review": self.human_review,
-            "outputs": dict(sorted(self.outputs.items())),
-            "status": RunStatus.PASSED if self.passed else RunStatus.FAILED,
-            "failed_stage": self.failed_stage,
-        }
+        return record_dict(self)
+
+    @JsonProperty
+    def format(self) -> Literal[3]:
+        """The run record's schema version."""
+        return RECORD_FORMAT
+
+    @JsonProperty
+    def odfa11y(self) -> str:
+        """The generator version."""
+        return __version__
+
+    @JsonProperty
+    def python(self) -> str:
+        """The interpreter version."""
+        return sys.version.split()[0]
+
+    @JsonProperty
+    def platform(self) -> str:
+        """The execution platform identity."""
+        return platform.platform()
+
+    @JsonProperty
+    def environment(self) -> dict[str, str | None]:
+        """The locale variables affecting native execution."""
+        return {name: os.environ.get(name) for name in LOCALE_VARIABLES}
+
+    @JsonProperty
+    def libraries(self) -> dict[str, str]:
+        """Installed runtime dependency versions."""
+        return _library_versions()
+
+    @JsonProperty
+    def schemas(self) -> dict[str, str]:
+        """Digests of bundled normative schema inputs."""
+        return {name: entry["sha256"] for name, entry in provenance().items()}
+
+    @JsonProperty
+    def export_options(self) -> dict[str, dict[str, str]]:
+        """The authoritative LibreOffice export options."""
+        return EXPORT_OPTIONS
+
+    @JsonProperty
+    def status(self) -> RunStatus:
+        """Whether all required assurance gates passed."""
+        return RunStatus.PASSED if self.passed else RunStatus.FAILED
 
 
 def _library_versions() -> dict[str, str]:

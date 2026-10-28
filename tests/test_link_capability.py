@@ -134,7 +134,9 @@ def test_doctor_reports_the_capability(
         lambda _probe, _settings: supported,
     )
     assert main(["doctor", "--format", "json"]) == 0
-    assert json.loads(capsys.readouterr().out)["pdfua_link_descriptions"] == expected
+    assert (
+        json.loads(capsys.readouterr().out)["capabilities"]["pdfua_link_descriptions"] == expected
+    )
     assert main(["doctor"]) == 0
     assert f"pdfua_link_descriptions: {expected}" in capsys.readouterr().out
 
@@ -146,8 +148,8 @@ def test_doctor_without_libreoffice_still_reports_and_fails(
     captured = capsys.readouterr()
     assert "error:" in captured.err
     info = json.loads(captured.out)
-    assert info["LibreOffice"] is None
-    assert info["pdfua_link_descriptions"] is None
+    assert info["toolchain"]["libreoffice"] is None
+    assert info["capabilities"]["pdfua_link_descriptions"] is None
 
 
 @pytest.mark.usefixtures("reported_tools")
@@ -160,9 +162,10 @@ def test_doctor_reports_selected_tool_versions(
     assert main(["doctor", "--format", "json"]) == 0
     info = json.loads(capsys.readouterr().out)
     assert info["odfa11y"] == __version__
-    assert info["LibreOffice"] == "26.8.0.3"
-    assert info["veraPDF"] == "1.30.3"
-    assert {"python", "lxml", "pypdf", "pypdfium2", "pillow", "odf_schemas"} <= info.keys()
+    assert info["toolchain"]["libreoffice"]["version"] == "26.8.0.3"
+    assert info["toolchain"]["verapdf"]["version"] == "1.30.3"
+    assert {"python", "schema_versions", "libraries", "toolchain"} <= info.keys()
+    assert {"lxml", "pypdf", "pypdfium2", "pillow"} <= info["libraries"].keys()
     assert main(["doctor"]) == 0
     assert "odfa11y:" in capsys.readouterr().out
 
@@ -201,8 +204,8 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
 
     assert main(["doctor", "--soffice", soffice, "--format", "json"]) == 0
     doctor = json.loads(capsys.readouterr().out)
-    assert doctor["LibreOffice"] == identify_soffice(soffice).version
-    reported = doctor["pdfua_link_descriptions"]
+    assert doctor["toolchain"]["libreoffice"]["version"] == identify_soffice(soffice).version
+    reported = doctor["capabilities"]["pdfua_link_descriptions"]
     titled_probe = tmp_path / "title-probe.odt"
     write_link_probe(titled_probe)
     probe_pdf = export_pdfua(
@@ -218,10 +221,11 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     record = run_pipeline(
         linked, [], FidelityPolicy(), tmp_path / "evidence", PipelineOptions(soffice=soffice)
     )
-    assert record.toolchain["LibreOffice"]["pdfua_link_descriptions"] == reported
-    assert record.toolchain["LibreOffice"]["version"] == doctor["LibreOffice"]
+    assert record.toolchain.capabilities["pdfua_link_descriptions"] == reported
+    assert record.toolchain.libreoffice is not None
+    assert record.toolchain.libreoffice.version == doctor["toolchain"]["libreoffice"]["version"]
     evidence = json.loads((tmp_path / "evidence" / "run.json").read_text())
-    assert evidence["toolchain"]["LibreOffice"]["pdfua_link_descriptions"] == reported
+    assert evidence["toolchain"]["capabilities"]["pdfua_link_descriptions"] == reported
     assert not any("probe" in name for name in evidence["outputs"])
     assert check_bundle(tmp_path / "evidence") == []
 

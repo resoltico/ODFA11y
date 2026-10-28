@@ -119,7 +119,7 @@ def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
     output = capsys.readouterr().out
     assert f"Wrote: {destination}" in output
     assert "applied   set_metadata [title]" in output
-    assert "Schema: no new violations" in output
+    assert "Schema: passed; ODF 1.4; 0 before, 0 after, 0 new" in output
     assert destination.is_file()
 
 

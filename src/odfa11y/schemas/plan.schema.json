@@ -1,0 +1,6 @@
+{
+  "$comment": "Reserved for the decision codec in WP-06; not an accepted plan contract.",
+  "$id": "urn:odfa11y:schema:plan",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "not": {}
+}

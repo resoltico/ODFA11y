@@ -39,7 +39,9 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
     assert finding.location is not None
     target = finding.location.path
     assert target == "content/heading[2]"
-    operation = SetHeadingLevels({target: HeadingLevel(2, finding.details["fingerprint"])})
+    reviewed_fingerprint = finding.details["fingerprint"]
+    assert isinstance(reviewed_fingerprint, str)
+    operation = SetHeadingLevels({target: HeadingLevel(2, reviewed_fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
     remediate(source, once, [operation])
     assert "TXT002" not in {f.rule_id for f in audit_odf(once).findings}

@@ -63,8 +63,11 @@ def test_changed_text_is_located_precisely(tmp_path: Path) -> None:
         tmp_path / "b.pdf", [[LINES[0], "A paragraph of BODY text on the page.", LINES[2]]]
     )
     finding = next(f for f in compare(tmp_path, left, right).findings if f.rule_id == "FID003")
-    assert "body" in finding.details["source"]
-    assert "BODY" in finding.details["candidate"]
+    source_text, candidate_text = finding.details["source"], finding.details["candidate"]
+    assert isinstance(source_text, str)
+    assert isinstance(candidate_text, str)
+    assert "body" in source_text
+    assert "BODY" in candidate_text
 
 
 def test_a_layout_shift_with_identical_text_fails_the_raster_gate(tmp_path: Path) -> None:
@@ -74,8 +77,11 @@ def test_a_layout_shift_with_identical_text_fails_the_raster_gate(tmp_path: Path
     assert ids(report) == {"FID005"}
     finding = report.findings[0]
     assert finding.details["page"] == 1
-    assert finding.details["changed_ratio"] > FidelityPolicy().raster_tolerance
-    assert (tmp_path / "diff" / finding.details["diff_image"]).is_file()
+    changed_ratio, diff_image = finding.details["changed_ratio"], finding.details["diff_image"]
+    assert isinstance(changed_ratio, float)
+    assert isinstance(diff_image, str)
+    assert changed_ratio > FidelityPolicy().raster_tolerance
+    assert (tmp_path / "diff" / diff_image).is_file()
 
 
 def test_a_loose_tolerance_accepts_a_shift_and_a_tight_one_rejects_tiny_changes(

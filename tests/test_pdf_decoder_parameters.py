@@ -112,9 +112,9 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
     monkeypatch.setattr(runner, "link_descriptions_supported", lambda *_args: True)
     monkeypatch.setattr(runner, "export_pdfua", export)
     result = run_batch(manifest, tmp_path / "out", PipelineOptions())
-    assert [item["exit_status"] for item in result.items] == [2, 0]
-    assert result.items[0]["failed_stage"] == "audit-pdf"
-    assert result.items[1]["status"] == "completed"
+    assert [item.exit_status for item in result.items] == [2, 0]
+    assert result.items[0].failed_stage == "audit-pdf"
+    assert result.items[1].status == "completed"
     bundle = tmp_path / "out" / "refused"
     record = json.loads((bundle / "run.json").read_text())
     audit = next(stage for stage in record["stages"] if stage["name"] == "audit-pdf")
@@ -125,5 +125,5 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
         if stage["name"] in {"verapdf", "fidelity"}
     )
     assert (bundle / "remediated.pdf").read_bytes() == bad.read_bytes()
-    assert all(check_bundle(tmp_path / "out" / item["id"]) == [] for item in result.items)
+    assert all(check_bundle(tmp_path / "out" / item.id) == [] for item in result.items)
     assert source.read_bytes() == before

@@ -21,6 +21,7 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
+from odfa11y.outcomes import StageStatus
 from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
 
 from .fixtures import make_minimal_odt
@@ -79,7 +80,9 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     result = remediate(source, destination, operations)
     assert result.destination == destination
     assert result.changed
-    assert result.schema_check.startswith("no new violations against ODF 1.4")
+    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.version == "1.4"
+    assert result.schema.new_count == 0
     assert {o.status for o in result.outcomes} == {Status.APPLIED}
     again = remediate(destination, tmp_path / "again.odt", operations)
     assert not again.changed
@@ -165,8 +168,8 @@ def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path)
     broken = tmp_path / "broken.odt"
     package.save(broken)
     result = remediate(broken, tmp_path / "out.odt", [SetMetadata(title="Still fine")])
-    assert "pre-existing" in result.schema_check
-    assert "(0 pre-existing)" not in result.schema_check
+    assert result.schema.before_count > 0
+    assert result.schema.before_count != 0
 
 
 def test_a_content_edit_beside_an_old_violation_does_not_count_as_a_regression(
@@ -182,7 +185,7 @@ def test_a_content_edit_beside_an_old_violation_does_not_count_as_a_regression(
     package.save(broken)
     result = remediate(broken, tmp_path / "out.odt", [RemoveEmptySpacers()])
     assert result.changed
-    assert "1 pre-existing" in result.schema_check
+    assert result.schema.before_count == 1
 
 
 def test_an_operation_that_misreports_its_edits_is_an_internal_error(tmp_path: Path) -> None:

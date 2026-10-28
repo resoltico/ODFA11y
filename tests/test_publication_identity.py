@@ -22,7 +22,7 @@ from odfa11y.pipeline import PipelineOptions, run_pipeline
 
 from .documents import make_flat
 from .fixtures import make_minimal_odt
-from .test_evidence import record
+from .record_fixtures import record
 
 
 @pytest.mark.parametrize("suffix", [".xml", ".fodt", ".odt"])

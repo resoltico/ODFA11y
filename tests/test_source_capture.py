@@ -194,8 +194,8 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
         tmp_path, [("oversized", source.name, "plan.toml"), ("valid", normal.name, "plan.toml")]
     )
     result = run_batch(manifest, tmp_path / "evidence", PipelineOptions(profile="inspect"))
-    assert [item["exit_status"] for item in result.items] == [3, 0]
-    assert result.items[0]["failed_stage"] == "identify-source"
+    assert [item.exit_status for item in result.items] == [3, 0]
+    assert result.items[0].failed_stage == "identify-source"
     for name in ["oversized", "valid"]:
         assert check_bundle(tmp_path / "evidence" / name) == []
     assert not list(tmp_path.glob(".odfa11y-source-*"))

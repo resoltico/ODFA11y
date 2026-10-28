@@ -57,25 +57,33 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     source = make(tmp_path, "text", Variant(body=BODY))
     report, template = prepare_template(source)
     assert template is not None
-    graphics = [f for f in report.findings if f.rule_id == "TXT010"]
-    tables = [f for f in report.findings if f.rule_id == "TXT021"]
-    note_graphic = next(f for f in graphics if f.location and "/note[1]/" in f.location.path)
-    note_table = next(f for f in tables if f.location and "/note[1]/" in f.location.path)
+    note_graphic = next(
+        f
+        for f in report.findings
+        if f.rule_id == "TXT010" and f.location and "/note[1]/" in f.location.path
+    )
+    note_table = next(
+        f
+        for f in report.findings
+        if f.rule_id == "TXT021" and f.location and "/note[1]/" in f.location.path
+    )
     assert note_graphic.location is not None
     assert note_table.location is not None
     assert note_graphic.location.path in template
     assert note_table.location.path in template
+    graphic_fingerprint = note_graphic.details["fingerprint"]
+    table_fingerprint = note_table.details["fingerprint"]
+    assert isinstance(graphic_fingerprint, str)
+    assert isinstance(table_fingerprint, str)
     operations = [
         SetGraphicAlternatives({
             note_graphic.location.path: GraphicAlternative(
                 description="The note's illustration",
-                fingerprint=note_graphic.details["fingerprint"],
+                fingerprint=graphic_fingerprint,
             )
         }),
         MarkTableHeaders({
-            note_table.location.path: TableHeaders(
-                rows=1, fingerprint=note_table.details["fingerprint"]
-            )
+            note_table.location.path: TableHeaders(rows=1, fingerprint=table_fingerprint)
         }),
     ]
     output = tmp_path / ("output" + source.suffix)
@@ -157,7 +165,9 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
     operation = MarkTableHeaders({finding.location.path: TableHeaders(rows=1)})
     assert operation.apply(document)[0].status is Status.FAILED
     assert document.edit_count == 0
+    reviewed_fingerprint = finding.details["fingerprint"]
+    assert isinstance(reviewed_fingerprint, str)
     reviewed = MarkTableHeaders({
-        finding.location.path: TableHeaders(rows=1, fingerprint=finding.details["fingerprint"])
+        finding.location.path: TableHeaders(rows=1, fingerprint=reviewed_fingerprint)
     })
     assert remediate(source, tmp_path / "reviewed.fodt", [reviewed]).changed

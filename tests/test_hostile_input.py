@@ -23,6 +23,7 @@ from odfa11y.families.text import (
 from odfa11y.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.fidelity import compare as compare_module
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
+from odfa11y.outcomes import StageStatus
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, SetOdfVersion, remediate
 
@@ -96,7 +97,12 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
 ) -> None:
     source = with_body(tmp_path, ANNOTATED)
     audited = [f for f in audit_odf(source).findings if f.rule_id == "TXT030"]
-    assert sorted(f.details["text"] for f in audited) == [
+    texts = []
+    for finding in audited:
+        value = finding.details["text"]
+        assert isinstance(value, str)
+        texts.append(value)
+    assert sorted(texts) == [
         "https://example.test/real",
         "qa@example.test",
     ]
@@ -155,7 +161,8 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
         tmp_path / "v12.odt", version="1.2", features={"with_data_table": True}
     )
     result = remediate(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
-    assert result.schema_check.startswith("valid against ODF 1.4")
+    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.version == "1.4"
     package = PackageStorage(valid)
     package.write_member(
         "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")

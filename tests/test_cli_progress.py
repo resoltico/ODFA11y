@@ -138,7 +138,7 @@ def test_batch_progress_contains_fixed_steps_and_published_status_only(tmp_path:
         on_progress=lambda event: events.append((event.step, event.state)),
     )
     assert events == [("batch-item", "running"), ("batch-item", "passed")]
-    assert record.items[0]["status"] == "completed"
+    assert record.items[0].status == "completed"
     assert str(tmp_path) not in str(events)
 
 

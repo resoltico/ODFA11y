@@ -60,7 +60,7 @@ def publish_evidence(
             "output": target,
         })
         record.outputs = write_bundle(
-            target, record.as_dict(), artifacts, redactor, diagnostics={"verapdf.xml"}
+            target, record, artifacts, redactor, diagnostics={"verapdf.xml"}
         )
     except OdfA11yError, OSError:
         if observer is not None:

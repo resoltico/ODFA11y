@@ -1,0 +1,121 @@
+{
+  "$id": "urn:odfa11y:schema:batch",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exit_status": {
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "format": {
+      "enum": [
+        2
+      ]
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exit_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failed_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "identify-source",
+                  "audit-source",
+                  "remediate",
+                  "audit-remediated",
+                  "export-source",
+                  "export-remediated",
+                  "audit-pdf",
+                  "validate-pdf",
+                  "fidelity",
+                  "publish-evidence",
+                  "load-plan",
+                  "pipeline"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed",
+              "interrupted"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "exit_status",
+          "failed_stage",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "pending_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "interrupted"
+      ]
+    }
+  },
+  "required": [
+    "items",
+    "status",
+    "exit_status",
+    "format",
+    "pending_ids"
+  ],
+  "type": "object"
+}

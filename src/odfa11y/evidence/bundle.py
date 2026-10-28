@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from lxml import etree
 
@@ -20,6 +20,8 @@ from .review import render_review
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from odfa11y.pipeline.record import RunRecord
 
     from .redact import Redactor
 
@@ -40,7 +42,7 @@ def require_free_directory(directory: Path) -> None:
 
 def write_bundle(
     directory: str | Path,
-    record: dict[str, Any],
+    record: RunRecord,
     artifacts: Mapping[str, Path],
     redactor: Redactor,
     *,
@@ -83,12 +85,12 @@ def write_bundle(
             else:
                 shutil.copyfile(source, destination)
         outputs = {name: sha256_file(staging / name) for name in artifacts}
-        safe_record = redactor.record(record | {"outputs": outputs})
+        safe_record = redactor.record(record.as_dict() | {"outputs": outputs})
         (staging / "run.json").write_text(
             json.dumps(safe_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
-        (staging / "REVIEW.md").write_text(render_review(safe_record), encoding="utf-8")
+        (staging / "REVIEW.md").write_text(redactor.text(render_review(record)), encoding="utf-8")
         write_manifest(staging)
         if target.exists():
             target.rmdir()

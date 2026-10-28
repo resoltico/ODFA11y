@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,9 +14,10 @@ import pytest
 
 from odfa11y.batch import load_manifest, run_batch
 from odfa11y.batch.manifest import preflight
-from odfa11y.batch.record import BatchRecord
+from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OutputError, PlanError
 from odfa11y.evidence import check_bundle
+from odfa11y.outcomes import BatchStatus, ExitStatus
 from odfa11y.pipeline import PipelineOptions
 
 from .fixtures import make_minimal_odt
@@ -64,13 +66,13 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
     record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
     assert record.status == "failed"
     assert record.exit_status == 3
-    assert [item["exit_status"] for item in record.items] == [4, 3, 2, 0]
-    assert record.items[-1]["status"] == "completed"
+    assert [item.exit_status for item in record.items] == [4, 3, 2, 0]
+    assert record.items[-1].status == "completed"
     summary = (tmp_path / "out" / "batch.json").read_text()
     assert str(tmp_path) not in summary
     assert "doc.odt" not in summary
     assert json.loads(summary)["pending_ids"] == []
-    assert all(check_bundle(tmp_path / "out" / item["id"]) == [] for item in record.items)
+    assert all(check_bundle(tmp_path / "out" / item.id) == [] for item in record.items)
 
 
 @pytest.mark.parametrize(
@@ -180,8 +182,8 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
 
     monkeypatch.setattr(runner, "run_pipeline", failing_pipeline)
     record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
-    assert [item["exit_status"] for item in record.items] == [3, 0]
-    assert record.items[0]["failed_stage"] == "pipeline"
+    assert [item.exit_status for item in record.items] == [3, 0]
+    assert record.items[0].failed_stage == "pipeline"
     assert check_bundle(tmp_path / "out" / "broken") == []
     assert "PRIVATE" not in (tmp_path / "out" / "broken" / "run.json").read_text()
 
@@ -189,7 +191,9 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
 def test_aggregate_precedence_and_atomic_summary_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    record = BatchRecord(items=[{"id": "one", "status": "failed", "exit_status": 1}])
+    record = BatchRecord(
+        items=[BatchItemResult("one", BatchStatus.FAILED, ExitStatus.STRICT_WARNINGS)]
+    )
     record.publish(tmp_path)
     previous = (tmp_path / "batch.json").read_bytes()
     original = Path.replace
@@ -200,9 +204,9 @@ def test_aggregate_precedence_and_atomic_summary_failure(
             raise OSError(msg)
         return original(path, destination)
 
-    record.items.append({"id": "two", "status": "failed", "exit_status": 2})
+    record.items.append(BatchItemResult("two", BatchStatus.FAILED, ExitStatus.ERRORS))
     assert record.exit_status == 2
-    record.items.append({"id": "three", "status": "failed", "exit_status": 3})
+    record.items.append(BatchItemResult("three", BatchStatus.FAILED, ExitStatus.EXECUTION_FAILURE))
     assert record.exit_status == 3
     monkeypatch.setattr(Path, "replace", failed_replace)
     with pytest.raises(OSError, match="publication"):
@@ -227,12 +231,12 @@ def test_unpublishable_item_is_explicit_and_later_document_still_runs(
 
     monkeypatch.setattr(runner, "write_bundle", unavailable_bundle)
     record = run_batch(manifest, tmp_path / "out", PipelineOptions(profile="inspect"))
-    assert record.items[0] == {
+    assert asdict(record.items[0]) == {
         "id": "failed",
         "status": "failed",
         "exit_status": 3,
         "failed_stage": "publish-evidence",
         "evidence": None,
     }
-    assert record.items[1]["exit_status"] == 0
+    assert record.items[1].exit_status == 0
     assert check_bundle(tmp_path / "out" / "valid") == []

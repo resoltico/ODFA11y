@@ -16,6 +16,7 @@ from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.fidelity import FidelityPolicy
 from odfa11y.odf import Family, Part, select_elements
+from odfa11y.outcomes import StageStatus
 from odfa11y.pipeline import PipelineOptions, run_pipeline
 from odfa11y.remediation import SetMetadata, remediate
 from odfa11y.report import FactKeys
@@ -110,7 +111,8 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
     output = tmp_path / f"out{source.suffix}"
     result = remediate(source, output, plan)
     assert result.changed
-    assert "no new violations" in result.schema_check
+    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.new_count == 0
     assert not {"SHEET002", "SHEET005"} & ids(output)
     again = remediate(output, tmp_path / f"again{source.suffix}", plan)
     assert not again.changed

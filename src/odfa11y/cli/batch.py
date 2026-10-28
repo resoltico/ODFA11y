@@ -44,8 +44,8 @@ def batch_command(args: argparse.Namespace) -> int:
             f"Profile: {options.profile}; exit {record.exit_status}",
         ]
         lines.extend(
-            f"- {item['id']}: {item['status']}; exit={item['exit_status']}; "
-            f"failed_stage={item['failed_stage']}; evidence={item['evidence']}"
+            f"- {item.id}: {item.status}; exit={item.exit_status}; "
+            f"failed_stage={item.failed_stage}; evidence={item.evidence}"
             for item in record.items
         )
         text = "\n".join(

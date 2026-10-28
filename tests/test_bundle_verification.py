@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,50 +18,13 @@ from odfa11y.evidence import (
 )
 from odfa11y.families.text import ADAPTER
 
+from .record_fixtures import record
+
 if TYPE_CHECKING:
     from pathlib import Path
 
-REVIEW_ITEMS = [{"key": item.key, "text": item.text} for item in ADAPTER.review_items]
+REVIEW_ITEMS = ADAPTER.review_items
 NO_REDACTION = Redactor(())
-
-
-def record(**changes: object) -> dict[str, Any]:
-    """Build a minimal run record.
-
-    Returns
-    -------
-    dict[str, Any]
-        A record shaped like the pipeline's.
-
-    """
-    base: dict[str, Any] = {
-        "document": {"name": "doc.odt", "sha256": "0" * 64},
-        "status": "passed",
-        "failed_stage": None,
-        "human_review": REVIEW_ITEMS,
-        "stages": [
-            {
-                "name": "audit-pdf",
-                "status": "passed",
-                "reason": None,
-                "report": {
-                    "summary": {"errors": 0, "warnings": 1},
-                    "facts": {"pdf.page_count": 2},
-                    "findings": [
-                        {"severity": "warning", "rule_id": "PDF005", "message": "No title display."}
-                    ],
-                },
-                "remediation": None,
-            },
-            {
-                "name": "validate-pdf",
-                "status": "skipped",
-                "reason": "not requested",
-                "report": None,
-            },
-        ],
-    }
-    return base | changes
 
 
 def bundle(tmp_path: Path, artifacts: dict[str, bytes] | None = None) -> Path:

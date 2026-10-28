@@ -4,47 +4,43 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal
 
 from odfa11y.adapter import Status
+from odfa11y.serialization import JsonProperty, record_dict
+lazy from odfa11y.records import SchemaCheck
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from odfa11y.adapter import Outcome
+    from odfa11y.serialization import JsonObject
 
 
 @dataclass(frozen=True, slots=True)
 class RemediationResult:
     """The outcome of a remediation run; ``destination`` is None for a dry run."""
 
-    source: Path
-    destination: Path | None
+    source: Path = field(metadata={"basename": True})
+    destination: Path | None = field(metadata={"basename": True})
     outcomes: tuple[Outcome, ...]
-    schema_check: str
+    schema: SchemaCheck
+    format: Literal[1] = field(default=1, init=False)
     dry_run: bool = False
-    operations: tuple[dict[str, Any], ...] = field(default_factory=tuple)
+    operations: tuple[JsonObject, ...] = field(default_factory=tuple)
 
-    @property
+    @JsonProperty
     def changed(self) -> bool:
         """Whether any operation changed the document."""
         return any(outcome.status is Status.APPLIED for outcome in self.outcomes)
 
-    def as_dict(self) -> dict[str, Any]:
-        """Serialize the run into JSON-compatible values.
+    def as_dict(self) -> JsonObject:
+        """Serialize typed remediation outcomes and schema assurance.
 
         Returns
         -------
-        dict[str, Any]
-            The file names (not paths), operations, outcomes and schema check result.
+        JsonObject
+            Basenames, operations, outcomes and structured schema assurance.
 
         """
-        return {
-            "source": self.source.name,
-            "destination": self.destination.name if self.destination else None,
-            "dry_run": self.dry_run,
-            "changed": self.changed,
-            "schema_check": self.schema_check,
-            "operations": list(self.operations),
-            "outcomes": [outcome.as_dict() for outcome in self.outcomes],
-        }
+        return record_dict(self)

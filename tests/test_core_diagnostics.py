@@ -48,10 +48,12 @@ def test_core_inspection_uses_real_registered_probe_and_returns_no_ui(
     monkeypatch.setattr(diagnostics, "link_descriptions_supported", capability)
     facts, error = diagnostics.inspect_tools(NativeOptions(soffice="selected-soffice", timeout=7))
     assert error is None
-    assert facts["pdfua_link_descriptions"] == ("supported" if supported else "unsupported")
-    assert facts["LibreOffice"] == "26.8"
-    assert facts["veraPDF"] == "1.28"
-    assert facts["odf_schemas"] == ["1.3", "1.4"]
+    assert facts.capabilities["pdfua_link_descriptions"] == (
+        "supported" if supported else "unsupported"
+    )
+    assert facts.toolchain.libreoffice == ToolIdentity("LibreOffice", "26.8")
+    assert facts.toolchain.verapdf == ToolIdentity("veraPDF", "1.28")
+    assert facts.schema_versions == ("1.3", "1.4")
     assert visited
     assert not visited[0].exists()
     output = capsys.readouterr()
@@ -71,8 +73,8 @@ def test_probe_failure_retains_identity_facts_and_controlled_error(
     monkeypatch.setattr(diagnostics, "link_descriptions_supported", capability)
     facts, error = diagnostics.inspect_tools()
     assert error is failure
-    assert facts["LibreOffice"] == "26.8"
-    assert facts["pdfua_link_descriptions"] is None
+    assert facts.toolchain.libreoffice == ToolIdentity("LibreOffice", "26.8")
+    assert facts.capabilities["pdfua_link_descriptions"] is None
 
 
 def test_missing_tools_have_no_identity_and_return_probe_error(
@@ -90,9 +92,9 @@ def test_missing_tools_have_no_identity_and_return_probe_error(
     monkeypatch.setattr(diagnostics, "find_verapdf", missing)
     monkeypatch.setattr(diagnostics, "link_descriptions_supported", capability)
     facts, error = diagnostics.inspect_tools()
-    assert facts["LibreOffice"] is None
-    assert facts["veraPDF"] is None
-    assert facts["pdfua_link_descriptions"] is None
+    assert facts.toolchain.libreoffice is None
+    assert facts.toolchain.verapdf is None
+    assert facts.capabilities["pdfua_link_descriptions"] is None
     assert error is failure
 
 
@@ -113,5 +115,5 @@ def test_registry_without_probe_returns_partial_unsupported_error(
     monkeypatch.setitem(REGISTRY, Family.TEXT, replace(REGISTRY[Family.TEXT], link_probe=None))
     facts, error = diagnostics.inspect_tools()
     assert isinstance(error, UnsupportedKindError)
-    assert facts["pdfua_link_descriptions"] is None
-    assert facts["LibreOffice"] == "26.8"
+    assert facts.capabilities["pdfua_link_descriptions"] is None
+    assert facts.toolchain.libreoffice == ToolIdentity("LibreOffice", "26.8")

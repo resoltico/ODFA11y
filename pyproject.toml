@@ -146,6 +146,7 @@ max-branches = 10
 [tool.ruff.lint.pydocstyle]
 # Public APIs use NumPy-style docstrings; this resolves competing docstring conventions.
 convention = "numpy"
+property-decorators = ["odfa11y.serialization.JsonProperty"]
 
 [tool.ruff.lint.flake8-type-checking]
 strict = true

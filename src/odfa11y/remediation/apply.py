@@ -11,6 +11,8 @@ from odfa11y.content import opaque_payloads
 from odfa11y.errors import OutputError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, regressions, validate
+from odfa11y.outcomes import StageStatus
+from odfa11y.records import SchemaCheck
 
 from .result import RemediationResult
 
@@ -91,7 +93,7 @@ def remediate(
         source=source,
         destination=None if dry_run else destination,
         outcomes=tuple(outcomes),
-        schema_check=schema_check,
+        schema=schema_check,
         dry_run=dry_run,
         operations=tuple(operation.as_dict() for operation in operations),
     )
@@ -145,9 +147,15 @@ def _check_edit_accounting(operation: Operation, outcomes: Sequence[Outcome], ed
         raise RemediationError(msg)
 
 
-def _schema_check(before: SchemaResult, after: SchemaResult) -> str:
+def _schema_check(before: SchemaResult, after: SchemaResult) -> SchemaCheck:
     if not after.available:
-        return "skipped: no bundled schema for the result's ODF version"
+        return SchemaCheck(
+            StageStatus.SKIPPED,
+            after.version,
+            before.count,
+            after.count,
+            unlocated_count=after.unlocated,
+        )
     if not before.available:
         # No baseline to compare with (for example a relabel from ODF 1.2): the result must
         # be fully valid, otherwise the change cannot be shown to be safe.
@@ -159,7 +167,13 @@ def _schema_check(before: SchemaResult, after: SchemaResult) -> str:
                 "nothing was written:\n" + "\n".join(lines)
             )
             raise RemediationError(msg)
-        return f"valid against ODF {after.version} (the source's version has no bundled schema)"
+        return SchemaCheck(
+            StageStatus.PASSED,
+            after.version,
+            before.count,
+            after.count,
+            unlocated_count=after.unlocated,
+        )
     new = regressions(before, after)
     if new:
         lines = [f"{member}: {message}" for member, messages in new.items() for message in messages]
@@ -167,8 +181,13 @@ def _schema_check(before: SchemaResult, after: SchemaResult) -> str:
             lines
         )
         raise RemediationError(msg)
-    unlocated = f", {after.unlocated} unlocated" if after.unlocated else ""
-    return f"no new violations against ODF {after.version} ({before.count} pre-existing{unlocated})"
+    return SchemaCheck(
+        StageStatus.PASSED,
+        after.version,
+        before.count,
+        after.count,
+        unlocated_count=after.unlocated,
+    )
 
 
 def _apply_operations(

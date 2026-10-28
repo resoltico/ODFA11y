@@ -1,0 +1,134 @@
+{
+  "$id": "urn:odfa11y:schema:remediation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "changed": {
+      "type": "boolean"
+    },
+    "destination": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "format": {
+      "enum": [
+        1
+      ]
+    },
+    "operations": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "outcomes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "applied",
+              "unchanged",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "status",
+          "message",
+          "key",
+          "count"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "after_count": {
+          "type": "integer"
+        },
+        "before_count": {
+          "type": "integer"
+        },
+        "new_count": {
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "skipped",
+            "not-applicable"
+          ]
+        },
+        "unlocated_count": {
+          "type": "integer"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "version",
+        "before_count",
+        "after_count",
+        "new_count",
+        "unlocated_count"
+      ],
+      "type": "object"
+    },
+    "source": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "source",
+    "destination",
+    "outcomes",
+    "schema",
+    "format",
+    "dry_run",
+    "operations",
+    "changed"
+  ],
+  "type": "object"
+}

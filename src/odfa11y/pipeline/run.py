@@ -33,6 +33,7 @@ from odfa11y.pdf import (
     link_descriptions_supported,
     list_fonts,
 )
+from odfa11y.records import DocumentIdentity
 from odfa11y.remediation import remediate
 from odfa11y.report import exit_status
 
@@ -45,7 +46,7 @@ from .stages import run_stage
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from odfa11y.adapter import FamilyAdapter, Operation, ReviewItem
+    from odfa11y.adapter import FamilyAdapter, Operation
     from odfa11y.fidelity import FidelityPolicy
     from odfa11y.report import Report
 
@@ -72,7 +73,7 @@ class _Run:
 
     def identify_source(self) -> StageResult:
         self.captured = self.lifetime.enter_context(capture_source(self.source))
-        self.record.document["sha256"] = sha256_file(self.captured)
+        self.record.document.sha256 = sha256_file(self.captured)
         try:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
@@ -85,7 +86,9 @@ class _Run:
             )  # audit-source explains
         detection = document.detection
         self.adapter = adapter_for(detection.kind)
-        self.record.document.update(
+        self.record.document = DocumentIdentity(
+            name=self.record.document.name,
+            sha256=self.record.document.sha256,
             kind=detection.kind.name if detection.kind else None,
             media_type=detection.media_type,
             layout=document.layout,
@@ -93,7 +96,7 @@ class _Run:
             adapter=self.adapter.name,
             odf_version=declared_version(document),
         )
-        self.record.human_review = review_items(self.adapter.review_items)
+        self.record.human_review = self.adapter.review_items
         return StageResult(StageName.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False)
 
     def audit_source(self) -> StageResult:
@@ -169,7 +172,7 @@ class _Run:
                 error=required,
             )
         (self.work / "verapdf.xml").write_text(result.raw_xml, encoding="utf-8")
-        self.record.toolchain["veraPDF"] = result.identity.as_dict()
+        self.record.toolchain.verapdf = result.identity
         return self._gate(StageName.VALIDATE_PDF, report)
 
     def fidelity(self) -> StageResult:
@@ -189,7 +192,7 @@ class _Run:
         return self.adapter.pdf_filter is not None
 
     def _no_pdf(self, name: StageName) -> StageResult:
-        kind = self.record.document.get("kind") or "this kind of"
+        kind = self.record.document.kind or "this kind of"
         reason = f"no PDF export is defined for {kind} documents"
         if self.record.profile.verapdf_required:
             return StageResult(
@@ -218,7 +221,7 @@ class _Run:
         )
         if self.executable is None:
             self.executable = find_soffice(self.options.soffice)
-            self.record.toolchain["LibreOffice"] = identify_soffice(self.executable).as_dict()
+            self.record.toolchain.libreoffice = identify_soffice(self.executable)
             if self.adapter.link_probe is not None:
                 with tempfile.TemporaryDirectory(prefix="odfa11y-link-probe-") as scratch:
                     probe = self.adapter.link_probe(Path(scratch))
@@ -231,7 +234,7 @@ class _Run:
                             self.work / "profile",
                         ),
                     )
-                self.record.toolchain["LibreOffice"]["pdfua_link_descriptions"] = (
+                self.record.toolchain.capabilities["pdfua_link_descriptions"] = (
                     "supported" if supported else "unsupported"
                 )
         export_pdfua(
@@ -240,18 +243,6 @@ class _Run:
             replace(settings, soffice=self.executable),
         )
         return StageResult(name, StageStatus.PASSED, gate=False)
-
-
-def review_items(items: tuple[ReviewItem, ...]) -> list[dict[str, str]]:
-    """Serialize review items for the run record.
-
-    Returns
-    -------
-    list[dict[str, str]]
-        One entry per item with its key and text.
-
-    """
-    return [{"key": item.key, "text": item.text} for item in items]
 
 
 def run_pipeline(
@@ -281,11 +272,11 @@ def run_pipeline(
     source, target = Path(source), Path(output_dir)
     require_free_directory(target)
     record = RunRecord(
-        document={"name": source.name, "sha256": None},
+        document=DocumentIdentity(source.name),
         operations=tuple(operation.as_dict() for operation in operations),
-        policy=policy.as_dict(),
+        policy=policy,
         profile=profile,
-        human_review=review_items(GENERIC.review_items),
+        human_review=GENERIC.review_items,
     )
     with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
         work = Path(scratch)

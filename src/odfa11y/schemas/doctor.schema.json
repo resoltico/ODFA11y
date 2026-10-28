@@ -1,0 +1,127 @@
+{
+  "$id": "urn:odfa11y:schema:doctor",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capabilities": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "type": "object"
+    },
+    "format": {
+      "enum": [
+        1
+      ]
+    },
+    "libraries": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "odfa11y": {
+      "type": "string"
+    },
+    "platform": {
+      "type": "string"
+    },
+    "python": {
+      "type": "string"
+    },
+    "schema_versions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "toolchain": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "libreoffice": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "version"
+              ],
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verapdf": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "version"
+              ],
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "libreoffice",
+        "verapdf",
+        "capabilities"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "odfa11y",
+    "python",
+    "platform",
+    "libraries",
+    "schema_versions",
+    "toolchain",
+    "capabilities",
+    "format"
+  ],
+  "type": "object"
+}

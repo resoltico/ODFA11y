@@ -36,7 +36,11 @@ def test_shared_reference_counts_each_owner(tmp_path: Path, *, array: bool) -> N
     path = tmp_path / "shared.pdf"
     writer.write(path)
     finding = next(f for f in audit_pdfua(path).findings if f.rule_id == "PDF022")
-    assert finding.details["mcids"][0]["references"] == 2
+    identifiers = finding.details["mcids"]
+    assert isinstance(identifiers, list)
+    reference = identifiers[0]
+    assert isinstance(reference, dict)
+    assert reference["references"] == 2
 
 
 def test_shared_empty_arrays_hit_traversal_work_bound(monkeypatch: pytest.MonkeyPatch) -> None:

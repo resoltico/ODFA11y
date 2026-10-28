@@ -9,7 +9,7 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.batch.record import BatchRecord
+from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.cli import main
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.outcomes import ExitStatus, combine_statuses
@@ -35,7 +35,13 @@ def test_exit_precedence_is_independent_of_numeric_order(
 ) -> None:
     assert combine_statuses(statuses) == expected
     assert (
-        BatchRecord(items=[{"exit_status": status} for status in statuses]).exit_status == expected
+        BatchRecord(
+            items=[
+                BatchItemResult(str(i), exit_status=ExitStatus(status))
+                for i, status in enumerate(statuses)
+            ]
+        ).exit_status
+        == expected
     )
 
 
