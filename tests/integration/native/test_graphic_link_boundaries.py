@@ -90,15 +90,15 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     assert report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] > 0
     assert report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] >= 1
     assert ((4, 4), PIXELS) in decoded_images(pdf)
-    assert compare_pdfs(control_pdf, pdf, FidelityPolicy(raster_tolerance=0.0)).passed
+    assert compare_pdfs(control_pdf, pdf, FidelityPolicy(raster_tolerance=0.0)).error_count == 0
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:
         # Standard draw:decorative is ignored by LibreOffice 26.8.1.1. No extension is authored.
         assert errors == {"PDF007"}
-        assert not report.passed
+        assert report.error_count != 0
         assert not validator.compliant
     else:
-        assert report.passed
+        assert report.error_count == 0
         assert validator.compliant
 
 
@@ -132,15 +132,15 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
     assert report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] == 1
-    assert compare_pdfs(control_pdf, pdf, FidelityPolicy()).passed
+    assert compare_pdfs(control_pdf, pdf, FidelityPolicy()).error_count == 0
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:
         # Writer 26.8.1.1 does not export the normative office:title to PDF /Alt.
         assert errors == {"PDF019"}
-        assert not report.passed
+        assert report.error_count != 0
         assert not validator.compliant
     else:
-        assert report.passed
+        assert report.error_count == 0
         assert validator.compliant
 
 

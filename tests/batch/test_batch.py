@@ -13,7 +13,7 @@ from odfa11y.application.native import NativeTools
 from odfa11y.batch import load_manifest, run_batch
 from odfa11y.batch.batch_file import preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
-from odfa11y.errors import OutputError, PlanError
+from odfa11y.errors import OutputOccupied, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.run.context import RunSettings
 from odfa11y.run.profiles import profile_named
@@ -118,7 +118,7 @@ def test_occupied_output_and_hardlink_are_preserved(tmp_path: Path) -> None:
     output = tmp_path / "out"
     os.link(manifest, output)
     before = manifest.read_bytes()
-    with pytest.raises(OutputError):
+    with pytest.raises(OutputOccupied):
         run_batch(manifest, output)
     assert output.read_bytes() == manifest.read_bytes() == before
 
@@ -130,14 +130,14 @@ def test_symlink_output_and_ancestor_are_rejected(tmp_path: Path) -> None:
     alias = tmp_path / "alias"
     alias.symlink_to(real, target_is_directory=True)
     for output in (alias, alias / "out"):
-        with pytest.raises(OutputError, match="symbolic"):
+        with pytest.raises(OutputOccupied, match="symbolic"):
             run_batch(manifest, output)
     assert list(real.iterdir()) == []
 
 
 def test_input_under_future_output_is_rejected_before_creation(tmp_path: Path) -> None:
     manifest = manifest_file(tmp_path, [("doc", "out/document.odt", "p")])
-    with pytest.raises(OutputError, match="contain"):
+    with pytest.raises(OutputOccupied, match="contain"):
         preflight(manifest, tmp_path / "out", load_manifest(manifest))
     assert not (tmp_path / "out").exists()
 

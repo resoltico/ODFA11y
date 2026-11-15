@@ -7,7 +7,7 @@ import re
 import pytest
 
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import ReportError
+from odfa11y.errors import InvalidOption
 from odfa11y.plans import registered_kinds
 from odfa11y.report import (
     RULES,
@@ -19,6 +19,7 @@ from odfa11y.report import (
     exit_status,
     render_reports,
 )
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.schema import assert_record_schema
@@ -26,7 +27,7 @@ from tests.fixtures.schema import assert_record_schema
 
 def _report() -> Report:
     report = Report(
-        kind="odf",
+        kind=ReportKind.ODF,
         subject="sample.odt",
         facts=FactSet({
             FactKeys.DOCUMENT_TITLE: "T",
@@ -41,11 +42,7 @@ def _report() -> Report:
     )
     report.add_decision(
         OpenDecision(
-            registered_kinds()["text.linkify_addresses"],
-            None,
-            None,
-            {"enabled": False},
-            ("LINK001",),
+            registered_kinds()["text.linkify_addresses"], None, {"enabled": False}, ("LINK001",)
         )
     )
     return report
@@ -69,7 +66,7 @@ def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     assert_record_schema(_report())
     single = json.loads(render_reports([_report()], output_format="json"))
-    assert single["format"] == 6
+    assert single["schema_version"] == 1
     assert single["kind"] == "odf"
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]
@@ -87,12 +84,12 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
 
 
 def test_unsupported_format_is_rejected() -> None:
-    with pytest.raises(ReportError, match="Unsupported report format: yaml"):
+    with pytest.raises(InvalidOption, match="Unsupported report format: yaml"):
         render_reports([_report()], output_format="yaml")
 
 
 def test_message_defaults_to_the_rule_title() -> None:
-    report = Report(kind="odf", subject="x")
+    report = Report(kind=ReportKind.ODF, subject="x")
     report.add(rules.META001)
     assert report.findings[0].message == rules.META001.title
 
@@ -110,14 +107,14 @@ def test_message_defaults_to_the_rule_title() -> None:
 def test_exit_status_follows_highest_severity(
     severity: Severity, *, strict: bool, expected: int
 ) -> None:
-    report = Report(kind="odf", subject="x")
+    report = Report(kind=ReportKind.ODF, subject="x")
     rule = next(r for r in RULES.values() if r.severity is severity)
     report.add(rule)
     assert exit_status([report], strict=strict) == expected
 
 
 def test_exit_status_takes_the_worst_report() -> None:
-    clean, warned, failed = (Report(kind="odf", subject=str(i)) for i in range(3))
+    clean, warned, failed = (Report(kind=ReportKind.ODF, subject=str(i)) for i in range(3))
     warned.add(rules.LINK001)
     failed.add(rules.META001)
     assert exit_status([clean, warned], strict=True) == 1
@@ -149,7 +146,7 @@ def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_tit
 
 
 def test_finding_references_one_rule_without_serializing_its_implementation() -> None:
-    report = Report(kind="odf", subject="source.odt")
+    report = Report(kind=ReportKind.ODF, subject="source.odt")
     report.add(rules.HEADING004, "A source-specific observation")
     [finding] = report.findings
     assert finding.rule is rules.HEADING004

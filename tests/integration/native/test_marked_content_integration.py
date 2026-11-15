@@ -27,7 +27,7 @@ def test_content_errors_agree_with_verapdf_on_a_damaged_real_export(
         tmp_path / "baseline.pdf",
         ExportSettings("writer_pdf_Export", soffice=soffice),
     )
-    assert audit_pdfua(baseline).passed
+    assert audit_pdfua(baseline).error_count == 0
     assert validate_pdfua(baseline, executable=verapdf).compliant
     writer = PdfWriter(clone_from=baseline)
     content = writer.pages[0].get_contents()
@@ -48,7 +48,7 @@ def test_content_errors_agree_with_verapdf_on_a_damaged_real_export(
     content_rules = {f.rule_id for f in report.findings if f.rule_id.startswith("PDF02")}
     expected = {"PDF020", "PDF021"} if defect == "unreferenced" else {"PDF021", "PDF023"}
     assert content_rules == expected
-    assert not report.passed
+    assert report.error_count != 0
     result = validate_pdfua(path, executable=verapdf)
     assert not result.compliant
     assert {(f.clause, f.test_number) for f in result.failures} == {("7.1", "3")}

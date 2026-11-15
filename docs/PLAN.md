@@ -17,7 +17,7 @@ the `plan` command; the value below is illustrative.
 
 ```toml
 [plan]
-format = 1
+schema_version = 1
 generator = "0.8.0"
 source.sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 

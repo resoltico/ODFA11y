@@ -9,7 +9,7 @@ lazy from collections.abc import Sequence
 from odfa11y.capture import capture_source
 from odfa11y.concepts import opaque_payloads
 from odfa11y.concepts.edits import Outcome, Status
-from odfa11y.errors import OutputError, PackageError, RemediationError, UnsupportedKindError
+from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Use, regressions, validate
 from odfa11y.records import SchemaCheck
@@ -109,7 +109,7 @@ def _run_operations(
     try:
         _require_matching_family(document, adapter, operations)
         adapter.preflight(document, operations)
-    except (RemediationError, UnsupportedKindError) as exc:
+    except DocumentRefusal as exc:
         state.violations.append(Violation(ViolationKind.FOREIGN_OPERATION, str(exc)))
         state.outcomes.extend(
             Outcome(operation.name, Status.FAILED, str(exc)) for operation in operations
@@ -136,11 +136,11 @@ def _run_operation(
     try:
         protected = adapter.protect_edit(document, operation)
         produced = operation.apply(document)
-    except (RemediationError, UnsupportedKindError) as exc:
+    except DocumentRefusal as exc:
         produced = (Outcome(operation.name, Status.FAILED, str(exc)),)
     state.outcomes.extend(produced)
     state.violations.extend(
-        Violation(ViolationKind.FAILED_OUTCOME, outcome.message, outcome.operation, outcome.key)
+        Violation(ViolationKind.FAILED_OUTCOME, outcome.message, outcome.operation, outcome.target)
         for outcome in produced
         if outcome.status == Status.FAILED
     )
@@ -254,7 +254,7 @@ def _require_matching_family(
             f"The plan configures {', '.join(wrong)}, which do not apply to a {kind} document "
             f"(handled by the {adapter.name} adapter); nothing was written."
         )
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
 
 
 def _require_consistent_kind(document: OdfDocument, source: Path) -> None:
@@ -279,7 +279,7 @@ def _require_distinct(source: Path, destination: Path) -> None:
     )
     if same:
         msg = f"Destination must differ from the source: {destination.name}"
-        raise OutputError(msg)
+        raise OutputOccupied(msg)
 
 
 def _check_edit_accounting(

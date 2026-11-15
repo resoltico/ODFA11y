@@ -17,6 +17,7 @@ from odfa11y.odf import OdfDocument, Part, Use
 from odfa11y.odf.export_context import native_export_limitations
 from odfa11y.plans.registry import document_decisions
 from odfa11y.report import FactKeys, Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 
 PARSED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.MANIFEST)
@@ -44,7 +45,7 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
 
     """
     source = Path(source)
-    report = Report(kind="odf", subject=str(source), sources=(source,))
+    report = Report(kind=ReportKind.ODF, subject=str(source), sources=(source,))
     try:
         document = OdfDocument.open(source)
     except (PackageError, OSError) as exc:

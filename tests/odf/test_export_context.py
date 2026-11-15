@@ -9,7 +9,7 @@ from lxml import etree
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
@@ -37,7 +37,7 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
     report = audit_odf(source)
     assert "NATIVE001" in {finding.rule_id for finding in report.findings}
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
-    with pytest.raises(ToolFailedError, match="rendering dependencies"):
+    with pytest.raises(DocumentRefusal, match="resource"):
         require_native_context(OdfDocument.open(source))
     # Verify reaches the explicit native refusal even without any installed application.
     result = execute(
@@ -47,8 +47,9 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
         RunSettings(tools=Tools(soffice="missing-tool"), profile=profile_named("verify")),
     )
     assert result.failed_stage == "export-source"
-    assert result.exit_status == 3
-    assert "rendering dependencies" in (result.stages[4].reason or "")
+    assert result.exit_status == 2
+    assert "frame 'Asset'" in (result.stages[4].reason or "")
+    assert "resource" in (result.stages[4].reason or "")
     assert check_bundle(tmp_path / "evidence") == []
     assert not (tmp_path / "evidence" / "source.pdf").exists()
     assert (tmp_path / "evidence" / "remediated.fodt").read_bytes() == source.read_bytes()
@@ -87,7 +88,7 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
     document.save(source)
     assert "NATIVE002" in {finding.rule_id for finding in audit_odf(source).findings}
     require_native_context(OdfDocument.open(source))  # Direct original export is distinct.
-    with pytest.raises(ToolFailedError, match="filename/path fields"):
+    with pytest.raises(DocumentRefusal, match="filename/path fields"):
         require_native_context(OdfDocument.open(source), captured_identity=True)
     output = tmp_path / "evidence"
     result = execute(

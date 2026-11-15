@@ -13,6 +13,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
+from odfa11y.targets import require_target
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header
 
@@ -31,7 +32,7 @@ def test_writer_language_source_decision_and_pdf_tags(
         answers.write_text(
             plan_header(source)
             + f'\n[decisions."language.target"."{question.target.path}"]\n'
-            + f'fingerprint = "{question.fingerprint}"\nwestern = "fr-FR"\n'
+            + f'fingerprint = "{require_target(question.target).fingerprint}"\nwestern = "fr-FR"\n'
         )
         edited = tmp_path / "reviewed.odt"
         result = remediate(source, edited, answers)

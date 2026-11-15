@@ -15,7 +15,7 @@ from pypdf.generic import NameObject, TextStringObject
 from odfa11y import __version__
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
-from odfa11y.errors import ToolFailedError, ToolNotFoundError
+from odfa11y.errors import ToolFailure, ToolUnavailable
 from odfa11y.families.text.probes import PROBES, write_link_probe
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import (
@@ -104,7 +104,7 @@ def test_an_uninspectable_pdf_is_a_failure_not_a_verdict() -> None:
         return destination
 
     execution = probe_result(export)
-    assert isinstance(execution.error, ToolFailedError)
+    assert isinstance(execution.error, ToolFailure)
     assert execution.result.status == CapabilityStatus.NOT_TESTED
 
 
@@ -114,7 +114,7 @@ def test_a_pdf_without_a_hyperlink_is_not_a_supported_verdict() -> None:
         return destination
 
     execution = probe_result(export)
-    assert isinstance(execution.error, ToolFailedError)
+    assert isinstance(execution.error, ToolFailure)
     assert "contains no hyperlink" in str(execution.error)
     assert execution.result.status == CapabilityStatus.NOT_TESTED
 
@@ -125,7 +125,7 @@ def test_a_missing_libreoffice_propagates(tmp_path: Path) -> None:
         ToolIdentity("LibreOffice", "26.8.1.1"),
         ExportSettings(WRITER, soffice=tmp_path / "absent"),
     )
-    assert isinstance(execution.error, ToolNotFoundError)
+    assert isinstance(execution.error, ToolUnavailable)
     assert execution.result.status == CapabilityStatus.NOT_TESTED
 
 

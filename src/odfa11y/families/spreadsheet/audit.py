@@ -31,6 +31,7 @@ from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -101,8 +102,10 @@ def _audit_names(document: OdfDocument, all_sheets: list[etree._Element], report
             report.add_decision(
                 OpenDecision(
                     SHEET_NAME,
-                    Location.indexed(Part.CONTENT, "sheet", index),
-                    sheet_fingerprint(document, sheet),
+                    Target(
+                        (Location.indexed(Part.CONTENT, "sheet", index)).path,
+                        Fingerprint(sheet_fingerprint(document, sheet)),
+                    ),
                     {"name": name},
                     (rule.id,),
                 )

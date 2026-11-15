@@ -9,7 +9,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import validate_timeout
 from odfa11y.pdf import audit_pdfua, check_pdfua
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run.comparison import is_pdf
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.report import Report
@@ -42,14 +42,14 @@ def audit_document(
     validate_timeout(timeout)
     source = Path(source)
     if on_progress is not None:
-        on_progress(ProgressEvent(StepName.AUDIT_DOCUMENT, StepState.RUNNING))
+        on_progress(ProgressEvent(Step.AUDIT_DOCUMENT, StepState.RUNNING))
     if not is_pdf(source):
         yield audit_odf(source, schema=schema)
         return
     yield audit_pdfua(source)
     if verapdf or verapdf_path:
         if on_progress is not None:
-            on_progress(ProgressEvent(StepName.VALIDATE_PDF, StepState.RUNNING))
+            on_progress(ProgressEvent(Step.VALIDATE_PDF, StepState.RUNNING))
         report, _result = check_pdfua(
             source,
             subject=str(source),

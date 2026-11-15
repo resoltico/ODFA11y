@@ -13,6 +13,7 @@ from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.odf import Family, Part, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
 OBJECTS = {
@@ -61,7 +62,7 @@ def description_attribute(node: etree._Element) -> str:
     return xml_names.FORM_TITLE if _form_target(node) else xml_names.DB_DESCRIPTION
 
 
-def fingerprint(node: etree._Element) -> str:
+def fingerprint(node: etree._Element) -> Fingerprint:
     """Bind the description decision to SQL, bindings and all other object content.
 
     Returns
@@ -70,7 +71,9 @@ def fingerprint(node: etree._Element) -> str:
         A reviewed digest excluding only the object's description.
 
     """
-    return protected_xml(node, omitted_element_attributes=description_attributes(node))[:16]
+    return Fingerprint.from_digest(
+        protected_xml(node, omitted_element_attributes=description_attributes(node))
+    )
 
 
 def description_attributes(root: etree._Element) -> dict[str, tuple[str, ...]]:
@@ -154,7 +157,7 @@ class SetObjectDescriptions(Operation):
             matches = available.get(target, [])
             problem = _problem(target, matches, value)
             if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, key=target))
+                failures.append(Outcome(self.name, Status.FAILED, problem, target=target))
             else:
                 decisions.append((target, matches[0], value.text.strip()))
         if failures:
@@ -172,7 +175,7 @@ class SetObjectDescriptions(Operation):
                     "Set supplied database object description."
                     if changed
                     else "Database object description already matches.",
-                    key=target,
+                    target=target,
                     count=int(changed),
                 )
             )

@@ -44,7 +44,7 @@ def assert_refused(result: RemediationResult, *, match: str | None = None) -> st
     assert result.exit_status == 2
     assert result.violations
     text = "\n".join(
-        f"{violation.operation or ''} [{violation.key or ''}]: {violation.message}"
+        f"{violation.operation or ''} [{violation.target or ''}]: {violation.message}"
         for violation in result.violations
     )
     if match is not None:

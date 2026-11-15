@@ -60,7 +60,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["toolchain"]["libreoffice"]["version"] != "unknown"
     assert run["toolchain"]["verapdf"]["name"] == "veraPDF"
-    assert run["format"] == 3
+    assert run["schema_version"] == 1
     assert run["profile"]["name"] == "production"
     assert run["document"]["kind"] == "text"
     assert run["document"]["layout"] == "package"

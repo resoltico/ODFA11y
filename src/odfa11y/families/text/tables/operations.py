@@ -9,7 +9,7 @@ lazy from lxml import etree
 
 from odfa11y.concepts import axis_count, header_count, require_safe_boundary, table_fingerprint
 from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal, Remedy, RemedyAction
 from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.tables.classification import TableKind, classify
 from odfa11y.families.text.tables.edit import mark_axis
@@ -51,8 +51,8 @@ class MarkTableHeaders(Operation):
             try:
                 changes = _preflight(matches, entry, document)
                 plans.append((name, matches[0], changes))
-            except RemediationError as exc:
-                failures.append(Outcome(self.name, Status.FAILED, str(exc), key=name))
+            except DocumentRefusal as exc:
+                failures.append(Outcome(self.name, Status.FAILED, str(exc), target=name))
         if failures:
             return tuple(failures)
         outcomes = []
@@ -66,7 +66,7 @@ class MarkTableHeaders(Operation):
                     "Applied reviewed table headers."
                     if changes
                     else "Table headers already match.",
-                    key=name,
+                    target=name,
                     count=len(changes),
                 )
             )
@@ -85,34 +85,44 @@ def _preflight(
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A target/count/boundary is ambiguous, stale, invalid or unavailable.
 
     """
     if len(matches) != 1:
         msg = "The table name must resolve to exactly one table."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     table = matches[0]
     if not table.get(xml_names.TABLE_NAME) and not entry.fingerprint:
         msg = "An ordinal table target requires its reviewed fingerprint."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     if entry.fingerprint is not None and entry.fingerprint != table_fingerprint(table, document):
         msg = "The table is no longer the object this plan was reviewed against."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     if entry.rows is None and entry.columns is None:
         msg = "A table-header decision needs rows or columns."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     changes = {}
     for axis, count in [("rows", entry.rows), ("columns", entry.columns)]:
         if count is None:
             continue
         if type(count) is not int or count < 1 or count > axis_count(table, axis):
             msg = f"Header {axis} must be a positive count within the table."
-            raise RemediationError(msg)
+            raise DocumentRefusal(msg)
         if header_count(table, axis) != count:
             changes[axis] = count
     require_safe_boundary(table, entry.rows, entry.columns)
     if classify(table).kind in {TableKind.LAYOUT_CANDIDATE, TableKind.AMBIGUOUS}:
-        message = "Table intent or header relationships remain ambiguous; edit the table in Writer."
-        raise RemediationError(message)
+        message = (
+            "Table intent or header relationships remain ambiguous; "
+            "establish header rows in Writer."
+        )
+        raise DocumentRefusal(
+            message,
+            remedy=Remedy(
+                RemedyAction.EDIT_IN_APPLICATION,
+                table.get(xml_names.TABLE_NAME) or "table",
+                "Use Writer table properties to declare header rows and review the table intent.",
+            ),
+        )
     return changes

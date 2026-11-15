@@ -28,7 +28,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -236,7 +236,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -262,7 +262,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -355,7 +355,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -381,7 +381,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -450,7 +450,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -479,7 +479,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -504,7 +504,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -573,7 +573,7 @@
             "type": "object"
           },
           "propertyNames": {
-            "pattern": "^(?:content|manifest|meta|settings|styles)/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])"
           },
           "type": "object"
         },
@@ -672,15 +672,15 @@
     "plan": {
       "additionalProperties": false,
       "properties": {
-        "format": {
-          "enum": [
-            1
-          ]
-        },
         "generator": {
           "description": "Version that generated the plan.",
           "minLength": 1,
           "type": "string"
+        },
+        "schema_version": {
+          "enum": [
+            1
+          ]
         },
         "source": {
           "additionalProperties": false,
@@ -698,7 +698,7 @@
         }
       },
       "required": [
-        "format",
+        "schema_version",
         "source",
         "generator"
       ],

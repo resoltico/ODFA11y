@@ -46,7 +46,7 @@ def _plan() -> list[Operation]:
     ]
 
 
-def test_native_formula_validates_and_missing_alternative_has_a_reviewed_target() -> None:
+def test_native_formula_validates_and_missing_alternative_requests_an_answer() -> None:
     document = OdfDocument.open(SOURCE)
     result = validate(document)
     assert result.available
@@ -56,7 +56,6 @@ def test_native_formula_validates_and_missing_alternative_has_a_reviewed_target(
     finding = next(f for f in report.findings if f.rule_id == "MATH002")
     question = next(d for d in report.decisions if d.kind.id == "formula.alternative")
     assert question.target is None
-    assert question.fingerprint is None
     assert finding.location is not None
     assert finding.location.path == "content/formula"
     assert "MATH002" in question.rule_ids

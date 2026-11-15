@@ -8,7 +8,7 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import OutputError
+from odfa11y.errors import OutputOccupied
 from odfa11y.evidence import Redactor, check_bundle, write_bundle
 from odfa11y.families.text import ADAPTER
 from tests.fixtures.records import record
@@ -59,7 +59,13 @@ def test_tampering_removal_and_additions_are_detected(tmp_path: Path) -> None:
 
 def test_an_unreadable_or_malformed_manifest_is_reported(tmp_path: Path) -> None:
     assert check_bundle(tmp_path)[0].startswith("Cannot read manifest.json")
-    for text in ("{}", "[]", '{"format": 1}', '{"format": 2, "files": {}}', "not json"):
+    for text in (
+        "{}",
+        "[]",
+        '{"bundle_version": 1}',
+        '{"bundle_version": 2, "files": {}}',
+        "not json",
+    ):
         (tmp_path / "manifest.json").write_text(text)
         assert check_bundle(tmp_path)[0].startswith("Cannot read manifest.json"), text
 
@@ -88,7 +94,9 @@ def test_a_manifest_naming_an_unsafe_path_is_rejected_before_any_read(
     directory = tmp_path / "bundle"
     directory.mkdir()
     digest = "0" * 64
-    (directory / "manifest.json").write_text(json.dumps({"format": 1, "files": {name: digest}}))
+    (directory / "manifest.json").write_text(
+        json.dumps({"bundle_version": 1, "files": {name: digest}})
+    )
     (directory / "x").write_text("x")
     problems = check_bundle(directory)
     assert problems
@@ -96,11 +104,11 @@ def test_a_manifest_naming_an_unsafe_path_is_rejected_before_any_read(
 
 
 def test_a_manifest_with_a_bad_digest_or_duplicate_keys_is_rejected(tmp_path: Path) -> None:
-    (tmp_path / "manifest.json").write_text('{"format": 1, "files": {"a": "xyz"}}')
+    (tmp_path / "manifest.json").write_text('{"bundle_version": 1, "files": {"a": "xyz"}}')
     assert "invalid digest" in check_bundle(tmp_path)[0]
     digest = "0" * 64
     (tmp_path / "manifest.json").write_text(
-        f'{{"format": 1, "files": {{"a": "{digest}", "a": "{digest}"}}}}'
+        f'{{"bundle_version": 1, "files": {{"a": "{digest}", "a": "{digest}"}}}}'
     )
     assert "duplicate key" in check_bundle(tmp_path)[0]
 
@@ -151,7 +159,7 @@ def test_the_writer_rejects_names_the_verifier_would_reject(tmp_path: Path) -> N
     source = tmp_path / "s.bin"
     source.write_bytes(b"x")
     for name in ("../escape", "/abs", "a//b", "manifest.json"):
-        with pytest.raises(OutputError, match="Unsafe bundle file name"):
+        with pytest.raises(OutputOccupied, match="Unsafe bundle file name"):
             write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
     assert not (tmp_path / "bundle").exists()
 
@@ -179,7 +187,7 @@ def test_an_artifact_cannot_take_the_name_of_a_file_the_bundle_writes(
 ) -> None:
     source = tmp_path / "s.bin"
     source.write_bytes(b"x")
-    with pytest.raises(OutputError, match="Unsafe bundle file name"):
+    with pytest.raises(OutputOccupied, match="Unsafe bundle file name"):
         write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
 
 
@@ -187,7 +195,7 @@ def test_an_artifact_cannot_take_the_name_of_a_file_the_bundle_writes(
 def test_names_other_filesystems_cannot_hold_are_rejected(tmp_path: Path, name: str) -> None:
     source = tmp_path / "s.bin"
     source.write_bytes(b"x")
-    with pytest.raises(OutputError, match="Unsafe bundle file name"):
+    with pytest.raises(OutputOccupied, match="Unsafe bundle file name"):
         write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
 
 

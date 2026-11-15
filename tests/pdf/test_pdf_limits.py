@@ -5,7 +5,7 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua, list_fonts
 from odfa11y.pdf import structure_walk as walk
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
@@ -26,7 +26,7 @@ def test_an_oversized_pdf_is_a_finding_not_a_crash(
     report = audit_pdfua(path)
     assert [f.rule_id for f in report.findings] == ["PDF000"]
     assert "exceeds" in report.findings[0].message
-    with pytest.raises(ToolFailedError, match="exceeds"):
+    with pytest.raises(ToolFailure, match="exceeds"):
         compare_pdfs(path, path, FidelityPolicy())
 
 
@@ -36,7 +36,7 @@ def test_a_pdf_with_too_many_pages_is_refused(
     path = text_pdf(tmp_path / "a.pdf", [["x"], ["y"], ["z"]])
     monkeypatch.setattr(limits, "MAX_PDF_PAGES", 2)
     assert "pages" in audit_pdfua(path).findings[0].message
-    with pytest.raises(ToolFailedError, match="3 pages"):
+    with pytest.raises(ToolFailure, match="3 pages"):
         compare_pdfs(path, path, FidelityPolicy())
 
 

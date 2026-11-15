@@ -14,7 +14,7 @@ from pypdf.generic import (
     StreamObject,
 )
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.reading.limits import MAX_STRUCTURE_NODES
 
 STANDARD_STRUCTURE_TYPES = {
@@ -163,7 +163,7 @@ def build_tree(root: DictionaryObject) -> StructureNode:
         A synthetic root whose children are the top-level structure elements.
 
     Elements and their kids together count toward ``MAX_STRUCTURE_NODES``; more raise
-    ``ToolFailedError``.
+    ``ToolFailure``.
 
     """
     role_map = role_map_of(root)
@@ -201,7 +201,7 @@ def _add_reference(parent: StructureNode, kid: DictionaryObject | int) -> None:
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         A stream reference has an unsupported shape.
 
     """
@@ -219,7 +219,7 @@ def _add_reference(parent: StructureNode, kid: DictionaryObject | int) -> None:
             or not isinstance(stream.get_object(), StreamObject)
         ):
             msg = "Cannot inspect a malformed /Stm content reference"
-            raise ToolFailedError(msg)
+            raise ToolFailure(msg)
         parent.marked_content.append(MarkedContentReference(int(mcid), page, _xref(stream)))
     elif kind == "/OBJR":
         parent.object_references.append(ObjectReference(_xref(kid.get("/Obj")), page))
@@ -228,7 +228,7 @@ def _add_reference(parent: StructureNode, kid: DictionaryObject | int) -> None:
 def _count(nodes: int) -> None:
     if nodes > MAX_STRUCTURE_NODES:
         msg = f"Structure tree has more than {MAX_STRUCTURE_NODES} elements"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
 
 
 def _xref(value: object) -> int | None:

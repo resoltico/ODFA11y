@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Apply reviewed target-local language without rewriting text or shared styles."""
 
-import hashlib
 import json
 from dataclasses import dataclass, replace
 from typing import ClassVar, override
@@ -11,7 +10,7 @@ lazy from lxml import etree
 
 from odfa11y.concepts import protected_xml
 from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.language.effective import (
     BLOCKS,
     INLINE,
@@ -32,6 +31,7 @@ from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Family
 from odfa11y.odf import names as xml_names
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.families.text.language.styles import Binding
 lazy from odfa11y.odf import OdfDocument
 
@@ -75,7 +75,7 @@ class SetTargetLanguages(Operation):
 
         Raises
         ------
-        RemediationError
+        DocumentRefusal
             Any target, declaration, fingerprint or definition is unresolved.
 
         """
@@ -85,7 +85,7 @@ class SetTargetLanguages(Operation):
             node = targets.get(target)
             if node is None or answer.fingerprint != language_fingerprint(document, node):
                 message = "Language target or reviewed fingerprint no longer matches."
-                raise RemediationError(message)
+                raise DocumentRefusal(message)
             prepared.append(_prepare(document, target, node, answer))
         return tuple(prepared)
 
@@ -93,7 +93,7 @@ class SetTargetLanguages(Operation):
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         try:
             prepared = self.prepare(document)
-        except RemediationError as error:
+        except DocumentRefusal as error:
             return (Outcome(self.name, Status.FAILED, str(error)),)
         catalog = catalog_of(document)
         outcomes = []
@@ -110,7 +110,7 @@ class SetTargetLanguages(Operation):
                     "Applied reviewed target language."
                     if item.changed
                     else "Target language already matches.",
-                    key=item.target,
+                    target=item.target,
                     count=int(item.changed),
                 )
             )
@@ -125,24 +125,24 @@ def _prepare(
     requested = (answer.western, answer.asian, answer.complex)
     if not any(value is not None for value in requested):
         message = "Select at least one target language channel."
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     effective = effective_languages(document, node)
     overrides = list(old.overrides)
     for index, tag in enumerate(requested):
         if tag is not None:
             if not isinstance(tag, str):
                 message = "Target language must be a valid language tag."
-                raise RemediationError(message)
+                raise DocumentRefusal(message)
             try:
                 overrides[index] = normalize_language(tag)
             except ValueError as error:
-                raise RemediationError(str(error)) from error
+                raise DocumentRefusal(str(error)) from error
     binding = replace(old, overrides=tuple(overrides))
     style = derive(document, family_of(node), binding)
     existing = catalog_of(document).style(family_of(node), binding.name)
     if existing is not None and protected_xml(existing) != protected_xml(style):
         message = "Generated language style name belongs to a different definition."
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     _require_effective_override(document, node, binding, style)
     changed = any(
         tag is not None and effective[index] != overrides[index]
@@ -176,10 +176,10 @@ def _require_effective_override(
             "Inherited full language tag prevents this override; "
             "edit the target language in Writer."
         )
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
 
 
-def language_fingerprint(document: OdfDocument, node: etree._Element) -> str:
+def language_fingerprint(document: OdfDocument, node: etree._Element) -> Fingerprint:
     """Bind authored content and original style definitions independently of our overrides.
 
     Returns
@@ -202,4 +202,4 @@ def language_fingerprint(document: OdfDocument, node: etree._Element) -> str:
             [protected_xml(style) for style in catalog.inheritance_chain(family, binding.base)],
         ])
     content = protected_xml(normalized_language_tree(document, node))
-    return hashlib.sha256(json.dumps([content, styles], sort_keys=True).encode()).hexdigest()[:16]
+    return Fingerprint.of(json.dumps([content, styles], sort_keys=True).encode())

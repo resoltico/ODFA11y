@@ -18,7 +18,7 @@ from typing import IO
 lazy from collections.abc import Generator
 lazy from types import FrameType
 
-from odfa11y.errors import PlanError, ToolNotFoundError
+from odfa11y.errors import InvalidOption, Remedy, RemedyAction, ToolUnavailable
 
 IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
@@ -40,16 +40,16 @@ def validate_timeout(timeout: float) -> float:
 
     Raises
     ------
-    PlanError
+    InvalidOption
         The input is not a supported finite, positive duration.
     """
     message = f"Timeout must be finite positive numeric seconds, at most {MAX_TIMEOUT_SECONDS}."
     if type(timeout) not in {int, float}:
-        raise PlanError(message)
+        raise InvalidOption(message)
     try:
         seconds = float(timeout)
     except OverflowError as exc:
-        raise PlanError(message) from exc
+        raise InvalidOption(message) from exc
     if (
         not math.isfinite(seconds)
         or seconds <= 0
@@ -57,7 +57,7 @@ def validate_timeout(timeout: float) -> float:
         or seconds > MAX_TIMEOUT_SECONDS
         or math.ceil(seconds * 1000) > 2**32 - 2
     ):
-        raise PlanError(message)
+        raise InvalidOption(message)
     return seconds
 
 
@@ -199,7 +199,7 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
 
     Raises
     ------
-    ToolNotFoundError
+    ToolUnavailable
         The requested executable, or every candidate, cannot be found.
     """
     if requested is not None:
@@ -207,19 +207,19 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
         if path.is_file():
             if not os.access(path, os.X_OK):
                 msg = f"Not executable: {requested}"
-                raise ToolNotFoundError(msg)
+                raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
             return str(path)
         resolved = shutil.which(str(requested))
         if resolved:
             return resolved
         msg = f"Executable not found: {requested}"
-        raise ToolNotFoundError(msg)
+        raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
     for candidate in candidates:
         resolved = shutil.which(candidate)
         if resolved:
             return resolved
     msg = f"None of {', '.join(candidates)} was found on PATH."
-    raise ToolNotFoundError(msg)
+    raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
 
 
 def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolIdentity:

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Review table contents independently of permitted header and repeat representations."""
 
-import hashlib
 import json
 from copy import deepcopy
 
@@ -13,6 +12,7 @@ from odfa11y.concepts.text import visible_words
 from odfa11y.concepts.xml import attribute_bindings, protected_xml
 from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn, select_elements
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
 
@@ -53,7 +53,7 @@ def _attributes(node: etree._Element, repeat: str, *, include_styles: bool) -> d
     return {k: v for k, v in node.attrib.items() if k not in excluded}
 
 
-def _fingerprint(table: etree._Element, *, include_styles: bool) -> str:
+def _fingerprint(table: etree._Element, *, include_styles: bool) -> Fingerprint:
     columns = []
     for column in declarations(table, "columns"):
         count = repeated(column, "number-columns-repeated")
@@ -81,7 +81,7 @@ def _fingerprint(table: etree._Element, *, include_styles: bool) -> str:
         else:
             runs.append((value, count))
     facts.extend(runs)
-    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
+    return Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
 
 
 def _cell_facts(cell: etree._Element, *, include_styles: bool) -> list[object]:

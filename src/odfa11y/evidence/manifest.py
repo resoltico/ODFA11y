@@ -9,10 +9,10 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from odfa11y.errors import OutputError, PackageError
+from odfa11y.errors import OutputOccupied, PackageError
 from odfa11y.evidence.paths import MANIFEST_NAME, unsafe_reason
 
-MANIFEST_FORMAT = 1
+BUNDLE_VERSION = 1
 CHUNK_BYTES = 1 << 20
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 MAX_SHOWN_NAME = 120
@@ -39,7 +39,7 @@ def write_manifest(directory: Path) -> None:
 
     Raises
     ------
-    OutputError
+    OutputOccupied
         A name is unsafe, or an entry is a symbolic link or not a regular file.
 
     """
@@ -52,9 +52,9 @@ def write_manifest(directory: Path) -> None:
             continue
         if reason := unsafe_reason(relative) or _kind_problem(path):
             msg = f"Cannot record {relative!r} in a bundle: {reason}"
-            raise OutputError(msg)
+            raise OutputOccupied(msg)
         files[relative] = sha256_file(path)
-    payload = {"format": MANIFEST_FORMAT, "files": files}
+    payload = {"bundle_version": BUNDLE_VERSION, "files": files}
     (directory / MANIFEST_NAME).write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -99,11 +99,11 @@ def _read_manifest(root: Path) -> dict[str, str]:
         raise PackageError(msg)
     text = (root / MANIFEST_NAME).read_text(encoding="utf-8")
     manifest = json.loads(text, object_pairs_hook=_no_duplicates)
-    if not isinstance(manifest, dict) or manifest.keys() != {"format", "files"}:
-        msg = "expected exactly the keys 'format' and 'files'"
+    if not isinstance(manifest, dict) or manifest.keys() != {"bundle_version", "files"}:
+        msg = "expected exactly the keys 'bundle_version' and 'files'"
         raise PackageError(msg)
-    if type(manifest["format"]) is not int or manifest["format"] != MANIFEST_FORMAT:
-        msg = f"unsupported format {manifest['format']!r}"
+    if type(manifest["bundle_version"]) is not int or manifest["bundle_version"] != BUNDLE_VERSION:
+        msg = f"unsupported bundle version {manifest['bundle_version']!r}"
         raise PackageError(msg)
     files = manifest["files"]
     if not isinstance(files, dict):

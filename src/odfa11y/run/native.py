@@ -5,13 +5,13 @@ lazy from pathlib import Path
 
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
-from odfa11y.errors import UnsupportedKindError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families import adapter_for
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import validate_timeout
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.odf.export_context import require_native_context
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 lazy from odfa11y.progress import ProgressObserver
 
 
@@ -32,7 +32,7 @@ def native_export_settings(
 
     Raises
     ------
-    UnsupportedKindError
+    DocumentRefusal
         The family has no native PDF export.
 
     """
@@ -42,7 +42,7 @@ def native_export_settings(
     if pdf_filter is None:
         kind = document.kind.name if document.kind is not None else "unrecognised"
         msg = f"No PDF export is defined for {kind} documents."
-        raise UnsupportedKindError(msg)
+        raise DocumentRefusal(msg)
     require_native_context(document, captured_identity=captured_identity)
     return ExportSettings(pdf_filter, soffice, timeout, profile_dir)
 
@@ -70,8 +70,8 @@ def export_document(
     tools = tools or Tools()
     settings = native_export_settings(OdfDocument.open(source), tools.soffice, tools.timeout)
     if on_progress is not None:
-        on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.RUNNING))
+        on_progress(ProgressEvent(Step.EXPORT_PDF, StepState.RUNNING))
     result = native_tools.export(Path(source), Path(destination), settings)
     if on_progress is not None:
-        on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.PASSED))
+        on_progress(ProgressEvent(Step.EXPORT_PDF, StepState.PASSED))
     return result

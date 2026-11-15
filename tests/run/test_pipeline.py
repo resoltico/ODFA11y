@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y.application.tools import Tools
 from odfa11y.concepts import GraphicAlternative
-from odfa11y.errors import OutputError, PlanError
+from odfa11y.errors import InvalidOption, OutputOccupied
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import (
     SetGraphicAlternatives,
@@ -74,7 +74,7 @@ def test_an_occupied_evidence_directory_is_refused_before_any_work(tmp_path: Pat
     target = tmp_path / "out"
     target.mkdir()
     (target / "keep.txt").write_text("precious")
-    with pytest.raises(OutputError):
+    with pytest.raises(OutputOccupied):
         execute(source, reviewed_plan(source, [], FidelityPolicy()), target)
     assert [p.name for p in target.iterdir()] == ["keep.txt"]
 
@@ -170,7 +170,7 @@ def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path
 
 def test_an_unknown_profile_is_a_configuration_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    with pytest.raises(PlanError, match="Unknown profile"):
+    with pytest.raises(InvalidOption, match="Unknown profile"):
         execute(
             source,
             reviewed_plan(source, [], FidelityPolicy()),

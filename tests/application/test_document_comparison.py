@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
-from odfa11y.errors import PackageError, ToolFailedError
+from odfa11y.errors import DocumentRefusal, PackageError, ToolFailure
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.run.comparison import compare_documents, is_pdf
 from odfa11y.run.native import export_document
@@ -58,7 +58,7 @@ def test_core_pdf_comparison_keeps_original_report_identity(tmp_path: Path) -> N
         tools=Tools(),
         on_progress=lambda event: events.append((event.step, event.state)),
     )
-    assert report.passed
+    assert report.error_count == 0
     assert report.sources == (candidate, source)
     assert report.subject == "candidate.pdf vs source.pdf"
     assert events == [("compare-fidelity", "running"), ("compare-fidelity", "passed")]
@@ -82,7 +82,7 @@ def test_core_odf_comparison_keeps_renders_alive_and_cleans_scratch(
 
     native_tools = replace(native_tools, export=render)
     report = compare_documents(source, candidate, FidelityPolicy(), native_tools=native_tools)
-    assert report.passed
+    assert report.error_count == 0
     assert profiles[0] == profiles[1]
     assert all(not path.exists() for path in rendered)
     assert not profiles[0].parent.exists()
@@ -97,7 +97,7 @@ def test_guarded_core_export_refuses_unresolved_resources_before_native_boundary
     before = source.read_bytes()
     calls: list[object] = []
     native_tools = replace(native_tools, export=refusing(calls))
-    with pytest.raises(ToolFailedError, match="rendering dependencies"):
+    with pytest.raises(DocumentRefusal, match="resource"):
         export_document(
             source, tmp_path / "out.pdf", Tools(soffice="missing-tool"), native_tools=native_tools
         )
@@ -117,12 +117,12 @@ def test_core_comparison_cleans_private_render_after_candidate_export_failure(
     def render(path: Path, destination: Path, _settings: ExportSettings) -> Path:
         if path == candidate:
             msg = "Candidate native export failed"
-            raise ToolFailedError(msg)
+            raise ToolFailure(msg)
         rendered.append(destination)
         return text_pdf(destination, [["Example"]])
 
     native_tools = replace(native_tools, export=render)
-    with pytest.raises(ToolFailedError, match="Candidate native export failed"):
+    with pytest.raises(ToolFailure, match="Candidate native export failed"):
         compare_documents(source, candidate, FidelityPolicy(), native_tools=native_tools)
     assert rendered
     assert not rendered[0].parent.exists()

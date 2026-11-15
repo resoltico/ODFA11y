@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Ephemeral selector, position and payload identities for graphic review."""
 
-import hashlib
 import json
 from pathlib import Path
 from urllib.parse import quote
@@ -23,6 +22,7 @@ from odfa11y.odf import NS, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.resources import ResourceIdentity
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
 
 SHAPE_TAGS = (
@@ -117,7 +117,7 @@ class GraphicIdentity:
         self._style_facts: dict[etree._Element, str] = {}
         self._style_problems: dict[etree._Element, str | None] = {}
         self._styles = GraphicStyles(document)
-        self._group_digests: dict[int, str] = {}
+        self._group_digests: dict[int, Fingerprint] = {}
         self._sibling_ordinals: dict[etree._Element, dict[etree._Element, int]] = {}
         self._table_ordinals: dict[tuple[etree._Element, str], dict[etree._Element, int]] = {}
 
@@ -149,7 +149,10 @@ class GraphicIdentity:
             "count": len(group),
         }
         return OpenDecision(
-            GRAPHIC_ALTERNATIVE, Location(target), self.fingerprint(group), current, (rule_id,)
+            GRAPHIC_ALTERNATIVE,
+            Target((Location(target)).path, Fingerprint(self.fingerprint(group))),
+            current,
+            (rule_id,),
         )
 
     def matching(self, selector: str) -> tuple[etree._Element, ...]:
@@ -163,7 +166,7 @@ class GraphicIdentity:
         """
         return self._groups.get(selector, ())
 
-    def fingerprint(self, frames: Sequence[etree._Element]) -> str:
+    def fingerprint(self, frames: Sequence[etree._Element]) -> Fingerprint:
         """Hash an ordered selection, retaining payload names, bytes and protected XML facts.
 
         Returns
@@ -176,7 +179,7 @@ class GraphicIdentity:
         if group in self._registered and group in self._group_digests:
             return self._group_digests[group]
         facts = [self._frame(frame) for frame in frames]
-        digest = hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
+        digest = Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
         if group in self._registered:
             self._group_digests[group] = digest
         return digest
@@ -287,7 +290,7 @@ class GraphicIdentity:
         return self._sibling_ordinals[parent][node]
 
 
-def graphics_fingerprint(document: OdfDocument, frames: Sequence[etree._Element]) -> str:
+def graphics_fingerprint(document: OdfDocument, frames: Sequence[etree._Element]) -> Fingerprint:
     """Compute a fresh graphic review identity, never caching mutable document state.
 
     Returns

@@ -10,7 +10,7 @@ lazy import pytest
 from odfa11y.application.native import NativeTools
 from odfa11y.batch import run_batch
 from odfa11y.concepts import document_links, link_fingerprint
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.families.text.probes import PROBES
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
@@ -73,7 +73,7 @@ def test_indeterminate_failure_is_not_reused_as_a_conclusive_verdict() -> None:
         calls += 1
         if calls == 1:
             message = "Controlled transient failure"
-            raise ToolFailedError(message)
+            raise ToolFailure(message)
         return control(source, destination, settings)
 
     cache = ProbeCache()

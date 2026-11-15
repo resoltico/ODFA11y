@@ -9,9 +9,10 @@ from pathlib import Path
 import pypdfium2
 from PIL import Image, ImageChops
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.report import FactKeys, Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 lazy from odfa11y.pdf.fidelity.policy import FidelityPolicy
 lazy from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
@@ -47,7 +48,9 @@ def compare_pdfs(
     """
     source, candidate = Path(source), Path(candidate)
     report = Report(
-        kind="fidelity", subject=f"{candidate.name} vs {source.name}", sources=(candidate, source)
+        kind=ReportKind.FIDELITY,
+        subject=f"{candidate.name} vs {source.name}",
+        sources=(candidate, source),
     )
     report.facts[FactKeys.FIDELITY_POLICY] = policy.as_dict()
     before, after = read_snapshot(source), read_snapshot(candidate)
@@ -128,7 +131,7 @@ def _compare_raster(
 ) -> None:
     if policy.dpi > sys.float_info.max:
         msg = "DPI exceeds the numeric range supported by PDF rendering"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     scale = policy.dpi / POINTS_PER_INCH
     oversized = [
         index + 1
@@ -142,7 +145,7 @@ def _compare_raster(
         ratios = (render or render_pages)(paths, snapshot, policy, report, diff_dir)
     except pypdfium2.PdfiumError as exc:
         msg = f"Cannot render PDF for comparison: {exc}"
-        raise ToolFailedError(msg) from exc
+        raise ToolFailure(msg) from exc
     report.facts[FactKeys.FIDELITY_RASTER_CHANGED_RATIOS] = ratios
     report.facts[FactKeys.FIDELITY_RASTER_MAX_CHANGED_RATIO] = max(ratios, default=0.0)
 

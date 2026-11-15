@@ -12,7 +12,7 @@ from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import termination_interrupt
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
-from odfa11y.progress import ProgressEvent, StageName, StepName, StepState
+from odfa11y.progress import ProgressEvent, Stage, Step, StepState
 from odfa11y.records import DocumentIdentity
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -67,7 +67,7 @@ def run_batch(
                     progress.status = BatchStatus.INTERRUPTED
                     progress.exit_status = ExitStatus.EXECUTION_FAILURE
                     if on_progress is not None:
-                        on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.FAILED))
+                        on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.FAILED))
             record.status = BatchStatus.INTERRUPTED
         else:
             record.status = BatchStatus.FAILED if record.exit_status else BatchStatus.COMPLETED
@@ -90,7 +90,7 @@ def _run_items(
         progress.status = BatchStatus.RUNNING
         record.publish(output)
         if on_progress is not None:
-            on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.RUNNING))
+            on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.RUNNING))
         _advance_item(
             item,
             progress,
@@ -104,7 +104,7 @@ def _run_items(
         if on_progress is not None:
             on_progress(
                 ProgressEvent(
-                    StepName.BATCH_ITEM,
+                    Step.BATCH_ITEM,
                     StepState.PASSED
                     if progress.status == BatchStatus.COMPLETED
                     else StepState.FAILED,
@@ -129,7 +129,7 @@ def _advance_item(
     except (OdfA11yError, OSError) as exc:
         progress.status = BatchStatus.FAILED
         progress.exit_status = failure_status(exc)
-        progress.failed_stage = StageName.PUBLISH_EVIDENCE
+        progress.failed_stage = Stage.PUBLISH_EVIDENCE
         return
     progress.status = BatchStatus.COMPLETED if result.passed else BatchStatus.FAILED
     progress.exit_status = result.exit_status
@@ -149,7 +149,7 @@ def _run_item(
     try:
         plan = load_plan(item.plan)
     except (OdfA11yError, OSError) as exc:
-        return _failure(item, target, options, StageName.LOAD_PLAN, exc)
+        return _failure(item, target, options, Stage.LOAD_PLAN, exc)
     try:
         return execute(
             item.source,
@@ -161,14 +161,14 @@ def _run_item(
             native_tools=native_tools,
         )
     except (OdfA11yError, OSError) as exc:
-        return _failure(item, target, options, StageName.PIPELINE, exc)
+        return _failure(item, target, options, Stage.PIPELINE, exc)
 
 
 def _failure(
     item: BatchItem,
     target: Path,
     options: RunSettings,
-    stage: StageName,
+    stage: Stage,
     exc: OdfA11yError | OSError,
 ) -> RunRecord:
     record = RunRecord(

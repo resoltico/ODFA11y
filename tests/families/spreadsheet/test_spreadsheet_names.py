@@ -69,7 +69,7 @@ def test_an_unknown_sheet_fails_the_whole_operation_before_any_edit(
     outcomes = reviewed_sheet_names(document, {"Sheet1": "Budget", "Missing": "Other"}).apply(
         document
     )
-    assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "content/sheet[4]")]
+    assert [(o.status, o.target) for o in outcomes] == [(Status.FAILED, "content/sheet[4]")]
     assert "must resolve to exactly one sheet" in outcomes[0].message
     assert not document.dirty
     assert sheet_names(document) == ["Sheet1", "Notes"]
@@ -218,7 +218,7 @@ def test_a_document_with_embedded_charts_refuses_every_rename(tmp_path: Path) ->
 def test_a_failed_rename_is_reported_with_every_other_failure(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
     outcomes = reviewed_sheet_names(document, {"Gone": "A", "Sheet1": "b/c"}).apply(document)
-    assert {o.key for o in outcomes} == {"content/sheet[3]", "content/sheet[1]"}
+    assert {o.target for o in outcomes} == {"content/sheet[3]", "content/sheet[1]"}
     assert {o.status for o in outcomes} == {Status.FAILED}
 
 

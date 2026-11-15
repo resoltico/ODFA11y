@@ -7,7 +7,7 @@ from typing import ClassVar, override
 lazy from lxml import etree
 
 from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.spacing.candidates import spacer_candidates
 from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import Family, Part
@@ -29,7 +29,7 @@ class RemoveEmptySpacers(Operation):
             count = remove_empty_spacer_paragraphs(
                 document.tree(Part.CONTENT), catalog_of(document)
             )
-        except RemediationError as exc:
+        except DocumentRefusal as exc:
             return (Outcome(self.name, Status.FAILED, str(exc)),)
         if not count:
             return (Outcome(self.name, Status.UNCHANGED, "No removable spacer paragraphs."),)

@@ -7,7 +7,7 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.native import NativeTools
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.report import FactKeys
 from tests.fixtures.native import refusing
@@ -137,7 +137,7 @@ def test_unreadable_pdfs_raise_a_tool_error(tmp_path: Path) -> None:
     good = text_pdf(tmp_path / "a.pdf", [LINES])
     bad = tmp_path / "bad.pdf"
     bad.write_bytes(b"not a pdf")
-    with pytest.raises(ToolFailedError):
+    with pytest.raises(ToolFailure):
         compare(tmp_path, good, bad)
 
 
@@ -148,7 +148,7 @@ def test_enormous_dpi_is_controlled_before_float_conversion(
     before = pdf.read_bytes()
     rendered = []
     native_tools = replace(native_tools, render=refusing(rendered))
-    with pytest.raises(ToolFailedError, match="DPI exceeds the numeric range"):
+    with pytest.raises(ToolFailure, match="DPI exceeds the numeric range"):
         compare_pdfs(
             pdf,
             pdf,

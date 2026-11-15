@@ -4,7 +4,7 @@
 lazy from lxml import etree
 
 from odfa11y.concepts import CHANNEL_ATTRIBUTES, reading_context_path
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.families.text.styles.properties import paragraph_style_name
@@ -65,7 +65,7 @@ def effective_text_properties(document: OdfDocument, node: etree._Element) -> di
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         The paragraph or style scope is unresolved.
 
     """
@@ -74,7 +74,7 @@ def effective_text_properties(document: OdfDocument, node: etree._Element) -> di
     block = next((ancestor for ancestor in ancestors if ancestor.tag in BLOCKS), None)
     if block is None:
         msg = "Inline language has no established paragraph context."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     props = catalog.effective_text_properties(paragraph_style_name(block))
     inline = ancestors[: ancestors.index(block)]
     for styled in reversed(inline):
@@ -115,7 +115,7 @@ def _channel(props: dict[str, str], attributes: tuple[str, ...]) -> str | None:
         )
     except ValueError as error:
         msg = "Effective style language is not a valid language tag."
-        raise RemediationError(msg) from error
+        raise DocumentRefusal(msg) from error
 
 
 def language_targets(document: OdfDocument) -> dict[str, etree._Element]:

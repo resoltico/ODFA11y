@@ -7,9 +7,10 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.native import NativeTools
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure, ToolUnavailable
 from odfa11y.report import FactKeys
 from odfa11y.run.inspection import audit_document
+from tests.fixtures.native import validation_result
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.writer import make_minimal_odt
 
@@ -36,16 +37,15 @@ def test_core_builtin_pdf_does_not_require_validator(tmp_path: Path) -> None:
     assert reports[0].sources == (source,)
 
 
-def test_core_validator_path_implies_validation_and_missing_tool_is_warning(
-    tmp_path: Path,
-) -> None:
+def test_requested_core_validation_requires_the_validator(tmp_path: Path) -> None:
     source = tmp_path / "source.pdf"
     tagged_writer().write(source)
-    reports = list(audit_document(source, verapdf_path=tmp_path / "absent-validator"))
-    assert [report.kind for report in reports] == ["pdf", "verapdf"]
-    assert reports[1].findings[0].rule_id == "VERA000"
-    assert reports[1].warning_count == 1
-    assert reports[1].sources == (source,)
+    reports = []
+    with pytest.raises(ToolUnavailable):
+        reports.extend(
+            audit_document(source, verapdf=True, verapdf_path=tmp_path / "absent-validator")
+        )
+    assert [report.kind for report in reports] == ["pdf"]
 
 
 def test_core_retains_completed_pdf_report_when_validator_execution_fails(
@@ -58,26 +58,30 @@ def test_core_retains_completed_pdf_report_when_validator_execution_fails(
 
     def failed(*_args: object, **_kwargs: object) -> None:
         message = "native validator failed"
-        raise ToolFailedError(message)
+        raise ToolFailure(message)
 
     native_tools = replace(native_tools, validate=failed)
     reports = []
-    with pytest.raises(ToolFailedError, match="validator failed"):
+    with pytest.raises(ToolFailure, match="validator failed"):
         reports.extend(audit_document(source, verapdf=True, native_tools=native_tools))
     assert len(reports) == 1
     assert reports[0].kind == "pdf"
     assert reports[0].sources == (source,)
 
 
-def test_core_progress_contains_no_source_path_or_document_values(tmp_path: Path) -> None:
+def test_core_progress_contains_no_source_path_or_document_values(
+    native_tools: NativeTools, tmp_path: Path
+) -> None:
     source = tmp_path / "private-document.pdf"
     tagged_writer().write(source)
     events: list[tuple[str, str]] = []
+    native_tools = replace(native_tools, validate=lambda *_args, **_kwargs: validation_result())
     list(
         audit_document(
             source,
             verapdf_path=tmp_path / "absent-validator",
             on_progress=lambda event: events.append((event.step, event.state)),
+            native_tools=native_tools,
         )
     )
     assert events == [

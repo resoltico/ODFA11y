@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Render typed run facts, gate outcomes and outstanding human review."""
 
-from odfa11y.progress import StageName
+from odfa11y.progress import Stage
 from odfa11y.status import StageStatus
 lazy from odfa11y.evidence.redact import Redactor
 lazy from odfa11y.run.record import RunRecord, StageResult
@@ -43,9 +43,7 @@ def render_review(record: RunRecord, *, redactor: Redactor | None = None) -> str
     attention = _attention(record.stages)
     if attention:
         lines += ["", "## Findings that need attention", "", *attention]
-    validator = next(
-        (stage for stage in record.stages if stage.name == StageName.VALIDATE_PDF), None
-    )
+    validator = next((stage for stage in record.stages if stage.name == Stage.VALIDATE_PDF), None)
     if validator is None or validator.status != StageStatus.PASSED:
         caveat = NOT_VALIDATION
         if validator is not None and validator.status == StageStatus.FAILED:

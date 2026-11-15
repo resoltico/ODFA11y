@@ -3,29 +3,29 @@
 
 import sys
 
-from odfa11y import StepName, terminal_text
+from odfa11y import Step, terminal_text
 lazy from odfa11y import ProgressEvent, ProgressObserver
 
 _LABELS = {
-    StepName.IDENTIFY_SOURCE: "Identify source",
-    StepName.AUDIT_SOURCE: "Audit source",
-    StepName.REMEDIATE: "Apply reviewed decisions",
-    StepName.AUDIT_REMEDIATED: "Audit remediated source",
-    StepName.EXPORT_SOURCE: "Export source PDF",
-    StepName.EXPORT_REMEDIATED: "Export remediated PDF",
-    StepName.AUDIT_PDF: "Inspect PDF",
-    StepName.VALIDATE_PDF: "Validate PDF/UA",
-    StepName.FIDELITY: "Compare fidelity",
-    StepName.PUBLISH_EVIDENCE: "Publish evidence",
-    StepName.LOAD_PLAN: "Load reviewed plan",
-    StepName.PIPELINE: "Run assurance workflow",
-    StepName.AUDIT_DOCUMENT: "Audit document",
-    StepName.EXPORT_PDF: "Export PDF",
-    StepName.EXPORT_CANDIDATE: "Export candidate PDF",
-    StepName.COMPARE_FIDELITY: "Compare fidelity",
-    StepName.PROBE_CAPABILITIES: "Measure native capabilities",
-    StepName.PROBE_TOOLCHAIN: "Inspect tools",
-    StepName.BATCH_ITEM: "Process batch item",
+    Step.IDENTIFY_SOURCE: "Identify source",
+    Step.AUDIT_SOURCE: "Audit source",
+    Step.REMEDIATE: "Apply reviewed decisions",
+    Step.AUDIT_REMEDIATED: "Audit remediated source",
+    Step.EXPORT_SOURCE: "Export source PDF",
+    Step.EXPORT_REMEDIATED: "Export remediated PDF",
+    Step.AUDIT_PDF: "Inspect PDF",
+    Step.VALIDATE_PDF: "Validate PDF/UA",
+    Step.FIDELITY: "Compare fidelity",
+    Step.PUBLISH_EVIDENCE: "Publish evidence",
+    Step.LOAD_PLAN: "Load reviewed plan",
+    Step.PIPELINE: "Run assurance workflow",
+    Step.AUDIT_DOCUMENT: "Audit document",
+    Step.EXPORT_PDF: "Export PDF",
+    Step.EXPORT_CANDIDATE: "Export candidate PDF",
+    Step.COMPARE_FIDELITY: "Compare fidelity",
+    Step.PROBE_CAPABILITIES: "Measure native capabilities",
+    Step.PROBE_TOOLCHAIN: "Inspect tools",
+    Step.BATCH_ITEM: "Process batch item",
 }
 
 

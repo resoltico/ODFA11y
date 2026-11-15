@@ -72,10 +72,12 @@ class GraphicEditor:
                 changed += edited
             if changed:
                 message = f"Set accessible text on {changed} graphic frame(s)."
-                outcomes.append(Outcome(self.name, Status.APPLIED, message, key=key, count=changed))
+                outcomes.append(
+                    Outcome(self.name, Status.APPLIED, message, target=key, count=changed)
+                )
             else:
                 outcomes.append(
-                    Outcome(self.name, Status.UNCHANGED, "Accessible text already set.", key=key)
+                    Outcome(self.name, Status.UNCHANGED, "Accessible text already set.", target=key)
                 )
         return tuple(outcomes)
 
@@ -117,7 +119,7 @@ class GraphicEditor:
                 if entry.decorative:
                     problem = problem or decorative_problem(frame)
             if problem:
-                role_failures.append(Outcome(self.name, Status.FAILED, problem, key=key))
+                role_failures.append(Outcome(self.name, Status.FAILED, problem, target=key))
         return tuple(role_failures)
 
     def _preflight(
@@ -169,7 +171,8 @@ class GraphicEditor:
         self._find_conflicts(matched, failures)
         self._role_conflicts(matched, failures)
         return tuple(
-            Outcome(self.name, Status.FAILED, message, key=key) for key, message in failures.items()
+            Outcome(self.name, Status.FAILED, message, target=key)
+            for key, message in failures.items()
         )
 
     def _role_conflicts(

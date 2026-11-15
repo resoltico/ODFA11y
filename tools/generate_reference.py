@@ -12,24 +12,45 @@ from odfa11y.cli.parser import build_parser
 from odfa11y.concepts.edits import Outcome, Status
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
-from odfa11y.errors import OdfA11yError
+from odfa11y.errors import OdfA11yError, RemedyAction
 from odfa11y.families.spec import ReviewItem
+from odfa11y.families.text.tables.classification import TableKind
+from odfa11y.glossary import TERMS
 from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeId
 from odfa11y.native.process import ToolIdentity
-from odfa11y.odf import Family
+from odfa11y.odf import Family, Part, Use
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema
 from odfa11y.plans.registry import registered_kinds
-from odfa11y.progress import StageName
+from odfa11y.progress import Stage, Step, StepState
 from odfa11y.records import DoctorRecord, DocumentIdentity, SchemaCheck, Toolchain
 from odfa11y.remediate import RemediationResult, Violation
 from odfa11y.remediate.violations import ViolationKind
-from odfa11y.report import FACT_REGISTRY, RULES, FactSet, Finding, Location, Report, Rule
+from odfa11y.report import (
+    FACT_REGISTRY,
+    RULES,
+    Category,
+    FactSet,
+    Finding,
+    Location,
+    Report,
+    ReportKind,
+    Rule,
+)
+from odfa11y.rules.registry import Severity
 from odfa11y.run.profiles import Profile
 from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.serialization import JsonObject, JsonValue, schema_for
-from odfa11y.status import EXIT_PRECEDENCE, BatchStatus, ExitStatus, RunStatus, StageStatus
+from odfa11y.status import (
+    EXIT_PRECEDENCE,
+    BatchStatus,
+    ExitStatus,
+    RunStatus,
+    SkipReason,
+    StageStatus,
+)
+from odfa11y.status import Profile as AssuranceProfile
 
 SCHEMA_DIRECTORY = Path(__file__).resolve().parents[1] / "src/odfa11y/schemas"
 FORMATS = {
@@ -64,7 +85,7 @@ TYPE_NAMESPACE = {
         ExitStatus,
         ReviewTopic,
         RunStatus,
-        StageName,
+        Stage,
         StageStatus,
         ViolationKind,
         Profile,
@@ -95,6 +116,33 @@ TYPE_NAMESPACE = {
     "JsonValue": JsonValue,
     "Path": Path,
 }
+
+
+USER_ENUMS = (
+    ExitStatus,
+    AssuranceProfile,
+    Stage,
+    Step,
+    StepState,
+    ReviewTopic,
+    Severity,
+    RemedyAction,
+    ReportKind,
+    SkipReason,
+    DecisionScope,
+    Family,
+    Part,
+    Use,
+    ProbeId,
+    CapabilityStatus,
+    TableKind,
+    Status,
+    ViolationKind,
+    StageStatus,
+    RunStatus,
+    BatchStatus,
+    Category,
+)
 
 
 def schemas() -> dict[str, JsonObject]:
@@ -254,14 +302,14 @@ def schema_reference() -> str:
         "Draft 2020-12 schemas ship in `odfa11y/schemas`.",
         "Registered facts and decisions are closed vocabularies.",
         "",
-        "| Interface | Format | Schema |",
+        "| Interface | Schema version | Schema |",
         "| --- | --- | --- |",
     ]
     for name, schema in schemas().items():
         properties = cast("dict[str, JsonObject]", schema["properties"])
         if name == "plan":
             properties = cast("dict[str, JsonObject]", properties["plan"]["properties"])
-        version = cast("list[int]", properties["format"]["enum"])[0]
+        version = cast("list[int]", properties["schema_version"]["enum"])[0]
         lines.append(
             f"| `{name}` | {version} | "
             f"[{name}.schema.json](../src/odfa11y/schemas/{name}.schema.json) |"
@@ -270,7 +318,7 @@ def schema_reference() -> str:
         "",
         "CLI audit/comparison JSON contains report objects (or an array of them).",
         "The `audit` schema describes the root application's per-input result record.",
-        "The `plan` schema describes the parsed TOML structure; its header owns `format`.",
+        "The `plan` schema describes the parsed TOML structure; its header owns `schema_version`.",
         "See [application API](API.md) and [evidence](EVIDENCE.md).",
         "",
     ]
@@ -320,6 +368,16 @@ def capability_reference() -> str:
     return "\n".join(lines)
 
 
+def glossary_reference() -> str:
+    """Generate shared vocabulary from core definitions and enum meanings."""
+    lines = ["# Glossary", "", "## Terms", "", "| Term | Meaning |", "| --- | --- |"]
+    lines.extend(f"| {term} | {meaning} |" for term, meaning in sorted(TERMS.items()))
+    for enum_type in USER_ENUMS:
+        lines.extend(["", f"## {enum_type.__name__}", "", "| Value | Meaning |", "| --- | --- |"])
+        lines.extend(f"| `{member.value}` | {member.meaning} |" for member in enum_type)
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     """Write reference artifacts or fail when the committed copies are stale.
 
@@ -349,6 +407,7 @@ def main() -> int:
         + "\n\n<!-- generated decisions -->\n"
         + decision_reference(registered_kinds())
     )
+    artifacts[plan_path.with_name("GLOSSARY.md")] = glossary_reference()
     artifacts[plan_path.with_name("CLI.md")] = cli_reference()
     artifacts[plan_path.with_name("SCHEMAS.md")] = schema_reference()
     artifacts[plan_path.with_name("CAPABILITIES.md")] = capability_reference()

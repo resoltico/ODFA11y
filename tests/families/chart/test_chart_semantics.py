@@ -10,7 +10,7 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.errors import PlanError, RemediationError
+from odfa11y.errors import DocumentRefusal, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
@@ -102,7 +102,7 @@ def test_chart_production_cannot_pass_without_pdf_assurance(tmp_path: Path) -> N
 )
 def test_chart_local_range_rejects_invalid_bounds(address: str) -> None:
     chart = select_elements(OdfDocument.open(SOURCE).tree(Part.CONTENT), "//chart:chart")[0]
-    with pytest.raises(RemediationError, match="range"):
+    with pytest.raises(DocumentRefusal, match="range"):
         range_shape(chart, address)
 
 

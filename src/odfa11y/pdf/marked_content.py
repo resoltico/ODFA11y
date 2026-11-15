@@ -7,7 +7,7 @@ lazy from collections.abc import Iterable
 from pypdf.generic import ArrayObject, StreamObject
 lazy from pypdf import PageObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.form_content import FormScanner
 from odfa11y.pdf.graphic_presence import described_graphics
 from odfa11y.pdf.link_structure import MAX_LISTED
@@ -30,7 +30,7 @@ def check_marked_content(
     content and ``/Artifact`` (``PDF023``). Invoked Forms and their ``/Stm`` references
     are inspected in independent stream scopes. The check claims only these correspondences;
     veraPDF remains the validator. Decoded content beyond ``MAX_CONTENT_BYTES`` in all pages
-    raises ``ToolFailedError``.
+    raises ``ToolFailure``.
 
     Returns
     -------
@@ -137,7 +137,7 @@ def _decoded_content(page: PageObject, budget: int) -> bytes:
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         The decoded content exceeds the budget.
 
     """
@@ -153,5 +153,5 @@ def _decoded_content(page: PageObject, budget: int) -> bytes:
             parts.append(data)
             if budget < 0:
                 msg = f"Page content is larger than the {MAX_CONTENT_BYTES}-byte limit"
-                raise ToolFailedError(msg)
+                raise ToolFailure(msg)
     return b"\n".join(parts)

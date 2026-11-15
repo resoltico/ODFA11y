@@ -21,6 +21,7 @@ from odfa11y.families.pages.operations import (
     SetLinkDescriptions,
     SetPageSemantics,
 )
+from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
@@ -45,7 +46,9 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetPageSemantics({
                     decision.target_path: PageDecision(
-                        answer.title, answer.description, fingerprint=decision.fingerprint
+                        answer.title,
+                        answer.description,
+                        fingerprint=require_target(decision.target).fingerprint,
                     )
                 })
             )
@@ -54,7 +57,8 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetPageSemantics({
                     decision.target_path: PageDecision(
-                        navigation=answer.navigation, fingerprint=decision.fingerprint
+                        navigation=answer.navigation,
+                        fingerprint=require_target(decision.target).fingerprint,
                     )
                 })
             )
@@ -63,7 +67,10 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetGraphicAlternatives({
                     decision.target_path: GraphicAlternative(
-                        answer.title, answer.description, decision.fingerprint, answer.decorative
+                        answer.title,
+                        answer.description,
+                        require_target(decision.target).fingerprint,
+                        answer.decorative,
                     )
                 })
             )
@@ -72,7 +79,7 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetLinkDescriptions({
                     decision.target_path: LinkDescription(
-                        answer.description, decision.fingerprint or ""
+                        answer.description, require_target(decision.target).fingerprint
                     )
                 })
             )

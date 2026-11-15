@@ -15,7 +15,7 @@ from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
 
-HEADER = '[plan]\nformat = 1\ngenerator = "0.8.0"\nsource.sha256 = "' + "a" * 64 + '"\n'
+HEADER = '[plan]\nschema_version = 1\ngenerator = "0.8.0"\nsource.sha256 = "' + "a" * 64 + '"\n'
 FULL = (
     HEADER
     + """

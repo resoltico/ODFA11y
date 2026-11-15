@@ -6,7 +6,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from odfa11y.errors import OutputError, PlanError
+from odfa11y.errors import OutputOccupied, PlanError
 
 ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 RESERVED_IDS = frozenset({
@@ -95,19 +95,19 @@ def preflight(manifest: Path, output: Path, items: tuple[BatchItem, ...]) -> Non
 
     Raises
     ------
-    OutputError
+    OutputOccupied
         The new batch root would touch existing or input data.
 
     """
     absolute = output.absolute()
     if any(path.is_symlink() for path in (absolute, *absolute.parents)):
         msg = "Batch output and its ancestors must not be symbolic links"
-        raise OutputError(msg)
+        raise OutputOccupied(msg)
     if absolute.exists():
         msg = "Batch output directory must not exist"
-        raise OutputError(msg)
+        raise OutputOccupied(msg)
     root = absolute.resolve()
     for path in (manifest, *(item.source for item in items), *(item.plan for item in items)):
         if path.absolute().is_relative_to(absolute) or path.resolve().is_relative_to(root):
             msg = "Batch output must not contain a manifest, source or plan"
-            raise OutputError(msg)
+            raise OutputOccupied(msg)

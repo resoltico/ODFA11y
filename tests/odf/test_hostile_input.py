@@ -13,7 +13,7 @@ import pytest
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.concepts.edits import Status
-from odfa11y.errors import PackageError, ToolFailedError
+from odfa11y.errors import PackageError, ToolFailure
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
@@ -218,7 +218,7 @@ def test_a_renderer_failure_is_a_tool_error_not_a_traceback(
         raise pypdfium2.PdfiumError(message)
 
     monkeypatch.setattr(compare_module.pypdfium2, "PdfDocument", refuse)
-    with pytest.raises(ToolFailedError, match="Cannot render"):
+    with pytest.raises(ToolFailure, match="Cannot render"):
         compare_pdfs(pdf, pdf, FidelityPolicy())
 
 

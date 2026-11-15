@@ -64,7 +64,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         actual = read_snapshot(pdf)
         assert actual.links == baseline.links
         assert actual.text == baseline.text
-        assert compare_pdfs(direct, pdf, FidelityPolicy()).passed
+        assert compare_pdfs(direct, pdf, FidelityPolicy()).error_count == 0
     published = output / ("remediated" + source.suffix)
     expected = tmp_path / ("expected" + source.suffix)
     execute_operations(source, expected, [SetMetadata(language="en-GB")])
@@ -125,7 +125,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
         published, tmp_path / "candidate.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
     assert "remediated.odt" in read_snapshot(renamed_pdf).text
-    assert not compare_pdfs(direct, renamed_pdf, FidelityPolicy()).passed
+    assert compare_pdfs(direct, renamed_pdf, FidelityPolicy()).error_count != 0
 
 
 def _set_navigation_base(source: Path) -> None:

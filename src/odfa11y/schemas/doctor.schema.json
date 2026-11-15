@@ -12,11 +12,6 @@
         4
       ]
     },
-    "format": {
-      "enum": [
-        1
-      ]
-    },
     "libraries": {
       "additionalProperties": {
         "type": "string"
@@ -31,6 +26,11 @@
     },
     "python": {
       "type": "string"
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
     },
     "schema_versions": {
       "items": {
@@ -180,7 +180,7 @@
     "libraries",
     "schema_versions",
     "toolchain",
-    "format",
+    "schema_version",
     "exit_status"
   ],
   "type": "object"

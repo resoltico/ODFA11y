@@ -6,11 +6,11 @@ import textwrap
 lazy from collections.abc import Iterable
 lazy from pathlib import Path
 
-from odfa11y.errors import ReportError
+from odfa11y.errors import InvalidOption
 from odfa11y.report.facts import FactKeys
 from odfa11y.report.sarif import sarif_log
 from odfa11y.report.terminal import terminal_text
-from odfa11y.status import ExitStatus
+from odfa11y.status import ExitStatus, combine_statuses, gate_outcome
 lazy from odfa11y.report.model import Report
 
 FORMATS = ("text", "json", "sarif")
@@ -30,7 +30,7 @@ def render_reports(
 
     Raises
     ------
-    ReportError
+    InvalidOption
         The requested format is unsupported or SARIF source identities are unsafe.
 
     """
@@ -38,14 +38,14 @@ def render_reports(
     if output_format == "sarif":
         if source_root is None:
             msg = "SARIF requires an explicit source root."
-            raise ReportError(msg)
+            raise InvalidOption(msg)
         return json.dumps(sarif_log(items, source_root=source_root), indent=2, ensure_ascii=False)
     if output_format == "json":
         payload = items[0].as_dict() if len(items) == 1 else [r.as_dict() for r in items]
         return json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True)
     if output_format != "text":
         msg = f"Unsupported report format: {output_format}"
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     return "\n\n".join(_render_text(report) for report in items)
 
 
@@ -58,13 +58,9 @@ def exit_status(reports: Iterable[Report], *, strict: bool = False) -> ExitStatu
         Zero on success, 1 when strict and a warning exists, or 2 when an error exists.
 
     """
-    status = ExitStatus.PASSED
-    for report in reports:
-        if report.error_count:
-            return ExitStatus.ERRORS
-        if strict and report.warning_count:
-            status = ExitStatus.STRICT_WARNINGS
-    return status
+    return combine_statuses(
+        gate_outcome(report, strict=strict).exit_status(strict) for report in reports
+    )
 
 
 def _render_text(report: Report) -> str:
@@ -89,7 +85,7 @@ def _render_text(report: Report) -> str:
     if report.decisions:
         lines.append("Open decisions:")
         for decision in report.decisions:
-            target = decision.target.label if decision.target else "document"
+            target = decision.target.path if decision.target else "document"
             lines.extend(_field(f"  {decision.kind.id}: ", target))
     if report.facts:
         lines.append("Facts:")

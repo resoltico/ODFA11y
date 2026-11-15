@@ -191,4 +191,4 @@ def _assert_fidelity(source: Path, pdf: Path, pdf_filter: str, soffice: str) -> 
     baseline = export_pdfua(
         source, pdf.with_name("source-" + pdf.name), ExportSettings(pdf_filter, soffice)
     )
-    assert compare_pdfs(baseline, pdf, FidelityPolicy()).passed
+    assert compare_pdfs(baseline, pdf, FidelityPolicy()).error_count == 0

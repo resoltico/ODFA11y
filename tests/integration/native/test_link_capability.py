@@ -130,7 +130,7 @@ def test_the_one_link_reproduction_and_explicit_name_control(
     assert failures == (set() if named else {("7.18.1", "2"), ("7.18.5", "2")}), failures
     assert ("PDF019" in {f.rule_id for f in report.findings}) == (not named)
     if named:
-        assert report.passed
+        assert report.error_count == 0
         assert result.compliant
         record = execute(
             source,

@@ -3,11 +3,11 @@
 
 from dataclasses import dataclass
 
-from odfa11y.errors import PlanError
-from odfa11y.progress import PIPELINE_STAGES, StageName
+from odfa11y.errors import InvalidOption
+from odfa11y.progress import PIPELINE_STAGES, Stage
 
 SOURCE_STAGES = PIPELINE_STAGES[:4]
-VERIFY_STAGES = tuple(name for name in PIPELINE_STAGES if name != StageName.VALIDATE_PDF)
+VERIFY_STAGES = tuple(name for name in PIPELINE_STAGES if name != Stage.VALIDATE_PDF)
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,7 +15,7 @@ class Profile:
     """The gates a run enforces; the effective profile is recorded in the evidence."""
 
     name: str
-    stages: tuple[StageName, ...]
+    stages: tuple[Stage, ...]
     strict: bool
     verapdf_required: bool
 
@@ -65,7 +65,7 @@ def profile_named(name: str) -> Profile:
 
     Raises
     ------
-    PlanError
+    InvalidOption
         The name is not a known profile.
 
     """
@@ -73,4 +73,4 @@ def profile_named(name: str) -> Profile:
         return PROFILES[name]
     except KeyError as exc:
         msg = f"Unknown profile {name!r}; use one of {', '.join(PROFILES)}"
-        raise PlanError(msg) from exc
+        raise InvalidOption(msg) from exc

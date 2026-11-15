@@ -9,8 +9,9 @@ lazy from pathlib import Path
 import pytest
 
 import odfa11y as api
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import IoFailure, ToolFailure
 from odfa11y.records import DoctorRecord, Toolchain
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.pdf import text_pdf
@@ -37,7 +38,7 @@ def test_multi_input_audit_retains_success_after_execution_failure(tmp_path: Pat
     missing = tmp_path / "missing.odt"
     result = api.audit([missing, source])
     assert len(result.inputs) == 2
-    assert isinstance(result.inputs[0].error, FileNotFoundError)
+    assert isinstance(result.inputs[0].error, IoFailure)
     assert result.inputs[1].error is None
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
     assert len(result.reports) == 1
@@ -56,10 +57,10 @@ def test_multi_input_audit_retains_success_after_execution_failure(tmp_path: Pat
 def test_partial_input_reports_survive_later_failure_and_sarif_is_fail_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    failure = ToolFailedError("Controlled validator failure")
+    failure = ToolFailure("Controlled validator failure")
 
     def inspect(source: Path, **_options: object) -> Iterator[api.Report]:
-        report = api.Report(kind="pdf", subject=source.name, sources=(source,))
+        report = api.Report(kind=ReportKind.PDF, subject=source.name, sources=(source,))
         report.add(rules.PDF005)
         yield report
         raise failure
@@ -72,7 +73,7 @@ def test_partial_input_reports_survive_later_failure_and_sarif_is_fail_closed(
     assert result.failures[0].error is failure
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
     assert result.render("json") is not None
-    with pytest.raises(ToolFailedError, match="Controlled validator failure"):
+    with pytest.raises(ToolFailure, match="Controlled validator failure"):
         result.render("sarif", source_root=tmp_path)
 
 
@@ -100,7 +101,7 @@ def test_compare_and_integrity_results_own_their_status(tmp_path: Path) -> None:
     source = text_pdf(tmp_path / "source.pdf", [["Example"]])
     result = api.compare(source, source)
     assert result.exit_status == api.ExitStatus.PASSED
-    assert result.report.passed
+    assert result.report.error_count == 0
     integrity = api.verify_evidence(tmp_path / "missing")
     assert integrity.exit_status == api.ExitStatus.ERRORS
     assert integrity.problems
@@ -109,11 +110,11 @@ def test_compare_and_integrity_results_own_their_status(tmp_path: Path) -> None:
 def test_doctor_retains_controlled_error_and_uses_shared_tools(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    failure = ToolFailedError("Controlled environment failure")
+    failure = ToolFailure("Controlled environment failure")
     selected = api.Tools("office", "validator", 7)
     visited = []
 
-    def inspect(tools: api.Tools, **_options: object) -> tuple[DoctorRecord, ToolFailedError]:
+    def inspect(tools: api.Tools, **_options: object) -> tuple[DoctorRecord, ToolFailure]:
         visited.append(tools)
         return DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain()), failure
 

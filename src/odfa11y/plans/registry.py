@@ -98,4 +98,4 @@ def document_decisions(report: Report) -> None:
                 if kind.id == "document.metadata"
                 else {"version": report.facts.get(FactKeys.DOCUMENT_ODF_VERSION)}
             )
-            report.add_decision(OpenDecision(kind, None, None, current, rules))
+            report.add_decision(OpenDecision(kind, None, current, rules))

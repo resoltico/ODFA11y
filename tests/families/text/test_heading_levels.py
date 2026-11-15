@@ -15,6 +15,7 @@ from odfa11y.families.text.headings.edit import heading_fingerprint, heading_loc
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.plans import load_plan
 from odfa11y.remediate.compile import compile_operations
+from odfa11y.targets import require_target
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.plans import plan_header, question_for
@@ -36,7 +37,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
     assert finding.location is not None
     target = finding.location.path
     assert target == "content/heading[2]"
-    reviewed_fingerprint = question_for(report, finding).fingerprint
+    reviewed_fingerprint = require_target(question_for(report, finding).target).fingerprint
     assert isinstance(reviewed_fingerprint, str)
     operation = SetHeadingLevels({target: HeadingLevel(2, reviewed_fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)

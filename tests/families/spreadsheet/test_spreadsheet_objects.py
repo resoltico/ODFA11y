@@ -11,6 +11,7 @@ from odfa11y.concepts import GraphicAlternative
 from odfa11y.concepts.edits import Status
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, sheet_snapshot, sheets_preserved
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.targets import require_target
 from tests.fixtures.plans import question_for
 from tests.fixtures.spreadsheets import (
     LAYOUTS,
@@ -98,7 +99,7 @@ def test_a_selector_that_matches_nothing_fails_everything_before_any_edit(
         "Nowhere": GraphicAlternative("x"),
     })
     outcomes = operation.apply(document)
-    assert [(o.status, o.key) for o in outcomes] == [(Status.FAILED, "Nowhere")]
+    assert [(o.status, o.target) for o in outcomes] == [(Status.FAILED, "Nowhere")]
     assert not document.dirty
     assert frame_text(document, "Logo") == [("image", None)]
 
@@ -124,7 +125,7 @@ def _audited_fingerprint(directory: Path, layout: str, frame: str) -> str:
     [finding] = [
         f for f in report.findings if f.rule_id == "GRAPHIC003" and f.details["frame"] == frame
     ]
-    return str(question_for(report, finding).fingerprint)
+    return str(require_target(question_for(report, finding).target).fingerprint)
 
 
 def test_a_fingerprint_survives_a_sheet_rename_in_the_same_plan(tmp_path: Path) -> None:
@@ -156,7 +157,7 @@ def test_two_selectors_setting_different_text_on_one_frame_both_fail(
         "logo.png": GraphicAlternative("Two"),
     })
     outcomes = conflicting.apply(document)
-    assert {o.key for o in outcomes} == {"Logo", "logo.png"}
+    assert {o.target for o in outcomes} == {"Logo", "logo.png"}
     assert {o.status for o in outcomes} == {Status.FAILED}
     agreeing = SetGraphicAlternatives({
         "Logo": GraphicAlternative("Same"),

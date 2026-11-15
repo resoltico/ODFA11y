@@ -8,7 +8,7 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.errors import PackageError, RemediationError
+from odfa11y.errors import DocumentRefusal, PackageError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
@@ -65,7 +65,7 @@ def test_metadata_creation_preflights_conflicting_manifest_declarations(
         entry.set(qn("manifest", "full-path"), "meta.xml")
         entry.set(qn("manifest", "media-type"), "text/xml" if duplicate else "text/plain")
     checkpoint = document.checkpoint()
-    with pytest.raises(RemediationError, match="duplicate or has a conflicting"):
+    with pytest.raises(DocumentRefusal, match="duplicate or has a conflicting"):
         ensure_metadata_part(document)
     assert not document.has(Part.META)
     assert not document.changed_since(checkpoint)

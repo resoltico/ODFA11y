@@ -6,6 +6,7 @@ lazy from lxml import etree
 from odfa11y.concepts import protected_xml
 from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
 XML_LANGUAGE = xml_names.XML_LANG
@@ -25,7 +26,7 @@ def expression(document: OdfDocument) -> etree._Element | None:
     return root if root.tag == xml_names.MATH_MATH else None
 
 
-def fingerprint(root: etree._Element) -> str:
+def fingerprint(root: etree._Element) -> Fingerprint:
     """Bind an alternative to the expression, annotations and presentation attributes.
 
     Returns
@@ -34,7 +35,7 @@ def fingerprint(root: etree._Element) -> str:
         A reviewed digest excluding only spoken alternative and root language.
 
     """
-    return protected_xml(root, omitted_root_attributes=EDITABLE)[:16]
+    return Fingerprint.from_digest(protected_xml(root, omitted_root_attributes=EDITABLE))
 
 
 def snapshot(document: OdfDocument) -> tuple[str, ...]:

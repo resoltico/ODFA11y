@@ -24,6 +24,7 @@ from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target, require_target
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -51,8 +52,7 @@ def audit_headings(
         excerpt = {"text": text[:80]}
         decision = OpenDecision(
             HEADING_LEVEL,
-            location,
-            heading_fingerprint(heading, document),
+            Target((location).path, Fingerprint(heading_fingerprint(heading, document))),
             {"level": raw},
             (rules.HEADING002.id,),
         )
@@ -66,8 +66,10 @@ def audit_headings(
             report.add_decision(
                 OpenDecision(
                     HEADING_LEVEL,
-                    location,
-                    decision.fingerprint,
+                    Target(
+                        (location).path,
+                        Fingerprint(require_target(decision.target).fingerprint),
+                    ),
                     decision.current,
                     (rules.HEADING001.id,),
                 )

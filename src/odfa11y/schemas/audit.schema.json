@@ -12,11 +12,6 @@
         4
       ]
     },
-    "format": {
-      "enum": [
-        1
-      ]
-    },
     "inputs": {
       "items": {
         "additionalProperties": false,
@@ -63,10 +58,6 @@
                           "current": {
                             "type": "object"
                           },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
-                          },
                           "kind": {
                             "const": "database.description"
                           },
@@ -79,23 +70,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -103,7 +89,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -114,9 +99,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
                           },
                           "kind": {
                             "const": "document.metadata"
@@ -134,7 +116,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -145,9 +126,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
                           },
                           "kind": {
                             "const": "document.odf_version"
@@ -165,7 +143,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -176,9 +153,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
                           },
                           "kind": {
                             "const": "formula.alternative"
@@ -196,7 +170,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -207,10 +180,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "graphic.alternative"
@@ -224,23 +193,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -248,7 +212,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -259,10 +222,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "heading.level"
@@ -276,23 +235,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -300,7 +254,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -311,10 +264,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "language.target"
@@ -328,23 +277,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -352,7 +296,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -363,10 +306,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "link.description"
@@ -380,23 +319,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -404,7 +338,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -415,10 +348,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "page.metadata"
@@ -432,23 +361,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -456,7 +380,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -467,10 +390,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "page.navigation"
@@ -484,23 +403,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -508,7 +422,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -519,10 +432,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "sheet.name"
@@ -536,23 +445,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -560,7 +464,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -571,10 +474,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                            "type": "string"
                           },
                           "kind": {
                             "const": "table.headers"
@@ -588,23 +487,18 @@
                           "target": {
                             "additionalProperties": false,
                             "properties": {
-                              "member": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
+                              "fingerprint": {
+                                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                "type": "string"
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
                             "required": [
                               "path",
-                              "member"
+                              "fingerprint"
                             ],
                             "type": "object"
                           }
@@ -612,7 +506,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -623,9 +516,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
                           },
                           "kind": {
                             "const": "text.linkify_addresses"
@@ -643,7 +533,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -654,9 +543,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
                           },
                           "kind": {
                             "const": "text.remove_spacers"
@@ -674,7 +560,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -685,9 +570,6 @@
                         "properties": {
                           "current": {
                             "type": "object"
-                          },
-                          "fingerprint": {
-                            "type": "null"
                           },
                           "kind": {
                             "const": "text.spacing"
@@ -705,7 +587,6 @@
                         "required": [
                           "kind",
                           "target",
-                          "fingerprint",
                           "current",
                           "rule_ids"
                         ],
@@ -1070,6 +951,7 @@
                                 ]
                               },
                               "path": {
+                                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                 "type": "string"
                               }
                             },
@@ -1110,16 +992,18 @@
                   },
                   "type": "array"
                 },
-                "format": {
+                "kind": {
                   "enum": [
-                    6
+                    "odf",
+                    "pdf",
+                    "pdf-validation",
+                    "fidelity"
                   ]
                 },
-                "kind": {
-                  "type": "string"
-                },
-                "passed": {
-                  "type": "boolean"
+                "schema_version": {
+                  "enum": [
+                    1
+                  ]
                 },
                 "subject": {
                   "type": "string"
@@ -1151,8 +1035,7 @@
                 "findings",
                 "facts",
                 "decisions",
-                "passed",
-                "format",
+                "schema_version",
                 "summary"
               ],
               "type": "object"
@@ -1172,6 +1055,11 @@
       },
       "type": "array"
     },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
     "strict": {
       "type": "boolean"
     }
@@ -1179,7 +1067,7 @@
   "required": [
     "inputs",
     "strict",
-    "format",
+    "schema_version",
     "exit_status"
   ],
   "type": "object"

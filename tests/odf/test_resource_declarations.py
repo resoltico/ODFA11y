@@ -6,7 +6,7 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.report import FactKeys
@@ -26,7 +26,7 @@ def test_schema_valid_declarations_are_reported_and_refused(
     report = audit_odf(source)
     assert "NATIVE001" in {f.rule_id for f in report.findings}
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
-    with pytest.raises(ToolFailedError, match="rendering dependencies"):
+    with pytest.raises(DocumentRefusal, match="resource"):
         require_native_context(document)
 
 
@@ -106,7 +106,7 @@ def test_file_resources_reject_root_directories_and_directory_intent(
     reopened = OdfDocument.open(source)
     assert validate(reopened).count == 0
     assert native_export_limitations(reopened)["rendering_dependencies"] == 1
-    with pytest.raises(ToolFailedError):
+    with pytest.raises(DocumentRefusal):
         require_native_context(reopened)
 
 

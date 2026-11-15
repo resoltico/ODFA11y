@@ -9,18 +9,19 @@ from pathlib import Path
 from typing import cast, get_type_hints
 lazy from collections.abc import Iterable, Mapping
 
-from odfa11y.decisions import (
-    TARGET_FINGERPRINT_PATTERN,
-    TARGET_PATH_PATTERN,
-    Decision,
-    DecisionScope,
-    decode_answer,
-)
+from odfa11y.decisions import Decision, DecisionScope, decode_answer
 from odfa11y.errors import PlanError
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.plans.model import PLAN_FORMAT, Plan, PlanHeader
+from odfa11y.plans.model import PLAN_SCHEMA_VERSION, Plan, PlanHeader
 from odfa11y.report import Location
 from odfa11y.serialization import fields_of, record_dict, schema_for
+from odfa11y.targets import (
+    FINGERPRINT_PATTERN,
+    TARGET_PATH_PATTERN,
+    Fingerprint,
+    Target,
+    require_target,
+)
 lazy from odfa11y.decisions import DecisionKind, OpenDecision
 lazy from odfa11y.serialization import JsonObject, JsonValue
 
@@ -69,7 +70,11 @@ def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]
     if "plan" not in values:
         msg = "A [plan] source-binding header is required"
         raise PlanError(msg)
-    header = decode_answer(PlanHeader, _table(values["plan"], "plan"), "plan")
+    header_values = _table(values["plan"], "plan")
+    if "format" in header_values:
+        message = "This plan uses a retired header; generate a fresh plan with schema_version = 1."
+        raise PlanError(message)
+    header = decode_answer(PlanHeader, header_values, "plan")
     answers = []
     for kind_id, value in _table(values.get("decisions", {}), "decisions").items():
         if kind_id not in kinds:
@@ -93,11 +98,15 @@ def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]
 def _answer(kind: DecisionKind, target: Location | None, values: Mapping[str, object]) -> Decision:
     fields = dict(values)
     fingerprint = fields.pop("fingerprint", None) if target is not None else None
-    if fingerprint is not None and not isinstance(fingerprint, str):
-        msg = f"{kind.id}.fingerprint must be a string"
-        raise PlanError(msg)
+    if target is None:
+        reviewed = None
+    else:
+        if not isinstance(fingerprint, str):
+            message = f"{kind.id}.fingerprint must be a string"
+            raise PlanError(message)
+        reviewed = Target(target.path, Fingerprint(fingerprint))
     answer = decode_answer(kind.answer_type, fields, kind.id)
-    return Decision(kind, target, fingerprint, answer)
+    return Decision(kind, reviewed, answer)
 
 
 def _table(value: object, label: str) -> dict[str, object]:
@@ -119,7 +128,7 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
     lines = [
         "# Review each answer before enabling it; this file does not change a source by itself.",
         "[plan]",
-        f"format = {PLAN_FORMAT}",
+        f"schema_version = {PLAN_SCHEMA_VERSION}",
         f"generator = {json.dumps(header.generator)}",
         f"source.sha256 = {json.dumps(header.source.sha256)}",
         "",
@@ -134,8 +143,10 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
             lines.append(
                 "# Current: " + json.dumps(record_dict(dict(decision.current)), ensure_ascii=False)
             )
-        if decision.fingerprint is not None:
-            lines.append(f"# fingerprint = {json.dumps(decision.fingerprint)}")
+        if decision.target is not None:
+            lines.append(
+                f"# fingerprint = {json.dumps(require_target(decision.target).fingerprint)}"
+            )
         hints = get_type_hints(kind.answer_type)
         for field in fields_of(kind.answer_type):
             help_text = field.metadata.get("schema", {}).get("description", field.name)
@@ -215,7 +226,7 @@ def plan_schema(kinds: Mapping[str, DecisionKind]) -> JsonObject:
             answer_properties = cast("JsonObject", body["properties"])
             answer_properties["fingerprint"] = {
                 "type": "string",
-                "pattern": "^" + TARGET_FINGERPRINT_PATTERN + r"(?![\s\S])",
+                "pattern": FINGERPRINT_PATTERN,
             }
             required = cast("list[JsonValue]", body["required"])
             required.append("fingerprint")
@@ -256,13 +267,7 @@ def decision_schema(kinds: Mapping[str, DecisionKind], *, open_decision: bool) -
         targeted = kind.scope == DecisionScope.TARGET
         properties: JsonObject = {
             "kind": {"const": kind.id},
-            "target": schema_for(Location, namespace=globals()) if targeted else {"type": "null"},
-            "fingerprint": {
-                "type": "string",
-                "pattern": "^" + TARGET_FINGERPRINT_PATTERN + r"(?![\s\S])",
-            }
-            if targeted
-            else {"type": "null"},
+            "target": schema_for(Target, namespace=globals()) if targeted else {"type": "null"},
         }
         if open_decision:
             properties |= {

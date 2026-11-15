@@ -85,7 +85,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
         output,
         RunSettings(profile=profile_named("source")),
     )
-    assert record.exit_status == 3
+    assert record.exit_status == 2
     assert record.failed_stage == "identify-source"
     assert check_bundle(output) == []
     assert not list(output.glob("remediated.*"))
@@ -106,7 +106,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
         ],
     )
     result = run_batch(manifest, tmp_path / "batch", RunSettings(profile=profile_named("source")))
-    assert [r.exit_status for r in result.items] == [3, 0]
+    assert [r.exit_status for r in result.items] == [2, 0]
     assert result.items[0].failed_stage == "identify-source"
     for name in ["changed", "valid"]:
         assert check_bundle(tmp_path / "batch" / name) == []

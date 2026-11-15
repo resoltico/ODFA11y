@@ -11,7 +11,7 @@ from odfa11y.application.tools import Tools
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument
 from odfa11y.pdf.fidelity import compare_pdfs
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run.native import native_export_settings
 lazy from odfa11y.pdf.fidelity import FidelityPolicy
 lazy from odfa11y.progress import ProgressObserver
@@ -96,10 +96,10 @@ def compare_documents(
             native_tools=native_tools,
         )
         if on_progress is not None:
-            on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.RUNNING))
+            on_progress(ProgressEvent(Step.COMPARE_FIDELITY, StepState.RUNNING))
         report = compare_pdfs(left, right, policy, diff_dir=diff_dir, render=native_tools.render)
         if on_progress is not None:
-            on_progress(ProgressEvent(StepName.COMPARE_FIDELITY, StepState.PASSED))
+            on_progress(ProgressEvent(Step.COMPARE_FIDELITY, StepState.PASSED))
     report.subject = f"{candidate.name} vs {source.name}"
     report.sources = (candidate, source)
     return report
@@ -122,8 +122,8 @@ def _render_input(
         OdfDocument.open(path), tools.soffice, tools.timeout, work / "profile"
     )
     if on_progress is not None:
-        on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.RUNNING))
+        on_progress(ProgressEvent(Step(f"export-{name}"), StepState.RUNNING))
     rendered = native_tools.export(path, work / f"{name}.pdf", settings)
     if on_progress is not None:
-        on_progress(ProgressEvent(StepName(f"export-{name}"), StepState.PASSED))
+        on_progress(ProgressEvent(Step(f"export-{name}"), StepState.PASSED))
     return rendered

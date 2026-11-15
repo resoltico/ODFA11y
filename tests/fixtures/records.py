@@ -5,9 +5,10 @@ from dataclasses import replace
 
 from odfa11y.families.text import ADAPTER
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.progress import StageName
+from odfa11y.progress import Stage
 from odfa11y.records import DocumentIdentity
 from odfa11y.report import FactKeys, FactSet, Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.run.profiles import PROFILES
 from odfa11y.run.record import RunRecord, StageResult
@@ -23,14 +24,16 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
         A typed pipeline record, ready for publication or review rendering.
 
     """
-    report = Report(kind="pdf", subject="doc.pdf", facts=FactSet({FactKeys.PDF_PAGE_COUNT: 2}))
+    report = Report(
+        kind=ReportKind.PDF, subject="doc.pdf", facts=FactSet({FactKeys.PDF_PAGE_COUNT: 2})
+    )
     report.add(rules.PDF005, "No title display.")
     stages = [
-        StageResult(StageName.AUDIT_PDF, StageStatus.PASSED, report=report),
-        StageResult(StageName.VALIDATE_PDF, StageStatus.SKIPPED, "not requested"),
+        StageResult(Stage.AUDIT_PDF, StageStatus.PASSED, report=report),
+        StageResult(Stage.VALIDATE_PDF, StageStatus.SKIPPED, "not requested"),
     ]
     if status == "failed":
-        name = StageName(failed_stage or StageName.REMEDIATE)
+        name = Stage(failed_stage or Stage.REMEDIATE)
         index = next((i for i, stage in enumerate(stages) if stage.name == name), None)
         if index is None:
             stages.append(StageResult(name, StageStatus.FAILED))

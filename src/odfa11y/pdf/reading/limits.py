@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 
 MAX_PDF_BYTES = 256 * 1024 * 1024
 MAX_PDF_PAGES = 5_000
@@ -18,13 +18,13 @@ def check_file_size(path: str | Path) -> None:
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         The file is larger than ``MAX_PDF_BYTES``.
 
     """
     if Path(path).stat().st_size > MAX_PDF_BYTES:
         msg = f"PDF {Path(path).name} exceeds the {MAX_PDF_BYTES}-byte limit"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
 
 
 def check_limits(path: str | Path, pages: int) -> None:
@@ -32,11 +32,11 @@ def check_limits(path: str | Path, pages: int) -> None:
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         The page count exceeds ``MAX_PDF_PAGES``.
 
     """
     check_file_size(path)
     if pages > MAX_PDF_PAGES:
         msg = f"PDF {Path(path).name} has {pages} pages; the limit is {MAX_PDF_PAGES}"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)

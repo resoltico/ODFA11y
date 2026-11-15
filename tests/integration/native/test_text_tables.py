@@ -13,6 +13,7 @@ from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
+from odfa11y.targets import require_target
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.paths import TESTS
 
@@ -48,7 +49,9 @@ def test_writer_table_classification_and_pdf_scope(
             edited,
             [
                 MarkTableHeaders({
-                    question.target.path: TableHeaders(rows=1, fingerprint=question.fingerprint)
+                    question.target.path: TableHeaders(
+                        rows=1, fingerprint=require_target(question.target).fingerprint
+                    )
                 })
             ],
         )

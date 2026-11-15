@@ -7,6 +7,7 @@ from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import DatabaseDescriptionAnswer
 from odfa11y.families.database.descriptions import DatabaseDescription, SetObjectDescriptions
 from odfa11y.odf import Family
+from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
@@ -34,7 +35,8 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
     return tuple(
         SetObjectDescriptions({
             decision.target_path: DatabaseDescription(
-                decision.answer_as(DatabaseDescriptionAnswer).text, decision.fingerprint
+                decision.answer_as(DatabaseDescriptionAnswer).text,
+                require_target(decision.target).fingerprint,
             )
         })
         for decision in decisions

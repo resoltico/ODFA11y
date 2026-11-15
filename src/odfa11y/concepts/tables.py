@@ -5,7 +5,7 @@ import re
 
 lazy from lxml import etree
 
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn, select_elements
 
@@ -26,7 +26,7 @@ def repeated(node: etree._Element, attribute: str) -> int:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A declared count is malformed or non-positive.
 
     """
@@ -37,7 +37,7 @@ def repeated(node: etree._Element, attribute: str) -> int:
         count = 0
     if count < 1:
         msg = f"Invalid or uninspectable table {attribute} count."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     return count
 
 
@@ -111,7 +111,7 @@ def header_count(table: etree._Element, axis: str) -> int:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A grouped/non-leading header band cannot be represented by one leading count.
 
     """
@@ -126,7 +126,7 @@ def header_count(table: etree._Element, axis: str) -> int:
         )
         if marked and data_seen:
             msg = "Non-leading table header bands require an explicit group-level decision."
-            raise RemediationError(msg)
+            raise DocumentRefusal(msg)
         if marked:
             total += repeated(node, AXES[axis][2])
         else:
@@ -139,7 +139,7 @@ def require_safe_boundary(table: etree._Element, rows: int | None, columns: int 
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A merged cell crosses the boundary or a repeat/span is malformed.
 
     """
@@ -159,7 +159,7 @@ def require_safe_boundary(table: etree._Element, rows: int | None, columns: int 
             )
             if row_crosses or column_crosses:
                 msg = "A merged cell crosses the requested header boundary."
-                raise RemediationError(msg)
+                raise DocumentRefusal(msg)
             column_position += repeated(cell, "number-columns-repeated")
         row_position += row_repeat
 
@@ -185,4 +185,4 @@ def _require_splittable(declaration: etree._Element) -> None:
         for node in declaration.iter()
     ):
         msg = "Splitting this repeat would duplicate structural objects or identities."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)

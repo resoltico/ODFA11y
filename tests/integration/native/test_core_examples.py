@@ -21,7 +21,7 @@ def test_native_examples_surface_real_fidelity_pipeline_and_integrity_results(
         tmp_path / "work",
         Tools(soffice=external_tool("soffice", "libreoffice")),
     )
-    assert comparison.passed, comparison.as_dict()
+    assert comparison.error_count == 0, comparison.as_dict()
     assert record.passed, record.as_dict()
     assert record.exit_status == 0
     assert problems == []

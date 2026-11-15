@@ -23,6 +23,22 @@ class Family(StrEnum):
     IMAGE = "image"
     DATABASE = "database"
 
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.TEXT: "A text document expresses prose and its structure.",
+            self.SPREADSHEET: "A spreadsheet expresses cells, formulas and tabular relationships.",
+            self.PRESENTATION: "A presentation expresses slides and their associated notes.",
+            self.DRAWING: "A drawing expresses objects placed on pages.",
+            self.FORMULA: "A formula document expresses a mathematical expression.",
+            self.CHART: "A chart document expresses data graphically.",
+            self.IMAGE: "An image document expresses graphic content.",
+            self.DATABASE: (
+                "A database document describes forms, reports, queries and data sources."
+            ),
+        }[self]
+
 
 @dataclass(frozen=True, slots=True)
 class DocumentKind:

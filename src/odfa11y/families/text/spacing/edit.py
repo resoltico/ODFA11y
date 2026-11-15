@@ -9,7 +9,7 @@ lazy from lxml import etree
 
 from odfa11y.concepts import eligible_text_node, visible_words
 from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.errors import RemediationError, XmlParseError
+from odfa11y.errors import DocumentRefusal, XmlParseError
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.styles.catalogue import (
     NO_STYLE,
@@ -47,7 +47,7 @@ class NormalizeSpacing(Operation):
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         try:
             plan = self._plan(document)
-        except RemediationError as exc:
+        except DocumentRefusal as exc:
             return (self._failed(str(exc)),)
         if isinstance(plan, tuple):
             return plan
@@ -211,7 +211,7 @@ def normalized_spacing_tree(document: OdfDocument, root: etree._Element) -> etre
         return clone
     try:
         proven = _proven_references(document, used)
-    except RemediationError, XmlParseError:
+    except DocumentRefusal, XmlParseError:
         return clone  # Unknown definitions cannot authorize normalization.
     for node in nodes:
         name = node.get(xml_names.TEXT_STYLE_NAME)

@@ -5,7 +5,7 @@ from typing import cast
 
 import pytest
 
-from odfa11y.errors import ReportError
+from odfa11y.errors import InvalidOption
 from odfa11y.report import FACT_REGISTRY, FactKey, FactKeys, FactSet
 
 
@@ -21,7 +21,7 @@ from odfa11y.report import FACT_REGISTRY, FactKey, FactKeys, FactSet
 )
 def test_fact_type_mismatch_is_rejected(key: FactKey[object], value: object) -> None:
     facts = FactSet()
-    with pytest.raises(ReportError, match="requires"):
+    with pytest.raises(InvalidOption, match="requires"):
         facts[key] = value
     assert not facts
 
@@ -29,13 +29,13 @@ def test_fact_type_mismatch_is_rejected(key: FactKey[object], value: object) -> 
 def test_registered_fact_identity_cannot_be_forged() -> None:
     facts = FactSet({FactKeys.PDF_PAGE_COUNT: 1})
     forged = FactKey[str]("pdf.page_count", str, "Forged definition")
-    with pytest.raises(ReportError, match="registered"):
+    with pytest.raises(InvalidOption, match="registered"):
         facts[forged] = "wrong"
-    with pytest.raises(ReportError, match="registered"):
+    with pytest.raises(InvalidOption, match="registered"):
         _ = facts[forged]
-    with pytest.raises(ReportError, match="registered"):
+    with pytest.raises(InvalidOption, match="registered"):
         facts.get(forged)
-    with pytest.raises(ReportError, match="registered"):
+    with pytest.raises(InvalidOption, match="registered"):
         facts[cast("FactKey[str]", "pdf.page_count")] = "wrong"
     assert facts[FactKeys.PDF_PAGE_COUNT] == 1
     assert FACT_REGISTRY["pdf.page_count"] is FactKeys.PDF_PAGE_COUNT

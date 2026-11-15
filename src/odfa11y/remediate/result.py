@@ -21,7 +21,7 @@ class Violation:
     kind: ViolationKind
     message: str
     operation: str | None = None
-    key: str | None = None
+    target: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +32,7 @@ class RemediationResult:
     destination: Path | None = field(metadata={"basename": True})
     outcomes: tuple[Outcome, ...]
     schema: SchemaCheck
-    format: Literal[1] = field(default=1, init=False)
+    schema_version: Literal[1] = field(default=1, init=False)
     published: bool = False
     violations: tuple[Violation, ...] = ()
     rebind: bool = False

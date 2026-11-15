@@ -28,11 +28,6 @@
         4
       ]
     },
-    "format": {
-      "enum": [
-        1
-      ]
-    },
     "operations": {
       "items": {
         "type": "object"
@@ -46,16 +41,6 @@
           "count": {
             "type": "integer"
           },
-          "key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "message": {
             "type": "string"
           },
@@ -68,13 +53,23 @@
               "unchanged",
               "failed"
             ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "operation",
           "status",
           "message",
-          "key",
+          "target",
           "count"
         ],
         "type": "object"
@@ -159,6 +154,11 @@
       ],
       "type": "object"
     },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
     "source": {
       "type": "string"
     },
@@ -166,16 +166,6 @@
       "items": {
         "additionalProperties": false,
         "properties": {
-          "key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "kind": {
             "enum": [
               "failed-outcome",
@@ -198,13 +188,23 @@
                 "type": "null"
               }
             ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "kind",
           "message",
           "operation",
-          "key"
+          "target"
         ],
         "type": "object"
       },
@@ -216,7 +216,7 @@
     "destination",
     "outcomes",
     "schema",
-    "format",
+    "schema_version",
     "published",
     "violations",
     "rebind",

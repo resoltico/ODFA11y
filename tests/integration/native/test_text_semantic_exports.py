@@ -31,7 +31,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     verapdf = external_tool("verapdf")
     source = CORPUS / "headings-skipped.odt"
     headings = select_elements(OdfDocument.open(source).tree(Part.CONTENT), "//text:h")
-    decisions = {
+    decisions: dict[str, HeadingLevel] = {
         heading_location(heading, index).path: HeadingLevel(index, heading_fingerprint(heading))
         for index, heading in enumerate(headings, 1)
     }
@@ -53,7 +53,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
         "H3": 1,
     }
     assert "PDF012" not in {f.rule_id for f in report.findings}
-    assert report.passed
+    assert report.error_count == 0
     assert validate_pdfua(pdf, executable=verapdf).compliant
 
 

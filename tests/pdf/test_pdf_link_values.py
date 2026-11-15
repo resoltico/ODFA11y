@@ -14,7 +14,7 @@ from pypdf.generic import (
 )
 
 from odfa11y.cli import main
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from tests.fixtures.pdf import register, tagged_writer
@@ -38,7 +38,7 @@ def test_malformed_annotations_fail_cleanly(
     writer.pages[0][NameObject("/Annots")] = values[shape]
     path = tmp_path / "malformed.pdf"
     writer.write(path)
-    with pytest.raises(ToolFailedError, match="Expected a PDF"):
+    with pytest.raises(ToolFailure, match="Expected a PDF"):
         read_snapshot(path)
     assert main(["compare", str(path), str(path)]) == 3
     assert "Traceback" not in capsys.readouterr().err
@@ -64,5 +64,5 @@ def test_uri_multiplicity_and_change(tmp_path: Path, *, indirect: bool) -> None:
         assert read_snapshot(path).links[f"https://example.test/{target}"] == 2
         paths.append(path)
     report = compare_pdfs(paths[0], paths[1], FidelityPolicy())
-    assert not report.passed
+    assert report.error_count != 0
     assert any(f.rule_id.startswith("FID") for f in report.findings)

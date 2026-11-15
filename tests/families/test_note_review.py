@@ -9,6 +9,7 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.report import Report, Severity, exit_status
+from odfa11y.report.model import ReportKind
 from tests.fixtures.paths import TESTS
 
 ROOT = TESTS
@@ -31,6 +32,6 @@ def test_notes_warn_consistently_and_fail_strict_acceptance(tmp_path: Path, fami
     notes = [finding for finding in observed.findings if finding.rule_id == "NOTE001"]
     assert notes
     assert all(finding.severity == Severity.WARNING for finding in notes)
-    scope = Report(kind="odf", subject=source.name, findings=notes)
+    scope = Report(kind=ReportKind.ODF, subject=source.name, findings=notes)
     assert exit_status([scope], strict=True) == 1
     assert exit_status([scope], strict=False) == 0

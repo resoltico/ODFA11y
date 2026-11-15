@@ -42,7 +42,7 @@ def test_audit_prints_json_for_one_file_and_an_array_for_several(
     second = make_minimal_odt(tmp_path / "b.odt")
     assert main(["audit", str(first), "--format", "json"]) == 0
     one = json.loads(capsys.readouterr().out)
-    assert (one["kind"], one["passed"], one["facts"]["document.title"]) == (
+    assert (one["kind"], one["summary"]["errors"] == 0, one["facts"]["document.title"]) == (
         "odf",
         True,
         "Synthetic accessible document",
@@ -82,17 +82,16 @@ def test_audit_with_schema_flag_validates(
     assert json.loads(capsys.readouterr().out)["facts"]["schema.violation_count"] == 0
 
 
-def test_missing_verapdf_is_a_warning_not_a_crash(
+def test_missing_verapdf_is_a_tool_failure_without_a_fake_finding(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
     arguments = ["audit", str(pdf), "--verapdf-path", str(tmp_path / "absent"), "--format", "json"]
-    assert main(arguments) == 0
-    reports = json.loads(capsys.readouterr().out)
-    assert reports[1]["kind"] == "verapdf"
-    assert reports[1]["findings"][0]["rule_id"] == "VERA000"
-    assert main([*arguments, "--strict"]) == 1
+    assert main(arguments) == 3
+    report = json.loads(capsys.readouterr().out)
+    assert report["kind"] == "pdf"
+    assert main([*arguments, "--strict"]) == 3
 
 
 def test_template_prints_a_loadable_commented_configuration(
@@ -237,10 +236,7 @@ def test_pipeline_command_without_libreoffice_fails_with_evidence_and_exit_3(
     output = capsys.readouterr().out
     assert "failed  export-source" in output
     assert (tmp_path / "ev" / "run.json").is_file()
-    assert (
-        main([*arguments, "--output-dir", str(tmp_path / "ev"), "--format", "json"])
-        == EXECUTION_FAILURE
-    )
+    assert main([*arguments, "--output-dir", str(tmp_path / "ev"), "--format", "json"]) == 4
 
 
 def test_verapdf_flag_does_not_swallow_the_next_argument(
@@ -249,6 +245,6 @@ def test_verapdf_flag_does_not_swallow_the_next_argument(
     monkeypatch.setenv("PATH", "")
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
-    assert main(["audit", "--verapdf", str(pdf), "--format", "json"]) == 0
+    assert main(["audit", "--verapdf", str(pdf), "--format", "json"]) == 3
     reports = json.loads(capsys.readouterr().out)
-    assert [report["kind"] for report in reports] == ["pdf", "verapdf"]
+    assert reports["kind"] == "pdf"

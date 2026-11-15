@@ -18,6 +18,7 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.targets import require_target
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.plans import question_for
@@ -67,8 +68,8 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     assert note_table.location is not None
     assert note_graphic.location.path in template
     assert note_table.location.path in template
-    graphic_fingerprint = question_for(report, note_graphic).fingerprint
-    table_fingerprint = question_for(report, note_table).fingerprint
+    graphic_fingerprint = require_target(question_for(report, note_graphic).target).fingerprint
+    table_fingerprint = require_target(question_for(report, note_table).target).fingerprint
     assert isinstance(graphic_fingerprint, str)
     assert isinstance(table_fingerprint, str)
     operations = [
@@ -161,7 +162,7 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
     operation = MarkTableHeaders({finding.location.path: TableHeaders(rows=1)})
     assert operation.apply(document)[0].status is Status.FAILED
     assert not document.dirty
-    reviewed_fingerprint = question_for(report, finding).fingerprint
+    reviewed_fingerprint = require_target(question_for(report, finding).target).fingerprint
     assert isinstance(reviewed_fingerprint, str)
     reviewed = MarkTableHeaders({
         finding.location.path: TableHeaders(rows=1, fingerprint=reviewed_fingerprint)

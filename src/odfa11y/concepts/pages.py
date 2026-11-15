@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """ODF drawing-page identities, descriptions, navigation and protected content."""
 
-import hashlib
 import json
 from collections import Counter
 from dataclasses import dataclass
@@ -21,6 +20,7 @@ from odfa11y.concepts.locations import page_location
 from odfa11y.concepts.xml import protected_xml
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
 XML_ID = xml_names.XML_ID
@@ -80,7 +80,7 @@ def shape_identity(shape: etree._Element) -> str | None:
     return identity
 
 
-def page_fingerprint(page: etree._Element, document: OdfDocument) -> str:
+def page_fingerprint(page: etree._Element, document: OdfDocument) -> Fingerprint:
     """Bind a reviewed page to words, shape identities, geometry, notes and references.
 
     Returns
@@ -98,7 +98,7 @@ def page_fingerprint(page: etree._Element, document: OdfDocument) -> str:
         omitted_elements=DESCRIPTIONS,
     )
     facts = (content, graphic_style_dependencies(document, page))
-    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
+    return Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
 
 
 def page_snapshot(document: OdfDocument) -> tuple[str, ...]:
@@ -165,7 +165,7 @@ class PageEditor:
             ]
             problem = _problem(matches, entry, identities, document)
             if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, key=name))
+                failures.append(Outcome(self.name, Status.FAILED, problem, target=name))
             else:
                 decisions.append((name, matches[0], entry))
         if failures:
@@ -183,7 +183,7 @@ class PageEditor:
                     self.name,
                     Status.APPLIED if changed else Status.UNCHANGED,
                     "Applied page decision." if changed else "Page decision already matches.",
-                    key=name,
+                    target=name,
                     count=int(changed),
                 )
             )

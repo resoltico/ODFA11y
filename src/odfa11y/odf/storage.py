@@ -2,7 +2,6 @@
 """How an ODF document is stored, and the logical parts every layout provides."""
 
 from abc import ABC, abstractmethod
-from enum import StrEnum
 from typing import ClassVar
 lazy import os
 lazy from pathlib import Path
@@ -11,16 +10,7 @@ from lxml import etree
 
 from odfa11y.errors import XmlParseError
 from odfa11y.safe_xml import parse_secure
-
-
-class Part(StrEnum):
-    """A logical part of an ODF document, independent of how it is stored."""
-
-    CONTENT = "content"
-    STYLES = "styles"
-    META = "meta"
-    SETTINGS = "settings"
-    MANIFEST = "manifest"
+from odfa11y.targets import Part
 
 
 class OdfStorage(ABC):

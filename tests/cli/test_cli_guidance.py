@@ -12,10 +12,11 @@ from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
-from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
+from odfa11y.errors import OutputOccupied, PlanError, Remedy, RemedyAction, ToolUnavailable
 from odfa11y.plans import PlanHeader, SourceBinding, render_plan
 from odfa11y.plans.registry import document_decisions
 from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.writer import make_minimal_odt
 
@@ -83,7 +84,7 @@ def test_command_typo_suggests_without_executing(capsys: pytest.CaptureFixture[s
 
 def test_next_command_handles_shell_names_and_leading_dash() -> None:
     source = Path("-a document; $(touch unwanted).odt")
-    report = Report(kind="odf", subject=source.name, sources=(source,))
+    report = Report(kind=ReportKind.ODF, subject=source.name, sources=(source,))
     report.add(rules.META001)
     document_decisions(report)
     hint = audit_next_step(argparse.Namespace(format="text"), [report])
@@ -95,7 +96,7 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
 
 @pytest.mark.parametrize(("kind", "source"), [("pdf", "a.pdf"), ("odf", "a\n.odt")])
 def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str) -> None:
-    report = Report(kind=kind, subject=source, sources=(Path(source),))
+    report = Report(kind=ReportKind(kind), subject=source, sources=(Path(source),))
     report.add(rules.META001)
     document_decisions(report)
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
@@ -103,7 +104,7 @@ def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str)
 
 
 def test_unreadable_document_does_not_offer_template() -> None:
-    report = Report(kind="odf", subject="bad.odt", sources=(Path("bad.odt"),))
+    report = Report(kind=ReportKind.ODF, subject="bad.odt", sources=(Path("bad.odt"),))
     report.add(rules.META001)
     document_decisions(report)
     report.add(rules.PKG000)
@@ -124,22 +125,17 @@ def test_template_header_escapes_untrusted_subject_without_active_toml(tmp_path:
 
 def test_recovery_preserves_configuration_and_existing_output() -> None:
     args = argparse.Namespace(command="remediate", config=Path("reviewed.toml"))
-    assert "edit the existing plan" in (error_hint(args, PlanError("wrong type")) or "")
-    assert "preserve" in (error_hint(args, OutputError("occupied")) or "")
+    assert "generate a fresh plan" in (error_hint(args, PlanError("wrong type")) or "")
+    assert "preserve" in (error_hint(args, OutputOccupied("occupied")) or "")
     assert error_hint(args, ValueError("unexpected")) is None
 
 
-def test_tool_recovery_matches_available_command_options(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    for command, flag in [("audit", "--verapdf-path"), ("export", "--soffice")]:
-        hint = error_hint(argparse.Namespace(command=command), ToolNotFoundError("missing"))
-        assert hint is not None
-        assert flag in hint
-        with pytest.raises(SystemExit) as raised:
-            main([command, "--help"])
-        assert raised.value.code == 0
-        assert flag in capsys.readouterr().out
+def test_tool_recovery_renders_the_producer_owned_remedy() -> None:
+    for command in ("audit", "export"):
+        remedy = Remedy(RemedyAction.INSTALL_TOOL, "veraPDF")
+        error = ToolUnavailable("missing", remedy=remedy)
+        hint = error_hint(argparse.Namespace(command=command), error)
+        assert hint == "Next: install or select veraPDF."
 
 
 @pytest.mark.parametrize(

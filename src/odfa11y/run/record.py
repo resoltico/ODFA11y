@@ -22,14 +22,14 @@ lazy from odfa11y.decisions import Decision
 lazy from odfa11y.families.spec import ReviewItem
 lazy from odfa11y.pdf.fidelity import FidelityPolicy
 lazy from odfa11y.plans import PlanHeader
-lazy from odfa11y.progress import StageName
+lazy from odfa11y.progress import Stage
 lazy from odfa11y.records import DocumentIdentity
 lazy from odfa11y.remediate import RemediationResult
 lazy from odfa11y.report import Report
 lazy from odfa11y.run.profiles import Profile
 lazy from odfa11y.serialization import JsonObject
 
-RECORD_FORMAT = 3
+RECORD_SCHEMA_VERSION = 1
 LOCALE_VARIABLES = ("LANG", "LC_ALL", "LC_MESSAGES")
 LIBRARIES = ("lxml", "pillow", "pypdf", "pypdfium2")
 
@@ -42,7 +42,7 @@ class StageResult:
     the profile); ``not-applicable`` means the kind of document has no such stage.
     """
 
-    name: StageName
+    name: Stage
     status: StageStatus
     reason: str | None = None
     report: Report | None = None
@@ -89,7 +89,7 @@ class RunRecord:
         return self.profile.strict
 
     @JsonProperty
-    def failed_stage(self) -> StageName | None:
+    def failed_stage(self) -> Stage | None:
         """The first failed stage, if any."""
         return next(
             (stage.name for stage in self.stages if stage.status == StageStatus.FAILED), None
@@ -133,9 +133,9 @@ class RunRecord:
         return record_dict(self)
 
     @JsonProperty
-    def format(self) -> Literal[3]:
+    def schema_version(self) -> Literal[1]:
         """The run record's schema version."""
-        return RECORD_FORMAT
+        return RECORD_SCHEMA_VERSION
 
     @JsonProperty
     def odfa11y(self) -> str:

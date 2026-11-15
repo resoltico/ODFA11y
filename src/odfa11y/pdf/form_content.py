@@ -4,7 +4,7 @@
 from pypdf.generic import NumberObject, StreamObject
 lazy from pypdf.generic import DictionaryObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.graphic_presence import page_images
 from odfa11y.pdf.reading.consumption import (
     MAX_FORM_DEPTH,
@@ -54,11 +54,11 @@ class FormScanner:
                 or self.invocations > MAX_FORM_INVOCATIONS
             ):
                 msg = "PDF Form cycle, depth or invocation limit prevents complete inspection"
-                raise ToolFailedError(msg)
+                raise ToolFailure(msg)
             scope = form.indirect_reference
             if scope is None:
                 msg = "Cannot inspect a Form without an indirect stream identity"
-                raise ToolFailedError(msg)
+                raise ToolFailure(msg)
             own = dictionary(form.get("/Resources")) if "/Resources" in form else resources
             child = self.scan(form.get_data(), own, inherited, active | {id(form)})
             accumulated = self.streams.setdefault(scope.idnum, ContentScan())

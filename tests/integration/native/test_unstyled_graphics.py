@@ -52,4 +52,4 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
     actual = export_pdfua(unchanged, tmp_path / "unchanged.pdf", settings)
     assert ((4, 4), PIXELS) in decoded_images(baseline)
     assert decoded_images(actual) == decoded_images(baseline)
-    assert compare_pdfs(baseline, actual, FidelityPolicy(raster_tolerance=0.0)).passed
+    assert compare_pdfs(baseline, actual, FidelityPolicy(raster_tolerance=0.0)).error_count == 0

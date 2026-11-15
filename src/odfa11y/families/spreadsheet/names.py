@@ -8,6 +8,8 @@ from typing import ClassVar, override
 from urllib.parse import unquote
 lazy from collections.abc import Mapping
 
+lazy from lxml import etree
+
 from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
@@ -41,7 +43,7 @@ class SetSheetNames(Operation):
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
         available = list(sheets(document.tree(Part.CONTENT)))
-        found = {
+        found: dict[str, etree._Element] = {
             Location.indexed(Part.CONTENT, "sheet", index).path: sheet
             for index, sheet in enumerate(available, 1)
         }
@@ -66,7 +68,7 @@ class SetSheetNames(Operation):
                 failures[target] = problem
         if failures:
             return tuple(
-                Outcome(self.name, Status.FAILED, message, key=target)
+                Outcome(self.name, Status.FAILED, message, target=target)
                 for target, message in failures.items()
             )
         outcomes = []
@@ -79,7 +81,7 @@ class SetSheetNames(Operation):
                         self.name,
                         Status.UNCHANGED,
                         f"Sheet is already named {entry.name!r}.",
-                        key=target,
+                        target=target,
                     )
                 )
             else:
@@ -90,7 +92,7 @@ class SetSheetNames(Operation):
                         self.name,
                         Status.APPLIED,
                         f"Renamed to {entry.name!r}.",
-                        key=target,
+                        target=target,
                         count=1,
                     )
                 )

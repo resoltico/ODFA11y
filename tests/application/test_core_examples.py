@@ -9,7 +9,7 @@ import pytest
 
 from odfa11y import audit
 from odfa11y.application.tools import Tools
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.records import DoctorRecord, Toolchain
@@ -68,12 +68,12 @@ def test_native_example_retains_controlled_probe_failure_before_export(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_flat(tmp_path, "text")
-    failure = ToolFailedError("Controlled capability probe failure")
+    failure = ToolFailure("Controlled capability probe failure")
     record = DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain(), error=failure)
     monkeypatch.setattr(core_examples.api, "doctor", lambda **_kwargs: record)
     exports = []
     monkeypatch.setattr(core_examples.api, "export", lambda *args, **_kwargs: exports.append(args))
-    with pytest.raises(ToolFailedError, match="Controlled capability probe failure") as caught:
+    with pytest.raises(ToolFailure, match="Controlled capability probe failure") as caught:
         core_examples.native_work(source, tmp_path / "work", Tools())
     assert caught.value is failure
     assert exports == []

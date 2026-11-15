@@ -8,7 +8,7 @@ lazy from collections.abc import Iterator
 lazy from lxml import etree
 
 from odfa11y.concepts import axis_count, cell_at, declarations, repeated
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import names as xml_names
 from odfa11y.odf import select_elements
 
@@ -66,7 +66,7 @@ class LocalRange:
 def range_shape(chart: etree._Element, address: str) -> tuple[int, int] | None:
     """Inspect a range without expanding cached cells.
 
-    A reversed or out-of-bounds local range propagates ``RemediationError``.
+    A reversed or out-of-bounds local range propagates ``DocumentRefusal``.
 
     Returns
     -------
@@ -88,7 +88,7 @@ def resolve_range(chart: etree._Element, address: str) -> LocalRange | None:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A resolved local range is reversed or exceeds its declared grid.
 
     """
@@ -113,7 +113,7 @@ def resolve_range(chart: etree._Element, address: str) -> LocalRange | None:
     last_column = _column(match["endcolumn"] or match["column"], columns)
     if not (1 <= first_row <= last_row <= rows and 1 <= first_column <= last_column <= columns):
         msg = "A local chart data range is reversed or exceeds its declared table."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     if (
         cell_at(table, first_row, first_column) is None
         or cell_at(table, last_row, last_column) is None

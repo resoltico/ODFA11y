@@ -9,7 +9,7 @@ from pypdf import PdfWriter
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject, TextStringObject
 lazy from pypdf.generic import PdfObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from tests.fixtures.pdf import register, text_pdf
@@ -93,14 +93,14 @@ def test_reference_resolution_from_written_pdf(
 )
 def test_unestablished_or_malformed_base_refuses(tmp_path: Path, base: PdfObject | None) -> None:
     path = _with_base(tmp_path / "bad.pdf", ["file.pdf"], base)
-    with pytest.raises(ToolFailedError, match=r"(Base|relative|Relative)"):
+    with pytest.raises(ToolFailure, match=r"(Base|relative|Relative)"):
         read_snapshot(path)
 
 
 @pytest.mark.parametrize("uri", ["https://host/%ZZ", "https://host/a b", "https://[bad/", ":bad"])
 def test_malformed_action_refuses(tmp_path: Path, uri: str) -> None:
     path = _with_base(tmp_path / "bad.pdf", [uri], TextStringObject("https://example.test/"))
-    with pytest.raises(ToolFailedError, match="URI"):
+    with pytest.raises(ToolFailure, match="URI"):
         read_snapshot(path)
 
 
@@ -129,7 +129,7 @@ def test_malformed_catalog_and_action_values_refuse(tmp_path: Path, shape: str) 
         else:
             action[NameObject("/URI")] = NameObject("/invalid")
     writer.write(path)
-    with pytest.raises(ToolFailedError, match="Expected"):
+    with pytest.raises(ToolFailure, match="Expected"):
         read_snapshot(path)
 
 
@@ -154,7 +154,7 @@ def test_malformed_uri_components_refuse_in_either_field(
         ["g" if field == "Base" else uri],
         TextStringObject(uri if field == "Base" else "https://example.test/"),
     )
-    with pytest.raises(ToolFailedError, match="URI"):
+    with pytest.raises(ToolFailure, match="URI"):
         read_snapshot(path)
 
 

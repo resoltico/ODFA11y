@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed native link descriptions, preserving labels and target names."""
 
-import hashlib
 import json
 from collections import Counter
 from dataclasses import dataclass
@@ -20,6 +19,7 @@ from odfa11y.decisions.kind import LINK_DESCRIPTION
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
 
 XML_ID = xml_names.XML_ID
@@ -69,7 +69,7 @@ def link_location(link: etree._Element, index: int) -> Location:
     )
 
 
-def link_fingerprint(document: OdfDocument, link: etree._Element) -> str:
+def link_fingerprint(document: OdfDocument, link: etree._Element) -> Fingerprint:
     """Bind content, href, Name and geometry while permitting reviewed alternative metadata.
 
     Returns
@@ -94,7 +94,7 @@ def link_fingerprint(document: OdfDocument, link: etree._Element) -> str:
         identity.logical_position(link),
         None if legal_id else len(document_links(document)),
     )
-    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
+    return Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
 
 
 def link_has_description(link: etree._Element) -> bool:
@@ -149,7 +149,7 @@ class LinkEditor:
             links = available.get(target, [])
             problem = _link_problem(document, links, entry)
             if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, key=target))
+                failures.append(Outcome(self.name, Status.FAILED, problem, target=target))
             else:
                 decisions.append((target, links[0], entry))
         if failures:
@@ -166,7 +166,7 @@ class LinkEditor:
                     "Applied source link description."
                     if changed
                     else "Source link description already matches.",
-                    key=target,
+                    target=target,
                     count=int(changed),
                 )
             )
@@ -209,8 +209,10 @@ def link_decision(
     """
     return OpenDecision(
         LINK_DESCRIPTION,
-        link_location(link, index),
-        link_fingerprint(document, link),
+        Target(
+            (link_location(link, index)).path,
+            Fingerprint(link_fingerprint(document, link)),
+        ),
         {"description": link.get(xml_names.OFFICE_TITLE), "href": link.get(xml_names.XLINK_HREF)},
         (rule_id,),
     )

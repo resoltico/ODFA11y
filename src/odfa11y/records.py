@@ -69,7 +69,7 @@ class DoctorRecord:
     libraries: dict[str, str]
     schema_versions: tuple[str, ...]
     toolchain: Toolchain
-    format: Literal[1] = field(default=1, init=False)
+    schema_version: Literal[1] = field(default=1, init=False)
     error: OdfA11yError | None = field(default=None, repr=False, metadata={"serialize": False})
 
     @JsonProperty

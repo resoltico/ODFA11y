@@ -11,6 +11,7 @@ from odfa11y.audit import plan_blockers, prepare_plan
 from odfa11y.families import REGISTRY
 from odfa11y.odf import Family
 from odfa11y.report import FactKeys, Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import make_flat, make_package
 from tests.fixtures.writer import make_minimal_odt
@@ -54,7 +55,7 @@ def test_fixable_errors_leave_template_planning_available(tmp_path: Path) -> Non
 
 
 def test_blocker_projection_preserves_original_full_report() -> None:
-    report = Report(kind="odf", subject="source.odt")
+    report = Report(kind=ReportKind.ODF, subject="source.odt")
     report.add(rules.META001)
     report.add(rules.PKG000)
     before = report.as_dict()

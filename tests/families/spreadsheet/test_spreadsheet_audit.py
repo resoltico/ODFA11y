@@ -10,6 +10,7 @@ from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import load_plan
 from odfa11y.report import FactKeys
+from odfa11y.targets import require_target
 from tests.fixtures.documents import make_package
 from tests.fixtures.plans import question_for
 from tests.fixtures.spreadsheets import (
@@ -120,7 +121,7 @@ def test_a_picture_without_accessible_text_is_an_error_with_a_fingerprinted_sele
     assert question_for(report, finding).kind.id == "graphic.alternative"
     assert finding.details["frame"] == "Logo"
     assert finding.details["href"] == "Pictures/logo.png"
-    assert len(str(question_for(report, finding).fingerprint)) == 16
+    assert len(str(require_target(question_for(report, finding).target).fingerprint)) == 16
     assert report.facts[FactKeys.SHEET_GRAPHIC_COUNT] == 2
 
 

@@ -8,7 +8,7 @@ lazy from collections.abc import Mapping
 
 from lxml import etree
 
-from odfa11y.errors import OutputError
+from odfa11y.errors import OutputOccupied
 from odfa11y.evidence.manifest import sha256_file, write_manifest
 from odfa11y.evidence.paths import is_reserved_bundle_file, unsafe_reason
 from odfa11y.evidence.review import render_review
@@ -23,13 +23,13 @@ def require_free_directory(directory: Path) -> None:
 
     Raises
     ------
-    OutputError
+    OutputOccupied
         The path exists and is not an empty directory.
 
     """
     if directory.exists() and not (directory.is_dir() and not any(directory.iterdir())):
         msg = f"Evidence directory must not exist or must be empty: {directory}"
-        raise OutputError(msg)
+        raise OutputOccupied(msg)
 
 
 def write_bundle(
@@ -53,7 +53,7 @@ def write_bundle(
 
     Raises
     ------
-    OutputError
+    OutputOccupied
         An artifact name is not a safe bundle-relative name.
 
     """
@@ -65,7 +65,7 @@ def write_bundle(
             "belongs to the bundle itself" if is_reserved_bundle_file(name) else None
         ):
             msg = f"Unsafe bundle file name {name!r}: {reason}"
-            raise OutputError(msg)
+            raise OutputOccupied(msg)
     staging = staging_sibling(target)
     staging.mkdir()
     try:

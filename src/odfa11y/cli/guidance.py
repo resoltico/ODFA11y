@@ -5,7 +5,7 @@ import shlex
 lazy import argparse
 lazy from collections.abc import Iterable
 
-from odfa11y import OutputError, PlanError, ToolNotFoundError, plan_blockers, terminal_text
+from odfa11y import OdfA11yError, RemedyAction, plan_blockers, terminal_text
 lazy from odfa11y import Report
 
 
@@ -18,28 +18,28 @@ def error_hint(args: argparse.Namespace, exc: Exception) -> str | None:
         A human-facing hint, or None when the specific error already explains recovery.
 
     """
-    if isinstance(exc, PlanError):
-        return (
-            "Next: edit the existing plan and retry. "
-            f"Use odfa11y {args.command} --help for command examples; "
-            "See https://github.com/resoltico/ODFA11y/blob/main/docs/PLAN.md "
-            "for supported fields."
-        )
-    if isinstance(exc, OutputError):
-        return "Next: choose a new output destination; preserve existing documents and evidence."
-    if isinstance(exc, ToolNotFoundError):
-        hints = {
-            "audit": "install veraPDF on PATH or pass --verapdf-path /path/to/verapdf.",
-            "pipeline": "install required tools on PATH; select LibreOffice with --soffice "
-            "and veraPDF with --verapdf-path.",
-            "batch": "install required tools on PATH; select LibreOffice with --soffice "
-            "and veraPDF with --verapdf-path.",
-            "doctor": "install LibreOffice and veraPDF on PATH; --soffice selects LibreOffice.",
-        }
-        return "Next: " + hints.get(
-            args.command, "install LibreOffice on PATH or pass --soffice /path/to/soffice."
-        )
-    return None
+    if not isinstance(exc, OdfA11yError) or exc.remedy is None:
+        return None
+    remedy = exc.remedy
+    target = terminal_text(remedy.target or "the document")
+    detail = terminal_text(remedy.detail or "the declared resource")
+    match remedy.action:
+        case RemedyAction.REGENERATE_PLAN:
+            return "Next: generate a fresh plan for this source and review its answers."
+        case RemedyAction.REBIND_PLAN:
+            return "Next: create a newly bound plan and review answers that no longer match."
+        case RemedyAction.CHOOSE_OUTPUT:
+            return (
+                "Next: choose a new output destination; preserve existing documents and evidence."
+            )
+        case RemedyAction.INSTALL_TOOL:
+            tool = terminal_text(remedy.target or "the required native tool")
+            return f"Next: install or select {tool}."
+        case RemedyAction.EMBED_RESOURCE:
+            return f"Next: embed {detail} for {target} in the source application."
+        case RemedyAction.EDIT_IN_APPLICATION:
+            instruction = terminal_text(remedy.detail or "")
+            return f"Next: edit {target} in the source application. {instruction}".rstrip()
 
 
 def audit_next_step(args: argparse.Namespace, reports: Iterable[Report]) -> str | None:

@@ -9,10 +9,10 @@ lazy from pathlib import Path
 from odfa11y.serialization import JsonProperty, record_dict
 from odfa11y.staging import staging_sibling
 from odfa11y.status import BatchStatus, ExitStatus, combine_statuses
-lazy from odfa11y.progress import StageName
+lazy from odfa11y.progress import Stage
 lazy from odfa11y.serialization import JsonObject
 
-BATCH_FORMAT = 2
+BATCH_SCHEMA_VERSION = 1
 
 
 @dataclass(slots=True)
@@ -22,7 +22,7 @@ class BatchItemResult:
     id: str
     status: BatchStatus = BatchStatus.PENDING
     exit_status: ExitStatus | None = None
-    failed_stage: StageName | None = None
+    failed_stage: Stage | None = None
     evidence: str | None = None
 
 
@@ -41,9 +41,9 @@ class BatchRecord:
         return combine_statuses(item.exit_status or ExitStatus.PASSED for item in self.items)
 
     @JsonProperty
-    def format(self) -> Literal[2]:
+    def schema_version(self) -> Literal[1]:
         """The batch record format version."""
-        return BATCH_FORMAT
+        return BATCH_SCHEMA_VERSION
 
     @JsonProperty
     def pending_ids(self) -> list[str]:

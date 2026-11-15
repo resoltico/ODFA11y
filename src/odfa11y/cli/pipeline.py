@@ -7,7 +7,7 @@ from textwrap import fill
 lazy import argparse
 
 import odfa11y as api
-from odfa11y import StageName, render_reports, terminal_text
+from odfa11y import Stage, render_reports, terminal_text
 lazy from odfa11y import RunRecord
 
 from .outcomes import render_command_outcome
@@ -76,12 +76,12 @@ def _render_pipeline(record: RunRecord, output_dir: object) -> str:
                 )
             )
     remediated = any(
-        stage.name == StageName.AUDIT_REMEDIATED and stage.report for stage in record.stages
+        stage.name == Stage.AUDIT_REMEDIATED and stage.report for stage in record.stages
     )
     for stage in record.stages:
         if not stage.report or not (stage.report.error_count or stage.report.warning_count):
             continue
-        if not stage.gate and (stage.name != StageName.AUDIT_SOURCE or remediated):
+        if not stage.gate and (stage.name != Stage.AUDIT_SOURCE or remediated):
             continue
         label = "Before remediation" if not stage.gate else "Gate findings"
         lines.extend(["", f"{label}: {stage.name}", render_reports([stage.report])])

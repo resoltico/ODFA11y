@@ -17,6 +17,15 @@ class Status(StrEnum):
     UNCHANGED = "unchanged"
     FAILED = StageStatus.FAILED
 
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.APPLIED: "The edit changed XML and established its postcondition.",
+            self.UNCHANGED: "The intended postcondition already held without changing XML.",
+            self.FAILED: "The edit could not establish its required postcondition.",
+        }[self]
+
 
 @dataclass(frozen=True, slots=True)
 class Outcome:
@@ -25,7 +34,7 @@ class Outcome:
     operation: str
     status: Status
     message: str
-    key: str | None = None
+    target: str | None = None
     count: int = 0
 
     def as_dict(self) -> dict[str, Any]:
@@ -39,7 +48,7 @@ class Outcome:
         """
         return {
             "operation": self.operation,
-            "key": self.key,
+            "target": self.target,
             "status": self.status.value,
             "count": self.count,
             "message": self.message,

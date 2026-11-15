@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
-from odfa11y.errors import ToolFailedError, ToolNotFoundError, UnsupportedKindError
+from odfa11y.errors import DocumentRefusal, ToolFailure, ToolUnavailable
 from odfa11y.families import REGISTRY
 from odfa11y.native.probes import CapabilityStatus, ProbeId
 from odfa11y.native.process import ToolIdentity
@@ -87,7 +87,7 @@ def test_probe_failure_retains_identity_facts_and_controlled_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     native_tools = identities(native_tools)
-    failure = ToolFailedError("named-link export failed", details="native diagnostic")
+    failure = ToolFailure("named-link export failed", details="native diagnostic")
 
     def exporter(_source: Path, _destination: Path, _settings: ExportSettings) -> Path:
         raise failure
@@ -105,7 +105,7 @@ def test_missing_tools_have_no_identity_and_return_probe_error(
     native_tools: NativeTools,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    failure = ToolNotFoundError("tool unavailable")
+    failure = ToolUnavailable("tool unavailable")
 
     def missing(*_args: object) -> str:
         raise failure
@@ -130,10 +130,10 @@ def test_unsupported_version_is_not_reported_as_missing(
 ) -> None:
     def unsupported(_requested: object) -> str:
         message = "LibreOffice 7.6 is unsupported"
-        raise ToolFailedError(message)
+        raise ToolFailure(message)
 
     native_tools = replace(native_tools, locate=unsupported)
-    with pytest.raises(ToolFailedError, match="unsupported"):
+    with pytest.raises(ToolFailure, match="unsupported"):
         diagnostics.inspect_tools(native_tools=native_tools)
 
 
@@ -145,7 +145,7 @@ def test_registry_without_any_probes_returns_partial_unsupported_error(
     for adapter in REGISTRY.values():
         monkeypatch.setattr(adapter, "probes", ())
     facts, error = diagnostics.inspect_tools(native_tools=native_tools)
-    assert isinstance(error, UnsupportedKindError)
+    assert isinstance(error, DocumentRefusal)
     assert all(
         result.status == CapabilityStatus.NOT_TESTED for result in facts.toolchain.capabilities
     )

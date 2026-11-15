@@ -9,7 +9,7 @@ import pytest
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.report import FactKeys
@@ -102,7 +102,7 @@ def _assert_binding(
     assert ("NATIVE001" in {f.rule_id for f in report.findings}) == expected
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
     if expected:
-        with pytest.raises(ToolFailedError):
+        with pytest.raises(DocumentRefusal):
             require_native_context(document)
 
         def refuse_launch(_source: Path, _destination: Path, _settings: ExportSettings) -> Path:
@@ -120,7 +120,7 @@ def _assert_binding(
                 ],
                 native_tools=native_tools,
             )
-            == 3
+            == 2
         )
     else:
         require_native_context(document)

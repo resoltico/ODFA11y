@@ -8,7 +8,7 @@ from pypdf import PdfReader
 from pypdf.errors import PdfReadError, PyPdfError
 from pypdf.generic import ArrayObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.reading.limits import MAX_PDF_PAGES, check_file_size
 from odfa11y.pdf.structure_walk import pdf_dictionary
 
@@ -28,7 +28,7 @@ def list_fonts(path: str | Path) -> list[dict[str, object]]:
     """
     try:
         fonts = _collect(Path(path))
-    except OSError, PyPdfError, ValueError, KeyError, TypeError, AttributeError, ToolFailedError:
+    except OSError, PyPdfError, ValueError, KeyError, TypeError, AttributeError, ToolFailure:
         return []
     return [{"name": name, "embedded": fonts[name]} for name in sorted(fonts)]
 

@@ -6,7 +6,7 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from tests.fixtures.declarations import declaration
@@ -86,5 +86,5 @@ def test_script_uri_loading_is_unestablished_even_for_present_internal_bytes(
     reopened = OdfDocument.open(source)
     assert validate(reopened).count == 0
     assert native_export_limitations(reopened)["rendering_dependencies"] == 1
-    with pytest.raises(ToolFailedError):
+    with pytest.raises(DocumentRefusal):
         require_native_context(reopened)

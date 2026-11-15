@@ -54,7 +54,7 @@ def test_conflicting_alt_text_for_one_graphic_fails_every_involved_entry(tmp_pat
         "logo.svg": GraphicAlternative(description="B"),
     }
     outcomes = SetGraphicAlternatives(entries).apply(document)
-    assert {outcome.key for outcome in outcomes} == {"Logo", "logo.svg"}
+    assert {outcome.target for outcome in outcomes} == {"Logo", "logo.svg"}
     assert all(outcome.status is Status.FAILED for outcome in outcomes)
     assert all("different description" in outcome.message for outcome in outcomes)
     assert not document.dirty

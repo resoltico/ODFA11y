@@ -24,33 +24,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "database.description"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -58,7 +49,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -116,9 +106,6 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "type": "null"
-              },
               "kind": {
                 "const": "document.metadata"
               },
@@ -129,7 +116,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -154,9 +140,6 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "type": "null"
-              },
               "kind": {
                 "const": "document.odf_version"
               },
@@ -167,7 +150,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -190,9 +172,6 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "type": "null"
-              },
               "kind": {
                 "const": "formula.alternative"
               },
@@ -203,7 +182,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -257,33 +235,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "graphic.alternative"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -291,7 +260,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -314,33 +282,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "heading.level"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -348,7 +307,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -403,33 +361,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "language.target"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -437,7 +386,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -460,33 +408,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "link.description"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -494,7 +433,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -536,33 +474,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "page.metadata"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -570,7 +499,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -596,33 +524,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "page.navigation"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -630,7 +549,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -652,33 +570,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "sheet.name"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -686,7 +595,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -728,33 +636,24 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
               "kind": {
                 "const": "table.headers"
               },
               "target": {
                 "additionalProperties": false,
                 "properties": {
-                  "member": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
                   },
                   "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                     "type": "string"
                   }
                 },
                 "required": [
                   "path",
-                  "member"
+                  "fingerprint"
                 ],
                 "type": "object"
               }
@@ -762,7 +661,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -782,9 +680,6 @@
                   "enabled"
                 ],
                 "type": "object"
-              },
-              "fingerprint": {
-                "type": "null"
               },
               "kind": {
                 "const": "text.linkify_addresses"
@@ -796,7 +691,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -817,9 +711,6 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "type": "null"
-              },
               "kind": {
                 "const": "text.remove_spacers"
               },
@@ -830,7 +721,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -872,9 +762,6 @@
                 ],
                 "type": "object"
               },
-              "fingerprint": {
-                "type": "null"
-              },
               "kind": {
                 "const": "text.spacing"
               },
@@ -885,7 +772,6 @@
             "required": [
               "kind",
               "target",
-              "fingerprint",
               "answer"
             ],
             "type": "object"
@@ -1083,11 +969,6 @@
       },
       "type": "object"
     },
-    "format": {
-      "enum": [
-        3
-      ]
-    },
     "human_review": {
       "items": {
         "additionalProperties": false,
@@ -1159,15 +1040,15 @@
         {
           "additionalProperties": false,
           "properties": {
-            "format": {
-              "enum": [
-                1
-              ]
-            },
             "generator": {
               "description": "Version that generated the plan.",
               "minLength": 1,
               "type": "string"
+            },
+            "schema_version": {
+              "enum": [
+                1
+              ]
             },
             "source": {
               "additionalProperties": false,
@@ -1185,7 +1066,7 @@
             }
           },
           "required": [
-            "format",
+            "schema_version",
             "source",
             "generator"
           ],
@@ -1247,6 +1128,11 @@
     },
     "rebind": {
       "type": "boolean"
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
     },
     "schemas": {
       "additionalProperties": {
@@ -1324,11 +1210,6 @@
                       4
                     ]
                   },
-                  "format": {
-                    "enum": [
-                      1
-                    ]
-                  },
                   "operations": {
                     "items": {
                       "type": "object"
@@ -1342,16 +1223,6 @@
                         "count": {
                           "type": "integer"
                         },
-                        "key": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
                         "message": {
                           "type": "string"
                         },
@@ -1364,13 +1235,23 @@
                             "unchanged",
                             "failed"
                           ]
+                        },
+                        "target": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
                         "operation",
                         "status",
                         "message",
-                        "key",
+                        "target",
                         "count"
                       ],
                       "type": "object"
@@ -1455,6 +1336,11 @@
                     ],
                     "type": "object"
                   },
+                  "schema_version": {
+                    "enum": [
+                      1
+                    ]
+                  },
                   "source": {
                     "type": "string"
                   },
@@ -1462,16 +1348,6 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "key": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
                         "kind": {
                           "enum": [
                             "failed-outcome",
@@ -1494,13 +1370,23 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "target": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
                         "kind",
                         "message",
                         "operation",
-                        "key"
+                        "target"
                       ],
                       "type": "object"
                     },
@@ -1512,7 +1398,7 @@
                   "destination",
                   "outcomes",
                   "schema",
-                  "format",
+                  "schema_version",
                   "published",
                   "violations",
                   "rebind",
@@ -1542,10 +1428,6 @@
                             "current": {
                               "type": "object"
                             },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
-                            },
                             "kind": {
                               "const": "database.description"
                             },
@@ -1558,23 +1440,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1582,7 +1459,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1593,9 +1469,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
                             },
                             "kind": {
                               "const": "document.metadata"
@@ -1613,7 +1486,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1624,9 +1496,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
                             },
                             "kind": {
                               "const": "document.odf_version"
@@ -1644,7 +1513,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1655,9 +1523,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
                             },
                             "kind": {
                               "const": "formula.alternative"
@@ -1675,7 +1540,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1686,10 +1550,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "graphic.alternative"
@@ -1703,23 +1563,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1727,7 +1582,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1738,10 +1592,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "heading.level"
@@ -1755,23 +1605,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1779,7 +1624,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1790,10 +1634,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "language.target"
@@ -1807,23 +1647,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1831,7 +1666,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1842,10 +1676,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "link.description"
@@ -1859,23 +1689,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1883,7 +1708,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1894,10 +1718,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "page.metadata"
@@ -1911,23 +1731,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1935,7 +1750,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1946,10 +1760,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "page.navigation"
@@ -1963,23 +1773,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -1987,7 +1792,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -1998,10 +1802,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "sheet.name"
@@ -2015,23 +1815,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -2039,7 +1834,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -2050,10 +1844,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                              "type": "string"
                             },
                             "kind": {
                               "const": "table.headers"
@@ -2067,23 +1857,18 @@
                             "target": {
                               "additionalProperties": false,
                               "properties": {
-                                "member": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
                               "required": [
                                 "path",
-                                "member"
+                                "fingerprint"
                               ],
                               "type": "object"
                             }
@@ -2091,7 +1876,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -2102,9 +1886,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
                             },
                             "kind": {
                               "const": "text.linkify_addresses"
@@ -2122,7 +1903,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -2133,9 +1913,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
                             },
                             "kind": {
                               "const": "text.remove_spacers"
@@ -2153,7 +1930,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -2164,9 +1940,6 @@
                           "properties": {
                             "current": {
                               "type": "object"
-                            },
-                            "fingerprint": {
-                              "type": "null"
                             },
                             "kind": {
                               "const": "text.spacing"
@@ -2184,7 +1957,6 @@
                           "required": [
                             "kind",
                             "target",
-                            "fingerprint",
                             "current",
                             "rule_ids"
                           ],
@@ -2549,6 +2321,7 @@
                                   ]
                                 },
                                 "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
                                   "type": "string"
                                 }
                               },
@@ -2589,16 +2362,18 @@
                     },
                     "type": "array"
                   },
-                  "format": {
+                  "kind": {
                     "enum": [
-                      6
+                      "odf",
+                      "pdf",
+                      "pdf-validation",
+                      "fidelity"
                     ]
                   },
-                  "kind": {
-                    "type": "string"
-                  },
-                  "passed": {
-                    "type": "boolean"
+                  "schema_version": {
+                    "enum": [
+                      1
+                    ]
                   },
                   "subject": {
                     "type": "string"
@@ -2630,8 +2405,7 @@
                   "findings",
                   "facts",
                   "decisions",
-                  "passed",
-                  "format",
+                  "schema_version",
                   "summary"
                 ],
                 "type": "object"
@@ -2819,7 +2593,7 @@
     "failed_stage",
     "exit_status",
     "plan_sha256",
-    "format",
+    "schema_version",
     "odfa11y",
     "python",
     "platform",

@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 lazy from lxml import etree
 
-from odfa11y.errors import PackageError, ToolFailedError
+from odfa11y.errors import DocumentRefusal, PackageError, Remedy, RemedyAction
 from odfa11y.odf import PackageStorage, Part, qn
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.formula import FormulaAnalysis, FormulaContext
@@ -222,21 +222,72 @@ def require_native_context(document: OdfDocument, *, captured_identity: bool = F
 
     Raises
     ------
-    ToolFailedError
+    DocumentRefusal
         A declared dependency or captured identity prevents established native preservation.
 
     """
     limits = native_export_limitations(document)
     if limits["rendering_dependencies"]:
+        refusal = _resource_refusal(document)
+        if refusal is not None:
+            raise refusal
         msg = (
             "Native export refuses external or unresolved rendering dependencies "
             "or formula context; "
             "use source-only inspect and embed/review required resources in the native application"
         )
-        raise ToolFailedError(msg)
+        raise DocumentRefusal(
+            msg,
+            remedy=Remedy(
+                RemedyAction.EDIT_IN_APPLICATION,
+                "document",
+                "Review formula context and rendering dependencies.",
+            ),
+        )
     if captured_identity and limits["location_fields"]:
         msg = (
             "Pipeline native export refuses filename/path fields because private staging cannot "
             "preserve their logical identity; use source-only inspect or direct original export"
         )
-        raise ToolFailedError(msg)
+        raise DocumentRefusal(
+            msg,
+            remedy=Remedy(
+                RemedyAction.EDIT_IN_APPLICATION,
+                "document",
+                "Review formula context and rendering dependencies.",
+            ),
+        )
+
+
+def _resource_refusal(document: OdfDocument) -> DocumentRefusal | None:
+    resources = ResourceIdentity(document.storage)
+    trees, _incomplete = _reachable_trees(document)
+    for prefix, tree in trees:
+        for index, node in enumerate(tree.iter(), 1):
+            declaration = RESOURCE_TARGETS.get(node.tag)
+            if declaration is None:
+                continue
+            attribute, shape = declaration
+            href = node.get(attribute)
+            if href is None or not _unresolved(
+                node, _relative_href(prefix, href), shape, resources
+            ):
+                continue
+            frame = next(node.iterancestors(xml_names.DRAW_FRAME), node)
+            name = frame.get(xml_names.DRAW_NAME) or node.get(xml_names.DRAW_NAME)
+            target = f"frame {name!r}" if name else f"rendering element {index}"
+            try:
+                resource = urlsplit(href).path.rsplit("/", 1)[-1] or "declared resource"
+            except ValueError:
+                resource = "malformed resource reference"
+            action = (
+                RemedyAction.EMBED_RESOURCE
+                if shape in {"file", "object", "chart"}
+                else RemedyAction.EDIT_IN_APPLICATION
+            )
+            message = (
+                f"Native export refuses {target}: embed or review resource {resource!r} "
+                "in the source application."
+            )
+            return DocumentRefusal(message, remedy=Remedy(action, target, resource))
+    return None

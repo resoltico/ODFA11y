@@ -131,7 +131,6 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `TABLE003` | Warning | Declared data table has no semantic headers. | `table.headers` |
 | `TABLE004` | Warning | Data sheet marks no header rows. |  |
 | `TABLE005` | Warning | Data sheet merges cells. |  |
-| `VERA000` | Warning | The requested veraPDF validator is unavailable. |  |
 | `VERA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 | `XML001` | Error | A required XML member cannot be parsed. |  |
 

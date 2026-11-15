@@ -29,6 +29,7 @@ from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, 
 from odfa11y.plans import load_plan
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import RULES, Report
+from odfa11y.report.model import ReportKind
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.writer import TEXT_MEDIA_TYPE, make_minimal_odt
 lazy from tests.fixtures.writer import Features
@@ -143,11 +144,10 @@ def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_a_config_er
 
 @given(st.lists(st.sampled_from(sorted(RULES)), max_size=10))
 def test_report_counts_partition_findings(rule_ids: list[str]) -> None:
-    report = Report(kind="odt", subject="synthetic")
+    report = Report(kind=ReportKind.ODF, subject="synthetic")
     for rule_id in rule_ids:
         report.add(RULES[rule_id])
     assert report.error_count + report.warning_count + report.info_count == len(rule_ids)
-    assert report.passed is (report.error_count == 0)
     assert json.loads(json.dumps(report.as_dict()))["summary"]["errors"] == report.error_count
 
 

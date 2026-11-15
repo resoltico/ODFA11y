@@ -9,7 +9,7 @@ from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject, StreamObject
 lazy from pypdf import PdfReader
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.reading.content import scan_content
 from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
 
@@ -78,7 +78,7 @@ class _Budget:
                 raise PdfReadError(msg) from exc
             except NotImplementedError as exc:
                 msg = f"Unsupported PDF stream decoding: {str(exc)[:200]}"
-                raise ToolFailedError(msg) from exc
+                raise ToolFailure(msg) from exc
         if id(stream) not in self.seen:
             self.seen.add(id(stream))
             self.decoded += len(data)
@@ -88,7 +88,7 @@ class _Budget:
 
     def refuse(self, reason: str) -> None:
         msg = f"{reason} exceed the {self.limit}-byte inspection limit"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
 
     def auxiliary(self, resources: DictionaryObject) -> None:
         if id(resources) in self.auxiliary_resources:
@@ -129,7 +129,7 @@ class _Budget:
         parts: list[bytes] = []
         if len(items) > MAX_CONTENT_STREAMS:
             msg = "PDF content array exceeds the stream-count limit"
-            raise ToolFailedError(msg)
+            raise ToolFailure(msg)
         for item in items:
             stream = resolve(item)
             if stream is None:
@@ -161,7 +161,7 @@ class _Budget:
     def form(self, form: StreamObject, inherited: DictionaryObject, active: frozenset[int]) -> None:
         if "/StructParent" in form:
             msg = "Whole-object Form ownership prevents complete content inspection"
-            raise ToolFailedError(msg)
+            raise ToolFailure(msg)
         self.invocations += 1
         if (
             id(form) in active
@@ -169,7 +169,7 @@ class _Budget:
             or self.invocations > MAX_FORM_INVOCATIONS
         ):
             msg = "PDF Form cycle, depth or invocation limit prevents complete inspection"
-            raise ToolFailedError(msg)
+            raise ToolFailure(msg)
         resources = dictionary(form.get("/Resources")) if "/Resources" in form else inherited
         self.content(form, resources, active | {id(form)})
 
@@ -182,7 +182,7 @@ def check_consumption(reader: PdfReader, limit: int | None = None) -> None:
     allocations and filters without incremental controls still require external OS isolation.
 
     Decoded bytes, invocation work, Form depth or cycles prevent complete inspection with
-    ``ToolFailedError``.
+    ``ToolFailure``.
 
     """
     budget = _Budget(reader, MAX_CONTENT_BYTES if limit is None else limit)

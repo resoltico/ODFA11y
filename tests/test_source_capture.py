@@ -91,7 +91,7 @@ def test_fifo_pipeline_refuses_without_waiting_for_a_writer(tmp_path: Path) -> N
     try:
         child.join(3)
         assert not child.is_alive(), "nonregular source open blocked"
-        assert child.exitcode == 3
+        assert child.exitcode == 2
         record = json.loads((output / "run.json").read_text())
         assert record["failed_stage"] == "identify-source"
         assert check_bundle(output) == []
@@ -190,7 +190,7 @@ def test_directory_input_has_valid_execution_failure_evidence(tmp_path: Path) ->
         RunSettings(profile=profile_named("source")),
     )
     assert result.failed_stage == "identify-source"
-    assert result.exit_status == 3
+    assert result.exit_status == 2
     assert check_bundle(output) == []
 
 
@@ -208,7 +208,7 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
     result = run_batch(
         manifest, tmp_path / "evidence", RunSettings(profile=profile_named("source"))
     )
-    assert [item.exit_status for item in result.items] == [3, 0]
+    assert [item.exit_status for item in result.items] == [2, 0]
     assert result.items[0].failed_stage == "identify-source"
     for name in ["oversized", "valid"]:
         assert check_bundle(tmp_path / "evidence" / name) == []

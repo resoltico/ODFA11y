@@ -3,7 +3,7 @@
 
 lazy from collections.abc import Sequence
 
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import has_revisions
 from odfa11y.odf import Part
 lazy from odfa11y.concepts.edits import Operation
@@ -15,7 +15,7 @@ def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> No
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A plan includes unsupported effects or unstable ordinal targeting.
 
     """
@@ -26,7 +26,7 @@ def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> No
         for operation in operations
     ):
         msg = "Tracked revisions permit only title/description metadata edits; nothing was written."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     names = {operation.name for operation in operations}
     if "set_target_languages" in names and names & {
         "linkify_addresses",
@@ -34,11 +34,11 @@ def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> No
         "remove_empty_spacers",
     }:
         message = "Ordinal target languages require a separate reviewed structural plan."
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     if names & {"linkify_addresses", "mark_table_headers"}:
         for operation in operations:
             if operation.name == "set_link_descriptions" and any(
                 "[id=" not in target for target in getattr(operation, "entries", {})
             ):
                 msg = "Ordinal link descriptions require a separate reviewed structural plan."
-                raise RemediationError(msg)
+                raise DocumentRefusal(msg)

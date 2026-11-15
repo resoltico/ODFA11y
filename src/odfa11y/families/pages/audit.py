@@ -26,6 +26,7 @@ from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.families.pages.profiles import PageProfile
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
@@ -73,8 +74,7 @@ def _audit_page(
             report.add_decision(
                 OpenDecision(
                     PAGE_METADATA,
-                    location,
-                    fingerprint,
+                    Target((location).path, Fingerprint(fingerprint)),
                     {
                         "title": page.findtext("svg:title", namespaces=NS),
                         "description": page.findtext("svg:desc", namespaces=NS),
@@ -103,8 +103,7 @@ def _audit_page(
             report.add_decision(
                 OpenDecision(
                     PAGE_NAVIGATION,
-                    location,
-                    fingerprint,
+                    Target((location).path, Fingerprint(fingerprint)),
                     {
                         "navigation": tuple(order.split()) if order else None,
                         "available_identities": supplied_ids,

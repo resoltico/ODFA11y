@@ -10,7 +10,7 @@ from pypdf.errors import PdfReadError, PyPdfError
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject
 lazy from pypdf import PageObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity.uri import effective_uri, uri_base
 from odfa11y.pdf.reading.consumption import check_consumption, resolve
 from odfa11y.pdf.reading.limits import check_file_size, check_limits
@@ -50,7 +50,7 @@ def read_snapshot(path: str | Path) -> PdfSnapshot:
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         The file cannot be read as a PDF.
 
     """
@@ -63,7 +63,7 @@ def read_snapshot(path: str | Path) -> PdfSnapshot:
             return _snapshot(reader)
     except (OSError, PyPdfError, ValueError, KeyError, RecursionError) as exc:
         msg = f"Cannot read PDF {path}: {exc}"
-        raise ToolFailedError(msg) from exc
+        raise ToolFailure(msg) from exc
 
 
 def _snapshot(reader: PdfReader) -> PdfSnapshot:

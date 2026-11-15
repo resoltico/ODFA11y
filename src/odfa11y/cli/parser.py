@@ -12,7 +12,7 @@ from odfa11y import (
     FORMATS,
     PROFILES,
     ExitStatus,
-    PlanError,
+    InvalidOption,
     __version__,
     profile_named,
     terminal_text,
@@ -220,7 +220,7 @@ def _timeout_seconds(value: str) -> int:
     try:
         seconds = int(value)
         validate_timeout(seconds)
-    except (ValueError, PlanError) as exc:
+    except (ValueError, InvalidOption) as exc:
         msg = (
             f"Invalid timeout: {value!r}; "
             "use positive whole seconds within the portable wait range."
@@ -309,5 +309,5 @@ def _profile_value(value: str) -> Profile:
     """
     try:
         return profile_named(value)
-    except PlanError as exc:
+    except InvalidOption as exc:
         raise argparse.ArgumentTypeError(str(exc)) from exc

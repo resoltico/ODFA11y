@@ -8,7 +8,7 @@ import re
 from lxml import etree
 
 from odfa11y.concepts import protected_xml
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.styles.properties import (
     BREAK_ATTRIBUTES,
     SPACING_ATTRIBUTES,
@@ -72,12 +72,12 @@ class StyleCatalog:
 
         Raises
         ------
-        RemediationError
+        DocumentRefusal
             The registration contradicts the style's declared family.
         """
         if style.get(xml_names.STYLE_FAMILY) != family:
             msg = "Registered paragraph style has a contradictory family."
-            raise RemediationError(msg)
+            raise DocumentRefusal(msg)
         self._add(self._automatic, style)
 
     def styles(self, family: str) -> list[etree._Element]:
@@ -109,7 +109,7 @@ class StyleCatalog:
 
         Raises
         ------
-        RemediationError
+        DocumentRefusal
             The applicable scope is ambiguous or conditional.
         """
         self._require_scope()
@@ -123,15 +123,15 @@ class StyleCatalog:
         )
         if len(nodes) > 1:
             msg = f"Paragraph style {name!r} is ambiguous in its legal scope."
-            raise RemediationError(msg)
+            raise DocumentRefusal(msg)
         if nodes and nodes[0].find("style:map", NS) is not None:
             msg = f"Conditional paragraph style {name!r} cannot establish effective properties."
-            raise RemediationError(msg)
+            raise DocumentRefusal(msg)
         return nodes[0] if nodes else None
 
     def _require_scope(self) -> None:
         if self._scope_problems:
-            raise RemediationError(" ".join(self._scope_problems))
+            raise DocumentRefusal(" ".join(self._scope_problems))
 
     def parent_name(self, family: str, name: str | None) -> str | None:
         """Return a named style's parent if declared.
@@ -154,7 +154,7 @@ class StyleCatalog:
 
         Raises
         ------
-        RemediationError
+        DocumentRefusal
             A reference is missing, ambiguous, conditional or cyclic.
         """
         chain: list[etree._Element] = []
@@ -165,10 +165,10 @@ class StyleCatalog:
             style = self.style(family, current, common=common)
             if style is None:
                 msg = f"Paragraph style {current!r} is missing in its legal scope."
-                raise RemediationError(msg)
+                raise DocumentRefusal(msg)
             if style in seen:
                 msg = f"Paragraph style inheritance contains a cycle at {current!r}."
-                raise RemediationError(msg)
+                raise DocumentRefusal(msg)
             seen.add(style)
             chain.append(style)
             current = style.get(xml_names.STYLE_PARENT_STYLE_NAME)
@@ -188,7 +188,7 @@ class StyleCatalog:
 
         Raises
         ------
-        RemediationError
+        DocumentRefusal
             Applicable defaults or property targets are ambiguous.
         """
         props: dict[str, str] = {}
@@ -196,7 +196,7 @@ class StyleCatalog:
         defaults = self._defaults.get(family, [])
         if len(defaults) > 1:
             msg = f"Default {family} style is ambiguous."
-            raise RemediationError(msg)
+            raise DocumentRefusal(msg)
         for style in [*defaults, *self.inheritance_chain(family, name)]:
             node = _properties(style, property_element)
             if node is not None:
@@ -290,11 +290,11 @@ def _trees(document: OdfDocument) -> tuple[etree._ElementTree, etree._ElementTre
 def _properties(style: etree._Element, name: str) -> etree._Element | None:
     if style.find("style:map", NS) is not None:
         msg = "Conditional paragraph styles cannot establish effective properties."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     nodes = style.findall(qn("style", name))
     if len(nodes) > 1:
         msg = f"Paragraph style has ambiguous {name} targets."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     return nodes[0] if nodes else None
 
 
@@ -370,14 +370,14 @@ def adopt_style(catalog: StyleCatalog, style: etree._Element) -> None:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         The style does not declare its family.
 
     """
     family = style.get(xml_names.STYLE_FAMILY)
     if not family:
         message = "An adopted style must declare its family."
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     auto_styles = catalog.content_tree.find("office:automatic-styles", NS)
     if auto_styles is None:
         root = catalog.content_tree.getroot()

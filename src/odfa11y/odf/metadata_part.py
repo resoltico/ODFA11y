@@ -3,7 +3,7 @@
 
 from lxml import etree
 
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.detect import declared_version
 from odfa11y.odf.names import NS
@@ -21,7 +21,7 @@ def ensure_metadata_part(document: OdfDocument) -> None:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         Creation lacks a declared supported version, a storage slot or a consistent manifest.
 
     """
@@ -33,7 +33,7 @@ def ensure_metadata_part(document: OdfDocument) -> None:
         msg = (
             "Creating metadata requires a declared supported ODF version and metadata storage slot."
         )
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     manifest = document.tree(Part.MANIFEST)
     entries = [
         node
@@ -44,7 +44,7 @@ def ensure_metadata_part(document: OdfDocument) -> None:
         entries and entries[0].get(xml_names.MANIFEST_MEDIA_TYPE) != "text/xml"
     ):
         msg = "The metadata manifest declaration is duplicate or has a conflicting media type."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     root = etree.Element(
         xml_names.OFFICE_DOCUMENT_META,
         nsmap={prefix: NS[prefix] for prefix in ("office", "meta", "dc")},

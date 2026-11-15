@@ -8,7 +8,7 @@ from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NameObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.pdf.reading import consumption
@@ -30,7 +30,7 @@ def test_real_compressed_content_boundary(tmp_path: Path, limit: int, *, tagged:
     writer.write(path)
     reader = PdfReader(path)
     if limit < 100:
-        with pytest.raises((ToolFailedError, PyPdfError), match=r"(limit|Limit|bytes)"):
+        with pytest.raises((ToolFailure, PyPdfError), match=r"(limit|Limit|bytes)"):
             check_consumption(reader, limit)
     else:
         check_consumption(reader, limit)
@@ -47,7 +47,7 @@ def test_aggregate_and_auxiliary_streams(tmp_path: Path) -> None:
     writer.root_object[NameObject("/Metadata")] = references[2]
     path = tmp_path / "aggregate.pdf"
     writer.write(path)
-    with pytest.raises((ToolFailedError, PyPdfError), match=r"(limit|Limit|bytes)"):
+    with pytest.raises((ToolFailure, PyPdfError), match=r"(limit|Limit|bytes)"):
         check_consumption(PdfReader(path), 119)
     check_consumption(PdfReader(path), 120)
 
@@ -63,7 +63,7 @@ def test_endpoints_refuse_resource_overflow(
     writer.write(path)
     monkeypatch.setattr(consumption, "MAX_CONTENT_BYTES", 10)
     assert "PDF000" in {f.rule_id for f in audit_pdfua(path).findings}
-    with pytest.raises((ToolFailedError, PyPdfError)):
+    with pytest.raises((ToolFailure, PyPdfError)):
         read_snapshot(path)
 
 
@@ -75,7 +75,7 @@ def test_extraction_depth_is_a_controlled_failure(tmp_path: Path) -> None:
     path = tmp_path / "deep.pdf"
     writer.write(path)
     assert "PDF000" in {f.rule_id for f in audit_pdfua(path).findings}
-    with pytest.raises(ToolFailedError, match="recursion"):
+    with pytest.raises(ToolFailure, match="recursion"):
         read_snapshot(path)
 
 
@@ -95,6 +95,6 @@ def test_embedded_type1_fallback_font_counts_toward_budget(tmp_path: Path) -> No
     resources[NameObject("/Font")] = DictionaryObject({NameObject("/F1"): font})
     path = tmp_path / "type1.pdf"
     writer.write(path)
-    with pytest.raises((ToolFailedError, PyPdfError)):
+    with pytest.raises((ToolFailure, PyPdfError)):
         check_consumption(PdfReader(path), 99)
     check_consumption(PdfReader(path), 200)

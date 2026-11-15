@@ -11,9 +11,10 @@ from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.progress import StageName
+from odfa11y.progress import Stage
 from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.run.profiles import PROFILES
 from odfa11y.run.record import RunRecord, StageResult
@@ -73,7 +74,7 @@ def test_production_warning_failure_preserves_findings_and_schema(
     output = capsys.readouterr()
     stored = json.loads((evidence / "run.json").read_text(encoding="utf-8"))
     assert stored["failed_stage"] == "audit-remediated"
-    assert stored["format"] == 3
+    assert stored["schema_version"] == 1
     if output_format == "json":
         assert json.loads(output.out)["failed_stage"] == "audit-remediated"
     else:
@@ -126,7 +127,7 @@ def test_review_does_not_claim_a_failed_validator_was_not_run(failure: str) -> N
 def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    source = Report(kind="odf", subject="source.odt")
+    source = Report(kind=ReportKind.ODF, subject="source.odt")
     source.add(rules.LINK001)
     data = RunRecord(
         document=DocumentIdentity("doc.odt"),
@@ -135,9 +136,9 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
         profile=PROFILES["source"],
     )
     data.stages = [
-        StageResult(StageName.AUDIT_SOURCE, StageStatus.PASSED, report=source, gate=False),
+        StageResult(Stage.AUDIT_SOURCE, StageStatus.PASSED, report=source, gate=False),
         StageResult(
-            StageName.REMEDIATE,
+            Stage.REMEDIATE,
             StageStatus.FAILED,
             "native tool failed",
             error=True,

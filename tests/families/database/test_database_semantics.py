@@ -73,7 +73,7 @@ def test_real_embedded_base_validates_and_creates_optional_metadata_without_stor
         "database/firebird.fbk"
     )
     assert source.storage.read("settings.xml") == result.storage.read("settings.xml")
-    assert audit_odf(destination).passed
+    assert audit_odf(destination).error_count == 0
     twice = tmp_path / "twice.odb"
     assert not execute_operations(destination, twice, [SetMetadata(title="Fruit counts")]).changed
     assert destination.read_bytes() == twice.read_bytes()
@@ -165,7 +165,8 @@ def test_database_configuration_is_strict(tmp_path: Path) -> None:
     )
     plan.write_text(
         plan_header(SOURCE)
-        + '[decisions."database.description"."content/query[1]"]\nconnection = "execute"\n'
+        + '[decisions."database.description"."content/query[1]"]\n'
+        + 'connection = "execute"\nfingerprint = "0123456789abcdef"\n'
     )
     with pytest.raises(PlanError, match="Unknown"):
         load_plan(plan)

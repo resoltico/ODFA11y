@@ -5,7 +5,7 @@ lazy from pathlib import Path
 
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.run.record import RunRecord
 
@@ -33,7 +33,7 @@ def publish_evidence(
 
     """
     if observer is not None:
-        observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.RUNNING))
+        observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.RUNNING))
     try:
         artifacts = {
             path.relative_to(work).as_posix(): path
@@ -51,11 +51,11 @@ def publish_evidence(
         )
     except OdfA11yError, OSError:
         if observer is not None:
-            observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.FAILED))
+            observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.FAILED))
         raise
     except KeyboardInterrupt:
         if observer is not None:
-            observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.FAILED))
+            observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.FAILED))
         raise
     if observer is not None:
-        observer(ProgressEvent(StepName.PUBLISH_EVIDENCE, StepState.PASSED))
+        observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.PASSED))

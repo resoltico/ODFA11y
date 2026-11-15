@@ -37,7 +37,9 @@ class SetMetadata(Operation):
         ):
             if value is not None and not isinstance(value, str):
                 return (
-                    Outcome(self.name, Status.FAILED, f"Document {key} must be a string.", key=key),
+                    Outcome(
+                        self.name, Status.FAILED, f"Document {key} must be a string.", target=key
+                    ),
                 )
         blank = [
             key
@@ -46,14 +48,14 @@ class SetMetadata(Operation):
         ]
         if blank:
             message = f"Document {' and '.join(blank)} must not be blank."
-            return (Outcome(self.name, Status.FAILED, message, key=blank[0]),)
+            return (Outcome(self.name, Status.FAILED, message, target=blank[0]),)
         try:
             language = normalize_language(self.language) if self.language is not None else None
             if language is not None:
                 # Establish the family's unique target before changing any metadata.
                 adapter_for(document.kind).default_language(document)
         except ValueError as exc:
-            return (Outcome(self.name, Status.FAILED, str(exc), key="language"),)
+            return (Outcome(self.name, Status.FAILED, str(exc), target="language"),)
         for key, tag, value in (
             ("title", xml_names.DC_TITLE, self.title),
             ("description", xml_names.DC_DESCRIPTION, self.description),
@@ -67,9 +69,9 @@ class SetMetadata(Operation):
     def _text(self, document: OdfDocument, key: str, tag: str, value: str) -> Outcome:
         node = _meta_node(document, tag)
         if node is not None and (node.text or "") == value:
-            return Outcome(self.name, Status.UNCHANGED, f"Document {key} already set.", key=key)
+            return Outcome(self.name, Status.UNCHANGED, f"Document {key} already set.", target=key)
         _ensure_meta_node(document, tag).text = value
-        return Outcome(self.name, Status.APPLIED, f"Set document {key}.", key=key, count=1)
+        return Outcome(self.name, Status.APPLIED, f"Set document {key}.", target=key, count=1)
 
     def _language(self, document: OdfDocument, tag: str) -> Outcome:
         adapter = adapter_for(document.kind)
@@ -79,9 +81,9 @@ class SetMetadata(Operation):
             _ensure_meta_node(document, xml_names.DC_LANGUAGE).text = tag
         style_changed = adapter.set_default_language(document, tag)
         if not (meta_changed or style_changed):
-            return Outcome(self.name, Status.UNCHANGED, "Language already set.", key="language")
+            return Outcome(self.name, Status.UNCHANGED, "Language already set.", target="language")
         return Outcome(
-            self.name, Status.APPLIED, f"Set language to {tag}.", key="language", count=1
+            self.name, Status.APPLIED, f"Set language to {tag}.", target="language", count=1
         )
 
 

@@ -10,6 +10,7 @@ from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.plans import Plan, render_plan
 from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 
 
@@ -47,7 +48,7 @@ def prepare_plan(source: str | Path) -> tuple[Report, str | None]:
         ):
             return _prepare_captured(source, captured)
     except (OSError, PackageError) as exc:
-        report = Report(kind="odf", subject=str(source), sources=(source,))
+        report = Report(kind=ReportKind.ODF, subject=str(source), sources=(source,))
         report.add(rules.PKG000, f"Cannot capture source for planning: {exc}")
         return report, None
 

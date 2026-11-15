@@ -3,7 +3,7 @@
 
 lazy from lxml import etree
 
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import NS, qn
 from odfa11y.odf import names as xml_names
 
@@ -33,7 +33,7 @@ def paragraph_style_name(node: etree._Element) -> str | None:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         Class overlays or conditional references require native style review.
     """
     if any(qn("text", name) in node.attrib for name in ("class-names", "cond-style-name")):
@@ -41,7 +41,7 @@ def paragraph_style_name(node: etree._Element) -> str | None:
             "Paragraph class overlays or conditional style references "
             "cannot establish effective properties."
         )
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     return node.get(xml_names.TEXT_STYLE_NAME)
 
 

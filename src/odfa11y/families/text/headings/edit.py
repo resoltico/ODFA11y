@@ -14,6 +14,7 @@ from odfa11y.families.text.contexts import text_nodes
 from odfa11y.odf import Family, Part, qn
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
 MAX_HEADING_LEVEL = 10
@@ -48,7 +49,7 @@ class SetHeadingLevels(Operation):
             matches = targets.get(target, [])
             problem = _problem(target, entry, matches, document)
             if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, key=target))
+                failures.append(Outcome(self.name, Status.FAILED, problem, target=target))
             else:
                 decisions.append((target, matches[0], entry.level))
         if failures:
@@ -63,7 +64,7 @@ class SetHeadingLevels(Operation):
                     self.name,
                     Status.APPLIED if changed else Status.UNCHANGED,
                     f"Outline level {level}.",
-                    key=target,
+                    target=target,
                     count=int(changed),
                 )
             )
@@ -87,7 +88,9 @@ def heading_location(heading: etree._Element, index: int) -> Location:
     )
 
 
-def heading_fingerprint(heading: etree._Element, document: OdfDocument | None = None) -> str:
+def heading_fingerprint(
+    heading: etree._Element, document: OdfDocument | None = None
+) -> Fingerprint:
     """Bind an outline decision to the full heading content, excluding mutable metadata.
 
     Returns
@@ -96,14 +99,16 @@ def heading_fingerprint(heading: etree._Element, document: OdfDocument | None = 
         The stable reviewed-content digest.
 
     """
-    return protected_xml(
-        normalized_graphic_tree(document, heading) if document is not None else heading,
-        omitted_element_attributes={
-            qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")
-        },
-        omitted_root_attributes=(xml_names.TEXT_OUTLINE_LEVEL,),
-        omitted_elements=(xml_names.SVG_TITLE, xml_names.SVG_DESC),
-    )[:16]
+    return Fingerprint.from_digest(
+        protected_xml(
+            normalized_graphic_tree(document, heading) if document is not None else heading,
+            omitted_element_attributes={
+                qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")
+            },
+            omitted_root_attributes=(xml_names.TEXT_OUTLINE_LEVEL,),
+            omitted_elements=(xml_names.SVG_TITLE, xml_names.SVG_DESC),
+        )
+    )
 
 
 def _problem(

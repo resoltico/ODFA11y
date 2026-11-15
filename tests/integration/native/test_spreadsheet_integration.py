@@ -22,6 +22,7 @@ from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from odfa11y.targets import require_target
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.spreadsheets import (
@@ -150,7 +151,7 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     soffice = external_tool("soffice", "libreoffice")
     source = author(tmp_path, soffice, *problem_sheets(), styles=HIDDEN_SHEET_STYLE)
     fingerprint = next(
-        str(d.fingerprint)
+        str(require_target(d.target).fingerprint)
         for d in audit_odf(source).decisions
         if d.kind.id == "graphic.alternative"
     )

@@ -9,10 +9,11 @@ from typing import Protocol
 
 from lxml import etree
 
-from odfa11y.errors import ToolFailedError, ToolNotFoundError
+from odfa11y.errors import ToolFailure
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import ToolIdentity, find_executable, run_bounded, validate_timeout
 from odfa11y.report import FactKeys, Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.safe_xml import parse_secure
 
@@ -89,7 +90,7 @@ def validate_pdfua(
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         The validator times out, fails without a report, cannot process the PDF, or
         returns a report that is not valid veraPDF XML.
 
@@ -109,13 +110,13 @@ def validate_pdfua(
         completed = run_bounded(command, timeout=timeout, max_output=MAX_REPORT_BYTES)
     except subprocess.TimeoutExpired as exc:
         msg = f"veraPDF timed out after {timeout} s"
-        raise ToolFailedError(msg) from exc
+        raise ToolFailure(msg) from exc
     if completed.stdout_truncated:
         msg = f"veraPDF output exceeded {MAX_REPORT_BYTES} bytes"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     if completed.returncode != 0 and not completed.stdout.strip():
         msg = f"veraPDF failed (exit status {completed.returncode})."
-        raise ToolFailedError(msg, details=completed.stderr.strip())
+        raise ToolFailure(msg, details=completed.stderr.strip())
     return _parse(completed.stdout, completed.stderr)
 
 
@@ -127,23 +128,19 @@ def check_pdfua(
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     validator: PdfValidator | None = None,
     locate: Callable[[str | Path | None], str] | None = None,
-) -> tuple[Report, VeraPdfResult | None]:
-    """Validate a PDF and report the outcome, treating an unavailable validator as a warning.
+) -> tuple[Report, VeraPdfResult]:
+    """Validate a PDF and report the outcome, refusing an unavailable validator.
 
     Returns
     -------
-    tuple[Report, VeraPdfResult | None]
-        A ``verapdf`` report (with ``VERA000`` when the validator cannot be found) and the
-        parsed result, which is None when the validator was unavailable.
+    tuple[Report, VeraPdfResult]
+        The PDF validation report and parsed validator result. Tool absence raises
+        ToolUnavailable before a validation report is returned.
 
     """
     validate_timeout(timeout)
-    report = Report(kind="verapdf", subject=subject, sources=(Path(pdf),))
-    try:
-        located = (locate or find_verapdf)(executable)
-    except ToolNotFoundError as exc:
-        report.add(rules.VERA000, str(exc))
-        return report, None
+    report = Report(kind=ReportKind.PDF_VALIDATION, subject=subject, sources=(Path(pdf),))
+    located = (locate or find_verapdf)(executable)
     result = (validator or validate_pdfua)(pdf, executable=located, timeout=timeout)
     add_verapdf_findings(report, result)
     return report, result
@@ -178,17 +175,17 @@ def _parse(stdout: str, stderr: str) -> VeraPdfResult:
         root = parse_secure(stdout.encode("utf-8"))
     except etree.XMLSyntaxError as exc:
         msg = "Could not parse the veraPDF report as XML."
-        raise ToolFailedError(
+        raise ToolFailure(
             msg, details=f"stdout={stdout[:DETAIL_CHARS]!r}\nstderr={stderr[:DETAIL_CHARS]!r}"
         ) from exc
     reports = [node for node in root.iter("*") if etree.QName(node).localname == "validationReport"]
     if not reports:
         msg = "veraPDF report contains no validationReport element."
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     unprocessed = [r.get("jobEndStatus") for r in reports if r.get("jobEndStatus") != "normal"]
     if unprocessed:
         msg = f"veraPDF could not process the PDF: {', '.join(map(str, unprocessed))}"
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     core = next(
         (
             n

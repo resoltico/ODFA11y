@@ -9,7 +9,7 @@ from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
 lazy from pypdf.generic import DictionaryObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.odf import names as xml_names
 from odfa11y.pdf.link_structure import link_annotations
 from odfa11y.pdf.reading.consumption import check_consumption
@@ -17,6 +17,7 @@ from odfa11y.pdf.reading.limits import check_file_size, check_limits
 from odfa11y.pdf.structure_checks import audit_structure
 from odfa11y.pdf.structure_walk import pdf_dictionary
 from odfa11y.report import FactKeys, Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.safe_xml import parse_secure
 
@@ -33,10 +34,10 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
 
     """
     pdf_path = Path(pdf_path)
-    report = Report(kind="pdf", subject=str(pdf_path), sources=(pdf_path,))
+    report = Report(kind=ReportKind.PDF, subject=str(pdf_path), sources=(pdf_path,))
     try:
         _inspect(pdf_path, report)
-    except (OSError, PyPdfError, ValueError, KeyError, RecursionError, ToolFailedError) as exc:
+    except (OSError, PyPdfError, ValueError, KeyError, RecursionError, ToolFailure) as exc:
         report.add(rules.PDF000, f"Cannot inspect PDF: {exc}")
     return report
 

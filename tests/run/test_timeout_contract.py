@@ -14,7 +14,7 @@ from pypdf import PdfWriter
 from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
-from odfa11y.errors import PlanError, ToolFailedError
+from odfa11y.errors import InvalidOption, ToolFailure
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import MAX_TIMEOUT_SECONDS, run_bounded, validate_timeout
 from odfa11y.pdf import check_pdfua, validate_pdfua
@@ -42,17 +42,17 @@ def test_invalid_timeouts_launch_nothing(value: object, monkeypatch: pytest.Monk
 
     monkeypatch.setattr("odfa11y.native.process.subprocess.Popen", forbidden)
     invalid_timeout = cast("float", value)
-    with pytest.raises(PlanError, match="Timeout"):
+    with pytest.raises(InvalidOption, match="Timeout"):
         run_bounded([sys.executable], timeout=invalid_timeout)
-    with pytest.raises(PlanError, match="Timeout"):
+    with pytest.raises(InvalidOption, match="Timeout"):
         Tools(timeout=invalid_timeout)
-    with pytest.raises(PlanError, match="Timeout"):
+    with pytest.raises(InvalidOption, match="Timeout"):
         ExportSettings("writer_pdf_Export", timeout=invalid_timeout)
-    with pytest.raises(PlanError, match="Timeout"):
+    with pytest.raises(InvalidOption, match="Timeout"):
         check_pdfua("missing.pdf", subject="missing.pdf", timeout=invalid_timeout)
-    with pytest.raises(PlanError, match="Timeout"):
+    with pytest.raises(InvalidOption, match="Timeout"):
         validate_pdfua("missing.pdf", timeout=invalid_timeout)
-    with pytest.raises(PlanError, match="Timeout"):
+    with pytest.raises(InvalidOption, match="Timeout"):
         list(audit_document("missing.pdf", timeout=invalid_timeout))
 
 
@@ -91,6 +91,6 @@ def test_selected_validator_timeout_terminates_actual_invocation(tmp_path: Path)
     writer.add_blank_page(width=100, height=100)
     writer.write(pdf)
     started = time.monotonic()
-    with pytest.raises(ToolFailedError, match=r"timed out after 0\.1 s"):
+    with pytest.raises(ToolFailure, match=r"timed out after 0\.1 s"):
         list(audit_document(pdf, verapdf_path=executable, timeout=0.1))
     assert time.monotonic() - started < 10

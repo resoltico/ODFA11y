@@ -7,7 +7,7 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.report import FactKeys
@@ -39,7 +39,7 @@ def test_presentation_events_classify_the_consumed_target_by_action(
     count = 1 if action in {"execute", "sound"} else 0
     assert native_export_limitations(reopened)["rendering_dependencies"] == count
     if count:
-        with pytest.raises(ToolFailedError):
+        with pytest.raises(DocumentRefusal):
             require_native_context(reopened)
     else:
         require_native_context(reopened)

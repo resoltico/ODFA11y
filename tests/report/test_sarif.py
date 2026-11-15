@@ -9,7 +9,7 @@ import pytest
 from jsonschema import Draft7Validator
 
 from odfa11y.audit import audit_odf
-from odfa11y.errors import PackageError, ReportError
+from odfa11y.errors import InvalidOption, IoFailure, PlanError
 from odfa11y.pdf import check_pdfua
 from odfa11y.report import (
     Category,
@@ -22,6 +22,7 @@ from odfa11y.report import (
     Severity,
     render_reports,
 )
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.paths import TESTS
@@ -56,8 +57,8 @@ def test_official_schema_identity_and_negative_control() -> None:
 
 def test_registered_rule_levels_and_logical_locations(tmp_path: Path) -> None:
     source = _source(tmp_path, "sample.odt")
-    report = Report(kind="odf", subject="ignored display", sources=(source,))
-    report.add(rules.META001, location=Location("metadata/title", "meta.xml"))
+    report = Report(kind=ReportKind.ODF, subject="ignored display", sources=(source,))
+    report.add(rules.META001, location=Location("meta/title", "meta.xml"))
     report.add(rules.TABLE003, location=Location.named("content", "table", "north/south"))
     report.add(rules.HEADING004)
     run = _render([report], tmp_path)["runs"][0]
@@ -70,7 +71,7 @@ def test_registered_rule_levels_and_logical_locations(tmp_path: Path) -> None:
     first = run["results"][0]
     assert "remedy" not in first["properties"]
     assert first["locations"][0]["properties"] == {"packageMember": "meta.xml"}
-    assert first["locations"][0]["logicalLocations"] == [{"fullyQualifiedName": "metadata/title"}]
+    assert first["locations"][0]["logicalLocations"] == [{"fullyQualifiedName": "meta/title"}]
     assert "logicalLocations" not in run["results"][2]["locations"][0]
 
 
@@ -80,7 +81,7 @@ def test_artifact_uris_distinguish_duplicate_names_and_escape_reserved_character
     first = _source(tmp_path, "a folder/report #1.odt")
     second = _source(tmp_path, "other/report #1.odt")
     report = Report(
-        kind="fidelity", subject="nonsense label: not a filename", sources=(first, second)
+        kind=ReportKind.FIDELITY, subject="nonsense label: not a filename", sources=(first, second)
     )
     report.add(rules.FID003)
     run = _render([report], tmp_path)["runs"][0]
@@ -96,7 +97,7 @@ def test_artifact_uris_distinguish_duplicate_names_and_escape_reserved_character
 
 def test_multiple_reports_share_artifact_identity(tmp_path: Path) -> None:
     source = _source(tmp_path, "sample.pdf")
-    reports = [Report(kind="pdf", subject="x", sources=(source,)) for _ in range(2)]
+    reports = [Report(kind=ReportKind.PDF, subject="x", sources=(source,)) for _ in range(2)]
     for report in reports:
         report.add(rules.PDF001)
     run = _render(reports, tmp_path)["runs"][0]
@@ -127,7 +128,7 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
     source = _source(tmp_path, "sample.odb")
     connection = "postgres://alice:super-secret@database/private"
     report = Report(
-        kind="odf",
+        kind=ReportKind.ODF,
         subject=str(source),
         sources=(source,),
         facts=FactSet({FactKeys.DOCUMENT_DESCRIPTION: connection}),
@@ -150,9 +151,9 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
     ],
 )
 def test_unsafe_logical_labels_are_rejected(tmp_path: Path, label: str) -> None:
-    report = Report(kind="odf", subject="x", sources=(_source(tmp_path, "x.odt"),))
-    report.add(rules.GRAPHIC003, location=Location(label))
-    with pytest.raises(ReportError, match="unsafe path or credential"):
+    report = Report(kind=ReportKind.ODF, subject="x", sources=(_source(tmp_path, "x.odt"),))
+    with pytest.raises((PlanError, InvalidOption)):  # noqa: PT012  Either path construction or SARIF privacy validation rejects the label.
+        report.add(rules.GRAPHIC003, location=Location(label))
         _render([report], tmp_path)
 
 
@@ -163,26 +164,26 @@ def test_sources_outside_root_and_symlink_escape_are_rejected(tmp_path: Path) ->
     link = root / "escape.odt"
     link.symlink_to(outside)
     for source in (outside, link):
-        report = Report(kind="odf", subject="x", sources=(source,))
-        with pytest.raises(ReportError, match="within the source root"):
+        report = Report(kind=ReportKind.ODF, subject="x", sources=(source,))
+        with pytest.raises(InvalidOption, match="within the source root"):
             _render([report], root)
 
 
 def test_missing_root_source_identity_and_unregistered_rules_are_rejected(tmp_path: Path) -> None:
-    with pytest.raises(ReportError, match="explicit source root"):
+    with pytest.raises(InvalidOption, match="explicit source root"):
         render_reports([], output_format="sarif")
-    with pytest.raises(ReportError, match="explicit source identities"):
-        _render([Report(kind="odf", subject="sample.odt")], tmp_path)
-    report = Report(kind="odf", subject="x", sources=(_source(tmp_path, "x.odt"),))
+    with pytest.raises(InvalidOption, match="explicit source identities"):
+        _render([Report(kind=ReportKind.ODF, subject="sample.odt")], tmp_path)
+    report = Report(kind=ReportKind.ODF, subject="x", sources=(_source(tmp_path, "x.odt"),))
     report.findings.append(Finding(Rule("UNKNOWN", Severity.ERROR, Category.SEMANTICS, "x"), "x"))
-    with pytest.raises(ReportError, match="registered rules"):
+    with pytest.raises(InvalidOption, match="registered rules"):
         _render([report], tmp_path)
 
 
 def test_missing_source_is_private_and_empty_report_is_valid(tmp_path: Path) -> None:
     source = tmp_path / "missing-secret.odt"
-    report = Report(kind="odf", subject="x", sources=(source,))
-    with pytest.raises(PackageError, match=r"^SARIF source identity cannot be resolved\.$"):
+    report = Report(kind=ReportKind.ODF, subject="x", sources=(source,))
+    with pytest.raises(IoFailure, match=r"^SARIF source identity cannot be resolved\.$"):
         _render([report], tmp_path)
     assert _render([], tmp_path)["runs"][0]["results"] == []
 
@@ -200,11 +201,11 @@ def test_verapdf_report_keeps_pdf_identity_independent_of_display_subject(tmp_pa
 
 def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Path) -> None:
     source = _source(tmp_path, "original.odt")
-    with pytest.raises(ReportError, match="existing directory"):
+    with pytest.raises(InvalidOption, match="existing directory"):
         _render([], source)
     link = tmp_path / "alias.odt"
     link.symlink_to(source)
-    report = Report(kind="fidelity", subject="x", sources=(source, link))
+    report = Report(kind=ReportKind.FIDELITY, subject="x", sources=(source, link))
     report.add(rules.FID003)
     run = _render([report], tmp_path)["runs"][0]
     assert len(run["artifacts"]) == 1
@@ -217,7 +218,7 @@ def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Pat
 def test_sarif_refuses_a_rule_impostor_with_a_registered_id(tmp_path: Path) -> None:
     source = _source(tmp_path, "source.odt")
     impostor = Rule("META001", Severity.INFO, Category.METADATA, "Impostor")
-    report = Report(kind="odf", subject=source.name, sources=(source,))
+    report = Report(kind=ReportKind.ODF, subject=source.name, sources=(source,))
     report.findings.append(Finding(impostor, "Untrusted severity"))
-    with pytest.raises(ReportError, match="registered rules"):
+    with pytest.raises(InvalidOption, match="registered rules"):
         _render([report], tmp_path)

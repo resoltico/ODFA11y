@@ -12,6 +12,7 @@ from odfa11y.decisions.validation import validate_xml_text
 from odfa11y.families.spreadsheet.names import SetSheetNames, SheetNameChange, invalid_name_reason
 from odfa11y.families.spreadsheet.objects import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.odf import Family
+from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
@@ -72,7 +73,9 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             answer = decision.answer_as(SheetNameAnswer)
             result.append(
                 SetSheetNames({
-                    decision.target_path: SheetNameChange(answer.name, decision.fingerprint or "")
+                    decision.target_path: SheetNameChange(
+                        answer.name, require_target(decision.target).fingerprint
+                    )
                 })
             )
         elif decision.kind == GRAPHIC_ALTERNATIVE:
@@ -80,7 +83,10 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetGraphicAlternatives({
                     decision.target_path: GraphicAlternative(
-                        answer.title, answer.description, decision.fingerprint, answer.decorative
+                        answer.title,
+                        answer.description,
+                        require_target(decision.target).fingerprint,
+                        answer.decorative,
                     )
                 })
             )
@@ -89,7 +95,7 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetLinkDescriptions({
                     decision.target_path: LinkDescription(
-                        answer.description, decision.fingerprint or ""
+                        answer.description, require_target(decision.target).fingerprint
                     )
                 })
             )

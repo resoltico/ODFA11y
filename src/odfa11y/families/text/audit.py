@@ -7,7 +7,7 @@ lazy from lxml import etree
 
 from odfa11y.concepts import document_links, link_decision, link_has_description, link_location
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.headings.audit import audit_headings, audit_images
 from odfa11y.families.text.kinds import LINKIFY_ADDRESSES, REMOVE_SPACERS
@@ -54,7 +54,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
 
     for kind, rule in [(LINKIFY_ADDRESSES, rules.LINK001), (REMOVE_SPACERS, rules.LAYOUT001)]:
         if any(finding.rule_id == rule.id for finding in report.findings):
-            report.add_decision(OpenDecision(kind, None, None, {"enabled": False}, (rule.id,)))
+            report.add_decision(OpenDecision(kind, None, {"enabled": False}, (rule.id,)))
 
 
 def _audit_links(tree: etree._ElementTree, report: Report) -> None:
@@ -82,7 +82,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
         name = paragraph.get(xml_names.TEXT_STYLE_NAME)
         try:
             breaks += catalog.has_break_semantics(name)
-        except RemediationError:
+        except DocumentRefusal:
             continue  # the style summary reports these unresolved current-flow styles
         styles.append(name)
     if styles:
@@ -131,7 +131,7 @@ def _style_rows(document: OdfDocument) -> tuple[list[StyleUsage], dict[str, str]
         name = node.get(xml_names.TEXT_STYLE_NAME) or "(none)"
         try:
             paragraph_style_name(node)
-        except RemediationError as exc:
+        except DocumentRefusal as exc:
             problems[name] = str(exc)
         else:
             counts[name] += 1
@@ -146,6 +146,6 @@ def _style_rows(document: OdfDocument) -> tuple[list[StyleUsage], dict[str, str]
                 "parent": catalog.parent_name("paragraph", style_name),
                 "spacing": catalog.spacing_signature(style_name),
             })
-        except RemediationError as exc:
+        except DocumentRefusal as exc:
             problems[name] = str(exc)
     return rows, problems

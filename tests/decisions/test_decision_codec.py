@@ -14,6 +14,7 @@ from odfa11y.errors import PlanError
 from odfa11y.odf import Family
 from odfa11y.plans import Plan, parse_tables, plan_schema, render_plan
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint, Target, TargetPath
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ KINDS = {kind.id: kind for kind in [HEADING, METADATA]}
 
 
 def header() -> dict[str, object]:
-    return {"format": 1, "generator": "0.8.0", "source": {"sha256": "a" * 64}}
+    return {"schema_version": 1, "generator": "0.8.0", "source": {"sha256": "a" * 64}}
 
 
 @pytest.mark.parametrize("value", [True, 0, 11, "2", 2.0, None])
@@ -76,20 +77,29 @@ def test_unknown_and_missing_answer_fields_are_rejected() -> None:
 )
 def test_old_or_noncanonical_targets_are_rejected(target: str) -> None:
     with pytest.raises(PlanError, match=r"target|encoded"):
-        Decision(HEADING, Location(target), "b" * 16, Level(2))
+        Decision(
+            HEADING, Target(TargetPath((Location(target)).path), Fingerprint("b" * 16)), Level(2)
+        )
 
 
 def test_targeted_answers_require_fingerprints_and_document_answers_refuse_targets() -> None:
     with pytest.raises(PlanError, match="fingerprint"):
-        Decision(HEADING, Location("content/heading[1]"), None, Level(2))
+        Decision(HEADING, None, Level(2))
     with pytest.raises(PlanError, match="document-scoped"):
-        Decision(METADATA, Location("content/heading[1]"), None, Metadata(title="Title"))
+        Decision(
+            METADATA,
+            Target(TargetPath("content/heading[1]"), Fingerprint("b" * 16)),
+            Metadata(title="Title"),
+        )
 
 
 def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     plan = parse_tables({"plan": header()}, KINDS)
     open_decision = OpenDecision(
-        HEADING, Location("content/heading[1]"), "b" * 16, {"level": 3}, ("HEADING002",)
+        HEADING,
+        Target(TargetPath((Location("content/heading[1]")).path), Fingerprint("b" * 16)),
+        {"level": 3},
+        ("HEADING002",),
     )
     template = render_plan(plan.header, [open_decision])
     assert not parse_tables(tomllib.loads(template), KINDS).decisions
@@ -102,7 +112,9 @@ def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     values = tomllib.loads(answered)
     result = parse_tables(values, KINDS)
     assert result.decisions[0].answer_as(Level).level == 2
-    assert result.decisions[0].target == Location("content/heading[1]")
+    assert result.decisions[0].target == Target(
+        TargetPath("content/heading[1]"), Fingerprint("b" * 16)
+    )
     Draft202012Validator(plan_schema(KINDS)).validate(result.as_dict())
     values["decisions"]["heading.level"]["content/heading[1]"]["level"] = True
     with pytest.raises(ValidationError):
@@ -114,7 +126,7 @@ def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     [
         {},
         {"document": {"title": "Old"}},
-        {"plan": {"format": 1}},
+        {"plan": {"schema_version": 1}},
         {"plan": header(), "decisions": {"missing.kind": {}}},
     ],
 )

@@ -11,7 +11,7 @@ from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.audit import prepare_plan
 from odfa11y.batch import run_batch as execute_batch
-from odfa11y.errors import OdfA11yError
+from odfa11y.errors import IoFailure, OdfA11yError
 from odfa11y.evidence import check_bundle
 from odfa11y.native.process import termination_interrupt
 from odfa11y.pdf.fidelity import FidelityPolicy
@@ -41,7 +41,10 @@ def _interruptible[**P, R](operation: Callable[P, R]) -> Callable[P, R]:
     @wraps(operation)
     def invoke(*args: P.args, **kwargs: P.kwargs) -> R:
         with termination_interrupt():
-            return operation(*args, **kwargs)
+            try:
+                return operation(*args, **kwargs)
+            except OSError as error:
+                raise IoFailure.from_oserror(error) from error
 
     return invoke
 
@@ -60,9 +63,7 @@ class AuditInput:
 
     source: Path = field(metadata={"basename": True})
     reports: tuple[Report, ...]
-    error: OdfA11yError | OSError | ValueError | None = field(
-        default=None, metadata={"serialize": False}
-    )
+    error: OdfA11yError | None = field(default=None, metadata={"serialize": False})
 
     @JsonProperty
     def failure(self) -> AuditFailure | None:
@@ -76,7 +77,7 @@ class AuditRun:
 
     inputs: tuple[AuditInput, ...]
     strict: bool = False
-    format: Literal[1] = field(default=1, init=False)
+    schema_version: Literal[1] = field(default=1, init=False)
 
     @property
     def reports(self) -> tuple[Report, ...]:
@@ -220,8 +221,8 @@ def audit(
                     native_tools=native_tools,
                 )
             )
-        except (OdfA11yError, OSError, ValueError) as exc:
-            error = exc
+        except (OdfA11yError, OSError) as exc:
+            error = IoFailure.from_oserror(exc) if isinstance(exc, OSError) else exc
         inputs.append(AuditInput(Path(source), tuple(reports), error))
     return AuditRun(tuple(inputs), strict)
 

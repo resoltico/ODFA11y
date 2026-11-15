@@ -10,7 +10,8 @@ from jsonschema import Draft7Validator
 
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
+from tests.fixtures.native import native_fakes, validation_result
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
 from tests.report.test_sarif import SCHEMA
@@ -25,7 +26,7 @@ def _run_log(output: str) -> dict:
     return payload["runs"][0]
 
 
-def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
+def test_audit_sarif_mixes_odf_pdf_and_validation_reports_without_local_paths(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     odf = make_minimal_odt(tmp_path / "document.odt", features={"with_image_without_alt": True})
@@ -42,7 +43,15 @@ def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
         "--verapdf-path",
         str(tmp_path / "missing-validator"),
     ]
-    assert main(arguments) == 2
+    assert (
+        main(
+            arguments,
+            native_tools=replace(
+                native_fakes(), validate=lambda *_args, **_kwargs: validation_result(False)
+            ),
+        )
+        == 2
+    )
     output = capsys.readouterr()
     assert not output.err
     assert str(tmp_path) not in output.out
@@ -56,8 +65,8 @@ def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
     assert (
         by_rule["GRAPHIC003"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 0
     )
-    assert by_rule["VERA000"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 1
-    assert by_rule["VERA000"]["level"] == "warning"
+    assert by_rule["VERA001"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 1
+    assert by_rule["VERA001"]["level"] == "error"
 
 
 def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_deleted(
@@ -279,7 +288,7 @@ def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
 
     def exporter(_input: Path, _destination: Path, _settings: ExportSettings) -> Path:
         message = "Conversion failed"
-        raise ToolFailedError(message, details=diagnostic)
+        raise ToolFailure(message, details=diagnostic)
 
     native_tools = replace(native_tools, export=exporter)
     arguments = ["compare", str(source), str(candidate)]

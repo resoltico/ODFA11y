@@ -3,18 +3,18 @@
 
 lazy from collections.abc import Callable
 
-from odfa11y.errors import OdfA11yError, ToolError
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.errors import OdfA11yError
+from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run.record import StageResult
 from odfa11y.status import StageStatus, failure_status
-lazy from odfa11y.progress import ProgressObserver, StageName
+lazy from odfa11y.progress import ProgressObserver, Stage
 lazy from odfa11y.run.record import RunRecord
 
 DETAIL_CHARS = 2048
 
 
 def run_stage(
-    name: StageName,
+    name: Stage,
     step: Callable[[], StageResult],
     record: RunRecord,
     *,
@@ -36,11 +36,11 @@ def run_stage(
             name, StageStatus.SKIPPED, f"not run: {record.failed_stage} failed", gate=False
         )
     if on_progress is not None:
-        on_progress(ProgressEvent(StepName(name), StepState.RUNNING))
+        on_progress(ProgressEvent(Step(name), StepState.RUNNING))
     try:
         return step()
     except (OdfA11yError, OSError) as exc:
-        details = getattr(exc, "details", "") if isinstance(exc, ToolError) else ""
+        details = getattr(exc, "details", "") if isinstance(exc, OdfA11yError) else ""
         return StageResult(
             name,
             StageStatus.FAILED,

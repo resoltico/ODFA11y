@@ -4,7 +4,7 @@
 lazy from lxml import etree
 
 from odfa11y.concepts import visible_words
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.chart.ranges import range_shape, resolve_range
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
@@ -72,7 +72,7 @@ def _ranges(chart: etree._Element, report: Report) -> None:
             location = Location.indexed(Part.CONTENT, "chart-range", index)
             try:
                 shape = range_shape(chart, address)
-            except RemediationError as exc:
+            except DocumentRefusal as exc:
                 report.add(rules.CHART004, str(exc), location=location)
                 continue
             if shape is None:
@@ -117,7 +117,7 @@ def _series_consistency(chart: etree._Element, report: Report) -> None:
                 for cell in values.cells():
                     if _nonnumeric(cell):
                         nonnumeric = True
-            except RemediationError as exc:
+            except DocumentRefusal as exc:
                 report.add(rules.CHART004, str(exc), location=location)
                 continue
             if nonnumeric:
@@ -133,7 +133,7 @@ def _resolved(chart: etree._Element, address: str | None) -> LocalRange | None:
         return None
     try:
         return resolve_range(chart, address)
-    except RemediationError:
+    except DocumentRefusal:
         return None  # Range diagnostics are emitted once by _ranges.
 
 

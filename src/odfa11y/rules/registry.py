@@ -12,6 +12,15 @@ class Severity(StrEnum):
     WARNING = "warning"
     INFO = "info"
 
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.ERROR: "A finding prevents acceptance under every profile.",
+            self.WARNING: "A finding requires review and prevents strict acceptance.",
+            self.INFO: "An observation provides context without preventing acceptance.",
+        }[self]
+
 
 class Category(StrEnum):
     """Group rules by the property they concern."""
@@ -27,6 +36,23 @@ class Category(StrEnum):
     PDF = "pdf"
     VALIDATOR = "validator"
     FIDELITY = "fidelity"
+
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.PACKAGE: "The finding concerns the stored OpenDocument container.",
+            self.XML: "The finding concerns XML parsing or structure.",
+            self.ODF: "The finding concerns OpenDocument conformance.",
+            self.METADATA: "The finding concerns descriptive document metadata.",
+            self.SEMANTICS: "The finding concerns the meaning expressed by document structure.",
+            self.LAYOUT: "The finding concerns document layout or reading flow.",
+            self.LINKS: "The finding concerns link structure or purpose.",
+            self.STYLE: "The finding concerns style use or inheritance.",
+            self.PDF: "The finding concerns exported PDF structure or content.",
+            self.VALIDATOR: "The finding is a PDF/UA validator observation.",
+            self.FIDELITY: "The finding concerns changes between source and candidate exports.",
+        }[self]
 
 
 @dataclass(frozen=True, slots=True)
@@ -298,7 +324,6 @@ PDF021 = _rule(
 )
 PDF022 = _rule("PDF022", WARNING, PDF, "Marked content is referenced by more than one element.")
 PDF023 = _rule("PDF023", ERROR, PDF, "Text is shown outside tagged content and artifacts.")
-VERA000 = _rule("VERA000", WARNING, VAL, "The requested veraPDF validator is unavailable.")
 VERA001 = _rule("VERA001", ERROR, VAL, "veraPDF reports a failed PDF/UA-1 rule.")
 
 FID001 = _rule("FID001", ERROR, FID, "Page count differs.")

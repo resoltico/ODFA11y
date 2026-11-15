@@ -76,11 +76,7 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
         report.add(rules.MATH002, location=location)
         report.add_decision(
             OpenDecision(
-                FORMULA_ALTERNATIVE,
-                None,
-                None,
-                {"alternative": root.get("alttext")},
-                (rules.MATH002.id,),
+                FORMULA_ALTERNATIVE, None, {"alternative": root.get("alttext")}, (rules.MATH002.id,)
             )
         )
     if any(

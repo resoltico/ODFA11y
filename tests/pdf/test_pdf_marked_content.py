@@ -9,7 +9,7 @@ from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObjec
 lazy from pypdf import PdfWriter
 lazy from pypdf.generic import IndirectObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
 from odfa11y.pdf.reading.content import scan as content_scan
@@ -244,7 +244,7 @@ def test_hostile_content_scanning_keeps_results_with_bounded_operands() -> None:
     for data, expected in hostile:
         scan = scan_content(data, lambda _name: None)
         assert (scan.mcids, scan.unmarked_text_operations) == (expected, 0)
-    with pytest.raises(ToolFailedError, match="Inline image has no data delimiter"):
+    with pytest.raises(ToolFailure, match="Inline image has no data delimiter"):
         scan_content(b"BI " * 500_000, lambda _name: None)
     scanner = content_scan._Scanner(lambda _name: None)
     for _ in range(content_scan.MAX_OPERANDS * 100):
@@ -282,7 +282,7 @@ def test_the_content_limit_covers_all_pages_together(
 def test_a_filtered_inline_image_is_refused_instead_of_guessing_its_end(
     filter_name: bytes,
 ) -> None:
-    with pytest.raises(ToolFailedError, match="Filtered inline images"):
+    with pytest.raises(ToolFailure, match="Filtered inline images"):
         scan_content(
             b"BI /W 1 /H 1 /CS /G /BPC 8 /" + filter_name + b" /Fl ID x EI",
             lambda _name: None,

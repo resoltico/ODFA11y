@@ -8,7 +8,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from odfa11y.errors import OutputError, ToolFailedError
+from odfa11y.errors import OutputOccupied, Remedy, RemedyAction, ToolFailure, ToolUnavailable
 from odfa11y.native.process import (
     find_executable,
     identify_running_or_by_file,
@@ -40,7 +40,7 @@ def find_soffice(requested: str | Path | None = None) -> str:
 
     Raises
     ------
-    ToolFailedError
+    ToolUnavailable
         LibreOffice is too old or its version cannot be determined.
 
     """
@@ -58,7 +58,7 @@ def require_supported_version(identity: ToolIdentity) -> None:
         or tuple(int(part) for part in version.split(".")) < MINIMUM_LIBREOFFICE_VERSION
     ):
         msg = f"LibreOffice {version} is unsupported; install LibreOffice {minimum} or newer."
-        raise ToolFailedError(msg)
+        raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, "LibreOffice"))
 
 
 def identify_soffice(executable: str) -> ToolIdentity:
@@ -108,9 +108,9 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
 
     Raises
     ------
-    OutputError
+    OutputOccupied
         The destination is the source document.
-    ToolFailedError
+    ToolFailure
         LibreOffice fails, times out, or returns without producing a PDF.
 
     """
@@ -119,7 +119,7 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
     destination = Path(destination_pdf).resolve()
     if source == destination:
         msg = f"Destination must differ from the source: {destination.name}"
-        raise OutputError(msg)
+        raise OutputOccupied(msg)
     executable = find_soffice(settings.soffice)
     destination.parent.mkdir(parents=True, exist_ok=True)
     options = f"pdf:{settings.pdf_filter}:" + json.dumps(EXPORT_OPTIONS, separators=(",", ":"))
@@ -150,11 +150,11 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
             completed = run_bounded(command, timeout=settings.timeout)
         except subprocess.TimeoutExpired as exc:
             msg = f"LibreOffice PDF/UA export timed out after {settings.timeout} s"
-            raise ToolFailedError(msg) from exc
+            raise ToolFailure(msg) from exc
         produced = Path(out_dir) / f"{source.stem}.pdf"
         if completed.returncode != 0 or not produced.is_file():
             msg = f"LibreOffice PDF/UA export failed (exit status {completed.returncode})."
-            raise ToolFailedError(
+            raise ToolFailure(
                 msg, details=f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
             )
         _publish(produced, destination)

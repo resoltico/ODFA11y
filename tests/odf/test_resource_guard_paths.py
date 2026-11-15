@@ -37,12 +37,12 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
     native_tools = replace(native_tools, export=export)
     native_tools = replace(native_tools, export=export)
     assert (
-        main(["export", str(source), str(tmp_path / "export.pdf")], native_tools=native_tools) == 3
+        main(["export", str(source), str(tmp_path / "export.pdf")], native_tools=native_tools) == 2
     )
     for left, right in [(source, safe), (safe, source)]:
         assert (
             main(["compare", str(left), str(right), "--format", "json"], native_tools=native_tools)
-            == 3
+            == 2
         )
     assert launched == [safe]
     output = tmp_path / "evidence"
@@ -54,7 +54,7 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
         native_tools=native_tools,
     )
     assert record.failed_stage == "export-source"
-    assert record.exit_status == 3
+    assert record.exit_status == 2
     assert (output / "remediated.odg").read_bytes() == source.read_bytes()
     assert not (output / "source.pdf").exists()
     assert check_bundle(output) == []

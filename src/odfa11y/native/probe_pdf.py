@@ -7,7 +7,7 @@ from pypdf import PdfReader
 from pypdf.generic import ContentStream, StreamObject
 lazy from pypdf.generic import DictionaryObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
 from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
@@ -23,7 +23,7 @@ def _inspect(pdf: Path) -> Report:
     report = audit_pdfua(pdf)
     if any(f.rule_id == "PDF000" for f in report.findings):
         msg = "The capability probe PDF cannot be inspected."
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     return report
 
 
@@ -44,14 +44,14 @@ def link_descriptions(
 
     Raises
     ------
-    ToolFailedError
+    ToolFailure
         The export contains no link annotation to inspect.
 
     """
     report = _inspect(pdf)
     if not report.facts.get(FactKeys.PDF_LINK_ANNOTATION_COUNT):
         msg = "The capability probe PDF contains no hyperlink."
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     tags = report.facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}
     if not tags.get("Link") or any(
         f.rule_id in {"PDF003", "PDF004", "PDF016", "PDF017", "PDF018", "PDF019"}
@@ -84,7 +84,7 @@ def _images(
 ) -> tuple[int, int]:
     if depth > MAX_FORM_DEPTH:
         msg = "Probe image form traversal is incomplete."
-        raise ToolFailedError(msg)
+        raise ToolFailure(msg)
     total = decorated = 0
     scopes = []
     for operands, operator in ContentStream(stream, reader).operations:
@@ -168,7 +168,7 @@ def math_tagging(
 
     """
     report = _inspect(pdf)
-    return report.passed and bool(report.facts.get(FactKeys.PDF_STRUCTURE_TAGS))
+    return (report.error_count == 0) and bool(report.facts.get(FactKeys.PDF_STRUCTURE_TAGS))
 
 
 def calc_pdfua(

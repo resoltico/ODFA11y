@@ -12,6 +12,7 @@ from odfa11y.odf import PackageStorage, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -127,8 +128,7 @@ def _objects(document: OdfDocument, report: Report) -> None:
             report.add_decision(
                 OpenDecision(
                     DATABASE_DESCRIPTION,
-                    Location(path),
-                    fingerprint(matches[0]),
+                    Target((Location(path)).path, Fingerprint(fingerprint(matches[0]))),
                     {"text": matches[0].get(description_attribute(matches[0]))},
                     (rules.BASE004.id,),
                 )

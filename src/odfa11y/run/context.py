@@ -4,7 +4,7 @@
 from dataclasses import dataclass, field
 
 from odfa11y.application.tools import Tools
-from odfa11y.errors import PlanError
+from odfa11y.errors import InvalidOption
 from odfa11y.run.profiles import DEFAULT_PROFILE, Profile
 lazy from odfa11y.progress import ProgressObserver
 
@@ -22,10 +22,10 @@ class RunSettings:
 
         Raises
         ------
-        PlanError
+        InvalidOption
             The caller supplied a name instead of a Profile value.
 
         """
         if not isinstance(self.profile, Profile):
             message = "A run requires a Profile value."
-            raise PlanError(message)
+            raise InvalidOption(message)

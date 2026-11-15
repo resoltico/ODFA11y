@@ -16,6 +16,19 @@ class Use(StrEnum):
     EXPORT = "export"
     STYLE = "style"
 
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.AUDIT: "Inspect the source without changing it.",
+            self.PLAN: "Prepare source-bound questions for human decisions.",
+            self.REMEDIATE: "Apply explicitly reviewed source edits.",
+            self.EXPORT: (
+                "Send a source with established rendering dependencies to its native exporter."
+            ),
+            self.STYLE: "Inspect style declarations and usage without changing the source.",
+        }[self]
+
 
 USE_LABELS = {
     Use.AUDIT: "source inspection",

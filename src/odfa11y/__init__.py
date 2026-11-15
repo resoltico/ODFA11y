@@ -30,17 +30,29 @@ from odfa11y.application.tools import Tools
 from odfa11y.audit import plan_blockers
 from odfa11y.batch import BatchRecord
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
-from odfa11y.errors import OdfA11yError, OutputError, PlanError, ReportError, ToolNotFoundError
+from odfa11y.errors import (
+    DocumentRefusal,
+    InvalidOption,
+    IoFailure,
+    OdfA11yError,
+    OutputOccupied,
+    PlanError,
+    Remedy,
+    RemedyAction,
+    ToolFailure,
+    ToolUnavailable,
+)
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import validate_timeout
 from odfa11y.plans import Plan, PlanHeader, SourceBinding, load_plan, registered_kinds
-from odfa11y.progress import ProgressEvent, ProgressObserver, StageName, StepName, StepState
+from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
 from odfa11y.records import DoctorRecord
 from odfa11y.remediate import RemediationResult
 from odfa11y.report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
 from odfa11y.run.profiles import DEFAULT_PROFILE, PROFILES, Profile, profile_named
 from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.status import ExitStatus, failure_status
+from odfa11y.targets import Fingerprint, Target, TargetPath
 from odfa11y.version import __version__
 
 __all__ = [
@@ -57,13 +69,17 @@ __all__ = [
     "DecisionKind",
     "DecisionScope",
     "DoctorRecord",
+    "DocumentRefusal",
     "ExitStatus",
     "ExportResult",
+    "Fingerprint",
+    "InvalidOption",
+    "IoFailure",
     "Location",
     "NativeTools",
     "OdfA11yError",
     "OpenDecision",
-    "OutputError",
+    "OutputOccupied",
     "Plan",
     "PlanError",
     "PlanHeader",
@@ -72,15 +88,19 @@ __all__ = [
     "ProgressEvent",
     "ProgressObserver",
     "RemediationResult",
+    "Remedy",
+    "RemedyAction",
     "Report",
-    "ReportError",
     "RunRecord",
     "SourceBinding",
-    "StageName",
+    "Stage",
     "StageResult",
-    "StepName",
+    "Step",
     "StepState",
-    "ToolNotFoundError",
+    "Target",
+    "TargetPath",
+    "ToolFailure",
+    "ToolUnavailable",
     "Tools",
     "VerificationResult",
     "__version__",

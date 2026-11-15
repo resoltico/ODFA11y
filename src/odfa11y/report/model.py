@@ -2,6 +2,7 @@
 """Findings and the report container shared by every check."""
 
 from dataclasses import dataclass, field, replace
+from enum import StrEnum
 from typing import Literal
 lazy from collections.abc import Mapping
 lazy from pathlib import Path
@@ -10,12 +11,30 @@ from odfa11y.errors import PackageError
 from odfa11y.report.facts import FactSet
 from odfa11y.rules.registry import Severity
 from odfa11y.serialization import JsonProperty, record_dict
-from odfa11y.targets import Location
+from odfa11y.targets import Location, TargetPath
 lazy from odfa11y.decisions import OpenDecision
 lazy from odfa11y.rules.registry import Rule
 lazy from odfa11y.serialization import JsonObject
 
-REPORT_FORMAT = 6
+REPORT_SCHEMA_VERSION = 1
+
+
+class ReportKind(StrEnum):
+    """The subject and producer of a findings report."""
+
+    ODF = "odf"
+    PDF = "pdf"
+    PDF_VALIDATION = "pdf-validation"
+    FIDELITY = "fidelity"
+
+    @property
+    def meaning(self) -> str:
+        return {
+            self.ODF: "Findings about the OpenDocument source.",
+            self.PDF: "Findings from built-in PDF inspection.",
+            self.PDF_VALIDATION: "Findings from independent PDF/UA validation.",
+            self.FIDELITY: "Findings about changes between source and candidate exports.",
+        }[self]
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,11 +86,11 @@ class FindingCounts:
 class Report:
     """Collect findings and registered facts about one artifact or comparison."""
 
-    kind: str
+    kind: ReportKind
     subject: str
     findings: list[Finding] = field(default_factory=list)
     facts: FactSet = field(default_factory=FactSet)
-    _decisions: dict[tuple[str, Location | None], OpenDecision] = field(
+    _decisions: dict[tuple[str, TargetPath | None], OpenDecision] = field(
         default_factory=dict, init=False, repr=False, metadata={"serialize": False}
     )
     sources: tuple[Path, ...] = field(
@@ -110,10 +129,10 @@ class Report:
             An audit observes inconsistent identities for the same logical target.
 
         """
-        key = (decision.kind.id, decision.target)
+        key = (decision.kind.id, decision.target.path if decision.target else None)
         previous = self._decisions.get(key)
         if previous is not None:
-            if previous.fingerprint != decision.fingerprint:
+            if previous.target != decision.target:
                 msg = "Document identity changed while collecting reviewed decisions"
                 raise PackageError(msg)
             decision = replace(
@@ -137,14 +156,9 @@ class Report:
         return sum(f.severity is Severity.INFO for f in self.findings)
 
     @JsonProperty
-    def passed(self) -> bool:
-        """Whether the report contains no errors."""
-        return self.error_count == 0
-
-    @JsonProperty
-    def format(self) -> Literal[6]:
+    def schema_version(self) -> Literal[1]:
         """The report's published schema version."""
-        return REPORT_FORMAT
+        return REPORT_SCHEMA_VERSION
 
     @JsonProperty
     def summary(self) -> FindingCounts:

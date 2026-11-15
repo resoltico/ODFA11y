@@ -19,6 +19,8 @@ from odfa11y.families.text.headings.audit import audit_images
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.odf.resources import local_resource_path
 from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
+from odfa11y.targets import require_target
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -163,7 +165,7 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     monkeypatch.setattr(graphic_identity, "protected_xml", observe_hash)
     monkeypatch.setattr(document.storage, "read", observe_read)
     monkeypatch.setattr(graphic_identity.json, "dumps", observe_dump)
-    report = Report(kind="odt", subject="synthetic")
+    report = Report(kind=ReportKind.ODF, subject="synthetic")
     audit_images(document, report)
     assert len(report.findings) == count
     assert len(hash_calls) == count
@@ -172,7 +174,7 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     if duplicate_names:
         assert (
             len({
-                question.fingerprint
+                require_target(question.target).fingerprint
                 for question in report.decisions
                 if question.kind.id == "graphic.alternative"
             })

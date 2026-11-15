@@ -7,6 +7,7 @@ from odfa11y.concepts import GraphicAlternative
 from odfa11y.decisions.answers import GraphicAlternativeAnswer
 from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE
 from odfa11y.families.image.operations import SetGraphicAlternatives
+from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
@@ -30,7 +31,10 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
         result.append(
             SetGraphicAlternatives({
                 decision.target_path: GraphicAlternative(
-                    answer.title, answer.description, decision.fingerprint, answer.decorative
+                    answer.title,
+                    answer.description,
+                    require_target(decision.target).fingerprint,
+                    answer.decorative,
                 )
             })
         )

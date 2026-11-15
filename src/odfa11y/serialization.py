@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal, Protocol, cast, get_args, get_origin, get_type_hints
 
-from odfa11y.errors import ReportError
+from odfa11y.errors import InvalidOption
 
 type JsonValue = bool | int | float | str | list[JsonValue] | dict[str, JsonValue] | None
 type JsonObject = dict[str, JsonValue]
@@ -45,13 +45,13 @@ def encode(value: object) -> JsonValue:
 
     Raises
     ------
-    ReportError
+    InvalidOption
         An unsupported value cannot be published as JSON.
 
     """
     if isinstance(value, float) and not math.isfinite(value):
         msg = "Non-finite values cannot be published as JSON."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     if isinstance(value, enum.Enum):
@@ -67,7 +67,7 @@ def encode(value: object) -> JsonValue:
     if callable(getattr(value, "as_dict", None)):
         return encode(cast("DictionaryRecord", value).as_dict())
     msg = f"Unsupported JSON value: {type(value).__name__}"
-    raise ReportError(msg)
+    raise InvalidOption(msg)
 
 
 def _dataclass_dict(value: object) -> JsonObject:
@@ -96,14 +96,14 @@ def record_dict(value: object) -> JsonObject:
 
     Raises
     ------
-    ReportError
+    InvalidOption
         The value does not describe an object.
 
     """
     result = encode(value)
     if not isinstance(result, dict):
         msg = "A published record must be a JSON object."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     return result
 
 
@@ -120,7 +120,7 @@ def schema_for(
     JsonObject
         A schema with strict dataclass properties and recursively typed collections.
 
-    Unsupported annotations raise ReportError from the class/type dispatcher.
+    Unsupported annotations raise InvalidOption from the class/type dispatcher.
 
     """
     overrides = overrides or {}
@@ -159,9 +159,15 @@ def _class_schema(
 ) -> JsonObject:
     if isinstance(value_type, type) and issubclass(value_type, enum.Enum):
         return {"enum": [encode(item.value) for item in value_type]}
+    if isinstance(value_type, type) and issubclass(value_type, str):
+        result: JsonObject = {"type": "string"}
+        pattern = getattr(value_type, "PATTERN", None)
+        if isinstance(pattern, str):
+            result["pattern"] = pattern
+        return result
     if not dataclasses.is_dataclass(value_type) or not isinstance(value_type, type):
         msg = f"Unsupported JSON schema annotation: {value_type}"
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     globalns = vars(sys.modules[value_type.__module__]) | dict(namespace)
     hints = get_type_hints(value_type, globalns=globalns)
     properties: JsonObject = {

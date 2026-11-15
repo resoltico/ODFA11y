@@ -15,6 +15,7 @@ from odfa11y.odf import NS, OdfDocument, PackageStorage, Part
 from odfa11y.plans import Plan, parse_tables, registered_kinds
 from odfa11y.remediate import remediate
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint, Target, TargetPath, require_target
 from tests.fixtures.paths import TESTS
 from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet, text_cell
 from tests.fixtures.writer import make_minimal_odt
@@ -62,8 +63,13 @@ def test_family_question_roundtrip_preservation_and_rebinding(tmp_path: Path, fi
     target = None if foreign.scope == "document" else Location("content/heading[1]")
     decision = Decision(
         foreign,
-        target,
-        None if target is None else "0" * 16,
+        (
+            None
+            if target is None
+            else Target(
+                TargetPath((target).path), Fingerprint(None if target is None else "0" * 16)
+            )
+        ),
         decode_answer(
             foreign.answer_type,
             {"level": 2} if foreign.id == "heading.level" else {"alternative": "A formula"},
@@ -88,18 +94,17 @@ def test_preview_and_publication_return_all_outcomes(
     graphic = kinds["graphic.alternative"]
     decisions = [
         Decision(
-            metadata,
-            None,
-            None,
-            decode_answer(metadata.answer_type, {"title": "Reviewed"}, metadata.id),
+            metadata, None, decode_answer(metadata.answer_type, {"title": "Reviewed"}, metadata.id)
         )
     ]
     if failing_target:
         decisions.append(
             Decision(
                 graphic,
-                Location("content/frame[name=Missing]"),
-                "0" * 16,
+                Target(
+                    TargetPath((Location("content/frame[name=Missing]")).path),
+                    Fingerprint("0" * 16),
+                ),
                 decode_answer(graphic.answer_type, {"title": "Missing"}, graphic.id),
             )
         )
@@ -115,7 +120,7 @@ def test_preview_and_publication_return_all_outcomes(
     if failing_target:
         assert result.outcomes[1].status == "failed"
         assert result.violations[0].kind == "failed-outcome"
-        assert result.violations[0].key == "content/frame[name=Missing]"
+        assert result.violations[0].target == "content/frame[name=Missing]"
     else:
         assert not result.violations
     result.as_dict()
@@ -136,8 +141,7 @@ def test_sheet_and_graphic_questions_compose_and_rebind(tmp_path: Path) -> None:
         decisions.append(
             Decision(
                 question.kind,
-                question.target,
-                question.fingerprint,
+                require_target(question.target),
                 decode_answer(question.kind.answer_type, values, question.kind.id),
             )
         )
@@ -182,7 +186,6 @@ def reviewed_title_plan(source: Path) -> Plan:
     assert plan.decisions == (
         Decision(
             question.kind,
-            None,
             None,
             decode_answer(
                 question.kind.answer_type, {"title": "Reviewed fruit document"}, question.kind.id

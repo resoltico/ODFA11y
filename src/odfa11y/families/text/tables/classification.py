@@ -24,6 +24,18 @@ class TableKind(StrEnum):
     LAYOUT_CANDIDATE = "layout-candidate"
     AMBIGUOUS = "ambiguous"
 
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.DATA: "The table has explicit evidence of data-table intent.",
+            self.COMPLEX_DATA: "The data table has relationships requiring explicit human review.",
+            self.LAYOUT_CANDIDATE: (
+                "The table may position content instead of expressing data relationships."
+            ),
+            self.AMBIGUOUS: "The table has insufficient evidence to infer data or layout intent.",
+        }[self]
+
 
 @dataclass(frozen=True)
 class TableClassification:

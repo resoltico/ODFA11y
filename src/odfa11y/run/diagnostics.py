@@ -12,12 +12,12 @@ from lxml import etree
 
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
-from odfa11y.errors import ToolNotFoundError, UnsupportedKindError
+from odfa11y.errors import DocumentRefusal, ToolUnavailable
 from odfa11y.families import REGISTRY
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeCache
 from odfa11y.odf import SUPPORTED_VERSIONS
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.records import DoctorRecord, Toolchain
 from odfa11y.version import __version__
 lazy from odfa11y.errors import OdfA11yError
@@ -47,12 +47,12 @@ def inspect_tools(
     native_tools = native_tools or NativeTools()
     tools = tools or Tools()
     if on_progress:
-        on_progress(ProgressEvent(StepName.PROBE_TOOLCHAIN, StepState.RUNNING))
+        on_progress(ProgressEvent(Step.PROBE_TOOLCHAIN, StepState.RUNNING))
     executable = None
     missing_error = None
     try:
         executable = native_tools.locate(tools.soffice)
-    except ToolNotFoundError as exc:
+    except ToolUnavailable as exc:
         missing_error = exc
     info = DoctorRecord(
         odfa11y=__version__,
@@ -76,7 +76,7 @@ def inspect_tools(
     )
     probes = tuple(probe for adapter in REGISTRY.values() for probe in adapter.probes)
     if not probes:
-        return info, UnsupportedKindError(
+        return info, DocumentRefusal(
             "No capability probes are declared by the registered families."
         )
     identity = info.toolchain.libreoffice
@@ -87,7 +87,7 @@ def inspect_tools(
             )
             for probe in probes
         )
-        return info, missing_error or ToolNotFoundError(
+        return info, missing_error or ToolUnavailable(
             "LibreOffice is unavailable for capability probes."
         )
     cache = ProbeCache()
@@ -118,5 +118,5 @@ def _tool(probe: Callable[[], ToolIdentity]) -> ToolIdentity | None:
     """
     try:
         return probe()
-    except ToolNotFoundError:
+    except ToolUnavailable:
         return None

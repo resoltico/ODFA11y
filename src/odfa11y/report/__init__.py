@@ -2,7 +2,7 @@
 """Rules, findings and report rendering shared by every check."""
 
 from odfa11y.report.facts import FACT_REGISTRY, FactKey, FactKeys, FactSet
-from odfa11y.report.model import Finding, Location, Report
+from odfa11y.report.model import Finding, Location, Report, ReportKind
 from odfa11y.report.render import FORMATS, exit_status, render_reports
 from odfa11y.report.sarif import preflight_sarif
 from odfa11y.report.terminal import terminal_text
@@ -20,6 +20,7 @@ __all__ = [
     "Finding",
     "Location",
     "Report",
+    "ReportKind",
     "Rule",
     "Severity",
     "exit_status",

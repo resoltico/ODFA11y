@@ -15,6 +15,7 @@ from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -380,7 +381,7 @@ def graphic_style_fingerprint(document: OdfDocument, shape: etree._Element) -> s
     return _style_facts(catalog, shadow)
 
 
-def _style_facts(catalog: GraphicStyles, shadow: etree._Element) -> str:
+def _style_facts(catalog: GraphicStyles, shadow: etree._Element) -> Fingerprint:
     if catalog.scope_problem:
         raise ValueError(catalog.scope_problem)
     if shadow.tag == xml_names.DRAW_PAGE:
@@ -407,7 +408,7 @@ def _style_facts(catalog: GraphicStyles, shadow: etree._Element) -> str:
             if not parent:
                 break
             style = catalog.style(family, parent, common=True)
-    return hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:16]
+    return Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
 
 
 def _visual_style_xml(style: etree._Element) -> str:

@@ -7,9 +7,10 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import ToolFailedError, ToolNotFoundError
+from odfa11y.errors import ToolFailure, ToolUnavailable
 from odfa11y.pdf import add_verapdf_findings, find_verapdf, validate_pdfua
 from odfa11y.report import FactKeys, Report
+from odfa11y.report.model import ReportKind
 
 REPORT = """<?xml version="1.0" encoding="utf-8"?>
 <report>
@@ -98,7 +99,7 @@ def test_failed_rules_keep_their_standard_identity_and_sample_contexts(tmp_path:
     assert failure.failed_checks == 4
     assert failure.contexts == ("root/a", "root/b", "root/c")
     assert failure.messages == ("one", "two", "three")
-    report = Report(kind="verapdf", subject="in.pdf")
+    report = Report(kind=ReportKind.PDF_VALIDATION, subject="in.pdf")
     add_verapdf_findings(report, result)
     finding = report.findings[0]
     assert finding.rule_id == "VERA001"
@@ -125,10 +126,10 @@ def test_a_report_is_the_outcome_whatever_the_exit_status(tmp_path: Path) -> Non
 def test_execution_and_report_failures_are_distinct_from_non_compliance(
     tmp_path: Path, output: str, status: int, message: str
 ) -> None:
-    with pytest.raises(ToolFailedError, match=message):
+    with pytest.raises(ToolFailure, match=message):
         validate_pdfua(tmp_path / "in.pdf", executable=stub(tmp_path, output, status=status))
 
 
 def test_missing_validator_is_a_not_found_error(tmp_path: Path) -> None:
-    with pytest.raises(ToolNotFoundError):
+    with pytest.raises(ToolUnavailable):
         find_verapdf(tmp_path / "absent")

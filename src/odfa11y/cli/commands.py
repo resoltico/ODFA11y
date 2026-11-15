@@ -9,6 +9,7 @@ lazy from collections.abc import Callable
 import odfa11y as api
 from odfa11y import (
     ExitStatus,
+    IoFailure,
     NativeTools,
     OdfA11yError,
     PlanError,
@@ -60,7 +61,9 @@ def main(argv: list[str] | None = None, *, native_tools: NativeTools | None = No
     except KeyboardInterrupt:
         print("error: command interrupted", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
         return ExitStatus.EXECUTION_FAILURE
-    except (OdfA11yError, OSError, ValueError) as exc:
+    except (OdfA11yError, OSError) as exc:
+        if isinstance(exc, OSError):
+            exc = IoFailure.from_oserror(exc)
         if sarif:
             print(  # noqa: T201  CLI output is the command interface.
                 "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
@@ -107,7 +110,7 @@ def _remediate(args: argparse.Namespace) -> int:
         else "Not published; review the failed guards."
     )
     for outcome in result.outcomes:
-        key = f" [{terminal_text(outcome.key)}]" if outcome.key else ""
+        key = f" [{terminal_text(outcome.target)}]" if outcome.target else ""
         print(  # noqa: T201  CLI output is the command interface.
             f"- {outcome.status.value:9} {terminal_text(outcome.operation)}{key}: "
             f"{terminal_text(outcome.message)}"

@@ -4,6 +4,7 @@
 import json
 
 from odfa11y.report import FactKeys, FactSet, Location, Report, render_reports, terminal_text
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 
 
@@ -16,28 +17,35 @@ def test_terminal_fields_escape_controls_and_preserve_unicode() -> None:
 
 def test_text_report_prioritizes_findings_and_wraps_without_breaking_tokens() -> None:
     report = Report(
-        kind="odf", subject="sample.odt", facts=FactSet({FactKeys.DOCUMENT_TITLE: "Metadata"})
+        kind=ReportKind.ODF,
+        subject="sample.odt",
+        facts=FactSet({FactKeys.DOCUMENT_TITLE: "Metadata"}),
     )
     token = "https://example.test/" + "a" * 90
     report.add(
         rules.LINK001,
         "A long explanation " * 12,
-        location=Location("paragraph[1]"),
+        location=Location("content/paragraph[1]"),
         details={"address": token},
     )
     text = render_reports([report])
     assert "Check: no errors" in text
     assert text.index("WARNING LINK001") < text.index("Facts:")
-    assert "location: paragraph[1]" in text
+    assert "location: content/paragraph[1]" in text
     assert token in text
     assert all(len(line) <= 80 for line in text.splitlines() if token not in line)
 
 
 def test_controls_are_escaped_in_all_text_fields_and_retained_in_json() -> None:
     report = Report(
-        kind="odf\x1b", subject="doc\n.odt", facts=FactSet({FactKeys.DOCUMENT_TITLE: "v\x85"})
+        kind=ReportKind.ODF, subject="doc\n.odt", facts=FactSet({FactKeys.DOCUMENT_TITLE: "v\x85"})
     )
-    report.add(rules.META001, "m\x1b", location=Location("p\u202e"), details={"d\t": "v\r"})
+    report.add(
+        rules.META001,
+        "m\x1b",
+        location=Location.named("content", "paragraph", "p\u202e"),
+        details={"d\t": "v\r"},
+    )
     text = render_reports([report])
     assert all(character not in text for character in ("\x1b", "\r", "\x85", "\u202e", "\t"))
     assert "\\x0a" in text

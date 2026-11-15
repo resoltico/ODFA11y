@@ -7,6 +7,7 @@ from odfa11y.concepts import normalized_graphic_tree, protected_xml
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
 SHEET_TAG = "sheet\t"
@@ -66,7 +67,7 @@ def sheet_identity(document: OdfDocument, sheet: etree._Element) -> str:
     )
 
 
-def sheet_fingerprint(document: OdfDocument, sheet: etree._Element) -> str:
+def sheet_fingerprint(document: OdfDocument, sheet: etree._Element) -> Fingerprint:
     """Bind a rename to the same preserved identity used by family guards.
 
     Returns
@@ -75,4 +76,4 @@ def sheet_fingerprint(document: OdfDocument, sheet: etree._Element) -> str:
         Reviewed target fingerprint, stable after allowed accessibility edits.
 
     """
-    return sheet_identity(document, sheet)[:16]
+    return Fingerprint.from_digest(sheet_identity(document, sheet))

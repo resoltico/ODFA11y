@@ -9,13 +9,20 @@ from odfa11y.application.native import NativeTools
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import ProbeId
 from odfa11y.native.process import ToolIdentity
-from odfa11y.pdf.validate import VeraPdfResult
+from odfa11y.pdf.validate import FailedRule, VeraPdfResult
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.probes import fake_export
 
 
 def validation_result(compliant: bool = True) -> VeraPdfResult:
-    return VeraPdfResult(ToolIdentity("veraPDF", "test"), "PDF/UA-1", compliant, (), "")
+    failures = (
+        ()
+        if compliant
+        else (
+            FailedRule("ISO 14289-1:2014", "7.1", "1", "Controlled validation failure", 1, (), ()),
+        )
+    )
+    return VeraPdfResult(ToolIdentity("veraPDF", "test"), "PDF/UA-1", compliant, failures, "")
 
 
 def refusing(calls: list[object]) -> Callable[..., Never]:

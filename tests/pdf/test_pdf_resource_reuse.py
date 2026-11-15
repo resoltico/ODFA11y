@@ -14,7 +14,7 @@ from pypdf.generic import (
 )
 lazy from pypdf import PdfWriter
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.reading.consumption import check_consumption
 from tests.fixtures.pdf import register, set_page_content, tagged_writer
 
@@ -73,6 +73,6 @@ def test_distinct_form_resources_still_reject_aggregate_cmap_overflow(tmp_path: 
     writer.pages[0][NameObject("/Resources")] = register(writer, shared)
     path = tmp_path / "distinct.pdf"
     writer.write(path)
-    with pytest.raises((ToolFailedError, PyPdfError), match=r"(limit|Limit|bytes)"):
+    with pytest.raises((ToolFailure, PyPdfError), match=r"(limit|Limit|bytes)"):
         check_consumption(PdfReader(path, strict=True), 100)
     check_consumption(PdfReader(path, strict=True), 123)

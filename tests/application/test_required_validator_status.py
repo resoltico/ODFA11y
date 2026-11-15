@@ -122,12 +122,12 @@ def test_cli_and_batch_keep_required_validator_status(
     assert "Traceback" not in capsys.readouterr().err
 
 
-def test_optional_audit_validation_keeps_warning_status(
+def test_requested_audit_validation_requires_the_validator(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     pdf = tmp_path / "source.pdf"
     tagged_writer(["H1"]).write(pdf)
     args = ["audit", str(pdf), "--verapdf-path", str(tmp_path / "missing-verapdf")]
-    assert main(args) == 0
-    assert main([*args, "--strict"]) == 1
-    assert "VERA000" in capsys.readouterr().out
+    assert main(args) == 3
+    assert main([*args, "--strict"]) == 3
+    assert "VERA000" not in capsys.readouterr().out

@@ -49,11 +49,11 @@ def test_fifo_refuses_before_deadline(tmp_path: Path, operand: str) -> None:
         timeout=3,
         check=False,
     )
-    assert result.returncode == 3
+    assert result.returncode == 2
     assert "regular file" in result.stderr
     assert "Traceback" not in result.stderr
     if operand == "audit":
-        assert "Command: failed (exit 3" in result.stdout
+        assert "Command: failed (exit 2" in result.stdout
     else:
         assert not result.stdout
     assert not diff.exists()
@@ -77,10 +77,10 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
         assert "Command gate (--strict): FAIL (exit 3)" in output.err
         reports = json.loads(output.out)
         assert [report["subject"] for report in reports] == [str(first), str(last)]
-        assert reports[0]["passed"]
-        assert not reports[1]["passed"]
+        assert reports[0]["summary"]["errors"] == 0
+        assert reports[1]["summary"]["errors"] > 0
     else:
-        assert "Command: failed (exit 3" in output.out
+        assert "Command: failed (exit 2" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
         assert "GRAPHIC003" in output.out
@@ -92,14 +92,14 @@ def test_sniff_regular_alias_and_directory(tmp_path: Path) -> None:
     alias.symlink_to(source)
     assert is_pdf(source)
     assert is_pdf(alias)
-    assert main(["audit", str(tmp_path)]) == 3
+    assert main(["audit", str(tmp_path)]) == 2
 
 
 def test_sniff_checks_opened_file_kind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     source = text_pdf(tmp_path / "source", [["Regular"]])
     directory_info = tmp_path.stat()
     monkeypatch.setattr(os, "fstat", lambda _: directory_info)
-    assert main(["audit", str(source)]) == 3
+    assert main(["audit", str(source)]) == 2
 
 
 def test_strict_gate_is_separate_from_json_report(
@@ -108,7 +108,7 @@ def test_strict_gate_is_separate_from_json_report(
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     assert main(["audit", str(source), "--strict", "--format", "json"]) == 1
     output = capsys.readouterr()
-    assert json.loads(output.out)["passed"]
+    assert json.loads(output.out)["summary"]["errors"] == 0
     assert "Command gate (--strict): FAIL (exit 1)" in output.err
 
 
@@ -157,7 +157,7 @@ def test_unreadable_input_continues_to_next_audit(
     def open_input(path: Path, flags: int) -> int:
         if path == blocked:
             message = "Permission denied"
-            raise PermissionError(message)
+            raise PermissionError(13, message, str(path))
         return opener(path, flags)
 
     monkeypatch.setattr(os, "open", open_input)

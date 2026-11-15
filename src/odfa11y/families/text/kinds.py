@@ -22,6 +22,7 @@ from odfa11y.families.text.spacing.edit import NormalizeSpacing
 from odfa11y.families.text.spacing.remove import RemoveEmptySpacers
 from odfa11y.families.text.tables import MarkTableHeaders, TableHeaders
 from odfa11y.odf import Family
+from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
@@ -180,7 +181,10 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetGraphicAlternatives({
                     decision.target_path: GraphicAlternative(
-                        answer.title, answer.description, decision.fingerprint, answer.decorative
+                        answer.title,
+                        answer.description,
+                        require_target(decision.target).fingerprint,
+                        answer.decorative,
                     )
                 })
             )
@@ -188,7 +192,8 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetHeadingLevels({
                     decision.target_path: HeadingLevel(
-                        decision.answer_as(HeadingLevelAnswer).level, decision.fingerprint
+                        decision.answer_as(HeadingLevelAnswer).level,
+                        require_target(decision.target).fingerprint,
                     )
                 })
             )
@@ -197,7 +202,7 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 MarkTableHeaders({
                     decision.target_path: TableHeaders(
-                        answer.rows, answer.columns, decision.fingerprint
+                        answer.rows, answer.columns, require_target(decision.target).fingerprint
                     )
                 })
             )
@@ -216,7 +221,10 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetTargetLanguages({
                     decision.target_path: TargetLanguage(
-                        answer.western, answer.asian, answer.complex, decision.fingerprint
+                        answer.western,
+                        answer.asian,
+                        answer.complex,
+                        require_target(decision.target).fingerprint,
                     )
                 })
             )
@@ -225,7 +233,7 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
             result.append(
                 SetLinkDescriptions({
                     decision.target_path: LinkDescription(
-                        answer.description, decision.fingerprint or ""
+                        answer.description, require_target(decision.target).fingerprint
                     )
                 })
             )

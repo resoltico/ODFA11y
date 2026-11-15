@@ -12,11 +12,12 @@ from odfa11y.decisions import validate_answer
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.serialization import record_dict
+from odfa11y.targets import require_target
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.serialization import JsonObject
 
 SOURCE_SHA256_PATTERN = r"^[0-9a-f]{64}(?![\s\S])"
-PLAN_FORMAT = 1
+PLAN_SCHEMA_VERSION = 1
 HASH_CHUNK_BYTES = 1 << 20
 
 
@@ -42,7 +43,7 @@ class SourceBinding:
 class PlanHeader:
     """The plan format, exact source binding and generator version."""
 
-    format: Literal[1]
+    schema_version: Literal[1]
     source: SourceBinding
     generator: str = field(
         metadata={"schema": {"minLength": 1, "description": "Version that generated the plan."}}
@@ -95,7 +96,9 @@ class Plan:
 
         """
         return cls(
-            PlanHeader(PLAN_FORMAT, SourceBinding(source_digest(Path(source))), version("odfa11y")),
+            PlanHeader(
+                PLAN_SCHEMA_VERSION, SourceBinding(source_digest(Path(source))), version("odfa11y")
+            ),
             tuple(decisions),
             fidelity or FidelityPolicy(),
         )
@@ -144,7 +147,10 @@ class Plan:
                 if not isinstance(group, dict):
                     msg = "A kind cannot mix document and target answers"
                     raise PlanError(msg)
-                group[decision.target.path] = {"fingerprint": decision.fingerprint, **answer}
+                group[decision.target.path] = {
+                    "fingerprint": require_target(decision.target).fingerprint,
+                    **answer,
+                }
         return record_dict({
             "plan": record_dict(self.header),
             "decisions": tables,

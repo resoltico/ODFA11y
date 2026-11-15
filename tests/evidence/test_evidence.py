@@ -6,7 +6,7 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import OutputError
+from odfa11y.errors import OutputOccupied
 from odfa11y.evidence import Redactor, render_review, require_free_directory, write_bundle
 from odfa11y.families.text import ADAPTER
 from odfa11y.status import StageStatus
@@ -41,11 +41,11 @@ def test_occupied_directories_are_refused_but_empty_ones_are_reused(tmp_path: Pa
     target.mkdir()
     require_free_directory(target)
     write_bundle(target, record(), {}, NO_REDACTION)
-    with pytest.raises(OutputError):
+    with pytest.raises(OutputOccupied):
         write_bundle(target, record(), {}, NO_REDACTION)
     file_path = tmp_path / "file"
     file_path.write_text("x")
-    with pytest.raises(OutputError):
+    with pytest.raises(OutputOccupied):
         require_free_directory(file_path)
 
 

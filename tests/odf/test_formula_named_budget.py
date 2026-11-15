@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
@@ -72,7 +72,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_incomplete"] > 0
     calls = []
     native_tools = replace(native_tools, export=refusing(calls))
-    with pytest.raises(ToolFailedError, match="formula context"):
+    with pytest.raises(DocumentRefusal, match="formula context"):
         export_document(source, tmp_path / "output.pdf", native_tools=native_tools)
     record = execute(
         source,
@@ -82,7 +82,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
         native_tools=native_tools,
     )
     assert record.failed_stage == "export-source"
-    assert record.exit_status == 3
+    assert record.exit_status == 2
     assert calls == []
     assert not (tmp_path / "output.pdf").exists()
     assert source.read_bytes() == original

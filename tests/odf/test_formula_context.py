@@ -9,7 +9,7 @@ from lxml import etree
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.odf.formula import (
@@ -127,7 +127,7 @@ def test_every_standard_formula_attribute_reaches_the_native_guard(
     original = source.read_bytes()
     calls = []
     native_tools = replace(native_tools, export=refusing(calls))
-    with pytest.raises(ToolFailedError, match="formula context"):
+    with pytest.raises(DocumentRefusal, match="formula context"):
         export_document(source, tmp_path / "destination.pdf", native_tools=native_tools)
     assert calls == []
     assert not (tmp_path / "destination.pdf").exists()
@@ -142,7 +142,7 @@ def test_captured_identity_and_original_export_are_separate(tmp_path: Path) -> N
     source = formula_document(tmp_path, 'of:=CELL("FILENAME")', qn("text", "formula"))
     document = OdfDocument.open(source)
     require_native_context(document)
-    with pytest.raises(ToolFailedError, match="filename/path fields"):
+    with pytest.raises(DocumentRefusal, match="filename/path fields"):
         require_native_context(document, captured_identity=True)
     assert "NATIVE002" in {f.rule_id for f in audit_odf(source).findings}
 
@@ -194,7 +194,7 @@ def test_embedded_odf_styles_and_nested_formula_contexts_are_inspected(tmp_path:
     limits = native_export_limitations(document)
     assert limits["formula_declarations"] == limits["formula_origins"] == 1
     assert limits["formula_incomplete"] == 1
-    with pytest.raises(ToolFailedError, match="formula context"):
+    with pytest.raises(DocumentRefusal, match="formula context"):
         require_native_context(document)
 
 
@@ -248,5 +248,5 @@ def test_malformed_reachable_embedded_xml_is_explicitly_incomplete(tmp_path: Pat
     document.storage.write_member("Object1/content.xml", b"malformed embedded XML")
     limits = native_export_limitations(document)
     assert limits["formula_incomplete"] == 1
-    with pytest.raises(ToolFailedError, match="formula context"):
+    with pytest.raises(DocumentRefusal, match="formula context"):
         require_native_context(document)

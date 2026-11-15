@@ -5,7 +5,7 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import OutputError, ToolFailedError, ToolNotFoundError
+from odfa11y.errors import OutputOccupied, ToolUnavailable
 from odfa11y.native.export import ExportSettings, export_pdfua, require_supported_version
 from odfa11y.native.process import ToolIdentity
 from tests.fixtures.writer import make_minimal_odt
@@ -25,13 +25,13 @@ RICH_BODY = (
 
 def test_export_to_the_source_path_is_refused(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    with pytest.raises(OutputError):
+    with pytest.raises(OutputOccupied):
         export_pdfua(source, source, ExportSettings(WRITER))
 
 
 def test_export_without_libreoffice_is_a_not_found_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    with pytest.raises(ToolNotFoundError):
+    with pytest.raises(ToolUnavailable):
         export_pdfua(
             source, tmp_path / "out.pdf", ExportSettings(WRITER, soffice=tmp_path / "absent")
         )
@@ -39,7 +39,7 @@ def test_export_without_libreoffice_is_a_not_found_error(tmp_path: Path) -> None
 
 @pytest.mark.parametrize("version", ["24.2.7.2", "26.7.9", "unknown"])
 def test_unsupported_runtime_versions_are_refused(version: str) -> None:
-    with pytest.raises(ToolFailedError, match=r"install LibreOffice 26\.8 or newer"):
+    with pytest.raises(ToolUnavailable, match=r"install LibreOffice 26\.8 or newer"):
         require_supported_version(ToolIdentity("LibreOffice", version))
 
 

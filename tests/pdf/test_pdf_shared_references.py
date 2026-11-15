@@ -6,7 +6,7 @@ lazy from pathlib import Path
 import pytest
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua, structure_walk
 from tests.fixtures.pdf import dictionary, register, tagged_writer
 from tests.pdf.test_pdf_marked_content import leaves
@@ -43,5 +43,5 @@ def test_shared_empty_arrays_hit_traversal_work_bound(monkeypatch: pytest.Monkey
     for _ in range(5):
         value = ArrayObject([value, value])
     root = DictionaryObject({NameObject("/K"): value})
-    with pytest.raises(ToolFailedError, match="more than 20"):
+    with pytest.raises(ToolFailure, match="more than 20"):
         structure_walk.build_tree(root)

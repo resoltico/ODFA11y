@@ -12,11 +12,6 @@
         4
       ]
     },
-    "format": {
-      "enum": [
-        2
-      ]
-    },
     "items": {
       "items": {
         "additionalProperties": false,
@@ -100,6 +95,11 @@
       },
       "type": "array"
     },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
     "status": {
       "enum": [
         "pending",
@@ -114,7 +114,7 @@
     "items",
     "status",
     "exit_status",
-    "format",
+    "schema_version",
     "pending_ids"
   ],
   "type": "object"

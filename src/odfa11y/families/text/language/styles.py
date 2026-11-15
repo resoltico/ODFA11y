@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from lxml import etree
 
 from odfa11y.concepts import CHANNEL_ATTRIBUTES, protected_xml
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.language.effective import BLOCKS, CHANNELS, language_targets
 from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.language_tags import language_parts, normalize_language
@@ -59,7 +59,7 @@ def derive(document: OdfDocument, family: str, binding: Binding) -> etree._Eleme
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         The original style cannot be uniquely resolved.
 
     """
@@ -67,7 +67,7 @@ def derive(document: OdfDocument, family: str, binding: Binding) -> etree._Eleme
     base = catalog.style(family, binding.base)
     if binding.base and base is None:
         message = "The original language style is missing."
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     style = (
         deepcopy(base)
         if base is not None
@@ -98,7 +98,7 @@ def binding_of(document: OdfDocument, node: etree._Element, target: str) -> Bind
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A generated-looking name or definition does not prove this target's derivation.
 
     """
@@ -109,16 +109,16 @@ def binding_of(document: OdfDocument, node: etree._Element, target: str) -> Bind
     try:
         binding = _decode(name, target)
     except (ValueError, TypeError, UnicodeError, binascii.Error) as error:
-        raise RemediationError(message) from error
+        raise DocumentRefusal(message) from error
     actual = catalog_of(document).style(family_of(node), name)
     if actual is None:
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     parent = actual.getparent()
     expected = derive(document, family_of(node), binding)
     if parent is None or parent.tag != xml_names.OFFICE_AUTOMATIC_STYLES:
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     if protected_xml(actual) != protected_xml(expected):
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     return binding
 
 
@@ -159,7 +159,7 @@ def normalized_language_tree(document: OdfDocument, root: etree._Element) -> etr
             continue
         try:
             binding = binding_of(document, source, targets[source])
-        except RemediationError:
+        except DocumentRefusal:
             continue
         target.attrib.pop(STYLE_NAME, None)
         if binding.base is not None:

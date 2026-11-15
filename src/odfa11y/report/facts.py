@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import cast, get_args, get_origin
 lazy from collections.abc import Iterator, Mapping
 
-from odfa11y.errors import ReportError
+from odfa11y.errors import InvalidOption
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +24,7 @@ FACT_REGISTRY: dict[str, FactKey[object]] = {}
 def _register[T](key: FactKey[T]) -> FactKey[T]:
     if key.id in FACT_REGISTRY:
         msg = f"Fact {key.id!r} is already registered."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     FACT_REGISTRY[key.id] = cast("FactKey[object]", key)
     return key
 
@@ -276,7 +276,7 @@ def _matches(value: object, expected: object) -> bool:
 def _require_registered(key: FactKey[object]) -> None:
     if not isinstance(key, FactKey) or FACT_REGISTRY.get(key.id) is not key:
         msg = "Report facts require a registered FactKey."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
 
 
 class FactSet:
@@ -292,14 +292,14 @@ class FactSet:
 
         Raises
         ------
-        ReportError
+        InvalidOption
             The key is unregistered or the value violates its declared type.
 
         """
         _require_registered(key)
         if not _matches(value, key.value_type):
             msg = f"Fact {key.id!r} requires {key.value_type}, found {type(value).__name__}."
-            raise ReportError(msg)
+            raise InvalidOption(msg)
         self._values[key.id] = value
 
     def __getitem__[T](self, key: FactKey[T]) -> T:

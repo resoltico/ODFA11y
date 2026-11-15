@@ -3,7 +3,7 @@
 
 from odfa11y.concepts import table_fingerprint
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import RemediationError
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.kinds import TABLE_HEADERS
 from odfa11y.families.text.tables.classification import TableKind, classify
@@ -11,6 +11,7 @@ from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -29,7 +30,7 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
         location = context_location(table, "table", index, name)
         try:
             classification = classify(table)
-        except RemediationError as error:
+        except DocumentRefusal as error:
             report.add(
                 rules.TABLE002,
                 str(error),
@@ -69,8 +70,7 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
             report.add_decision(
                 OpenDecision(
                     TABLE_HEADERS,
-                    location,
-                    table_fingerprint(table, document),
+                    Target((location).path, Fingerprint(table_fingerprint(table, document))),
                     {"rows": 0, "columns": 0},
                     (rules.TABLE003.id,),
                 )

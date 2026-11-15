@@ -9,8 +9,9 @@ import pytest
 
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.cli import main
-from odfa11y.errors import PackageError, PlanError
+from odfa11y.errors import PlanError, ToolFailure
 from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.status import ExitStatus, combine_statuses
 
@@ -61,8 +62,8 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
             raise PlanError(msg)
         if source.name == "unreadable":
             msg = "Unreadable input"
-            raise PackageError(msg)
-        report = Report(kind="text", subject="source")
+            raise ToolFailure(msg)
+        report = Report(kind=ReportKind.ODF, subject="source")
         report.add(rules.META001)
         yield report
 

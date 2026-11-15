@@ -123,6 +123,6 @@ def test_json_report_serializes_the_path_and_the_member(
     main(["audit", str(source), "--format", "json"])
     report = json.loads(capsys.readouterr().out)
     locations = {f["rule_id"]: f["location"] for f in reversed(report["findings"])}
-    assert report["format"] == 6
+    assert report["schema_version"] == 1
     assert locations["LINK001"] == {"path": "content/paragraph[1]", "member": None}
     assert locations["ODF004"] == {"path": "manifest", "member": "META-INF/manifest.xml"}

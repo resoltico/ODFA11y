@@ -30,6 +30,7 @@ from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import Plan, PlanHeader, SourceBinding, registered_kinds
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint, Target, TargetPath
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import DecisionKind, OpenDecision
 lazy from odfa11y.report import Finding, Report
@@ -80,7 +81,7 @@ def reviewed_plan(
             if fields:
                 kind = kinds[kind_id]
                 answers.append(
-                    Decision(kind, None, None, decode_answer(kind.answer_type, fields, kind_id))
+                    Decision(kind, None, decode_answer(kind.answer_type, fields, kind_id))
                 )
         elif name in {"linkify_addresses", "remove_empty_spacers"}:
             kind_id = (
@@ -88,9 +89,7 @@ def reviewed_plan(
             )
             kind = kinds[kind_id]
             answers.append(
-                Decision(
-                    kind, None, None, decode_answer(kind.answer_type, {"enabled": True}, kind_id)
-                )
+                Decision(kind, None, decode_answer(kind.answer_type, {"enabled": True}, kind_id))
             )
         else:
             answers.extend(_target_answers(document, name, values["entries"], kinds))
@@ -163,8 +162,7 @@ def _target_answers(
             answers.append(
                 Decision(
                     kind,
-                    Location(target),
-                    reviewed,
+                    Target(TargetPath((Location(target)).path), Fingerprint(reviewed)),
                     decode_answer(kind.answer_type, values, kind_id),
                 )
             )
@@ -259,7 +257,7 @@ def plan_header(source: Path) -> str:
 
     """
     digest = Plan.for_source(source).header.source.sha256 if source.is_file() else "0" * 64
-    return f'[plan]\nformat = 1\ngenerator = "0.8.0"\nsource.sha256 = "{digest}"\n'
+    return f'[plan]\nschema_version = 1\ngenerator = "0.8.0"\nsource.sha256 = "{digest}"\n'
 
 
 def question_for(report: Report, finding: Finding) -> OpenDecision:
@@ -274,6 +272,9 @@ def question_for(report: Report, finding: Finding) -> OpenDecision:
     [question] = [
         item
         for item in report.decisions
-        if finding.rule_id in item.rule_ids and item.target == finding.location
+        if finding.rule_id in item.rule_ids
+        and item.target is not None
+        and finding.location is not None
+        and item.target.path == finding.location.path
     ]
     return question

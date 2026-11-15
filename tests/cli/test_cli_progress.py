@@ -9,9 +9,9 @@ import pytest
 
 from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
-from odfa11y.errors import OutputError
+from odfa11y.errors import OutputOccupied
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run import publication as run_publication
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -74,8 +74,8 @@ def test_progress_is_append_only_and_safe(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr("sys.stderr", terminal)
     callback = progress_callback("text")
     assert callback is not None
-    callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.RUNNING))
-    callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.PASSED))
+    callback(ProgressEvent(Step.EXPORT_SOURCE, StepState.RUNNING))
+    callback(ProgressEvent(Step.EXPORT_SOURCE, StepState.PASSED))
     assert terminal.getvalue() == (
         "Progress: Export source PDF: running\nProgress: Export source PDF: passed\n"
     )
@@ -203,12 +203,12 @@ def test_observer_is_excluded_from_options_identity() -> None:
 
 @pytest.mark.parametrize(
     ("failure", "status"),
-    [(OutputError("Unsafe publication"), "failed"), (KeyboardInterrupt(), "failed")],
+    [(OutputOccupied("Unsafe publication"), "failed"), (KeyboardInterrupt(), "failed")],
 )
 def test_publication_observes_domain_failure_and_interruption_without_replacing_exception(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failure: OutputError | KeyboardInterrupt,
+    failure: OutputOccupied | KeyboardInterrupt,
     status: str,
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")

@@ -7,10 +7,10 @@ from enum import StrEnum
 from pathlib import Path
 lazy from collections.abc import Callable, Sequence
 
-from odfa11y.errors import OdfA11yError, ToolFailedError
+from odfa11y.errors import OdfA11yError, ToolFailure
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.pdf.validate import PdfValidator
-from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.progress import ProgressEvent, Step, StepState
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.native.process import ToolIdentity
 lazy from odfa11y.odf import Family
@@ -30,6 +30,21 @@ class ProbeId(StrEnum):
     MATH_TAGGING = "math-tagging"
     CALC_PDFUA = "calc-pdfua"
 
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.LINK_DESCRIPTIONS: "Measure whether accessible link descriptions survive export.",
+            self.DECORATIVE_ROLE: (
+                "Measure whether decorative graphics retain their nonsemantic role."
+            ),
+            self.WRITER_HEADER_COLUMNS: "Measure whether Writer column headers survive PDF export.",
+            self.MATH_TAGGING: "Measure whether exported mathematics has usable tagged structure.",
+            self.CALC_PDFUA: (
+                "Measure whether a semantic Calc table passes PDF inspection and PDF/UA validation."
+            ),
+        }[self]
+
 
 class CapabilityStatus(StrEnum):
     """A measured answer, or an explicit absence of a tested answer."""
@@ -37,6 +52,15 @@ class CapabilityStatus(StrEnum):
     SUPPORTED = "supported"
     UNSUPPORTED = "unsupported"
     NOT_TESTED = "not-tested"
+
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.SUPPORTED: "The declared synthetic experiment established the capability.",
+            self.UNSUPPORTED: "The declared synthetic experiment did not establish the capability.",
+            self.NOT_TESTED: "The capability was not measured conclusively.",
+        }[self]
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,13 +140,13 @@ class ProbeCache:
         if key in self._results:
             return ProbeExecution(self._results[key])
         if observer:
-            observer(ProgressEvent(StepName.PROBE_CAPABILITIES, StepState.RUNNING))
+            observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.RUNNING))
         try:
             supported = _conduct(
                 probe, settings, verapdf_path, export or export_pdfua, validate=validate
             )
         except OSError as exc:
-            error = ToolFailedError("Capability probe I/O failed", details=str(exc))
+            error = ToolFailure("Capability probe I/O failed", details=str(exc))
             return self._not_tested(probe, identity, error, observer)
         except OdfA11yError as exc:
             return self._not_tested(probe, identity, exc, observer)
@@ -134,7 +158,7 @@ class ProbeCache:
         )
         self._results[key] = result
         if observer:
-            observer(ProgressEvent(StepName.PROBE_CAPABILITIES, StepState.PASSED))
+            observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.PASSED))
         return ProbeExecution(result)
 
     @staticmethod
@@ -145,7 +169,7 @@ class ProbeCache:
         observer: ProgressObserver | None,
     ) -> ProbeExecution:
         if observer:
-            observer(ProgressEvent(StepName.PROBE_CAPABILITIES, StepState.FAILED))
+            observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.FAILED))
         return ProbeExecution(
             CapabilityResult(
                 probe.id, probe.family, CapabilityStatus.NOT_TESTED, identity, str(error)
