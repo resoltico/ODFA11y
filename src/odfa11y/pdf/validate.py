@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 

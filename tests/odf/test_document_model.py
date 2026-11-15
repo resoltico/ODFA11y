@@ -139,9 +139,9 @@ def test_namespace_binding_changes_ignored_by_c14n_are_detected(tmp_path: Path) 
     tree = document.tree(Part.CONTENT)
     left = etree.fromstring(b'<root xmlns:of="urn:formula:a" formula="of:=1"/>')
     right = etree.fromstring(b'<root xmlns:of="urn:formula:b" formula="of:=1"/>')
-    tree._setroot(left)  # noqa: SLF001  lxml documents this tree-root replacement API.
+    tree._setroot(left)
     checkpoint = document.checkpoint()
-    tree._setroot(right)  # noqa: SLF001  lxml documents this tree-root replacement API.
+    tree._setroot(right)
     assert etree.tostring(left, method="c14n2") == etree.tostring(right, method="c14n2")
     assert document.changed_since(checkpoint) == frozenset({"content.xml"})
 

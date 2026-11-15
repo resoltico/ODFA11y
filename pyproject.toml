@@ -103,9 +103,6 @@ fail_under = 88
 show_missing = true
 skip_covered = true
 
-[tool.ty.environment]
-python-version = "3.15"
-
 [tool.ty.src]
 include = ["src", "tests", "tools"]
 
@@ -117,47 +114,32 @@ error-on-warning = true
 
 [tool.ruff]
 required-version = "==0.17.3"
-target-version = "py315"
 preview = true
 line-length = 100
-respect-gitignore = false
-# Check authored hidden/ignored Python; generated distribution trees exist only at the root.
+respect-gitignore = true
 exclude = [".git", ".venv", "__pycache__", ".ruff_cache", "build/**", "dist/**"]
 
 [tool.ruff.lint]
-select = ["ALL"]
-ignore = [
-  # These rules conflict with Ruff's formatter; formatting is checked separately.
-  "missing-trailing-comma",
-  # Use the brief's standard noqa syntax; RUF100 still rejects stale suppressions.
-  "noqa-comments",
-  # Cohesion is reviewed; these incidental function-size caps are not requirements.
-  "too-many-arguments",
-  "too-many-return-statements",
-  "too-many-statements",
-]
+select = ["E", "F", "W", "I", "UP", "B", "S", "SIM", "RUF", "PL", "C90", "PT", "PTH", "TRY", "DTZ", "ERA", "T20", "CPY001", "D"]
+explicit-preview-rules = true
+# Complexity has one owner: McCabe's control-flow cap.
+ignore = ["PLR0911", "PLR0912", "PLR0913", "PLR0915"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.lint.pylint]
-max-branches = 10
-
 [tool.ruff.lint.pydocstyle]
-# Public APIs use NumPy-style docstrings; this resolves competing docstring conventions.
-convention = "numpy"
-property-decorators = ["odfa11y.serialization.JsonProperty"]
-
-[tool.ruff.lint.flake8-type-checking]
-strict = true
+convention = "pep257"
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 min-file-size = 0
 
 [tool.ruff.lint.per-file-ignores]
+# Only the root API and application use cases require public docstrings.
+"!src/odfa11y/{application/**,__init__.py}" = ["D"]
 # Pytest assertions, descriptive test names, literal expectations and exact render comparisons.
-"tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
+"tests/**" = ["assert", "magic-value-comparison", "float-equality-comparison"]
 # Test subprocesses select local tools; pypdf fixtures require its private registration API.
 "tests/tools/test_architecture.py" = ["suspicious-subprocess-import"]
 "tests/cli/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]

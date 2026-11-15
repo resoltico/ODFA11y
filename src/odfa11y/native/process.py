@@ -8,7 +8,7 @@ import os
 import re
 import shutil
 import signal
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 import sys
 import threading
 import time

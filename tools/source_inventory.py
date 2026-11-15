@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 

@@ -59,7 +59,7 @@ jobs:
       - name: Check Python formatting
         run: uv run --no-sync ruff format --check .
       - name: Type-check source, tests and tools
-        run: uv run --no-sync python -m tools.check_quality
+        run: uv run --no-sync python -m tools.check types
       - name: Check generated references and schemas
         run: uv run --no-sync python -m tools.generate_reference --check
       - name: Enforce package boundaries
@@ -152,7 +152,7 @@ jobs:
           uv sync --locked
           uv run --no-sync ruff check .
           uv run --no-sync ruff format --check .
-          uv run --no-sync python -m tools.check_quality
+          uv run --no-sync python -m tools.check types
           uv run --no-sync tach check
           uv run --no-sync tach check-external
           uv run --no-sync pytest -m 'not integration' --durations=10

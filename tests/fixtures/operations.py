@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from odfa11y.remediation.apply import _document, _execute  # noqa: PLC2701  Test the actual internal engine.
+from odfa11y.remediation.apply import _document, _execute
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

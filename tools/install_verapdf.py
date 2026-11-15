@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 import sys
 import tempfile
 import urllib.request

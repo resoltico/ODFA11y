@@ -26,7 +26,7 @@ Run on stable inputs, using focused checks while iterating:
 ```sh
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
-uv run --no-sync python -m tools.check_quality
+uv run --no-sync python -m tools.check types
 uv run --no-sync tach check
 uv run --no-sync tach check-external
 uv run --no-sync python -m tools.generate_reference --check
@@ -41,10 +41,10 @@ outputs and LibreOffice profiles; worker crashes fail without retry. Required na
 turns absent tools into failures. Record versions, failures/fixes, skipped work and unavailable
 platforms. Branch coverage must remain at least 88%; inspect `coverage json` totals.
 
-Ruff checks all authored Python, including hidden/ignored source; `tools.check_quality`
-passes explicit authored paths to ty. Generated environments/caches/root build outputs are
-excluded, while nested authored `build`/`dist` names remain in scope. Complexity/branch
-limits stay at 10; module cohesion is reviewed separately from size. Narrow justified
+Ruff respects `.gitignore`; `[tool.ty.src]` owns type-checker inputs.
+`python -m tools.check` owns the lint, types, boundaries, reference, unit, integration,
+build and release commands. The McCabe complexity limit is 10; module cohesion is reviewed
+separately from size. Public docstrings are required only for the root API and application use cases. Narrow justified
 inline suppressions are checked for staleness; file-level ignores are for tests only.
 See [architecture](ARCHITECTURE.md) and [AGENTS.md](../AGENTS.md).
 

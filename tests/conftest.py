@@ -42,14 +42,14 @@ RECORD_VALIDATORS = {
 }
 
 settings.register_profile(
-    "default",
+    "required",
     max_examples=200,
     deadline=None,
     derandomize=True,
     suppress_health_check=[HealthCheck.too_slow],
 )
-settings.register_profile("smoke", parent=settings.get_profile("default"), max_examples=5)
-settings.load_profile("default")
+settings.register_profile("smoke", parent=settings.get_profile("required"), max_examples=5)
+settings.load_profile("required")
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def external_tool() -> Callable[..., str]:
     return locate
 
 
-@pytest.fixture(autouse=True)  # ruff: ignore[pytest-fixture-autouse]  Validate every emitted record.
+@pytest.fixture(autouse=True)
 def validate_published_record_shapes() -> Iterator[None]:
     """Validate every root record without changing test fixture cleanup ordering.
 

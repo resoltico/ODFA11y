@@ -33,7 +33,7 @@ def test_remediation_refuses_unreviewed_loaded_bytes_after_source_exchange(
     )
     plan = Plan.for_source(reviewed)
     module = importlib.import_module("odfa11y.remediation.apply")
-    original = module._document  # noqa: SLF001  Inject a source exchange at the actual model-load boundary.
+    original = module._document
 
     def exchange(path: Path, destination: Path) -> OdfDocument:
         document = original(path, destination)

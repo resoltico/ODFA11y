@@ -166,7 +166,7 @@ def rule_reference() -> str:
 
 
 def _actions(parser: argparse.ArgumentParser) -> list[argparse.Action]:
-    return parser._actions  # noqa: SLF001  argparse stores the actual option/command graph here.
+    return parser._actions
 
 
 def _commands(action: argparse.Action) -> dict[str, argparse.ArgumentParser] | None:
