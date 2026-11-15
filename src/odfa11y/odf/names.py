@@ -213,3 +213,7 @@ XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 
 SVG_WIDTH = qn("svg", "width")
+
+FO_KEEP_WITH_NEXT = qn("fo", "keep-with-next")
+FO_FONT_WEIGHT = qn("fo", "font-weight")
+DRAW_FILL_COLOR = qn("draw", "fill-color")
