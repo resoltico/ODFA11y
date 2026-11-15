@@ -84,7 +84,7 @@ def test_command_typo_suggests_without_executing(capsys: pytest.CaptureFixture[s
 
 def test_next_command_handles_shell_names_and_leading_dash() -> None:
     source = Path("-a document; $(touch unwanted).odt")
-    report = Report(kind=ReportKind.ODF, subject=source.name, sources=(source,))
+    report = Report(kind=ReportKind.ODF, subject=source.name, _sources=(source,))
     report.add(rules.META001)
     document_decisions(report)
     hint = audit_next_step(argparse.Namespace(format="text"), [report])
@@ -96,7 +96,7 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
 
 @pytest.mark.parametrize(("kind", "source"), [("pdf", "a.pdf"), ("odf", "a\n.odt")])
 def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str) -> None:
-    report = Report(kind=ReportKind(kind), subject=source, sources=(Path(source),))
+    report = Report(kind=ReportKind(kind), subject=source, _sources=(Path(source),))
     report.add(rules.META001)
     document_decisions(report)
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
@@ -104,7 +104,7 @@ def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str)
 
 
 def test_unreadable_document_does_not_offer_template() -> None:
-    report = Report(kind=ReportKind.ODF, subject="bad.odt", sources=(Path("bad.odt"),))
+    report = Report(kind=ReportKind.ODF, subject="bad.odt", _sources=(Path("bad.odt"),))
     report.add(rules.META001)
     document_decisions(report)
     report.add(rules.PKG000)

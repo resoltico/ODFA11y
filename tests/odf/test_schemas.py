@@ -6,12 +6,12 @@ from copy import deepcopy
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 
+from odfa11y.contracts import encode
 from odfa11y.errors import InvalidOption
 from odfa11y.families import REGISTRY
 from odfa11y.report import FactKeys, FactSet, Report
 from odfa11y.report.model import ReportKind
-from odfa11y.schemas import read_schema
-from odfa11y.serialization import encode
+from tests.fixtures.schema import read_schema
 from tools.generate_reference import schemas
 
 

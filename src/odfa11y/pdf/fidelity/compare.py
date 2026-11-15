@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Compare two PDFs: pages, text, links and rendered pixels."""
 
-import sys
 from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
@@ -14,8 +13,8 @@ from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.report import FactKeys, Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-lazy from odfa11y.pdf.fidelity.policy import FidelityPolicy
 lazy from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
+lazy from odfa11y.plans.fidelity import FidelityPolicy, SamePagination
 
 MAX_RENDER_PIXELS = 20_000_000
 EXCERPT_CONTEXT = 40
@@ -24,7 +23,7 @@ RATIO_PRECISION = 6
 
 
 type Rasterizer = Callable[
-    [tuple[Path, Path], PdfSnapshot, FidelityPolicy, Report, Path | None], list[float]
+    [tuple[Path, Path], PdfSnapshot, SamePagination, Report, Path | None], list[float]
 ]
 
 
@@ -50,7 +49,7 @@ def compare_pdfs(
     report = Report(
         kind=ReportKind.FIDELITY,
         subject=f"{candidate.name} vs {source.name}",
-        sources=(candidate, source),
+        _sources=(candidate, source),
     )
     report.facts[FactKeys.FIDELITY_POLICY] = policy.as_dict()
     before, after = read_snapshot(source), read_snapshot(candidate)
@@ -60,7 +59,7 @@ def compare_pdfs(
     }
     _compare_text(before, after, report)
     _compare_links(before, after, report)
-    if policy.pagination == "same" and _compare_pages(before, after, report):
+    if isinstance(policy, SamePagination) and _compare_pages(before, after, report):
         _compare_raster(
             (source, candidate),
             before,
@@ -123,16 +122,13 @@ def _compare_pages(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> b
 def _compare_raster(
     paths: tuple[Path, Path],
     snapshot: PdfSnapshot,
-    policy: FidelityPolicy,
+    policy: SamePagination,
     report: Report,
     diff_dir: Path | None,
     *,
     render: Rasterizer | None,
 ) -> None:
-    if policy.dpi > sys.float_info.max:
-        msg = "DPI exceeds the numeric range supported by PDF rendering"
-        raise ToolFailure(msg)
-    scale = policy.dpi / POINTS_PER_INCH
+    scale = 1.0
     oversized = [
         index + 1
         for index, page in enumerate(snapshot.pages)
@@ -166,11 +162,11 @@ def _difference(
 def render_pages(
     paths: tuple[Path, Path],
     snapshot: PdfSnapshot,
-    policy: FidelityPolicy,
+    policy: SamePagination,
     report: Report,
     diff_dir: Path | None,
 ) -> list[float]:
-    scale = policy.dpi / POINTS_PER_INCH
+    scale = 1.0
     ratios: list[float] = []
     with (
         closing(pypdfium2.PdfDocument(paths[0])) as reference,

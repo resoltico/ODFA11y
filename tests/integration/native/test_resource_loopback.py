@@ -10,7 +10,7 @@ lazy from pathlib import Path
 from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -58,7 +58,7 @@ def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
             output = tmp_path / kind
             record = execute(
                 source,
-                reviewed_plan(source, [], FidelityPolicy()),
+                reviewed_plan(source, [], Pagination.SAME()),
                 output,
                 RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
             )

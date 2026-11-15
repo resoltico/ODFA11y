@@ -10,7 +10,7 @@ import pytest
 from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
 from odfa11y.errors import OutputOccupied
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run import publication as run_publication
 from odfa11y.run.context import RunSettings
@@ -96,7 +96,7 @@ def test_pipeline_progress_precedes_work_and_publication(tmp_path: Path) -> None
 
     result = execute(
         source,
-        reviewed_plan(source, (), FidelityPolicy()),
+        reviewed_plan(source, (), Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("source"), on_progress=observe),
     )
@@ -116,7 +116,7 @@ def test_failed_progress_stream_does_not_prevent_evidence(
     output = tmp_path / "evidence"
     execute(
         source,
-        reviewed_plan(source, (), FidelityPolicy()),
+        reviewed_plan(source, (), Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("source"), on_progress=progress_callback("text")),
     )
@@ -156,7 +156,7 @@ def test_publication_failure_never_emits_passed_progress(
     with pytest.raises(OSError, match="storage unavailable"):
         execute(
             source,
-            reviewed_plan(source, (), FidelityPolicy()),
+            reviewed_plan(source, (), Pagination.SAME()),
             tmp_path / "evidence",
             RunSettings(
                 profile=profile_named("source"),
@@ -221,7 +221,7 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
     with pytest.raises(type(failure)) as caught:
         execute(
             source,
-            reviewed_plan(source, (), FidelityPolicy()),
+            reviewed_plan(source, (), Pagination.SAME()),
             tmp_path / "evidence",
             RunSettings(
                 profile=profile_named("source"),

@@ -2,17 +2,24 @@
 """Decision parsing, templates and schemas share one strict registered answer contract."""
 
 import tomllib
-from dataclasses import dataclass, field
-from typing import ClassVar, cast
+from dataclasses import dataclass
+from typing import Annotated, ClassVar, cast
 lazy from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 
+from odfa11y.contracts import (
+    Description,
+    NonBlank,
+    Range,
+    RequireAny,
+)
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
 from odfa11y.errors import PlanError
 from odfa11y.odf import Family
 from odfa11y.plans import Plan, parse_tables, plan_schema, render_plan
+from odfa11y.plans.fidelity import SamePagination
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint, Target, TargetPath
 
@@ -21,18 +28,16 @@ from odfa11y.targets import Fingerprint, Target, TargetPath
 class Level:
     """A constrained answer independent of the codec implementation."""
 
-    level: int = field(
-        metadata={"schema": {"minimum": 1, "maximum": 10, "description": "Intended heading level."}}
-    )
+    level: Annotated[int, Range(minimum=1, maximum=10), Description("Intended heading level.")]
 
 
 @dataclass(frozen=True)
 class Metadata:
     """Optional answer fields still require a real answer."""
 
-    title: str | None = field(default=None, metadata={"schema": {"pattern": r"\S"}})
+    title: Annotated[str | None, NonBlank()] = None
     description: str | None = None
-    required_any: ClassVar[tuple[str, ...]] = ("title", "description")
+    __contract__: ClassVar[Annotated[object, RequireAny(("title", "description"))]]
 
 
 HEADING = DecisionKind(
@@ -61,7 +66,7 @@ def test_unknown_and_missing_answer_fields_are_rejected() -> None:
         decode_answer(Level, {}, "heading.level")
     with pytest.raises(PlanError, match="at least one"):
         decode_answer(Metadata, {}, "document.metadata")
-    with pytest.raises(PlanError, match="syntax"):
+    with pytest.raises(PlanError, match="non-blank"):
         decode_answer(Metadata, {"title": "  "}, "document.metadata")
 
 
@@ -156,17 +161,20 @@ def test_source_hash_is_exact_and_cannot_hide_a_trailing_newline(digest: str) ->
         Draft202012Validator(plan_schema(KINDS)).validate({"plan": binding})
 
 
-@pytest.mark.parametrize("value", [True, float("nan"), float("inf"), -1.0, 10**1000])
+@pytest.mark.parametrize("value", [True, float("nan"), float("inf"), -1.0])
 def test_policy_uses_the_same_strict_numeric_contract(value: object) -> None:
-    with pytest.raises(PlanError, match="finite non-negative"):
+    with pytest.raises(PlanError, match="raster_tolerance"):
         parse_tables({"plan": header(), "fidelity": {"raster_tolerance": value}}, KINDS)
 
 
-def test_policy_numeric_equivalence_has_a_canonical_representation() -> None:
+def test_policy_numeric_input_types_are_preserved_without_coercion() -> None:
     integer = parse_tables({"plan": header(), "fidelity": {"raster_tolerance": 1}}, KINDS)
     floating = parse_tables({"plan": header(), "fidelity": {"raster_tolerance": 1.0}}, KINDS)
     assert integer.as_dict() == floating.as_dict()
-    assert type(integer.fidelity.raster_tolerance) is float
+    assert isinstance(integer.fidelity, SamePagination)
+    assert isinstance(floating.fidelity, SamePagination)
+    assert type(integer.fidelity.raster_tolerance) is int
+    assert type(floating.fidelity.raster_tolerance) is float
 
 
 @pytest.mark.parametrize("value", [1, "true", "false"])

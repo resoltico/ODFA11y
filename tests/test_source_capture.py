@@ -14,7 +14,7 @@ from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -72,7 +72,7 @@ def test_growth_after_descriptor_size_check_is_bounded(
 def _pipeline(source: str, output: str) -> None:
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("source")),
     )
@@ -170,7 +170,7 @@ def test_zero_length_input_retains_invalid_document_outcome(tmp_path: Path) -> N
     source.write_bytes(b"")
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(profile=profile_named("source")),
     )
@@ -185,7 +185,7 @@ def test_directory_input_has_valid_execution_failure_evidence(tmp_path: Path) ->
     output = tmp_path / "evidence"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("source")),
     )
@@ -227,7 +227,7 @@ def test_unwritable_source_directory_publishes_failure_elsewhere(tmp_path: Path)
         output = tmp_path / "evidence"
         result = execute(
             source,
-            reviewed_plan(source, [], FidelityPolicy()),
+            reviewed_plan(source, [], Pagination.SAME()),
             output,
             RunSettings(profile=profile_named("source")),
         )

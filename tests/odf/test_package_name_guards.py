@@ -12,7 +12,7 @@ from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, PackageStorage
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
@@ -113,7 +113,7 @@ def _assert_guarded_refusal(
     assert FactKeys.TEXT_PARAGRAPH_STYLES not in style_report.facts
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         directory / "evidence",
         RunSettings(profile=profile_named("source")),
         native_tools=native_tools,

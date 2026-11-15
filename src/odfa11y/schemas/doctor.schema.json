@@ -12,6 +12,97 @@
         4
       ]
     },
+    "failure": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "details": {
+              "type": "string"
+            },
+            "exit_status": {
+              "enum": [
+                2,
+                3,
+                4
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "problems": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "remedy": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "enum": [
+                        "regenerate-plan",
+                        "rebind-plan",
+                        "choose-output",
+                        "install-tool",
+                        "edit-in-application",
+                        "embed-resource"
+                      ]
+                    },
+                    "detail": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "target",
+                    "detail"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "exit_status",
+            "remedy",
+            "problems",
+            "details"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "libraries": {
       "additionalProperties": {
         "type": "string"
@@ -181,7 +272,8 @@
     "schema_versions",
     "toolchain",
     "schema_version",
-    "exit_status"
+    "exit_status",
+    "failure"
   ],
   "type": "object"
 }

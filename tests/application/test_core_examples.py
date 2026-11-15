@@ -69,7 +69,7 @@ def test_native_example_retains_controlled_probe_failure_before_export(
 ) -> None:
     source = make_flat(tmp_path, "text")
     failure = ToolFailure("Controlled capability probe failure")
-    record = DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain(), error=failure)
+    record = DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain(), _error=failure)
     monkeypatch.setattr(core_examples.api, "doctor", lambda **_kwargs: record)
     exports = []
     monkeypatch.setattr(core_examples.api, "export", lambda *args, **_kwargs: exports.append(args))

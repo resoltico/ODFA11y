@@ -14,8 +14,8 @@ from odfa11y.errors import PlanError
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
-from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.remediate.compile import compile_operations
 from odfa11y.report import FactKeys
@@ -215,7 +215,7 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
         SetGraphicAlternatives({"Logo": GraphicAlternative("Logo")}),
     ]
     record = execute(
-        source, reviewed_plan(source, plan, FidelityPolicy()), tmp_path / "out", options
+        source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options
     )
     statuses = {stage.name.value: stage.status for stage in record.stages}
     assert statuses["remediate"] == "passed"

@@ -21,10 +21,14 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "details": {
+                    "type": "string"
+                  },
                   "exit_status": {
                     "enum": [
-                      0,
-                      1,
                       2,
                       3,
                       4
@@ -32,11 +36,69 @@
                   },
                   "message": {
                     "type": "string"
+                  },
+                  "problems": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "remedy": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "action": {
+                            "enum": [
+                              "regenerate-plan",
+                              "rebind-plan",
+                              "choose-output",
+                              "install-tool",
+                              "edit-in-application",
+                              "embed-resource"
+                            ]
+                          },
+                          "detail": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "target": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "action",
+                          "target",
+                          "detail"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
+                  "code",
+                  "message",
                   "exit_status",
-                  "message"
+                  "remedy",
+                  "problems",
+                  "details"
                 ],
                 "type": "object"
               },
@@ -51,15 +113,18 @@
               "properties": {
                 "decisions": {
                   "items": {
-                    "oneOf": [
+                    "anyOf": [
                       {
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "database.description"
+                          "kind_id": {
+                            "enum": [
+                              "database.description"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -87,10 +152,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -98,10 +163,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "document.metadata"
+                          "kind_id": {
+                            "enum": [
+                              "document.metadata"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -114,10 +182,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -125,10 +193,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "document.odf_version"
+                          "kind_id": {
+                            "enum": [
+                              "document.odf_version"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -141,10 +212,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -152,10 +223,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "formula.alternative"
+                          "kind_id": {
+                            "enum": [
+                              "formula.alternative"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -168,10 +242,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -179,10 +253,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "graphic.alternative"
+                          "kind_id": {
+                            "enum": [
+                              "graphic.alternative"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -210,10 +287,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -221,10 +298,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "heading.level"
+                          "kind_id": {
+                            "enum": [
+                              "heading.level"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -252,10 +332,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -263,10 +343,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "language.target"
+                          "kind_id": {
+                            "enum": [
+                              "language.target"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -294,10 +377,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -305,10 +388,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "link.description"
+                          "kind_id": {
+                            "enum": [
+                              "link.description"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -336,10 +422,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -347,10 +433,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "page.metadata"
+                          "kind_id": {
+                            "enum": [
+                              "page.metadata"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -378,10 +467,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -389,10 +478,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "page.navigation"
+                          "kind_id": {
+                            "enum": [
+                              "page.navigation"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -420,10 +512,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -431,10 +523,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "sheet.name"
+                          "kind_id": {
+                            "enum": [
+                              "sheet.name"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -462,10 +557,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -473,10 +568,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "table.headers"
+                          "kind_id": {
+                            "enum": [
+                              "table.headers"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -504,10 +602,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -515,10 +613,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "text.linkify_addresses"
+                          "kind_id": {
+                            "enum": [
+                              "text.linkify_addresses"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -531,10 +632,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -542,10 +643,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "text.remove_spacers"
+                          "kind_id": {
+                            "enum": [
+                              "text.remove_spacers"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -558,10 +662,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       },
@@ -569,10 +673,13 @@
                         "additionalProperties": false,
                         "properties": {
                           "current": {
+                            "additionalProperties": {},
                             "type": "object"
                           },
-                          "kind": {
-                            "const": "text.spacing"
+                          "kind_id": {
+                            "enum": [
+                              "text.spacing"
+                            ]
                           },
                           "rule_ids": {
                             "items": {
@@ -585,10 +692,10 @@
                           }
                         },
                         "required": [
-                          "kind",
-                          "target",
                           "current",
-                          "rule_ids"
+                          "kind_id",
+                          "rule_ids",
+                          "target"
                         ],
                         "type": "object"
                       }
@@ -600,35 +707,27 @@
                   "additionalProperties": false,
                   "properties": {
                     "chart.count": {
-                      "description": "Native charts in a Chart document.",
                       "type": "integer"
                     },
                     "chart.series_count": {
-                      "description": "Declared chart series.",
                       "type": "integer"
                     },
                     "database.connection_declaration_count": {
-                      "description": "Database connection declarations.",
                       "type": "integer"
                     },
                     "database.query_declaration_count": {
-                      "description": "Declared database queries.",
                       "type": "integer"
                     },
                     "document.adapter": {
-                      "description": "Family adapter used for source semantics.",
                       "type": "string"
                     },
                     "document.description": {
-                      "description": "Authored document description.",
                       "type": "string"
                     },
                     "document.family": {
-                      "description": "Detected ODF family.",
                       "type": "string"
                     },
                     "document.kind": {
-                      "description": "Detected ODF document kind.",
                       "type": "string"
                     },
                     "document.language": {
@@ -639,8 +738,7 @@
                         {
                           "type": "null"
                         }
-                      ],
-                      "description": "Effective document language."
+                      ]
                     },
                     "document.media_type": {
                       "anyOf": [
@@ -650,29 +748,24 @@
                         {
                           "type": "null"
                         }
-                      ],
-                      "description": "Declared source media type."
+                      ]
                     },
                     "document.odf_version": {
-                      "description": "Declared ODF version.",
                       "type": "string"
                     },
                     "document.title": {
-                      "description": "Authored document title.",
                       "type": "string"
                     },
                     "fidelity.link_count": {
                       "additionalProperties": {
                         "type": "integer"
                       },
-                      "description": "Source and candidate link counts.",
                       "type": "object"
                     },
                     "fidelity.page_count": {
                       "additionalProperties": {
                         "type": "integer"
                       },
-                      "description": "Source and candidate page counts.",
                       "type": "object"
                     },
                     "fidelity.policy": {
@@ -692,107 +785,84 @@
                           }
                         ]
                       },
-                      "description": "Effective comparison policy.",
                       "type": "object"
                     },
                     "fidelity.raster_changed_ratios": {
-                      "description": "Changed-pixel ratio for each compared page.",
                       "items": {
                         "type": "number"
                       },
                       "type": "array"
                     },
                     "fidelity.raster_max_changed_ratio": {
-                      "description": "Largest changed-pixel ratio.",
                       "type": "number"
                     },
                     "formula.element_count": {
-                      "description": "Inspected MathML elements.",
                       "type": "integer"
                     },
                     "image.graphic_count": {
-                      "description": "Graphic frames in an Image document.",
                       "type": "integer"
                     },
                     "native.limitations": {
                       "additionalProperties": {
                         "type": "integer"
                       },
-                      "description": "Counts of declarations requiring native export refusal or review.",
                       "type": "object"
                     },
                     "package.layout": {
-                      "description": "Physical ODF representation.",
                       "type": "string"
                     },
                     "page.count": {
-                      "description": "Drawing or presentation pages.",
                       "type": "integer"
                     },
                     "page.link_count": {
-                      "description": "Links on drawing or presentation pages.",
                       "type": "integer"
                     },
                     "page.shape_count": {
-                      "description": "Shapes on drawing or presentation pages.",
                       "type": "integer"
                     },
                     "pdf.described_graphic_count": {
-                      "description": "Inspected graphical content with descriptions.",
                       "type": "integer"
                     },
                     "pdf.format": {
-                      "description": "PDF header format declaration.",
                       "type": "string"
                     },
                     "pdf.language": {
-                      "description": "PDF catalog language.",
                       "type": "string"
                     },
                     "pdf.link_annotation_count": {
-                      "description": "Inspected link annotations.",
                       "type": "integer"
                     },
                     "pdf.link_structure_element_count": {
-                      "description": "Link elements in the structure tree.",
                       "type": "integer"
                     },
                     "pdf.marked_content_id_count": {
-                      "description": "Marked content identifiers.",
                       "type": "integer"
                     },
                     "pdf.page_count": {
-                      "description": "Pages in the inspected PDF.",
                       "type": "integer"
                     },
                     "pdf.role_map": {
                       "additionalProperties": {
                         "type": "string"
                       },
-                      "description": "PDF custom-to-standard structure role mapping.",
                       "type": "object"
                     },
                     "pdf.structure_tags": {
                       "additionalProperties": {
                         "type": "integer"
                       },
-                      "description": "Reachable structure roles and their counts.",
                       "type": "object"
                     },
                     "pdf.text_character_count": {
-                      "description": "Extractable text characters.",
                       "type": "integer"
                     },
                     "pdf.title": {
-                      "description": "PDF document title.",
                       "type": "string"
                     },
                     "pdf.ua_part": {
-                      "description": "Declared PDF/UA part.",
                       "type": "integer"
                     },
                     "schema.unlocated_violation_count": {
-                      "description": "Violations without established element locations.",
                       "type": "integer"
                     },
                     "schema.version": {
@@ -803,27 +873,21 @@
                         {
                           "type": "null"
                         }
-                      ],
-                      "description": "Version of the selected bundled schema."
+                      ]
                     },
                     "schema.violation_count": {
-                      "description": "Reported schema violations.",
                       "type": "integer"
                     },
                     "sheet.count": {
-                      "description": "Sheets in document order.",
                       "type": "integer"
                     },
                     "sheet.graphic_count": {
-                      "description": "Graphic objects on sheets.",
                       "type": "integer"
                     },
                     "text.bookmark_count": {
-                      "description": "Bookmark destinations in current reading contexts.",
                       "type": "integer"
                     },
                     "text.effective_languages": {
-                      "description": "Per-target effective western, Asian and complex languages or refusal reasons.",
                       "items": {
                         "additionalProperties": {},
                         "type": "object"
@@ -831,31 +895,24 @@
                       "type": "array"
                     },
                     "text.graphic_count": {
-                      "description": "Graphic objects in current reading contexts.",
                       "type": "integer"
                     },
                     "text.heading_count": {
-                      "description": "Structural headings in current reading contexts.",
                       "type": "integer"
                     },
                     "text.list_continuation_count": {
-                      "description": "Resolved list continuation relationships.",
                       "type": "integer"
                     },
                     "text.list_count": {
-                      "description": "Lists in established current reading contexts.",
                       "type": "integer"
                     },
                     "text.list_max_level": {
-                      "description": "Deepest counter level, resetting at cells and text boxes.",
                       "type": "integer"
                     },
                     "text.note_count": {
-                      "description": "Notes anchored in current reading contexts.",
                       "type": "integer"
                     },
                     "text.paragraph_styles": {
-                      "description": "Paragraph style usage and effective spacing.",
                       "items": {
                         "additionalProperties": {},
                         "type": "object"
@@ -866,26 +923,21 @@
                       "additionalProperties": {
                         "type": "integer"
                       },
-                      "description": "Declared layout conditions needing native reading-order review.",
                       "type": "object"
                     },
                     "text.reference_count": {
-                      "description": "Internal links and typed cross-reference fields.",
                       "type": "integer"
                     },
                     "text.revision_relationships": {
                       "additionalProperties": {
                         "type": "integer"
                       },
-                      "description": "Tracked declarations, authored markers and unresolved relationships.",
                       "type": "object"
                     },
                     "text.simulated_list_count": {
-                      "description": "Paragraphs resembling typed list markers; review only.",
                       "type": "integer"
                     },
                     "text.table_classifications": {
-                      "description": "Per-table source-supported intent, grid and semantic header bands.",
                       "items": {
                         "additionalProperties": {},
                         "type": "object"
@@ -893,11 +945,9 @@
                       "type": "array"
                     },
                     "text.table_count": {
-                      "description": "Tables in current reading contexts.",
                       "type": "integer"
                     },
                     "text.visibility_contexts": {
-                      "description": "Visibility conditions and cached states, without evaluation.",
                       "items": {
                         "additionalProperties": {},
                         "type": "object"
@@ -918,10 +968,10 @@
                           }
                         ]
                       },
-                      "description": "Validator identity, profile, verdict and failed-rule count.",
                       "type": "object"
                     }
                   },
+                  "required": [],
                   "type": "object"
                 },
                 "findings": {
@@ -1042,14 +1092,14 @@
             },
             "type": "array"
           },
-          "source": {
+          "source_name": {
             "type": "string"
           }
         },
         "required": [
-          "source",
           "reports",
-          "failure"
+          "failure",
+          "source_name"
         ],
         "type": "object"
       },

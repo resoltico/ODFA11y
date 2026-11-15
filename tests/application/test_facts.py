@@ -21,8 +21,10 @@ from odfa11y.report import FACT_REGISTRY, FactKey, FactKeys, FactSet
 )
 def test_fact_type_mismatch_is_rejected(key: FactKey[object], value: object) -> None:
     facts = FactSet()
-    with pytest.raises(InvalidOption, match="requires"):
+    with pytest.raises(InvalidOption) as caught:
         facts[key] = value
+    assert key.id in str(caught.value)
+    assert caught.value.problems
     assert not facts
 
 

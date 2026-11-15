@@ -63,9 +63,9 @@ Scope: document.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |
-| `title` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text","pattern":"\\S"}` | Document title identifying its purpose. |
-| `description` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text","pattern":"\\S"}` | Document description and context. |
-| `language` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"pattern":"\\S","format":"odfa11y-language-tag"}` | Intended default language, preserving explicit local overrides. |
+| `title` | no | `{"anyOf":[{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"},{"type":"null"}]}` | Document title identifying its purpose. |
+| `description` | no | `{"anyOf":[{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"},{"type":"null"}]}` | Document description and context. |
+| `language` | no | `{"anyOf":[{"type":"string","format":"odfa11y-language-tag"},{"type":"null"}]}` | Intended default language, preserving explicit local overrides. |
 
 Required-field alternatives: `[{"required": ["title"], "properties": {"title": {"not": {"type": "null"}}}}, {"required": ["description"], "properties": {"description": {"not": {"type": "null"}}}}, {"required": ["language"], "properties": {"language": {"not": {"type": "null"}}}}]`.
 
@@ -93,8 +93,8 @@ Use the audit's canonical target and mandatory fingerprint.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |
-| `title` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Accessible title; empty text explicitly clears it. |
-| `description` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Explain the graphic's meaning; empty text clears it. |
+| `title` | no | `{"anyOf":[{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"},{"type":"null"}]}` | Accessible title. |
+| `description` | no | `{"anyOf":[{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"},{"type":"null"}]}` | Explain the graphic's meaning. |
 | `decorative` | no | `{"anyOf":[{"type":"boolean"},{"type":"null"}]}` | Explicit decorative role, subject to source safety guards. |
 
 Required-field alternatives: `[{"required": ["title"], "properties": {"title": {"not": {"type": "null"}}}}, {"required": ["description"], "properties": {"description": {"not": {"type": "null"}}}}, {"required": ["decorative"], "properties": {"decorative": {"not": {"type": "null"}}}}]`.
@@ -117,9 +117,9 @@ Use the audit's canonical target and mandatory fingerprint.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |
-| `western` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-language-tag"}` | Language for the target western-script channel. |
-| `asian` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-language-tag"}` | Language for the target Asian-script channel. |
-| `complex` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-language-tag"}` | Language for the target complex-script channel. |
+| `western` | no | `{"anyOf":[{"type":"string","format":"odfa11y-language-tag"},{"type":"null"}]}` | Language for the target western-script channel. |
+| `asian` | no | `{"anyOf":[{"type":"string","format":"odfa11y-language-tag"},{"type":"null"}]}` | Language for the target Asian-script channel. |
+| `complex` | no | `{"anyOf":[{"type":"string","format":"odfa11y-language-tag"},{"type":"null"}]}` | Language for the target complex-script channel. |
 
 Required-field alternatives: `[{"required": ["western"], "properties": {"western": {"not": {"type": "null"}}}}, {"required": ["asian"], "properties": {"asian": {"not": {"type": "null"}}}}, {"required": ["complex"], "properties": {"complex": {"not": {"type": "null"}}}}]`.
 
@@ -141,8 +141,8 @@ Use the audit's canonical target and mandatory fingerprint.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |
-| `title` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Accessible page title. |
-| `description` | no | `{"anyOf":[{"type":"string"},{"type":"null"}],"format":"odfa11y-xml-text"}` | Page purpose and context. |
+| `title` | no | `{"anyOf":[{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"},{"type":"null"}]}` | Accessible page title. |
+| `description` | no | `{"anyOf":[{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"},{"type":"null"}]}` | Page purpose and context. |
 
 Required-field alternatives: `[{"required": ["title"], "properties": {"title": {"not": {"type": "null"}}}}, {"required": ["description"], "properties": {"description": {"not": {"type": "null"}}}}]`.
 
@@ -154,7 +154,7 @@ Use the audit's canonical target and mandatory fingerprint.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |
-| `navigation` | yes | `{"type":"array","items":{"type":"string","pattern":"\\S","format":"odfa11y-xml-text"}}` | Complete reading order of the page's existing shape identities. |
+| `navigation` | yes | `{"type":"array","items":{"type":"string","format":"odfa11y-xml-text","pattern":"\\S"}}` | Complete reading order of the page's existing shape identities. |
 
 ### `sheet.name`
 
@@ -174,8 +174,8 @@ Use the audit's canonical target and mandatory fingerprint.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |
-| `rows` | no | `{"anyOf":[{"type":"integer"},{"type":"null"}],"minimum":1}` | Number of leading logical header rows. |
-| `columns` | no | `{"anyOf":[{"type":"integer"},{"type":"null"}],"minimum":1}` | Number of leading logical header columns. |
+| `rows` | no | `{"anyOf":[{"type":"integer","minimum":1},{"type":"null"}]}` | Number of leading logical header rows. |
+| `columns` | no | `{"anyOf":[{"type":"integer","minimum":1},{"type":"null"}]}` | Number of leading logical header columns. |
 
 Required-field alternatives: `[{"required": ["rows"], "properties": {"rows": {"not": {"type": "null"}}}}, {"required": ["columns"], "properties": {"columns": {"not": {"type": "null"}}}}]`.
 

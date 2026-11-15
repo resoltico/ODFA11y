@@ -11,8 +11,9 @@ from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -51,7 +52,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
     output = tmp_path / "evidence"
     result = execute(
         source,
-        reviewed_plan(source, [SetMetadata(language="en-GB")], FidelityPolicy()),
+        reviewed_plan(source, [SetMetadata(language="en-GB")], Pagination.SAME()),
         output,
         RunSettings(
             tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
@@ -64,7 +65,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         actual = read_snapshot(pdf)
         assert actual.links == baseline.links
         assert actual.text == baseline.text
-        assert compare_pdfs(direct, pdf, FidelityPolicy()).error_count == 0
+        assert compare_pdfs(direct, pdf, Pagination.SAME()).error_count == 0
     published = output / ("remediated" + source.suffix)
     expected = tmp_path / ("expected" + source.suffix)
     execute_operations(source, expected, [SetMetadata(language="en-GB")])
@@ -101,7 +102,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     for repeat in [1, 2]:
         result = execute(
             source,
-            reviewed_plan(source, [], FidelityPolicy()),
+            reviewed_plan(source, [], Pagination.SAME()),
             output / str(repeat),
             RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
         )
@@ -112,7 +113,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     inspected = tmp_path / "inspected"
     assert execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         inspected,
         RunSettings(profile=profile_named("source")),
     ).passed
@@ -125,7 +126,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
         published, tmp_path / "candidate.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
     assert "remediated.odt" in read_snapshot(renamed_pdf).text
-    assert compare_pdfs(direct, renamed_pdf, FidelityPolicy()).error_count != 0
+    assert compare_pdfs(direct, renamed_pdf, Pagination.SAME()).error_count != 0
 
 
 def _set_navigation_base(source: Path) -> None:

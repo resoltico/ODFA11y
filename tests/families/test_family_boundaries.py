@@ -14,7 +14,7 @@ from odfa11y.families import REGISTRY
 from odfa11y.families.generic import GenericAdapter
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys, Location, Severity
 from odfa11y.rules import registry as rules
@@ -175,7 +175,7 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     source = make_package(tmp_path, "presentation")
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
+        reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(),
     )
@@ -202,7 +202,7 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     )
     record = execute(
         make_package(tmp_path, "presentation"),
-        reviewed_plan(make_package(tmp_path, "presentation"), [], FidelityPolicy()),
+        reviewed_plan(make_package(tmp_path, "presentation"), [], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(profile=profile_named("production")),
     )

@@ -11,7 +11,7 @@ import pytest
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal, PackageError, ToolFailure
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.comparison import compare_documents, is_pdf
 from odfa11y.run.native import export_document
 from tests.fixtures.native import refusing
@@ -28,7 +28,9 @@ def test_core_comparison_preflights_both_inputs_before_export(
     calls: list[object] = []
     native_tools = replace(native_tools, export=refusing(calls))
     with pytest.raises(FileNotFoundError):
-        compare_documents(source, tmp_path / "missing", FidelityPolicy(), native_tools=native_tools)
+        compare_documents(
+            source, tmp_path / "missing", Pagination.SAME(), native_tools=native_tools
+        )
     assert not calls
 
 
@@ -54,7 +56,7 @@ def test_core_pdf_comparison_keeps_original_report_identity(tmp_path: Path) -> N
     report = compare_documents(
         source,
         candidate,
-        FidelityPolicy(),
+        Pagination.SAME(),
         tools=Tools(),
         on_progress=lambda event: events.append((event.step, event.state)),
     )
@@ -81,7 +83,7 @@ def test_core_odf_comparison_keeps_renders_alive_and_cleans_scratch(
         return text_pdf(destination, [["Example"]])
 
     native_tools = replace(native_tools, export=render)
-    report = compare_documents(source, candidate, FidelityPolicy(), native_tools=native_tools)
+    report = compare_documents(source, candidate, Pagination.SAME(), native_tools=native_tools)
     assert report.error_count == 0
     assert profiles[0] == profiles[1]
     assert all(not path.exists() for path in rendered)
@@ -123,7 +125,7 @@ def test_core_comparison_cleans_private_render_after_candidate_export_failure(
 
     native_tools = replace(native_tools, export=render)
     with pytest.raises(ToolFailure, match="Candidate native export failed"):
-        compare_documents(source, candidate, FidelityPolicy(), native_tools=native_tools)
+        compare_documents(source, candidate, Pagination.SAME(), native_tools=native_tools)
     assert rendered
     assert not rendered[0].parent.exists()
     assert (source.read_bytes(), candidate.read_bytes()) == before

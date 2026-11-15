@@ -5,11 +5,12 @@ import hashlib
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Annotated, ClassVar
 from urllib.parse import quote, unquote
 
+from odfa11y.contracts import Pattern, record_dict
 from odfa11y.errors import PlanError
-from odfa11y.serialization import record_dict
-lazy from odfa11y.serialization import JsonObject
+lazy from odfa11y.contracts import JsonObject
 
 
 class Part(StrEnum):
@@ -48,6 +49,7 @@ class TargetPath(str):
     """A canonical logical location, independent of package storage paths."""
 
     PATTERN = TARGET_PATH_PATTERN
+    __contract__: ClassVar[Annotated[str, Pattern(PATTERN)]]
 
     def __new__(cls, value: str) -> TargetPath:
         if type(value) is cls:
@@ -85,6 +87,7 @@ class Fingerprint(str):
 
     LENGTH = 16
     PATTERN = r"^[0-9a-f]{" + str(LENGTH) + r"}(?![\s\S])"
+    __contract__: ClassVar[Annotated[str, Pattern(PATTERN)]]
 
     def __new__(cls, value: str) -> Fingerprint:
         if type(value) is cls:

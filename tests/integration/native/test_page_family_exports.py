@@ -12,7 +12,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.families import pages
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
@@ -33,7 +33,7 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     root = tmp_path / "evidence"
     record = execute(
         source,
-        reviewed_plan(source, _plan(family), FidelityPolicy()),
+        reviewed_plan(source, _plan(family), Pagination.SAME()),
         root,
         RunSettings(
             tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
@@ -74,7 +74,7 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     ]
     record = execute(
         source,
-        reviewed_plan(source, plan, FidelityPolicy()),
+        reviewed_plan(source, plan, Pagination.SAME()),
         root,
         RunSettings(
             tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")

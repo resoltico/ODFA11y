@@ -13,7 +13,7 @@ from odfa11y.odf import OdfDocument
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run.native import native_export_settings
-lazy from odfa11y.pdf.fidelity import FidelityPolicy
+lazy from odfa11y.plans.fidelity import FidelityPolicy
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.report import Report
 

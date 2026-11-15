@@ -1,14 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed sheet, graphic and link answer contracts."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Annotated, ClassVar
 lazy from collections.abc import Sequence
 
 from odfa11y.concepts import GraphicAlternative, LinkDescription
+from odfa11y.contracts import (
+    Constraint,
+    Description,
+    XmlText,
+)
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import GraphicAlternativeAnswer, LinkDescriptionAnswer
 from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
-from odfa11y.decisions.validation import validate_xml_text
 from odfa11y.families.spreadsheet.names import SetSheetNames, SheetNameChange, invalid_name_reason
 from odfa11y.families.spreadsheet.objects import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.odf import Family
@@ -18,33 +23,27 @@ lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
 
 
-def validate_sheet_name(name: str) -> None:
-    """Require native-safe names without accepting invalid XML text.
+@dataclass(frozen=True, slots=True)
+class SheetName(Constraint):
+    """A native sheet name whose characters are representable in XML."""
 
-    Raises
-    ------
-    ValueError
-        The name cannot be represented or violates native naming constraints.
+    format_name: ClassVar[str] = "odfa11y-sheet-name"
 
-    """
-    validate_xml_text(name)
-    if reason := invalid_name_reason(name):
-        raise ValueError(reason)
+    def problems(self, value: object) -> tuple[str, ...]:
+        if not isinstance(value, str):
+            return ()
+        problem = invalid_name_reason(value)
+        return XmlText().problems(value) + ((problem,) if problem else ())
+
+    def schema(self) -> dict[str, object]:
+        return {"format": self.format_name}
 
 
 @dataclass(frozen=True, slots=True)
 class SheetNameAnswer:
     """A meaningful sheet name supplied by its reviewer."""
 
-    name: str = field(
-        metadata={
-            "schema": {
-                "format": "odfa11y-sheet-name",
-                "description": "Name identifying what the sheet contains.",
-            },
-            "validate": validate_sheet_name,
-        }
-    )
+    name: Annotated[str, SheetName(), Description("Name identifying what the sheet contains.")]
 
 
 SHEET_NAME = DecisionKind(

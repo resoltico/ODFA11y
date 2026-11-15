@@ -13,7 +13,7 @@ from odfa11y.errors import DocumentRefusal
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -42,7 +42,7 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
     # Verify reaches the explicit native refusal even without any installed application.
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "evidence",
         RunSettings(tools=Tools(soffice="missing-tool"), profile=profile_named("verify")),
     )
@@ -65,7 +65,7 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
     require_native_context(document, captured_identity=True)
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "evidence",
         RunSettings(profile=profile_named("source")),
     )
@@ -93,7 +93,7 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
     output = tmp_path / "evidence"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("source")),
     )

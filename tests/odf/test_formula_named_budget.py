@@ -14,7 +14,7 @@ from odfa11y.errors import DocumentRefusal
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -76,7 +76,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
         export_document(source, tmp_path / "output.pdf", native_tools=native_tools)
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "evidence",
         RunSettings(profile=profile_named("verify")),
         native_tools=native_tools,

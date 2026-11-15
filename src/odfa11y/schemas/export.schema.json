@@ -1,0 +1,30 @@
+{
+  "$id": "urn:odfa11y:schema:export",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exit_status": {
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "output_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "output_name",
+    "exit_status"
+  ],
+  "type": "object"
+}

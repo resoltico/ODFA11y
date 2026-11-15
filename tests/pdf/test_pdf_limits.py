@@ -8,8 +8,9 @@ import pytest
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua, list_fonts
 from odfa11y.pdf import structure_walk as walk
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.reading import limits
+from odfa11y.plans.fidelity import Pagination
 from tests.fixtures.pdf import tagged_writer, text_pdf
 
 
@@ -27,7 +28,7 @@ def test_an_oversized_pdf_is_a_finding_not_a_crash(
     assert [f.rule_id for f in report.findings] == ["PDF000"]
     assert "exceeds" in report.findings[0].message
     with pytest.raises(ToolFailure, match="exceeds"):
-        compare_pdfs(path, path, FidelityPolicy())
+        compare_pdfs(path, path, Pagination.SAME())
 
 
 def test_a_pdf_with_too_many_pages_is_refused(
@@ -37,7 +38,7 @@ def test_a_pdf_with_too_many_pages_is_refused(
     monkeypatch.setattr(limits, "MAX_PDF_PAGES", 2)
     assert "pages" in audit_pdfua(path).findings[0].message
     with pytest.raises(ToolFailure, match="3 pages"):
-        compare_pdfs(path, path, FidelityPolicy())
+        compare_pdfs(path, path, Pagination.SAME())
 
 
 def test_a_structure_tree_above_the_limit_is_a_finding(

@@ -5,16 +5,15 @@ import hashlib
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
-from odfa11y.decisions import validate_answer
+from odfa11y.contracts import Description, Length, Pattern, record_dict, validate
 from odfa11y.errors import PackageError, PlanError
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.serialization import record_dict
-from odfa11y.targets import require_target
+from odfa11y.plans.fidelity import FidelityPolicy, Pagination
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision
-lazy from odfa11y.serialization import JsonObject
+lazy from odfa11y.plans.contracts import to_file
 
 SOURCE_SHA256_PATTERN = r"^[0-9a-f]{64}(?![\s\S])"
 PLAN_SCHEMA_VERSION = 1
@@ -25,18 +24,9 @@ HASH_CHUNK_BYTES = 1 << 20
 class SourceBinding:
     """Exact physical source bytes to which human decisions were bound."""
 
-    sha256: str = field(
-        metadata={
-            "schema": {
-                "pattern": SOURCE_SHA256_PATTERN,
-                "description": "SHA-256 of the reviewed source bytes.",
-            }
-        }
-    )
-
-    def __post_init__(self) -> None:
-        """Validate bindings created by Python callers as well as the parser."""
-        validate_answer(self, "plan.source")
+    sha256: Annotated[
+        str, Pattern(SOURCE_SHA256_PATTERN), Description("SHA-256 of the reviewed source bytes.")
+    ]
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,13 +35,7 @@ class PlanHeader:
 
     schema_version: Literal[1]
     source: SourceBinding
-    generator: str = field(
-        metadata={"schema": {"minLength": 1, "description": "Version that generated the plan."}}
-    )
-
-    def __post_init__(self) -> None:
-        """Validate the complete binding envelope."""
-        validate_answer(self, "plan")
+    generator: Annotated[str, Length(minimum=1), Description("Version that generated the plan.")]
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +44,7 @@ class Plan:
 
     header: PlanHeader
     decisions: tuple[Decision, ...] = ()
-    fidelity: FidelityPolicy = field(default_factory=FidelityPolicy)
+    fidelity: FidelityPolicy = field(default_factory=Pagination.SAME)
 
     def __post_init__(self) -> None:
         """Reject conflicting duplicate answers before execution.
@@ -71,6 +55,8 @@ class Plan:
             More than one answer addresses the same kind and target.
 
         """
+        validate(self.header, label="plan", error=PlanError)
+        validate(self.fidelity, label="fidelity", error=PlanError)
         keys = [
             (answer.kind.id, answer.target.path if answer.target else None)
             for answer in self.decisions
@@ -78,6 +64,23 @@ class Plan:
         if len(keys) != len(set(keys)):
             msg = "A plan cannot answer the same decision kind and target twice"
             raise PlanError(msg)
+
+    @classmethod
+    def _decoded(
+        cls, header: PlanHeader, decisions: tuple[Decision, ...], fidelity: FidelityPolicy
+    ) -> Plan:
+        keys = [
+            (decision.kind.id, decision.target.path if decision.target else None)
+            for decision in decisions
+        ]
+        if len(keys) != len(set(keys)):
+            message = "A plan cannot answer the same decision kind and target twice"
+            raise PlanError(message)
+        result = object.__new__(cls)
+        object.__setattr__(result, "header", header)
+        object.__setattr__(result, "decisions", decisions)
+        object.__setattr__(result, "fidelity", fidelity)
+        return result
 
     @classmethod
     def for_source(
@@ -100,7 +103,7 @@ class Plan:
                 PLAN_SCHEMA_VERSION, SourceBinding(source_digest(Path(source))), version("odfa11y")
             ),
             tuple(decisions),
-            fidelity or FidelityPolicy(),
+            fidelity or Pagination.SAME(),
         )
 
     def verify_source(self, source: str | Path, *, rebind: bool = False) -> None:
@@ -133,29 +136,7 @@ class Plan:
             A kind mixes incompatible document and target answer tables.
 
         """
-        tables: dict[str, object] = {}
-        for decision in self.decisions:
-            answer = {
-                key: value
-                for key, value in record_dict(decision.answer).items()
-                if value is not None
-            }
-            if decision.target is None:
-                tables[decision.kind.id] = answer
-            else:
-                group = tables.setdefault(decision.kind.id, {})
-                if not isinstance(group, dict):
-                    msg = "A kind cannot mix document and target answers"
-                    raise PlanError(msg)
-                group[decision.target.path] = {
-                    "fingerprint": require_target(decision.target).fingerprint,
-                    **answer,
-                }
-        return record_dict({
-            "plan": record_dict(self.header),
-            "decisions": tables,
-            "fidelity": record_dict(self.fidelity),
-        })
+        return record_dict(to_file(self))
 
 
 def source_digest(source: Path) -> str:

@@ -16,7 +16,8 @@ from odfa11y.evidence import check_bundle
 from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf import audit_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from tests.fixtures.pdf import register, tagged_writer
 from tests.fixtures.plans import plan_header
@@ -54,7 +55,7 @@ def test_invalid_predictor_refuses_and_retains_mixed_audits(
     assert [f.rule_id for f in report.findings] == ["PDF000"]
     assert "Malformed PDF stream decoding parameters" in report.findings[0].message
     with pytest.raises(ToolFailure, match="Malformed PDF stream decoding parameters"):
-        compare_pdfs(good, bad, FidelityPolicy())
+        compare_pdfs(good, bad, Pagination.SAME())
     assert main(["audit", str(good), str(bad), str(good), "--format", "json"]) == 2
     output = capsys.readouterr()
     assert not output.err

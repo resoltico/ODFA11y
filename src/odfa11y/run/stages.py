@@ -30,10 +30,10 @@ def run_stage(
     """
     if name not in record.profile.stages:
         reason = f"not part of the {record.profile.name} profile"
-        return StageResult(name, StageStatus.SKIPPED, reason, gate=False)
+        return StageResult(name, StageStatus.SKIPPED, reason, _gate=False)
     if record.failed_stage:
         return StageResult(
-            name, StageStatus.SKIPPED, f"not run: {record.failed_stage} failed", gate=False
+            name, StageStatus.SKIPPED, f"not run: {record.failed_stage} failed", _gate=False
         )
     if on_progress is not None:
         on_progress(ProgressEvent(Step(name), StepState.RUNNING))
@@ -45,8 +45,8 @@ def run_stage(
             name,
             StageStatus.FAILED,
             _describe(exc),
-            error=True,
-            failure_status=failure_status(exc),
+            _error=True,
+            _failure_status=failure_status(exc),
             details=details[:DETAIL_CHARS] or None,
         )
 

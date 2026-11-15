@@ -11,7 +11,7 @@ from odfa11y.concepts import GraphicAlternative
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
 from odfa11y.pdf import validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
@@ -38,7 +38,7 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
     plan = [SetMetadata(title="Corpus document", language="en-US"), *PIPELINE_RUNS[name]]
     record = execute(
         CORPUS / name,
-        reviewed_plan(CORPUS / name, plan, FidelityPolicy()),
+        reviewed_plan(CORPUS / name, plan, Pagination.SAME()),
         tmp_path / "out",
         RunSettings(tools=Tools(soffice=soffice)),
     )

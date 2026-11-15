@@ -14,8 +14,8 @@ from odfa11y.errors import DocumentRefusal, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -75,7 +75,7 @@ def test_chart_numeric_change_is_rejected_before_publication(tmp_path: Path) -> 
 def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, profile: str) -> None:
     record = execute(
         SOURCE,
-        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
+        reviewed_plan(SOURCE, _plan(), Pagination.SAME()),
         tmp_path / profile,
         RunSettings(profile=profile_named(profile)),
     )
@@ -88,7 +88,7 @@ def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, pr
 def test_chart_production_cannot_pass_without_pdf_assurance(tmp_path: Path) -> None:
     record = execute(
         SOURCE,
-        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
+        reviewed_plan(SOURCE, _plan(), Pagination.SAME()),
         tmp_path / "production",
         RunSettings(profile=profile_named("production")),
     )

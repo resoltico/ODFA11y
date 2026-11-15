@@ -6,12 +6,12 @@ from typing import Literal
 lazy from pathlib import Path
 
 from odfa11y.concepts.edits import Status
-from odfa11y.serialization import JsonProperty, record_dict
+from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.status import ExitStatus
 lazy from odfa11y.concepts.edits import Outcome
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.records import SchemaCheck
 lazy from odfa11y.remediate.violations import ViolationKind
-lazy from odfa11y.serialization import JsonObject
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,8 +28,8 @@ class Violation:
 class RemediationResult:
     """The outcome of a remediation run; ``destination`` is None for a dry run."""
 
-    source: Path = field(metadata={"basename": True})
-    destination: Path | None = field(metadata={"basename": True})
+    _source: Path
+    _destination: Path | None
     outcomes: tuple[Outcome, ...]
     schema: SchemaCheck
     schema_version: Literal[1] = field(default=1, init=False)
@@ -63,3 +63,19 @@ class RemediationResult:
 
         """
         return record_dict(self)
+
+    @property
+    def source(self) -> Path:
+        return self._source
+
+    @property
+    def destination(self) -> Path | None:
+        return self._destination
+
+    @JsonProperty
+    def source_name(self) -> str:
+        return self._source.name
+
+    @JsonProperty
+    def destination_name(self) -> str | None:
+        return self._destination.name if self._destination is not None else None

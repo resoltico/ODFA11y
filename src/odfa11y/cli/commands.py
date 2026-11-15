@@ -64,20 +64,26 @@ def main(argv: list[str] | None = None, *, native_tools: NativeTools | None = No
     except (OdfA11yError, OSError) as exc:
         if isinstance(exc, OSError):
             exc = IoFailure.from_oserror(exc)
-        if sarif:
-            print(  # noqa: T201  CLI output is the command interface.
-                "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
-            )
-            return failure_status(exc)
-        print(f"error: {terminal_text(exc)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        if isinstance(exc, PlanError) and getattr(args, "plan", None):
-            print(f"Plan: {terminal_text(args.plan)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        details = getattr(exc, "details", "")
-        if details:
-            print(terminal_text(details), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
-        if hint := error_hint(args, exc):
-            print(hint, file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+        return _failure(args, exc, sarif=sarif)
+
+
+def _failure(args: argparse.Namespace, exc: OdfA11yError, *, sarif: bool) -> int:
+    if sarif:
+        print(  # noqa: T201  CLI output is the command interface.
+            "error: SARIF command failed; check source root, inputs and tools.", file=sys.stderr
+        )
         return failure_status(exc)
+    print(f"error: {terminal_text(exc.message)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+    for problem in exc.problems:
+        sys.stderr.write(f"  - {terminal_text(problem)}\n")
+    if isinstance(exc, PlanError) and getattr(args, "plan", None):
+        print(f"Plan: {terminal_text(args.plan)}", file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+    details = getattr(exc, "details", "")
+    if details:
+        print(terminal_text(details), file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+    if hint := error_hint(args, exc):
+        print(hint, file=sys.stderr)  # noqa: T201  CLI output is the command interface.
+    return failure_status(exc)
 
 
 def _preflight_sarif(args: argparse.Namespace) -> None:

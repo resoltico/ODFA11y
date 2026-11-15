@@ -14,8 +14,8 @@ from odfa11y.errors import PlanError
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.remediate.compile import compile_operations
 from odfa11y.run.context import RunSettings
@@ -176,14 +176,14 @@ def test_base_source_assurance_and_pdf_boundary_are_explicit(tmp_path: Path) -> 
     operations = [SetMetadata(title="Fruit counts", language="en-US")]
     inspected = execute(
         SOURCE,
-        reviewed_plan(SOURCE, operations, FidelityPolicy()),
+        reviewed_plan(SOURCE, operations, Pagination.SAME()),
         tmp_path / "source",
         RunSettings(profile=profile_named("source")),
     )
     assert inspected.exit_status == 0
     production = execute(
         SOURCE,
-        reviewed_plan(SOURCE, operations, FidelityPolicy()),
+        reviewed_plan(SOURCE, operations, Pagination.SAME()),
         tmp_path / "production",
         RunSettings(profile=profile_named("production")),
     )

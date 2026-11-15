@@ -90,8 +90,8 @@ def _execute(
     if published:
         document.save(destination)
     return RemediationResult(
-        source=source,
-        destination=destination if published else None,
+        _source=source,
+        _destination=destination if published else None,
         outcomes=tuple(state.outcomes),
         schema=schema,
         published=published,

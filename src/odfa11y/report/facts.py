@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Registered measurements and their declared value types."""
 
-import types
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from typing import cast, get_args, get_origin
-lazy from collections.abc import Iterator, Mapping
+from typing import ClassVar, cast
 
+from odfa11y.contracts import mapping_contract, validate
 from odfa11y.errors import InvalidOption
 
 
@@ -252,27 +252,6 @@ class FactKeys:
     )
 
 
-def _matches(value: object, expected: object) -> bool:
-    origin = get_origin(expected)
-    arguments = get_args(expected)
-    if origin is types.UnionType:
-        return any(_matches(value, item) for item in arguments)
-    if expected is object:
-        return True
-    if origin is list:
-        return isinstance(value, list) and all(_matches(item, arguments[0]) for item in value)
-    if origin is dict:
-        return isinstance(value, dict) and all(
-            _matches(key, arguments[0]) and _matches(item, arguments[1])
-            for key, item in value.items()
-        )
-    if expected is float:
-        return type(value) in {int, float}
-    if expected in {int, bool}:
-        return type(value) is expected
-    return isinstance(expected, type) and isinstance(value, expected)
-
-
 def _require_registered(key: FactKey[object]) -> None:
     if not isinstance(key, FactKey) or FACT_REGISTRY.get(key.id) is not key:
         msg = "Report facts require a registered FactKey."
@@ -297,9 +276,7 @@ class FactSet:
 
         """
         _require_registered(key)
-        if not _matches(value, key.value_type):
-            msg = f"Fact {key.id!r} requires {key.value_type}, found {type(value).__name__}."
-            raise InvalidOption(msg)
+        validate(value, key.value_type, label=f"Fact {key.id!r}")
         self._values[key.id] = value
 
     def __getitem__[T](self, key: FactKey[T]) -> T:
@@ -369,3 +346,15 @@ class FactSet:
 
         """
         return dict(self._values)
+
+
+# The catalogue supplies actual annotations, so all four contract operations share its types.
+FactSet.__annotations__ = {
+    "__contract__": ClassVar.__getitem__(
+        mapping_contract(
+            "MeasuredFacts",
+            {name: key.value_type for name, key in sorted(FACT_REGISTRY.items())},
+            total=False,
+        )
+    )
+}

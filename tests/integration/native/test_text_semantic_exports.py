@@ -11,7 +11,7 @@ from odfa11y.families.text.headings.edit import heading_fingerprint, heading_loc
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
@@ -84,7 +84,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
         reviewed_plan(
             clean_columns,
             [SetMetadata(title="Header column boundary", language="en-US")],
-            FidelityPolicy(),
+            Pagination.SAME(),
         ),
         tmp_path / "evidence",
         RunSettings(

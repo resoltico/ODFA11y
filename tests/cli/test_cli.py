@@ -163,7 +163,10 @@ def test_invalid_configuration_is_reported_on_stderr(
     source = make_minimal_odt(tmp_path / "a.odt")
     invalid = config(tmp_path, '[decisions."document.metadata"]\nlanguage = 7\n')
     assert main(["remediate", str(source), str(tmp_path / "o.odt"), "--plan", str(invalid)]) == 4
-    assert "document.metadata.language has an unsupported value type" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert "document.metadata.language" in error
+    assert "must satisfy" in error
+    assert not (tmp_path / "o.odt").exists()
 
 
 def test_removed_flags_and_commands_are_rejected() -> None:

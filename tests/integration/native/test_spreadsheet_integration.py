@@ -15,7 +15,8 @@ from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.pdf import validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
@@ -204,7 +205,7 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     plan = [SetMetadata(language="en-GB")]
     options = RunSettings(tools=Tools(soffice=soffice))
     record = execute(
-        source, reviewed_plan(source, plan, FidelityPolicy()), tmp_path / "out", options
+        source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options
     )
     reached = stages(record)
     assert all(reached[name] == "passed" for name in PIPELINE_STAGES[:6]), record.as_dict()
@@ -231,13 +232,13 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
     plan = [reviewed_sheet_names(source, {"Fruit": "Fruit prices"})]
     record = execute(
         source,
-        reviewed_plan(source, plan, FidelityPolicy()),
+        reviewed_plan(source, plan, Pagination.SAME()),
         tmp_path / "out",
         RunSettings(tools=Tools(soffice=soffice)),
     )
     assert stages(record)["remediate"] == "passed"
     report = compare_pdfs(
-        tmp_path / "out" / "source.pdf", tmp_path / "out" / "remediated.pdf", FidelityPolicy()
+        tmp_path / "out" / "source.pdf", tmp_path / "out" / "remediated.pdf", Pagination.SAME()
     )
     assert "FID003" in {f.rule_id for f in report.findings}
     assert record.failed_stage == "fidelity", record.as_dict()
@@ -254,7 +255,7 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     )
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(language="en-GB")], FidelityPolicy()),
+        reviewed_plan(source, [SetMetadata(language="en-GB")], Pagination.SAME()),
         tmp_path / "out",
         options,
     )

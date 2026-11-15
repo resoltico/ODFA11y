@@ -4,12 +4,13 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from odfa11y.serialization import JsonProperty, record_dict
+from odfa11y.contracts import JsonProperty, record_dict
+from odfa11y.errors import Failure
 from odfa11y.status import ExitStatus, failure_status
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.errors import OdfA11yError
 lazy from odfa11y.native.probes import CapabilityResult
 lazy from odfa11y.native.process import ToolIdentity
-lazy from odfa11y.serialization import JsonObject
 lazy from odfa11y.status import StageStatus
 
 
@@ -70,7 +71,7 @@ class DoctorRecord:
     schema_versions: tuple[str, ...]
     toolchain: Toolchain
     schema_version: Literal[1] = field(default=1, init=False)
-    error: OdfA11yError | None = field(default=None, repr=False, metadata={"serialize": False})
+    _error: OdfA11yError | None = field(default=None, repr=False)
 
     @JsonProperty
     def exit_status(self) -> ExitStatus:
@@ -87,3 +88,11 @@ class DoctorRecord:
 
         """
         return record_dict(self)
+
+    @property
+    def error(self) -> OdfA11yError | None:
+        return self._error
+
+    @JsonProperty
+    def failure(self) -> Failure | None:
+        return self._error.as_record() if self._error is not None else None

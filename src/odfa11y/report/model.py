@@ -7,14 +7,14 @@ from typing import Literal
 lazy from collections.abc import Mapping
 lazy from pathlib import Path
 
+from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.errors import PackageError
 from odfa11y.report.facts import FactSet
 from odfa11y.rules.registry import Severity
-from odfa11y.serialization import JsonProperty, record_dict
 from odfa11y.targets import Location, TargetPath
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import OpenDecision
 lazy from odfa11y.rules.registry import Rule
-lazy from odfa11y.serialization import JsonObject
 
 REPORT_SCHEMA_VERSION = 1
 
@@ -41,7 +41,7 @@ class ReportKind(StrEnum):
 class Finding:
     """One observed condition, resolved from its rule at creation."""
 
-    rule: Rule = field(metadata={"serialize": False})
+    _rule: Rule
     message: str
     location: Location | None = None
     details: Mapping[str, object] = field(default_factory=dict)
@@ -72,6 +72,10 @@ class Finding:
         """
         return record_dict(self)
 
+    @property
+    def rule(self) -> Rule:
+        return self._rule
+
 
 @dataclass(frozen=True, slots=True)
 class FindingCounts:
@@ -91,11 +95,9 @@ class Report:
     findings: list[Finding] = field(default_factory=list)
     facts: FactSet = field(default_factory=FactSet)
     _decisions: dict[tuple[str, TargetPath | None], OpenDecision] = field(
-        default_factory=dict, init=False, repr=False, metadata={"serialize": False}
+        default_factory=dict, init=False, repr=False
     )
-    sources: tuple[Path, ...] = field(
-        default=(), metadata={"serialize": False}
-    )  # physical identity is internal and never serialized
+    _sources: tuple[Path, ...] = field(default=())
 
     def add(
         self,
@@ -108,7 +110,7 @@ class Report:
         """Append a finding for a rule, defaulting the message to the rule title."""
         self.findings.append(
             Finding(
-                rule=rule,
+                _rule=rule,
                 message=message or rule.title,
                 location=location,
                 details=record_dict(details) if details else {},
@@ -175,3 +177,11 @@ class Report:
 
         """
         return record_dict(self)
+
+    @property
+    def sources(self) -> tuple[Path, ...]:
+        return self._sources
+
+    @sources.setter
+    def sources(self, value: tuple[Path, ...]) -> None:
+        self._sources = value

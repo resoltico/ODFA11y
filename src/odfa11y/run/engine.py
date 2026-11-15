@@ -61,13 +61,13 @@ class _Run:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
             return StageResult(
-                Stage.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False
+                Stage.IDENTIFY_SOURCE, StageStatus.PASSED, _gate=False
             )  # audit-source explains
         try:
             document.require(Use.AUDIT)
         except PackageError:
             return StageResult(
-                Stage.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False
+                Stage.IDENTIFY_SOURCE, StageStatus.PASSED, _gate=False
             )  # audit-source explains
         detection = document.detection
         self.adapter = adapter_for(detection.kind)
@@ -82,7 +82,7 @@ class _Run:
             odf_version=declared_version(document),
         )
         self.record.human_review = self.adapter.review_items
-        return StageResult(Stage.IDENTIFY_SOURCE, StageStatus.PASSED, gate=False)
+        return StageResult(Stage.IDENTIFY_SOURCE, StageStatus.PASSED, _gate=False)
 
     def audit_source(self) -> StageResult:
         report = audit_odf(self.captured or self.source, schema=True)
@@ -93,7 +93,7 @@ class _Run:
             StageStatus.FAILED if blocked else StageStatus.PASSED,
             "source is not a readable ODF document" if blocked else None,
             report=report,
-            gate=blocked,
+            _gate=blocked,
         )
 
     def remediate(self) -> StageResult:
@@ -105,8 +105,8 @@ class _Run:
             Stage.REMEDIATE,
             StageStatus.PASSED if result.published else StageStatus.FAILED,
             reason="; ".join(item.message for item in result.violations) or None,
-            remediation=replace(result, source=self.source),
-            gate=not result.published,
+            remediation=replace(result, _source=self.source),
+            _gate=not result.published,
         )
 
     def audit_remediated(self) -> StageResult:
@@ -182,9 +182,9 @@ class _Run:
                 name,
                 StageStatus.FAILED,
                 f"{reason}; the profile requires PDF validation",
-                error=True,
+                _error=True,
             )
-        return StageResult(name, StageStatus.NOT_APPLICABLE, reason, gate=False)
+        return StageResult(name, StageStatus.NOT_APPLICABLE, reason, _gate=False)
 
     def _gate(self, name: Stage, report: Report) -> StageResult:
         failed = exit_status([report], strict=self.record.strict) != 0
@@ -225,7 +225,7 @@ class _Run:
             self.work / pdf_name,
             replace(settings, soffice=self.executable),
         )
-        return StageResult(name, StageStatus.PASSED, gate=False)
+        return StageResult(name, StageStatus.PASSED, _gate=False)
 
 
 def execute(
@@ -260,7 +260,7 @@ def execute(
     record = RunRecord(
         document=DocumentIdentity(source.name),
         operations=(),
-        policy=plan.fidelity,
+        fidelity_policy=plan.fidelity,
         plan=plan.header,
         decisions=plan.decisions,
         rebind=rebind,

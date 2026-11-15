@@ -14,8 +14,9 @@ from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from tests.fixtures.documents import Variant, make_flat
@@ -191,4 +192,4 @@ def _assert_fidelity(source: Path, pdf: Path, pdf_filter: str, soffice: str) -> 
     baseline = export_pdfua(
         source, pdf.with_name("source-" + pdf.name), ExportSettings(pdf_filter, soffice)
     )
-    assert compare_pdfs(baseline, pdf, FidelityPolicy()).error_count == 0
+    assert compare_pdfs(baseline, pdf, Pagination.SAME()).error_count == 0

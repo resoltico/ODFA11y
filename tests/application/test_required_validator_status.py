@@ -13,7 +13,7 @@ from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -49,7 +49,7 @@ def test_required_validator_failure_reaches_stage_and_retains_evidence(
     target = tmp_path / "evidence"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         target,
         RunSettings(
             tools=Tools(verapdf=str(tmp_path / "missing-verapdf")),

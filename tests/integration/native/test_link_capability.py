@@ -17,7 +17,7 @@ from odfa11y.native.export import ExportSettings, export_pdfua, identify_soffice
 from odfa11y.native.probes import ProbeId
 from odfa11y.odf import OdfDocument, PackageStorage, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from tests.application.test_link_capability import LINK_BODY, WRITER
@@ -74,7 +74,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
                     )
                 })
             ],
-            FidelityPolicy(),
+            Pagination.SAME(),
         ),
         tmp_path / "evidence",
         RunSettings(tools=Tools(soffice=soffice)),
@@ -134,7 +134,7 @@ def test_the_one_link_reproduction_and_explicit_name_control(
         assert result.compliant
         record = execute(
             source,
-            reviewed_plan(source, [], FidelityPolicy()),
+            reviewed_plan(source, [], Pagination.SAME()),
             tmp_path / "named-evidence",
             RunSettings(tools=Tools(soffice=external_tool("soffice", "libreoffice"))),
         )

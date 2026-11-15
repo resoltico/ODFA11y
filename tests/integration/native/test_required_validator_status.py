@@ -6,7 +6,7 @@ lazy from pathlib import Path
 
 from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -21,7 +21,7 @@ def test_real_production_reaches_missing_required_validator(
     target = tmp_path / "evidence"
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         target,
         RunSettings(
             tools=Tools(

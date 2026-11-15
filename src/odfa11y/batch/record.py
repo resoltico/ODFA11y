@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from typing import Literal
 lazy from pathlib import Path
 
-from odfa11y.serialization import JsonProperty, record_dict
+from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.staging import staging_sibling
 from odfa11y.status import BatchStatus, ExitStatus, combine_statuses
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import Stage
-lazy from odfa11y.serialization import JsonObject
 
 BATCH_SCHEMA_VERSION = 1
 

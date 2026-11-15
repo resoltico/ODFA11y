@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y.evidence import sha256_file
 from odfa11y.odf import PackageStorage
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -34,7 +34,7 @@ def test_source_replacement_uses_captured_bytes(
     target = tmp_path / "bundle"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         target,
         RunSettings(profile=profile_named("source")),
     )

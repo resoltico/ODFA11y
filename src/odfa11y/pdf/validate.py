@@ -139,7 +139,7 @@ def check_pdfua(
 
     """
     validate_timeout(timeout)
-    report = Report(kind=ReportKind.PDF_VALIDATION, subject=subject, sources=(Path(pdf),))
+    report = Report(kind=ReportKind.PDF_VALIDATION, subject=subject, _sources=(Path(pdf),))
     located = (locate or find_verapdf)(executable)
     result = (validator or validate_pdfua)(pdf, executable=located, timeout=timeout)
     add_verapdf_findings(report, result)

@@ -10,24 +10,24 @@ from dataclasses import dataclass, field
 from importlib import metadata
 from typing import Literal
 
+from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.native.export import EXPORT_OPTIONS
 from odfa11y.odf import provenance
 from odfa11y.plans import Plan
 from odfa11y.records import Toolchain
 from odfa11y.report import exit_status
-from odfa11y.serialization import JsonProperty, record_dict
 from odfa11y.status import ExitStatus, RunStatus, StageStatus, combine_statuses
 from odfa11y.version import __version__
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.families.spec import ReviewItem
-lazy from odfa11y.pdf.fidelity import FidelityPolicy
 lazy from odfa11y.plans import PlanHeader
+lazy from odfa11y.plans.fidelity import FidelityPolicy
 lazy from odfa11y.progress import Stage
 lazy from odfa11y.records import DocumentIdentity
 lazy from odfa11y.remediate import RemediationResult
 lazy from odfa11y.report import Report
 lazy from odfa11y.run.profiles import Profile
-lazy from odfa11y.serialization import JsonObject
 
 RECORD_SCHEMA_VERSION = 1
 LOCALE_VARIABLES = ("LANG", "LC_ALL", "LC_MESSAGES")
@@ -47,12 +47,10 @@ class StageResult:
     reason: str | None = None
     report: Report | None = None
     remediation: RemediationResult | None = None
-    gate: bool = field(default=True, metadata={"serialize": False})
-    error: bool = field(default=False, metadata={"serialize": False})
+    _gate: bool = field(default=True)
+    _error: bool = field(default=False)
     details: str | None = None
-    failure_status: ExitStatus = field(
-        default=ExitStatus.EXECUTION_FAILURE, metadata={"serialize": False}
-    )
+    _failure_status: ExitStatus = field(default=ExitStatus.EXECUTION_FAILURE)
 
     def as_dict(self) -> JsonObject:
         """Serialize the typed execution record.
@@ -65,6 +63,18 @@ class StageResult:
         """
         return record_dict(self)
 
+    @property
+    def gate(self) -> bool:
+        return self._gate
+
+    @property
+    def error(self) -> bool:
+        return self._error
+
+    @property
+    def failure_status(self) -> ExitStatus:
+        return self._failure_status
+
 
 @dataclass(slots=True)
 class RunRecord:
@@ -72,7 +82,7 @@ class RunRecord:
 
     document: DocumentIdentity
     operations: tuple[JsonObject, ...]
-    policy: FidelityPolicy = field(metadata={"json_name": "fidelity_policy"})
+    fidelity_policy: FidelityPolicy
     profile: Profile
     stages: list[StageResult] = field(default_factory=list)
     toolchain: Toolchain = field(default_factory=Toolchain)
@@ -114,9 +124,11 @@ class RunRecord:
     def plan_sha256(self) -> str:
         """Digest of the operations, fidelity policy and profile, independent of file layout."""
         plan = {
-            "plan": Plan(self.plan, self.decisions, self.policy).as_dict() if self.plan else None,
+            "plan": Plan(self.plan, self.decisions, self.fidelity_policy).as_dict()
+            if self.plan
+            else None,
             "operations": list(self.operations),
-            "fidelity_policy": self.policy.as_dict(),
+            "fidelity_policy": self.fidelity_policy.as_dict(),
             "profile": self.profile.as_dict(),
         }
         return hashlib.sha256(json.dumps(plan, sort_keys=True).encode("utf-8")).hexdigest()

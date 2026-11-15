@@ -2,12 +2,12 @@
 """Registered human decisions, reviewed targets and their typed answers."""
 
 import dataclasses
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import cast
 lazy from collections.abc import Mapping
 
-from odfa11y.decisions.validation import validate_answer
+from odfa11y.contracts import JsonProperty, validate
 from odfa11y.errors import PlanError
 from odfa11y.targets import Target
 lazy from odfa11y.odf import Family
@@ -34,7 +34,7 @@ class DecisionKind:
 
     id: str
     scope: DecisionScope
-    answer_type: type[object] = field(metadata={"serialize": False})
+    _answer_type: type[object]
     families: frozenset[Family]
     operation: str
 
@@ -51,12 +51,16 @@ class DecisionKind:
             msg = f"Decision {self.id!r} needs an answer dataclass"
             raise PlanError(msg)
 
+    @property
+    def answer_type(self) -> type[object]:
+        return self._answer_type
+
 
 @dataclass(frozen=True, slots=True)
 class OpenDecision:
     """A reviewed identity and current values on which an audit requests human judgment."""
 
-    kind: DecisionKind = field(metadata={"attribute": "id"})
+    _kind: DecisionKind
     target: Target | None
     current: Mapping[str, object]
     rule_ids: tuple[str, ...] = ()
@@ -65,12 +69,20 @@ class OpenDecision:
         """Enforce one target grammar and mandatory targeted fingerprints."""
         _identity(self.kind, self.target)
 
+    @property
+    def kind(self) -> DecisionKind:
+        return self._kind
+
+    @JsonProperty
+    def kind_id(self) -> str:
+        return self._kind.id
+
 
 @dataclass(frozen=True, slots=True)
 class Decision:
     """An answered open decision, ready for family-specific operation translation."""
 
-    kind: DecisionKind = field(metadata={"attribute": "id"})
+    _kind: DecisionKind
     target: Target | None
     answer: object
 
@@ -87,7 +99,19 @@ class Decision:
         if type(self.answer) is not self.kind.answer_type:
             msg = f"{self.kind.id} requires {self.kind.answer_type.__name__}"
             raise PlanError(msg)
-        validate_answer(self.answer, self.kind.id)
+        validate(self.answer, self.kind.answer_type, label=self.kind.id, error=PlanError)
+
+    @classmethod
+    def _decoded(cls, kind: DecisionKind, target: Target | None, answer: object) -> Decision:
+        _identity(kind, target)
+        if type(answer) is not kind.answer_type:
+            message = f"{kind.id} requires {kind.answer_type.__name__}"
+            raise PlanError(message)
+        result = object.__new__(cls)
+        object.__setattr__(result, "_kind", kind)
+        object.__setattr__(result, "target", target)
+        object.__setattr__(result, "answer", answer)
+        return result
 
     @property
     def target_path(self) -> str:
@@ -122,6 +146,14 @@ class Decision:
             msg = f"{self.kind.id} cannot provide {expected.__name__}"
             raise PlanError(msg)
         return cast("T", self.answer)
+
+    @property
+    def kind(self) -> DecisionKind:
+        return self._kind
+
+    @JsonProperty
+    def kind_id(self) -> str:
+        return self._kind.id
 
 
 def _identity(kind: DecisionKind, target: Target | None) -> None:

@@ -8,7 +8,8 @@ import pytest
 
 from odfa11y.application.native import NativeTools
 from odfa11y.errors import ToolFailure
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.plans.fidelity import FidelityPolicy, Pagination
 from odfa11y.report import FactKeys
 from tests.fixtures.native import refusing
 from tests.fixtures.pdf import text_pdf
@@ -28,7 +29,7 @@ def compare(
         The fidelity report.
 
     """
-    return compare_pdfs(source, candidate, policy or FidelityPolicy(), diff_dir=tmp_path / "diff")
+    return compare_pdfs(source, candidate, policy or Pagination.SAME(), diff_dir=tmp_path / "diff")
 
 
 def ids(report: Report) -> set[str]:
@@ -75,7 +76,7 @@ def test_a_layout_shift_with_identical_text_fails_the_raster_gate(tmp_path: Path
     changed_ratio, diff_image = finding.details["changed_ratio"], finding.details["diff_image"]
     assert isinstance(changed_ratio, float)
     assert isinstance(diff_image, str)
-    assert changed_ratio > FidelityPolicy().raster_tolerance
+    assert changed_ratio > Pagination.SAME().raster_tolerance
     assert (tmp_path / "diff" / diff_image).is_file()
 
 
@@ -84,9 +85,9 @@ def test_a_loose_tolerance_accepts_a_shift_and_a_tight_one_rejects_tiny_changes(
 ) -> None:
     left = text_pdf(tmp_path / "a.pdf", [LINES], top=180)
     right = text_pdf(tmp_path / "b.pdf", [LINES], top=140)
-    assert compare(tmp_path, left, right, FidelityPolicy(raster_tolerance=5.0)).findings == []
+    assert compare(tmp_path, left, right, Pagination.SAME(raster_tolerance=5.0)).findings == []
     nudged = text_pdf(tmp_path / "c.pdf", [LINES], top=179)
-    assert "FID005" in ids(compare(tmp_path, left, nudged, FidelityPolicy(raster_tolerance=0.0)))
+    assert "FID005" in ids(compare(tmp_path, left, nudged, Pagination.SAME(raster_tolerance=0.0)))
 
 
 def test_page_count_and_size_differences_are_reported_when_pagination_must_match(
@@ -104,18 +105,18 @@ def test_may_change_pagination_skips_page_and_raster_checks_but_still_gates_text
 ) -> None:
     one = text_pdf(tmp_path / "one.pdf", [["First part."]])
     split = text_pdf(tmp_path / "split.pdf", [["First part."], [""]])
-    assert compare(tmp_path, one, split, FidelityPolicy(pagination="may-change")).findings == []
+    assert compare(tmp_path, one, split, Pagination.MAY_CHANGE).findings == []
     shifted = text_pdf(tmp_path / "shifted.pdf", [["First part."]], top=100)
-    assert compare(tmp_path, one, shifted, FidelityPolicy(pagination="may-change")).findings == []
+    assert compare(tmp_path, one, shifted, Pagination.MAY_CHANGE).findings == []
     other = text_pdf(tmp_path / "other.pdf", [["Other part."]])
-    assert ids(compare(tmp_path, one, other, FidelityPolicy(pagination="may-change"))) == {"FID003"}
+    assert ids(compare(tmp_path, one, other, Pagination.MAY_CHANGE)) == {"FID003"}
 
 
 def test_lost_links_fail_and_added_links_are_informational(tmp_path: Path) -> None:
     with_link = text_pdf(tmp_path / "a.pdf", [LINES], links=["https://example.test/a"])
     without = text_pdf(tmp_path / "b.pdf", [LINES])
     assert "FID004" in ids(compare(tmp_path, with_link, without))
-    added = compare(tmp_path, without, with_link, FidelityPolicy(raster_tolerance=1.0))
+    added = compare(tmp_path, without, with_link, Pagination.SAME(raster_tolerance=1.0))
     assert ids(added) == {"FID006"}
     assert added.error_count == 0
 
@@ -123,7 +124,7 @@ def test_lost_links_fail_and_added_links_are_informational(tmp_path: Path) -> No
 def test_changed_link_targets_count_as_lost(tmp_path: Path) -> None:
     left = text_pdf(tmp_path / "a.pdf", [LINES], links=["https://example.test/a"])
     right = text_pdf(tmp_path / "b.pdf", [LINES], links=["https://example.test/b"])
-    report = compare(tmp_path, left, right, FidelityPolicy(raster_tolerance=1.0))
+    report = compare(tmp_path, left, right, Pagination.SAME(raster_tolerance=1.0))
     assert ids(report) == {"FID004", "FID006"}
 
 
@@ -141,28 +142,24 @@ def test_unreadable_pdfs_raise_a_tool_error(tmp_path: Path) -> None:
         compare(tmp_path, good, bad)
 
 
-def test_enormous_dpi_is_controlled_before_float_conversion(
+def test_oversized_page_is_controlled_before_rendering(
     native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    pdf = text_pdf(tmp_path / "dpi.pdf", [LINES])
+    pdf = text_pdf(tmp_path / "large.pdf", [LINES], size=(5000, 5000))
     before = pdf.read_bytes()
     rendered = []
     native_tools = replace(native_tools, render=refusing(rendered))
-    with pytest.raises(ToolFailure, match="DPI exceeds the numeric range"):
-        compare_pdfs(
-            pdf,
-            pdf,
-            FidelityPolicy(dpi=10**400),
-            diff_dir=tmp_path / "diff",
-            render=native_tools.render,
-        )
+    report = compare_pdfs(
+        pdf, pdf, Pagination.SAME(), diff_dir=tmp_path / "diff", render=native_tools.render
+    )
+    assert ids(report) == {"FID007"}
     assert not rendered
     assert not (tmp_path / "diff").exists()
     assert pdf.read_bytes() == before
 
 
-@pytest.mark.parametrize("dpi", [72, 144, 4096])
-def test_legitimate_dpi_uses_existing_pixel_budget(tmp_path: Path, dpi: int) -> None:
-    pdf = text_pdf(tmp_path / "dpi.pdf", [LINES])
-    report = compare_pdfs(pdf, pdf, FidelityPolicy(dpi=dpi))
-    assert ids(report) == ({"FID007"} if dpi == 4096 else set())
+@pytest.mark.parametrize("width", [200, 512, 5000])
+def test_fixed_resolution_retains_the_existing_pixel_limit(tmp_path: Path, width: int) -> None:
+    pdf = text_pdf(tmp_path / "sized.pdf", [LINES], size=(width, width))
+    report = compare_pdfs(pdf, pdf, Pagination.SAME())
+    assert ids(report) == ({"FID007"} if width == 5000 else set())

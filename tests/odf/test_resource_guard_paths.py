@@ -9,7 +9,7 @@ import pytest
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -48,7 +48,7 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
     output = tmp_path / "evidence"
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("verify")),
         native_tools=native_tools,
@@ -61,7 +61,7 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
     inspected = tmp_path / "source"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         inspected,
         RunSettings(profile=profile_named("source")),
         native_tools=native_tools,

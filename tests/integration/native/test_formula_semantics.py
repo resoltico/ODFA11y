@@ -7,7 +7,7 @@ lazy from pathlib import Path
 from odfa11y.application.tools import Tools
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -32,7 +32,7 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     assert not validate_pdfua(pdf, executable=verapdf).compliant
     record = execute(
         SOURCE,
-        reviewed_plan(SOURCE, _plan(), FidelityPolicy()),
+        reviewed_plan(SOURCE, _plan(), Pagination.SAME()),
         tmp_path / "evidence",
         RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
     )

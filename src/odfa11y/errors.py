@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from odfa11y.exit_codes import ExitStatus
 
@@ -39,17 +39,51 @@ class Remedy:
     detail: str | None = None
 
 
+DIAGNOSTIC_CHARACTERS = 4096
+
+
+type FailureStatus = Literal[
+    ExitStatus.ERRORS, ExitStatus.EXECUTION_FAILURE, ExitStatus.USAGE_ERROR
+]
+
+
+@dataclass(frozen=True, slots=True)
+class Failure:
+    """The immutable public facts of an expected failure."""
+
+    code: str
+    message: str
+    exit_status: FailureStatus
+    remedy: Remedy | None = None
+    problems: tuple[str, ...] = ()
+    details: str = ""
+
+
 class OdfA11yError(Exception):
     """An expected failure that every application boundary can report."""
 
     code: ClassVar[str] = "execution-failure"
-    exit_status: ClassVar[ExitStatus] = ExitStatus.EXECUTION_FAILURE
+    exit_status: ClassVar[FailureStatus] = ExitStatus.EXECUTION_FAILURE
     default_remedy: ClassVar[Remedy | None] = None
 
-    def __init__(self, message: str, *, remedy: Remedy | None = None, details: str = "") -> None:
-        super().__init__(message)
+    def __init__(
+        self,
+        message: str,
+        *,
+        remedy: Remedy | None = None,
+        details: str = "",
+        problems: tuple[str, ...] = (),
+    ) -> None:
+        self.message = message
+        self.problems = problems
+        super().__init__(message + ("\n" + "\n".join(problems) if problems else ""))
         self.remedy = remedy if remedy is not None else self.default_remedy
-        self.details = details
+        self.details = details[:DIAGNOSTIC_CHARACTERS]
+
+    def as_record(self) -> Failure:
+        return Failure(
+            self.code, self.message, self.exit_status, self.remedy, self.problems, self.details
+        )
 
 
 class InvalidOption(OdfA11yError):

@@ -25,7 +25,7 @@ def plan_blockers(report: Report) -> Report | None:
     """
     findings = [finding for finding in report.findings if finding.rule_id in BLOCKING_RULE_IDS]
     return (
-        Report(kind=report.kind, subject=report.subject, findings=findings, sources=report.sources)
+        Report(kind=report.kind, subject=report.subject, findings=findings, _sources=report.sources)
         if findings
         else None
     )
@@ -48,7 +48,7 @@ def prepare_plan(source: str | Path) -> tuple[Report, str | None]:
         ):
             return _prepare_captured(source, captured)
     except (OSError, PackageError) as exc:
-        report = Report(kind=ReportKind.ODF, subject=str(source), sources=(source,))
+        report = Report(kind=ReportKind.ODF, subject=str(source), _sources=(source,))
         report.add(rules.PKG000, f"Cannot capture source for planning: {exc}")
         return report, None
 

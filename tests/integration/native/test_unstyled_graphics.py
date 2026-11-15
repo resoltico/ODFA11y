@@ -9,7 +9,8 @@ from odfa11y.concepts.edits import Status
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.plans.fidelity import Pagination
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
 from tests.fixtures.operations import assert_refused, execute_operations
 
@@ -52,4 +53,4 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
     actual = export_pdfua(unchanged, tmp_path / "unchanged.pdf", settings)
     assert ((4, 4), PIXELS) in decoded_images(baseline)
     assert decoded_images(actual) == decoded_images(baseline)
-    assert compare_pdfs(baseline, actual, FidelityPolicy(raster_tolerance=0.0)).error_count == 0
+    assert compare_pdfs(baseline, actual, Pagination.SAME(raster_tolerance=0.0)).error_count == 0

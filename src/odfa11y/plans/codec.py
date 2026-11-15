@@ -3,27 +3,21 @@
 
 import dataclasses
 import json
-import sys
 import tomllib
 from pathlib import Path
 from typing import cast, get_type_hints
 lazy from collections.abc import Iterable, Mapping
 
-from odfa11y.decisions import Decision, DecisionScope, decode_answer
+from odfa11y.contracts import decode, fields_of, record_dict, schema_for
+from odfa11y.decisions import DecisionScope
 from odfa11y.errors import PlanError
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.contracts import PlanFile, decision_contract, file_contract, from_file
 from odfa11y.plans.model import PLAN_SCHEMA_VERSION, Plan, PlanHeader
-from odfa11y.report import Location
-from odfa11y.serialization import fields_of, record_dict, schema_for
 from odfa11y.targets import (
-    FINGERPRINT_PATTERN,
-    TARGET_PATH_PATTERN,
-    Fingerprint,
-    Target,
     require_target,
 )
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import DecisionKind, OpenDecision
-lazy from odfa11y.serialization import JsonObject, JsonValue
 
 
 def parse_plan(path: str | Path, kinds: Mapping[str, DecisionKind]) -> Plan:
@@ -63,57 +57,15 @@ def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]
         A table, decision kind, target or answer is invalid.
 
     """
-    unknown = values.keys() - {"plan", "decisions", "fidelity"}
-    if unknown:
-        msg = f"Unknown plan tables: {', '.join(sorted(unknown))}"
-        raise PlanError(msg)
-    if "plan" not in values:
-        msg = "A [plan] source-binding header is required"
-        raise PlanError(msg)
-    header_values = _table(values["plan"], "plan")
-    if "format" in header_values:
+    header = values.get("plan")
+    if isinstance(header, Mapping) and "format" in header:
         message = "This plan uses a retired header; generate a fresh plan with schema_version = 1."
         raise PlanError(message)
-    header = decode_answer(PlanHeader, header_values, "plan")
-    answers = []
-    for kind_id, value in _table(values.get("decisions", {}), "decisions").items():
-        if kind_id not in kinds:
-            msg = f"Unknown decision kind: {kind_id}"
-            raise PlanError(msg)
-        kind = kinds[kind_id]
-        table = _table(value, kind_id)
-        if kind.scope == DecisionScope.DOCUMENT:
-            answers.append(_answer(kind, None, table))
-        else:
-            answers.extend(
-                _answer(kind, Location(target), _table(raw, target))
-                for target, raw in table.items()
-            )
-    fidelity = decode_answer(
-        FidelityPolicy, _table(values.get("fidelity", {}), "fidelity"), "fidelity"
+    contract = file_contract(kinds)
+    record = cast(
+        PlanFile[Mapping[str, object]], decode(contract, values, label="plan", error=PlanError)
     )
-    return Plan(header, tuple(answers), fidelity)
-
-
-def _answer(kind: DecisionKind, target: Location | None, values: Mapping[str, object]) -> Decision:
-    fields = dict(values)
-    fingerprint = fields.pop("fingerprint", None) if target is not None else None
-    if target is None:
-        reviewed = None
-    else:
-        if not isinstance(fingerprint, str):
-            message = f"{kind.id}.fingerprint must be a string"
-            raise PlanError(message)
-        reviewed = Target(target.path, Fingerprint(fingerprint))
-    answer = decode_answer(kind.answer_type, fields, kind.id)
-    return Decision(kind, reviewed, answer)
-
-
-def _table(value: object, label: str) -> dict[str, object]:
-    if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
-        msg = f"{label} must be a table with string keys"
-        raise PlanError(msg)
-    return value
+    return from_file(record, kinds)
 
 
 def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
@@ -147,9 +99,9 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
             lines.append(
                 f"# fingerprint = {json.dumps(require_target(decision.target).fingerprint)}"
             )
-        hints = get_type_hints(kind.answer_type)
+        hints = get_type_hints(kind.answer_type, include_extras=True)
         for field in fields_of(kind.answer_type):
-            help_text = field.metadata.get("schema", {}).get("description", field.name)
+            help_text = schema_for(hints[field.name], input=True).get("description", field.name)
             placeholder = _placeholder(field, hints[field.name])
             lines.append(
                 f"# {field.name} = {json.dumps(placeholder, ensure_ascii=False)}  # {help_text}"
@@ -159,7 +111,7 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
 
 
 def _placeholder(field: dataclasses.Field[object], value_type: object) -> object:
-    schema = field.metadata.get("schema", {})
+    schema = schema_for(value_type, input=True)
     if "minimum" in schema:
         return schema["minimum"]
     if value_type is bool:
@@ -179,112 +131,21 @@ def answer_schema(answer_type: type[object]) -> JsonObject:
         Strict answer properties, with cross-field requirements from the answer class.
 
     """
-    hints = get_type_hints(answer_type)
-    fields = fields_of(answer_type)
-    properties: JsonObject = {
-        field.name: schema_for(
-            hints[field.name], namespace=vars(sys.modules[answer_type.__module__])
-        )
-        | field.metadata.get("schema", {})
-        for field in fields
-    }
-    required: list[JsonValue] = [
-        field.name
-        for field in fields
-        if field.default is dataclasses.MISSING and field.default_factory is dataclasses.MISSING
-    ]
-    result: JsonObject = {
-        "type": "object",
-        "properties": properties,
-        "required": required,
-        "additionalProperties": False,
-    }
-    required_any = getattr(answer_type, "required_any", ())
-    if required_any:
-        result["anyOf"] = [
-            {"required": [name], "properties": {name: {"not": {"type": "null"}}}}
-            for name in required_any
-        ]
-    return result
+    return schema_for(answer_type, input=True)
 
 
 def plan_schema(kinds: Mapping[str, DecisionKind]) -> JsonObject:
-    """Derive the complete plan-file schema from registered kinds.
-
-    Returns
-    -------
-    JsonObject
-        The strict binding envelope and document/target answer tables.
-
-    """
-    properties: JsonObject = {}
-    for kind in kinds.values():
-        body = answer_schema(kind.answer_type)
-        if kind.scope == DecisionScope.DOCUMENT:
-            properties[kind.id] = body
-        else:
-            answer_properties = cast("JsonObject", body["properties"])
-            answer_properties["fingerprint"] = {
-                "type": "string",
-                "pattern": FINGERPRINT_PATTERN,
-            }
-            required = cast("list[JsonValue]", body["required"])
-            required.append("fingerprint")
-            properties[kind.id] = {
-                "type": "object",
-                "propertyNames": {"pattern": TARGET_PATH_PATTERN},
-                "additionalProperties": body,
-            }
+    """Describe the plan file using its generated, annotated table contract."""
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "urn:odfa11y:schema:plan",
-        "type": "object",
-        "properties": {
-            "plan": schema_for(PlanHeader, namespace=globals()),
-            "decisions": {
-                "type": "object",
-                "properties": properties,
-                "additionalProperties": False,
-            },
-            "fidelity": answer_schema(FidelityPolicy),
-        },
-        "required": ["plan"],
-        "additionalProperties": False,
+        "$id": "urn:odfa11y:schema:plan-file",
+        **schema_for(file_contract(kinds), input=True),
     }
 
 
 def decision_schema(kinds: Mapping[str, DecisionKind], *, open_decision: bool) -> JsonObject:
-    """Describe a decision record with the exact kind-dependent target and answer contract.
-
-    Returns
-    -------
-    JsonObject
-        One registered variant per decision kind.
-
-    """
-    variants: list[JsonValue] = []
-    for kind in kinds.values():
-        targeted = kind.scope == DecisionScope.TARGET
-        properties: JsonObject = {
-            "kind": {"const": kind.id},
-            "target": schema_for(Target, namespace=globals()) if targeted else {"type": "null"},
-        }
-        if open_decision:
-            properties |= {
-                "current": {"type": "object"},
-                "rule_ids": {"type": "array", "items": {"type": "string"}},
-            }
-        else:
-            properties["answer"] = schema_for(
-                kind.answer_type, namespace=vars(sys.modules[kind.answer_type.__module__])
-            )
-        variants.append({
-            "type": "object",
-            "properties": properties,
-            "required": list(properties),
-            "additionalProperties": False,
-        })
-    return {"oneOf": variants}
+    """Describe kind-dependent decision projections from their annotations."""
+    return schema_for(decision_contract(kinds, open_decision=open_decision))
 
 
 def decision_reference(kinds: Mapping[str, DecisionKind]) -> str:

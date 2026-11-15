@@ -6,42 +6,27 @@ import json
 from pathlib import Path
 from typing import cast
 
-from odfa11y.application import AuditFailure, AuditInput, AuditRun
-from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.cli.parser import build_parser
-from odfa11y.concepts.edits import Outcome, Status
+from odfa11y.concepts.edits import Status
 from odfa11y.concepts.review import ReviewTopic
-from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
-from odfa11y.errors import OdfA11yError, RemedyAction
-from odfa11y.families.spec import ReviewItem
+from odfa11y.contracts import JsonObject
+from odfa11y.decisions import DecisionScope
+from odfa11y.errors import RemedyAction
 from odfa11y.families.text.tables.classification import TableKind
 from odfa11y.glossary import TERMS
-from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeId
-from odfa11y.native.process import ToolIdentity
+from odfa11y.native.probes import CapabilityStatus, ProbeId
 from odfa11y.odf import Family, Part, Use
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.plans import Plan, PlanHeader, SourceBinding
-from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema
+from odfa11y.plans.codec import decision_reference
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.progress import Stage, Step, StepState
-from odfa11y.records import DoctorRecord, DocumentIdentity, SchemaCheck, Toolchain
-from odfa11y.remediate import RemediationResult, Violation
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import (
-    FACT_REGISTRY,
     RULES,
     Category,
-    FactSet,
-    Finding,
-    Location,
-    Report,
     ReportKind,
-    Rule,
 )
 from odfa11y.rules.registry import Severity
-from odfa11y.run.profiles import Profile
-from odfa11y.run.record import RunRecord, StageResult
-from odfa11y.serialization import JsonObject, JsonValue, schema_for
+from odfa11y.schemas import generated_schemas, registered_contracts
 from odfa11y.status import (
     EXIT_PRECEDENCE,
     BatchStatus,
@@ -53,69 +38,7 @@ from odfa11y.status import (
 from odfa11y.status import Profile as AssuranceProfile
 
 SCHEMA_DIRECTORY = Path(__file__).resolve().parents[1] / "src/odfa11y/schemas"
-FORMATS = {
-    "report": Report,
-    "audit": AuditRun,
-    "run": RunRecord,
-    "batch": BatchRecord,
-    "doctor": DoctorRecord,
-    "remediation": RemediationResult,
-    "plan": Plan,
-}
-# Supply type-only names while resolving record annotations; runtime modules stay layered.
-TYPE_NAMESPACE = {
-    value.__name__: value
-    for value in (
-        AuditRun,
-        AuditInput,
-        AuditFailure,
-        OdfA11yError,
-        Outcome,
-        ReviewItem,
-        Status,
-        BatchItemResult,
-        BatchRecord,
-        ToolIdentity,
-        CapabilityResult,
-        CapabilityStatus,
-        ProbeId,
-        Family,
-        FidelityPolicy,
-        BatchStatus,
-        ExitStatus,
-        ReviewTopic,
-        RunStatus,
-        Stage,
-        StageStatus,
-        ViolationKind,
-        Profile,
-        RunRecord,
-        StageResult,
-        DoctorRecord,
-        DocumentIdentity,
-        SchemaCheck,
-        Toolchain,
-        RemediationResult,
-        FactSet,
-        Finding,
-        Rule,
-        Location,
-        Report,
-    )
-} | {
-    "Plan": Plan,
-    "Violation": Violation,
-    "ViolationKind": ViolationKind,
-    "PlanHeader": PlanHeader,
-    "SourceBinding": SourceBinding,
-    "OpenDecision": OpenDecision,
-    "Decision": Decision,
-    "DecisionKind": DecisionKind,
-    "DecisionScope": DecisionScope,
-    "JsonObject": JsonObject,
-    "JsonValue": JsonValue,
-    "Path": Path,
-}
+FORMATS = {contract.name: contract.record for contract in registered_contracts()}
 
 
 USER_ENUMS = (
@@ -154,27 +77,7 @@ def schemas() -> dict[str, JsonObject]:
         Generated schemas keyed by their public format names.
 
     """
-    fact_properties: JsonObject = {
-        key.id: schema_for(key.value_type, namespace=TYPE_NAMESPACE)
-        | {"description": key.description}
-        for key in FACT_REGISTRY.values()
-    }
-    kinds = registered_kinds()
-    overrides: dict[object, JsonObject] = {
-        Plan: plan_schema(kinds),
-        Decision: decision_schema(kinds, open_decision=False),
-        OpenDecision: decision_schema(kinds, open_decision=True),
-        DecisionKind: {"enum": list(kinds)},
-        FactSet: {"type": "object", "properties": fact_properties, "additionalProperties": False},
-    }
-    return {
-        name: {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "$id": f"urn:odfa11y:schema:{name}",
-            **schema_for(record_type, namespace=TYPE_NAMESPACE, overrides=overrides),
-        }
-        for name, record_type in FORMATS.items()
-    }
+    return generated_schemas()
 
 
 def rule_reference() -> str:
@@ -305,14 +208,10 @@ def schema_reference() -> str:
         "| Interface | Schema version | Schema |",
         "| --- | --- | --- |",
     ]
-    for name, schema in schemas().items():
-        properties = cast("dict[str, JsonObject]", schema["properties"])
-        if name == "plan":
-            properties = cast("dict[str, JsonObject]", properties["plan"]["properties"])
-        version = cast("list[int]", properties["schema_version"]["enum"])[0]
+    for contract in registered_contracts():
         lines.append(
-            f"| `{name}` | {version} | "
-            f"[{name}.schema.json](../src/odfa11y/schemas/{name}.schema.json) |"
+            f"| `{contract.name}` | {contract.schema_version} | "
+            f"[{contract.filename}](../src/odfa11y/schemas/{contract.filename}) |"
         )
     lines += [
         "",

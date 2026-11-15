@@ -80,7 +80,7 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
         assert reports[0]["summary"]["errors"] == 0
         assert reports[1]["summary"]["errors"] > 0
     else:
-        assert "Command: failed (exit 2" in output.out
+        assert "Command: failed (exit 3" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
         assert "GRAPHIC003" in output.out

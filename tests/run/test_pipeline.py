@@ -14,7 +14,7 @@ from odfa11y.families.text import (
     SetGraphicAlternatives,
 )
 from odfa11y.odf import PackageStorage
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
@@ -41,7 +41,7 @@ def statuses(record: RunRecord) -> dict[str, str]:
 def test_unreadable_source_stops_everything_but_still_publishes_evidence(tmp_path: Path) -> None:
     source = tmp_path / "broken.odt"
     source.write_bytes(b"not a zip")
-    record = execute(source, reviewed_plan(source, [], FidelityPolicy()), tmp_path / "out")
+    record = execute(source, reviewed_plan(source, [], Pagination.SAME()), tmp_path / "out")
     assert_record_schema(record)
     assert statuses(record)["audit-source"] == "failed"
     assert statuses(record)["identify-source"] == "passed"
@@ -58,7 +58,7 @@ def test_remediation_failure_publishes_evidence_without_a_remediated_document(
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     operations = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
-    record = execute(source, reviewed_plan(source, operations, FidelityPolicy()), tmp_path / "out")
+    record = execute(source, reviewed_plan(source, operations, Pagination.SAME()), tmp_path / "out")
     assert statuses(record)["remediate"] == "failed"
     assert record.exit_status == 2
     assert not (tmp_path / "out" / "remediated.odt").exists()
@@ -75,7 +75,7 @@ def test_an_occupied_evidence_directory_is_refused_before_any_work(tmp_path: Pat
     target.mkdir()
     (target / "keep.txt").write_text("precious")
     with pytest.raises(OutputOccupied):
-        execute(source, reviewed_plan(source, [], FidelityPolicy()), target)
+        execute(source, reviewed_plan(source, [], Pagination.SAME()), target)
     assert [p.name for p in target.iterdir()] == ["keep.txt"]
 
 
@@ -86,7 +86,7 @@ def test_a_missing_libreoffice_fails_the_export_stage_and_keeps_earlier_evidence
     options = RunSettings(tools=Tools(soffice=str(tmp_path / "no-such-soffice")))
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
+        reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()),
         tmp_path / "out",
         options,
     )
@@ -100,7 +100,7 @@ def test_the_record_lists_every_stage_in_order(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(tools=Tools(soffice="nope")),
     )
@@ -126,7 +126,7 @@ def _document_with_spacers(tmp_path: Path) -> Path:
 def test_an_unreadable_source_still_yields_an_evidence_bundle(tmp_path: Path) -> None:
     record = execute(
         tmp_path / "absent.odt",
-        reviewed_plan(tmp_path / "absent.odt", [], FidelityPolicy()),
+        reviewed_plan(tmp_path / "absent.odt", [], Pagination.SAME()),
         tmp_path / "out",
     )
     assert statuses(record)["identify-source"] == "failed"
@@ -152,7 +152,7 @@ def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path
     options = RunSettings(profile=profile_named("source"))
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(title="T")], FidelityPolicy()),
+        reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()),
         tmp_path / "o",
         options,
     )
@@ -173,7 +173,7 @@ def test_an_unknown_profile_is_a_configuration_error(tmp_path: Path) -> None:
     with pytest.raises(InvalidOption, match="Unknown profile"):
         execute(
             source,
-            reviewed_plan(source, [], FidelityPolicy()),
+            reviewed_plan(source, [], Pagination.SAME()),
             tmp_path / "o",
             RunSettings(profile=profile_named("x")),
         )
@@ -187,6 +187,6 @@ def test_the_production_profile_fails_at_export_when_libreoffice_is_unavailable(
     options = RunSettings(
         tools=Tools(soffice=str(tmp_path / "none")), profile=profile_named("production")
     )
-    record = execute(source, reviewed_plan(source, [], FidelityPolicy()), tmp_path / "o", options)
+    record = execute(source, reviewed_plan(source, [], Pagination.SAME()), tmp_path / "o", options)
     assert statuses(record)["export-source"] == "failed"
     assert record.strict

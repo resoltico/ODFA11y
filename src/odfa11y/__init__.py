@@ -2,7 +2,6 @@
 """ODFA11y's application API: explicit decisions, guarded workflows and typed results."""
 
 from odfa11y.application import (
-    AuditFailure,
     AuditInput,
     AuditRun,
     ComparisonResult,
@@ -60,7 +59,6 @@ __all__ = [
     "DEFAULT_TIMEOUT_SECONDS",
     "FORMATS",
     "PROFILES",
-    "AuditFailure",
     "AuditInput",
     "AuditRun",
     "BatchRecord",

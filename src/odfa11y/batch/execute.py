@@ -10,8 +10,8 @@ from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
 from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import termination_interrupt
-from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import ProgressEvent, Stage, Step, StepState
 from odfa11y.records import DocumentIdentity
 from odfa11y.run.context import RunSettings
@@ -174,13 +174,13 @@ def _failure(
     record = RunRecord(
         document=DocumentIdentity(item.id),
         operations=(),
-        policy=FidelityPolicy(),
+        fidelity_policy=Pagination.SAME(),
         profile=options.profile,
     )
     reason = str(exc) if isinstance(exc, OdfA11yError) else "Item execution could not complete"
     record.stages.append(
         StageResult(
-            stage, StageStatus.FAILED, reason, error=True, failure_status=failure_status(exc)
+            stage, StageStatus.FAILED, reason, _error=True, _failure_status=failure_status(exc)
         )
     )
     redactor = Redactor.for_locations({

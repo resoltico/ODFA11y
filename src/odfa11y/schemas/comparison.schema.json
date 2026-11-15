@@ -1,0 +1,1013 @@
+{
+  "$id": "urn:odfa11y:schema:comparison",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exit_status": {
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "report": {
+      "additionalProperties": false,
+      "properties": {
+        "decisions": {
+          "items": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "database.description"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "document.metadata"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "document.odf_version"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "formula.alternative"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "graphic.alternative"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "heading.level"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "language.target"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "link.description"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "page.metadata"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "page.navigation"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "sheet.name"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "table.headers"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "fingerprint": {
+                        "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                        "type": "string"
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "fingerprint"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "text.linkify_addresses"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "text.remove_spacers"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "kind_id": {
+                    "enum": [
+                      "text.spacing"
+                    ]
+                  },
+                  "rule_ids": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "target": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current",
+                  "kind_id",
+                  "rule_ids",
+                  "target"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "facts": {
+          "additionalProperties": false,
+          "properties": {
+            "chart.count": {
+              "type": "integer"
+            },
+            "chart.series_count": {
+              "type": "integer"
+            },
+            "database.connection_declaration_count": {
+              "type": "integer"
+            },
+            "database.query_declaration_count": {
+              "type": "integer"
+            },
+            "document.adapter": {
+              "type": "string"
+            },
+            "document.description": {
+              "type": "string"
+            },
+            "document.family": {
+              "type": "string"
+            },
+            "document.kind": {
+              "type": "string"
+            },
+            "document.language": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "document.media_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "document.odf_version": {
+              "type": "string"
+            },
+            "document.title": {
+              "type": "string"
+            },
+            "fidelity.link_count": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "fidelity.page_count": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "fidelity.policy": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "fidelity.raster_changed_ratios": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "fidelity.raster_max_changed_ratio": {
+              "type": "number"
+            },
+            "formula.element_count": {
+              "type": "integer"
+            },
+            "image.graphic_count": {
+              "type": "integer"
+            },
+            "native.limitations": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "package.layout": {
+              "type": "string"
+            },
+            "page.count": {
+              "type": "integer"
+            },
+            "page.link_count": {
+              "type": "integer"
+            },
+            "page.shape_count": {
+              "type": "integer"
+            },
+            "pdf.described_graphic_count": {
+              "type": "integer"
+            },
+            "pdf.format": {
+              "type": "string"
+            },
+            "pdf.language": {
+              "type": "string"
+            },
+            "pdf.link_annotation_count": {
+              "type": "integer"
+            },
+            "pdf.link_structure_element_count": {
+              "type": "integer"
+            },
+            "pdf.marked_content_id_count": {
+              "type": "integer"
+            },
+            "pdf.page_count": {
+              "type": "integer"
+            },
+            "pdf.role_map": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "pdf.structure_tags": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "pdf.text_character_count": {
+              "type": "integer"
+            },
+            "pdf.title": {
+              "type": "string"
+            },
+            "pdf.ua_part": {
+              "type": "integer"
+            },
+            "schema.unlocated_violation_count": {
+              "type": "integer"
+            },
+            "schema.version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "schema.violation_count": {
+              "type": "integer"
+            },
+            "sheet.count": {
+              "type": "integer"
+            },
+            "sheet.graphic_count": {
+              "type": "integer"
+            },
+            "text.bookmark_count": {
+              "type": "integer"
+            },
+            "text.effective_languages": {
+              "items": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "text.graphic_count": {
+              "type": "integer"
+            },
+            "text.heading_count": {
+              "type": "integer"
+            },
+            "text.list_continuation_count": {
+              "type": "integer"
+            },
+            "text.list_count": {
+              "type": "integer"
+            },
+            "text.list_max_level": {
+              "type": "integer"
+            },
+            "text.note_count": {
+              "type": "integer"
+            },
+            "text.paragraph_styles": {
+              "items": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "text.reading_order_counts": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "text.reference_count": {
+              "type": "integer"
+            },
+            "text.revision_relationships": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "text.simulated_list_count": {
+              "type": "integer"
+            },
+            "text.table_classifications": {
+              "items": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "text.table_count": {
+              "type": "integer"
+            },
+            "text.visibility_contexts": {
+              "items": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "verapdf.identity": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "findings": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "details": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "location": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "member": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "path": {
+                        "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "member"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "rule_id": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "error",
+                  "warning",
+                  "info"
+                ]
+              }
+            },
+            "required": [
+              "message",
+              "location",
+              "details",
+              "rule_id",
+              "severity",
+              "category"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "odf",
+            "pdf",
+            "pdf-validation",
+            "fidelity"
+          ]
+        },
+        "schema_version": {
+          "enum": [
+            1
+          ]
+        },
+        "subject": {
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": false,
+          "properties": {
+            "errors": {
+              "type": "integer"
+            },
+            "info": {
+              "type": "integer"
+            },
+            "warnings": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "errors",
+            "warnings",
+            "info"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "subject",
+        "findings",
+        "facts",
+        "decisions",
+        "schema_version",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
+    "strict": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "report",
+    "strict",
+    "exit_status"
+  ],
+  "type": "object"
+}

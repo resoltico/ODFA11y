@@ -10,7 +10,7 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
 from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report
@@ -132,16 +132,16 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     data = RunRecord(
         document=DocumentIdentity("doc.odt"),
         operations=(),
-        policy=FidelityPolicy(),
+        fidelity_policy=Pagination.SAME(),
         profile=PROFILES["source"],
     )
     data.stages = [
-        StageResult(Stage.AUDIT_SOURCE, StageStatus.PASSED, report=source, gate=False),
+        StageResult(Stage.AUDIT_SOURCE, StageStatus.PASSED, report=source, _gate=False),
         StageResult(
             Stage.REMEDIATE,
             StageStatus.FAILED,
             "native tool failed",
-            error=True,
+            _error=True,
             details="untrusted\x1b[31m\nCommand: completed",
         ),
     ]

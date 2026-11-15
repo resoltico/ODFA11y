@@ -21,8 +21,9 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity import compare as compare_module
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -200,7 +201,7 @@ def test_a_non_executable_soffice_fails_the_stage_and_still_publishes_evidence(
     fake.chmod(0o600)
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(tools=Tools(soffice=str(fake))),
     )
@@ -219,7 +220,7 @@ def test_a_renderer_failure_is_a_tool_error_not_a_traceback(
 
     monkeypatch.setattr(compare_module.pypdfium2, "PdfDocument", refuse)
     with pytest.raises(ToolFailure, match="Cannot render"):
-        compare_pdfs(pdf, pdf, FidelityPolicy())
+        compare_pdfs(pdf, pdf, Pagination.SAME())
 
 
 @POSIX_ONLY
@@ -229,7 +230,7 @@ def test_published_outputs_honour_the_umask_instead_of_being_owner_only(tmp_path
         source = make_minimal_odt(tmp_path / "doc.odt")
         record = execute(
             source,
-            reviewed_plan(source, [], FidelityPolicy()),
+            reviewed_plan(source, [], Pagination.SAME()),
             tmp_path / "out",
             RunSettings(tools=Tools(soffice="missing")),
         )

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Application use cases own input policy, continuation and effective result statuses."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import wraps
 from pathlib import Path
 from typing import Literal
@@ -11,11 +11,13 @@ from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.audit import prepare_plan
 from odfa11y.batch import run_batch as execute_batch
-from odfa11y.errors import IoFailure, OdfA11yError
+from odfa11y.contracts import JsonProperty, record_dict
+from odfa11y.errors import Failure, IoFailure, OdfA11yError
 from odfa11y.evidence import check_bundle
 from odfa11y.native.process import termination_interrupt
-from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import Plan, load_plan
+from odfa11y.plans.fidelity import FidelityPolicy as FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate import remediate as apply_plan
 from odfa11y.report import exit_status, render_reports
 from odfa11y.run.comparison import compare_documents
@@ -25,16 +27,15 @@ from odfa11y.run.engine import execute
 from odfa11y.run.inspection import audit_document
 from odfa11y.run.native import export_document
 from odfa11y.run.profiles import DEFAULT_PROFILE
-from odfa11y.serialization import JsonProperty, record_dict
 from odfa11y.status import ExitStatus, combine_statuses, failure_status
 lazy from odfa11y.batch.record import BatchRecord
+lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.records import DoctorRecord
 lazy from odfa11y.remediate import RemediationResult
 lazy from odfa11y.report import Report
 lazy from odfa11y.run.profiles import Profile
 lazy from odfa11y.run.record import RunRecord
-lazy from odfa11y.serialization import JsonObject
 
 
 def _interruptible[**P, R](operation: Callable[P, R]) -> Callable[P, R]:
@@ -50,25 +51,32 @@ def _interruptible[**P, R](operation: Callable[P, R]) -> Callable[P, R]:
 
 
 @dataclass(frozen=True, slots=True)
-class AuditFailure:
-    """An input's effective failure status and actionable message."""
-
-    exit_status: ExitStatus
-    message: str
-
-
-@dataclass(frozen=True, slots=True)
 class AuditInput:
     """Completed checks survive a later failure for the same physical input."""
 
-    source: Path = field(metadata={"basename": True})
+    _source: Path
     reports: tuple[Report, ...]
-    error: OdfA11yError | None = field(default=None, metadata={"serialize": False})
+    _error: OdfA11yError | None = field(default=None)
 
     @JsonProperty
-    def failure(self) -> AuditFailure | None:
+    def failure(self) -> Failure | None:
         """Return the failure derived from the original error, if inspection was incomplete."""
-        return AuditFailure(failure_status(self.error), str(self.error)) if self.error else None
+        return self._error.as_record() if self._error is not None else None
+
+    @property
+    def source(self) -> Path:
+        """Return the inspected input path."""
+        return self._source
+
+    @property
+    def error(self) -> OdfA11yError | None:
+        """Return an incomplete inspection failure."""
+        return self._error
+
+    @JsonProperty
+    def source_name(self) -> str:
+        """Return the source filename without its parent directories."""
+        return self._source.name
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,46 +146,84 @@ class AuditRun:
 class PlanResult:
     """A source report and its bound disabled-answer template when planning is possible."""
 
+    schema_version: Literal[1] = field(default=1, init=False)
+
     report: Report
     template: str | None
 
-    @property
+    @JsonProperty
     def exit_status(self) -> ExitStatus:
         """Whether a reviewable plan was prepared."""
         return ExitStatus.PASSED if self.template is not None else exit_status([self.report])
+
+    def as_dict(self) -> JsonObject:
+        """Serialize the use case's result contract."""
+        return record_dict(self)
 
 
 @dataclass(frozen=True, slots=True)
 class ExportResult:
     """The published PDF path and effective export status."""
 
-    output: Path
-    exit_status: ExitStatus = field(default=ExitStatus.PASSED, init=False)
+    schema_version: Literal[1] = field(default=1, init=False)
+
+    _output: Path
+
+    @property
+    def output(self) -> Path:
+        """Return the published path for a subsequent application operation."""
+        return self._output
+
+    @JsonProperty
+    def output_name(self) -> str:
+        """Return the published filename without exposing its parent directories."""
+        return self._output.name
+
+    @JsonProperty
+    def exit_status(self) -> ExitStatus:
+        """Return the completed export's effective status."""
+        return ExitStatus.PASSED
+
+    def as_dict(self) -> JsonObject:
+        """Serialize the use case's result contract."""
+        return record_dict(self)
 
 
 @dataclass(frozen=True, slots=True)
 class ComparisonResult:
     """A fidelity report under an explicit acceptance policy."""
 
+    schema_version: Literal[1] = field(default=1, init=False)
+
     report: Report
     strict: bool = False
 
-    @property
+    @JsonProperty
     def exit_status(self) -> ExitStatus:
-        """The comparison's effective acceptance status."""
+        """Return the comparison's effective acceptance status."""
         return exit_status([self.report], strict=self.strict)
+
+    def as_dict(self) -> JsonObject:
+        """Serialize the use case's result contract."""
+        return record_dict(self)
 
 
 @dataclass(frozen=True, slots=True)
 class VerificationResult:
     """Recorded-file integrity problems, independent of accessibility claims."""
 
+    schema_version: Literal[1] = field(default=1, init=False)
+
     problems: tuple[str, ...]
 
-    @property
+    @JsonProperty
     def exit_status(self) -> ExitStatus:
         """Whether every recorded integrity check passed."""
         return ExitStatus.ERRORS if self.problems else ExitStatus.PASSED
+
+    def as_dict(self) -> JsonObject:
+        """Serialize the use case's result contract."""
+        return record_dict(self)
 
 
 def _selected_plan(value: Plan | str | Path) -> Plan:
@@ -305,7 +351,7 @@ def compare(
         Fidelity findings and effective strict acceptance.
 
     """
-    policy = _selected_plan(plan).fidelity if plan is not None else FidelityPolicy()
+    policy = _selected_plan(plan).fidelity if plan is not None else Pagination.SAME()
     return ComparisonResult(
         compare_documents(
             source,
@@ -395,8 +441,7 @@ def doctor(
 
     """
     record, error = inspect_tools(tools or Tools(), on_progress=observer, native_tools=native_tools)
-    record.error = error
-    return record
+    return replace(record, _error=error)
 
 
 @_interruptible

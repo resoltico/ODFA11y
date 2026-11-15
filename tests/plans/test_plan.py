@@ -8,8 +8,8 @@ import pytest
 from odfa11y.decisions.answers import DocumentMetadataAnswer
 from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument
-from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate.compile import compile_operations
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.schema import assert_record_schema
@@ -42,9 +42,6 @@ target_styles = ["BodyTight"]
 exact_reference = true
 [fidelity]
 pagination = "may-change"
-raster_tolerance = 0.3
-ink_threshold = 180
-dpi = 100
 """
 )
 
@@ -83,13 +80,13 @@ def test_full_plan_compiles_in_canonical_order(tmp_path: Path) -> None:
         "description": "Decision letter",
         "language": "en-GB",
     }
-    assert plan.fidelity == FidelityPolicy("may-change", 0.3, 180, 100)
+    assert plan.fidelity == Pagination.MAY_CHANGE
 
 
 def test_header_only_plan_requests_nothing(tmp_path: Path) -> None:
     plan = load_plan(write(tmp_path, HEADER))
     assert plan.decisions == ()
-    assert plan.fidelity == FidelityPolicy()
+    assert plan.fidelity == Pagination.SAME()
 
 
 def test_false_switches_compile_no_operations(tmp_path: Path) -> None:

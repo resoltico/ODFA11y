@@ -1,15 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Writer answer contracts and translation into preservation-guarded operations."""
 
-from dataclasses import dataclass, field
-from typing import ClassVar
+from dataclasses import dataclass
+from typing import Annotated, ClassVar
 lazy from collections.abc import Sequence
 
 from odfa11y.concepts import GraphicAlternative, LinkDescription
+from odfa11y.contracts import (
+    Description,
+    ItemCount,
+    LanguageTag,
+    NonBlank,
+    Range,
+    RequireAny,
+)
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import GraphicAlternativeAnswer, LinkDescriptionAnswer, SwitchAnswer
 from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
-from odfa11y.decisions.validation import LANGUAGE_TAG_FORMAT
 from odfa11y.families.text.graphics import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.families.text.headings.edit import (
     MAX_HEADING_LEVEL,
@@ -32,98 +39,56 @@ lazy from odfa11y.odf import OdfDocument
 class TargetLanguageAnswer:
     """Explicit language overrides for one paragraph or inline reading target."""
 
-    western: str | None = field(
-        default=None,
-        metadata={
-            "schema": {
-                "format": LANGUAGE_TAG_FORMAT,
-                "description": "Language for the target western-script channel.",
-            }
-        },
-    )
-    asian: str | None = field(
-        default=None,
-        metadata={
-            "schema": {
-                "format": LANGUAGE_TAG_FORMAT,
-                "description": "Language for the target Asian-script channel.",
-            }
-        },
-    )
-    complex: str | None = field(
-        default=None,
-        metadata={
-            "schema": {
-                "format": LANGUAGE_TAG_FORMAT,
-                "description": "Language for the target complex-script channel.",
-            }
-        },
-    )
-    required_any: ClassVar[tuple[str, ...]] = ("western", "asian", "complex")
+    western: Annotated[
+        str | None, LanguageTag(), Description("Language for the target western-script channel.")
+    ] = None
+    asian: Annotated[
+        str | None, LanguageTag(), Description("Language for the target Asian-script channel.")
+    ] = None
+    complex: Annotated[
+        str | None, LanguageTag(), Description("Language for the target complex-script channel.")
+    ] = None
+    __contract__: ClassVar[Annotated[object, RequireAny(("western", "asian", "complex"))]]
 
 
 @dataclass(frozen=True, slots=True)
 class HeadingLevelAnswer:
     """The reviewed semantic level of one heading."""
 
-    level: int = field(
-        metadata={
-            "schema": {
-                "minimum": 1,
-                "maximum": MAX_HEADING_LEVEL,
-                "description": "Intended outline level.",
-            }
-        }
-    )
+    level: Annotated[
+        int, Range(minimum=1, maximum=MAX_HEADING_LEVEL), Description("Intended outline level.")
+    ]
 
 
 @dataclass(frozen=True, slots=True)
 class TableHeadersAnswer:
     """Explicit semantic header bands for a safely resolved table."""
 
-    rows: int | None = field(
-        default=None,
-        metadata={
-            "schema": {"minimum": 1, "description": "Number of leading logical header rows."}
-        },
-    )
-    columns: int | None = field(
-        default=None,
-        metadata={
-            "schema": {"minimum": 1, "description": "Number of leading logical header columns."}
-        },
-    )
-    required_any: ClassVar[tuple[str, ...]] = ("rows", "columns")
+    rows: Annotated[
+        int | None, Range(minimum=1), Description("Number of leading logical header rows.")
+    ] = None
+    columns: Annotated[
+        int | None, Range(minimum=1), Description("Number of leading logical header columns.")
+    ] = None
+    __contract__: ClassVar[Annotated[object, RequireAny(("rows", "columns"))]]
 
 
 @dataclass(frozen=True, slots=True)
 class TextSpacingAnswer:
     """Reviewed reference text and the paragraph styles whose spacing may change."""
 
-    reference_text: str = field(
-        metadata={
-            "schema": {
-                "pattern": r"\S",
-                "description": "Authored text identifying the reference paragraph.",
-            }
-        }
-    )
-    target_styles: tuple[str, ...] = field(
-        metadata={
-            "schema": {
-                "minItems": 1,
-                "items": {"type": "string", "pattern": r"\S"},
-                "description": "Existing paragraph styles selected for spacing normalization.",
-            }
-        }
-    )
-    exact_reference: bool = field(
-        default=False, metadata={"schema": {"description": "Match the entire reference paragraph."}}
-    )
-    include_headings: bool = field(
-        default=False,
-        metadata={"schema": {"description": "Also apply to headings using the selected styles."}},
-    )
+    reference_text: Annotated[
+        str, NonBlank(), Description("Authored text identifying the reference paragraph.")
+    ]
+    target_styles: Annotated[
+        tuple[Annotated[str, NonBlank()], ...],
+        ItemCount(minimum=1),
+        Description("Existing paragraph styles selected for spacing normalization."),
+    ]
+    exact_reference: Annotated[bool, Description("Match the entire reference paragraph.")] = False
+    include_headings: Annotated[
+        bool, Description("Also apply to headings using the selected styles.")
+    ] = False
 
 
 FAMILIES = frozenset({Family.TEXT})

@@ -10,7 +10,7 @@ from odfa11y import capture
 from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -81,7 +81,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
     output = tmp_path / "pipeline"
     record = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         output,
         RunSettings(profile=profile_named("source")),
     )

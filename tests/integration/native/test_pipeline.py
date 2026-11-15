@@ -14,7 +14,7 @@ from odfa11y.families.text import (
     SetGraphicAlternatives,
     TableHeaders,
 )
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
@@ -43,7 +43,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
         tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
     )
     record = execute(
-        source, reviewed_plan(source, operations, FidelityPolicy()), tmp_path / "out", options
+        source, reviewed_plan(source, operations, Pagination.SAME()), tmp_path / "out", options
     )
     why = [
         (
@@ -79,14 +79,14 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
     options = RunSettings(tools=Tools(soffice=soffice))
     failed = execute(
         source,
-        reviewed_plan(source, [RemoveEmptySpacers()], FidelityPolicy()),
+        reviewed_plan(source, [RemoveEmptySpacers()], Pagination.SAME()),
         tmp_path / "strict",
         options,
     )
     assert statuses(failed)["fidelity"] == "failed"
     assert failed.exit_status == 2
     assert (tmp_path / "strict" / "fidelity" / "page-001-diff.png").is_file()
-    allowed = FidelityPolicy(pagination="may-change")
+    allowed = Pagination.MAY_CHANGE
     passed = execute(
         source,
         reviewed_plan(source, [RemoveEmptySpacers()], allowed),
@@ -105,7 +105,7 @@ def test_repeated_runs_have_equal_logical_results_and_identical_documents(
     runs = [
         execute(
             source,
-            reviewed_plan(source, [SetMetadata(title="Same")], FidelityPolicy()),
+            reviewed_plan(source, [SetMetadata(title="Same")], Pagination.SAME()),
             tmp_path / f"r{i}",
             options,
         )

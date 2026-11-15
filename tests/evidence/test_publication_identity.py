@@ -11,7 +11,7 @@ from lxml import etree
 
 from odfa11y.evidence import Redactor, check_bundle, write_bundle
 from odfa11y.odf import OdfDocument
-from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -35,7 +35,7 @@ def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: st
     target = tmp_path / "bundle"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         target,
         RunSettings(profile=profile_named("source")),
     )
@@ -83,7 +83,7 @@ def test_accepted_package_with_xml_suffix_is_copied_unchanged(tmp_path: Path) ->
     target = tmp_path / "bundle"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         target,
         RunSettings(profile=profile_named("source")),
     )
@@ -104,7 +104,7 @@ def test_flat_document_preserves_declared_encoding(tmp_path: Path) -> None:
     target = tmp_path / "bundle"
     result = execute(
         source,
-        reviewed_plan(source, [], FidelityPolicy()),
+        reviewed_plan(source, [], Pagination.SAME()),
         target,
         RunSettings(profile=profile_named("source")),
     )

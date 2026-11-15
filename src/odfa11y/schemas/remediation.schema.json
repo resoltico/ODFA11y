@@ -6,7 +6,7 @@
     "changed": {
       "type": "boolean"
     },
-    "destination": {
+    "destination_name": {
       "anyOf": [
         {
           "type": "string"
@@ -159,7 +159,7 @@
         1
       ]
     },
-    "source": {
+    "source_name": {
       "type": "string"
     },
     "violations": {
@@ -212,8 +212,6 @@
     }
   },
   "required": [
-    "source",
-    "destination",
     "outcomes",
     "schema",
     "schema_version",
@@ -223,7 +221,9 @@
     "dry_run",
     "operations",
     "changed",
-    "exit_status"
+    "exit_status",
+    "source_name",
+    "destination_name"
   ],
   "type": "object"
 }

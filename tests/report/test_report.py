@@ -76,7 +76,7 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
         "links",
     )
     assert "remedy" not in finding
-    assert single["decisions"][0]["kind"] == "text.linkify_addresses"
+    assert single["decisions"][0]["kind_id"] == "text.linkify_addresses"
     assert finding["location"] == {"path": "content/paragraph[2]", "member": None}
     several = json.loads(render_reports([_report(), _report()], output_format="json"))
     assert isinstance(several, list)

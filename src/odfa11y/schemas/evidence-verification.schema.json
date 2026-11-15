@@ -1,0 +1,33 @@
+{
+  "$id": "urn:odfa11y:schema:evidence-verification",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exit_status": {
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "problems": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "problems",
+    "exit_status"
+  ],
+  "type": "object"
+}

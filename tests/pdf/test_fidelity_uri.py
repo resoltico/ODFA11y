@@ -10,8 +10,9 @@ from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObjec
 lazy from pypdf.generic import PdfObject
 
 from odfa11y.errors import ToolFailure
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
+from odfa11y.plans.fidelity import Pagination
 from tests.fixtures.pdf import register, text_pdf
 
 
@@ -36,14 +37,14 @@ def test_base_change_and_equivalent_absolute_destinations(tmp_path: Path) -> Non
     right = _with_base(
         tmp_path / "right.pdf", ["file.pdf"] * 2, TextStringObject("https://example.test/two/")
     )
-    report = compare_pdfs(left, right, FidelityPolicy())
+    report = compare_pdfs(left, right, Pagination.SAME())
     assert {f.rule_id for f in report.findings} == {"FID004", "FID006"}
     absolute = _with_base(
         tmp_path / "absolute.pdf",
         ["https://example.test/one/file.pdf"] * 2,
         TextStringObject("https://irrelevant.test/"),
     )
-    assert compare_pdfs(left, absolute, FidelityPolicy()).findings == []
+    assert compare_pdfs(left, absolute, Pagination.SAME()).findings == []
     assert read_snapshot(left).links == Counter({"https://example.test/one/file.pdf": 2})
 
 
