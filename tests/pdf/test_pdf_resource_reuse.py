@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Shared font resources are inspected once without skipping distinct CMap streams."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfReader
@@ -14,15 +12,11 @@ from pypdf.generic import (
     EncodedStreamObject,
     NameObject,
 )
+lazy from pypdf import PdfWriter
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.reading.consumption import check_consumption
 from tests.fixtures.pdf import register, set_page_content, tagged_writer
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf import PdfWriter
 
 
 def _resources(writer: PdfWriter, size: int) -> DictionaryObject:

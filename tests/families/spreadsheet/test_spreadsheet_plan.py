@@ -1,28 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
 """A spreadsheet plan end to end: configuration, the executor's guards, and family boundaries."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import GraphicAlternative
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import GraphicAlternative
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.errors import PlanError
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
-from odfa11y.outcomes import StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
 from odfa11y.plans import load_plan
-from odfa11y.remediation import SetMetadata
-from odfa11y.remediation.planning import compile_operations
+from odfa11y.remediate import SetMetadata
+from odfa11y.remediate.compile import compile_operations
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.status import StageStatus
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.spreadsheets import (
@@ -34,10 +33,6 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 SHEETS = (

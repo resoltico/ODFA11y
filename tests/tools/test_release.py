@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Negative controls for tag and release-artifact identity."""
 
-from __future__ import annotations
-
 import importlib
 import io
 import tarfile

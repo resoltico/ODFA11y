@@ -1,26 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Verifying a bundle treats its manifest and its directory as untrusted."""
 
-from __future__ import annotations
-
 import json
 import os
 import sys
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.errors import OutputError
-from odfa11y.evidence import (
-    Redactor,
-    check_bundle,
-    write_bundle,
-)
+from odfa11y.evidence import Redactor, check_bundle, write_bundle
 from odfa11y.families.text import ADAPTER
 from tests.fixtures.records import record
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 REVIEW_ITEMS = ADAPTER.review_items
 NO_REDACTION = Redactor(())

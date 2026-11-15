@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Command behaviour: output formats, exit statuses and failures without tracebacks."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
@@ -12,10 +11,6 @@ from odfa11y.cli import main
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 FINDINGS = 2
 EXECUTION_FAILURE = 3

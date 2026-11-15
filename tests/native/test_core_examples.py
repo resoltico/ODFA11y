@@ -1,27 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Execute public library examples against real source fixtures and native boundaries."""
 
-from __future__ import annotations
-
 import sys
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y import audit
+from odfa11y.application.tools import Tools
 from odfa11y.errors import ToolFailedError
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.records import DoctorRecord, Toolchain
 from odfa11y.report import FactKeys
-from odfa11y.tools import Tools
 from tests.fixtures.documents import make_flat, make_package
 from tests.fixtures.native_resources import writer_resource
 from tools import core_examples
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("author", [make_flat, make_package], ids=["flat", "package"])

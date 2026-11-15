@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Author bound application plans from explicit expected-operation fixture values."""
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import quote
+lazy from collections.abc import Mapping, Sequence
 
-from odfa11y.content import (
+from odfa11y.concepts import (
     SHAPE_TAGS,
     GraphicIdentity,
     document_links,
@@ -26,18 +25,14 @@ from odfa11y.families.database.descriptions import targets as database_targets
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.families.text.contexts import context_location, text_nodes
-from odfa11y.families.text.headings import heading_fingerprint, heading_location
+from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import Plan, PlanHeader, SourceBinding, registered_kinds
 from odfa11y.report import Location
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
-
-    from odfa11y.adapter import Operation
-    from odfa11y.decisions import DecisionKind, OpenDecision
-    from odfa11y.report import Finding, Report
+lazy from odfa11y.concepts.edits import Operation
+lazy from odfa11y.decisions import DecisionKind, OpenDecision
+lazy from odfa11y.report import Finding, Report
 
 
 def reviewed_plan(

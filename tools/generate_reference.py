@@ -1,42 +1,35 @@
 # SPDX-License-Identifier: MPL-2.0
 """Generate published reference artifacts from their typed authorities."""
 
-from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path
 from typing import cast
 
-from odfa11y.adapter import Outcome, ReviewItem, Status
 from odfa11y.application import AuditFailure, AuditInput, AuditRun
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.cli.parser import build_parser
+from odfa11y.concepts.edits import Outcome, Status
+from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
 from odfa11y.errors import OdfA11yError
+from odfa11y.families.spec import ReviewItem
 from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import Family
-from odfa11y.outcomes import (
-    EXIT_PRECEDENCE,
-    BatchStatus,
-    ExitStatus,
-    ReviewTopic,
-    RunStatus,
-    StageName,
-    StageStatus,
-    ViolationKind,
-)
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.profiles import Profile
-from odfa11y.pipeline.record import RunRecord, StageResult
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema
 from odfa11y.plans.registry import registered_kinds
+from odfa11y.progress import StageName
 from odfa11y.records import DoctorRecord, DocumentIdentity, SchemaCheck, Toolchain
-from odfa11y.remediation import RemediationResult, Violation
+from odfa11y.remediate import RemediationResult, Violation
+from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import FACT_REGISTRY, RULES, FactSet, Finding, Location, Report, Rule
+from odfa11y.run.profiles import Profile
+from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.serialization import JsonObject, JsonValue, schema_for
+from odfa11y.status import EXIT_PRECEDENCE, BatchStatus, ExitStatus, RunStatus, StageStatus
 
 SCHEMA_DIRECTORY = Path(__file__).resolve().parents[1] / "src/odfa11y/schemas"
 FORMATS = {
@@ -150,7 +143,7 @@ def rule_reference() -> str:
         "",
         "Rules define each finding's identity, severity, category and possible decision kinds.",
         "Findings reference these rules; open decisions carry the human questions.",
-        "The [registry](../src/odfa11y/report/rules.py) is authoritative.",
+        "The [registry](../src/odfa11y/rules/registry.py) is authoritative.",
         "",
         "## Registered rules",
         "",

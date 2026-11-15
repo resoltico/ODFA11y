@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Help and next actions preserve reviewed plans and remain safe to copy."""
 
-from __future__ import annotations
-
 import argparse
 import shlex
 import tomllib
@@ -10,14 +8,15 @@ from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
 from odfa11y.errors import OutputError, PlanError, ToolNotFoundError
 from odfa11y.plans import PlanHeader, SourceBinding, render_plan
 from odfa11y.plans.registry import document_decisions
-from odfa11y.report import Report, rules
-from odfa11y.source_audit import audit_odf
+from odfa11y.report import Report
+from odfa11y.rules import registry as rules
 from tests.fixtures.writer import make_minimal_odt
 
 

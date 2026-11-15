@@ -1,16 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Append terminal-only progress without contaminating machine output."""
 
-from __future__ import annotations
-
 import sys
-from typing import TYPE_CHECKING
 
 from odfa11y import StepName, terminal_text
-
-if TYPE_CHECKING:
-    from odfa11y import ProgressEvent, ProgressObserver
-
+lazy from odfa11y import ProgressEvent, ProgressObserver
 
 _LABELS = {
     StepName.IDENTIFY_SOURCE: "Identify source",

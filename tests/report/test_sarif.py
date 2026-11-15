@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check SARIF schema, source identity, logical semantics and disclosure boundaries."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 lazy from pathlib import Path
@@ -10,6 +8,7 @@ lazy from pathlib import Path
 import pytest
 from jsonschema import Draft7Validator
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, ReportError
 from odfa11y.pdf import check_pdfua
 from odfa11y.report import (
@@ -22,9 +21,8 @@ from odfa11y.report import (
     Rule,
     Severity,
     render_reports,
-    rules,
 )
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.paths import TESTS
 from tests.pdf.test_verapdf import report_xml, stub

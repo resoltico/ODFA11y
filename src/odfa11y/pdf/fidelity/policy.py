@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """How strictly a candidate render must match its source render."""
 
-from __future__ import annotations
-
 from dataclasses import asdict, dataclass, field
 from typing import Any
 

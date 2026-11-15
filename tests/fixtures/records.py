@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Construct typed assurance records for evidence publication tests."""
 
-from __future__ import annotations
-
 from dataclasses import replace
 
 from odfa11y.families.text import ADAPTER
-from odfa11y.outcomes import StageName, StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.profiles import PROFILES
-from odfa11y.pipeline.record import RunRecord, StageResult
+from odfa11y.progress import StageName
 from odfa11y.records import DocumentIdentity
-from odfa11y.report import FactKeys, FactSet, Report, rules
+from odfa11y.report import FactKeys, FactSet, Report
+from odfa11y.rules import registry as rules
+from odfa11y.run.profiles import PROFILES
+from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.status import StageStatus
 
 
 def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRecord:

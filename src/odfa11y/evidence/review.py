@@ -1,16 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Render typed run facts, gate outcomes and outstanding human review."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.outcomes import StageName, StageStatus
-
-if TYPE_CHECKING:
-    from odfa11y.pipeline.record import RunRecord, StageResult
-
-    from .redact import Redactor
+from odfa11y.progress import StageName
+from odfa11y.status import StageStatus
+lazy from odfa11y.evidence.redact import Redactor
+lazy from odfa11y.run.record import RunRecord, StageResult
 
 NOT_VALIDATION = (
     "veraPDF did not run: the built-in PDF checks are a smoke test, not PDF/UA validation."

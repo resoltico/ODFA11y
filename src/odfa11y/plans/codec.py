@@ -1,14 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """One strict plan codec derives parsing, templates and schema from registered answers."""
 
-from __future__ import annotations
-
 import dataclasses
 import json
 import sys
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING, cast, get_type_hints
+from typing import cast, get_type_hints
+lazy from collections.abc import Iterable, Mapping
 
 from odfa11y.decisions import (
     TARGET_FINGERPRINT_PATTERN,
@@ -19,18 +18,11 @@ from odfa11y.decisions import (
 )
 from odfa11y.errors import PlanError
 from odfa11y.pdf.fidelity import FidelityPolicy
+from odfa11y.plans.model import PLAN_FORMAT, Plan, PlanHeader
 from odfa11y.report import Location
-from odfa11y.serialization import record_dict, schema_for
-
-from .models import PLAN_FORMAT, Plan, PlanHeader
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
-
-    from _typeshed import DataclassInstance
-
-    from odfa11y.decisions import DecisionKind, OpenDecision
-    from odfa11y.serialization import JsonObject, JsonValue
+from odfa11y.serialization import fields_of, record_dict, schema_for
+lazy from odfa11y.decisions import DecisionKind, OpenDecision
+lazy from odfa11y.serialization import JsonObject, JsonValue
 
 
 def parse_plan(path: str | Path, kinds: Mapping[str, DecisionKind]) -> Plan:
@@ -145,7 +137,7 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
         if decision.fingerprint is not None:
             lines.append(f"# fingerprint = {json.dumps(decision.fingerprint)}")
         hints = get_type_hints(kind.answer_type)
-        for field in dataclasses.fields(cast("type[DataclassInstance]", kind.answer_type)):
+        for field in fields_of(kind.answer_type):
             help_text = field.metadata.get("schema", {}).get("description", field.name)
             placeholder = _placeholder(field, hints[field.name])
             lines.append(
@@ -177,7 +169,7 @@ def answer_schema(answer_type: type[object]) -> JsonObject:
 
     """
     hints = get_type_hints(answer_type)
-    fields = dataclasses.fields(cast("type[DataclassInstance]", answer_type))
+    fields = fields_of(answer_type)
     properties: JsonObject = {
         field.name: schema_for(
             hints[field.name], namespace=vars(sys.modules[answer_type.__module__])

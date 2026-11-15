@@ -1,18 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Production retains the floating-frame review gate while inline asset controls can pass."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 from odfa11y import Tools, profile_named, run
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.plans import reviewed_plan
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_production_requires_floating_frame_review_before_native_export(tmp_path: Path) -> None:

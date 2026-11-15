@@ -1,19 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """A flat ODF document: all parts in one XML file."""
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy import os
 
 from odfa11y.errors import MissingMemberError, PackageError
+from odfa11y.odf.archive import MAX_UNCOMPRESSED_BYTES
+from odfa11y.odf.storage import OdfStorage, Part
 from odfa11y.staging import staging_sibling
-
-from .archive import MAX_UNCOMPRESSED_BYTES
-from .storage import OdfStorage, Part
-
-if TYPE_CHECKING:
-    import os
 
 FLAT_MEMBER = "document"
 

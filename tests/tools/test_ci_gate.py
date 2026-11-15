@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """The one required check: the ruleset, the gate job and the jobs it waits for must agree."""
 
-from __future__ import annotations
-
 import json
 import re
 

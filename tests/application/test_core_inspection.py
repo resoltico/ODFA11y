@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Core document inspection preserves content dispatch and incremental audit reports."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.pipeline import inspection
-from odfa11y.pipeline.inspection import audit_document
 from odfa11y.report import FactKeys
+from odfa11y.run import inspection
+from odfa11y.run.inspection import audit_document
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_core_dispatch_uses_content_and_applies_odf_schema(

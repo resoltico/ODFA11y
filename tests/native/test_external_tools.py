@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Bounded tool execution: limited output, timeouts, and no process left behind."""
 
-from __future__ import annotations
-
 import json
 import multiprocessing
 import os
@@ -11,25 +9,23 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from collections.abc import Callable
+lazy from multiprocessing.synchronize import Event
 
 import pytest
 
+from odfa11y.application.tools import Tools
 from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.native import process
 from odfa11y.native.process import ToolRun, identify, run_bounded
 from odfa11y.odf import PackageStorage
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from multiprocessing.synchronize import Event
 
 PYTHON = sys.executable
 

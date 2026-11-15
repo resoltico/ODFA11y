@@ -2,7 +2,7 @@
 
 Rules define each finding's identity, severity, category and possible decision kinds.
 Findings reference these rules; open decisions carry the human questions.
-The [registry](../src/odfa11y/report/rules.py) is authoritative.
+The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 
 ## Registered rules
 

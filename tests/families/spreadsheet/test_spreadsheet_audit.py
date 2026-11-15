@@ -1,17 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Each spreadsheet rule fires where it should and stays quiet where it should, in both layouts."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import load_plan
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf, prepare_plan
 from tests.fixtures.documents import make_package
 from tests.fixtures.plans import question_for
 from tests.fixtures.spreadsheets import (
@@ -24,11 +22,7 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Finding, Report
+lazy from odfa11y.report import Finding, Report
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 CONTENT = sheet("Budget", row(text_cell("Total"), text_cell("7")))

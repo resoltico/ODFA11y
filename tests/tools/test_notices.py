@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Legal compliance: bundled OASIS files ship unmodified, with their notice and terms."""
 
-from __future__ import annotations
-
 import tomllib
 
 import pytest

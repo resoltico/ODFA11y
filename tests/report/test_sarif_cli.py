@@ -1,24 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Exercise SARIF through CLI dispatch and real document/PDF boundaries."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from jsonschema import Draft7Validator
 
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
+from odfa11y.run import comparison as run_comparison
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
 from tests.report.test_sarif import SCHEMA
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.export import ExportSettings
 
 
 def _run_log(output: str) -> dict:
@@ -77,7 +72,7 @@ def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_de
         line = "Unchanged" if input_path == source else "Changed"
         return text_pdf(destination, [[line]])
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
+    monkeypatch.setattr(run_comparison, "export_pdfua", exporter)
     assert (
         main([
             "compare",
@@ -236,7 +231,7 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
         calls.append(input_path)
         return text_pdf(destination, [["Actual comparison"]])
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
+    monkeypatch.setattr(run_comparison, "export_pdfua", exporter)
     diff = tmp_path / "diff"
     extra: list[str] = []
     if outside:
@@ -272,7 +267,7 @@ def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
         message = "Conversion failed"
         raise ToolFailedError(message, details=diagnostic)
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
+    monkeypatch.setattr(run_comparison, "export_pdfua", exporter)
     arguments = ["compare", str(source), str(candidate)]
     assert main([*arguments, "--format", "sarif", "--source-root", str(tmp_path)]) == 3
     sarif_output = capsys.readouterr()

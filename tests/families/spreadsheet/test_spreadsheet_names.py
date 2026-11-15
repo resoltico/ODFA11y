@@ -1,13 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Renaming sheets: explicit, fail-closed, collision-safe, and never at the cost of a reference."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.adapter import Status
+from odfa11y.concepts.edits import Status
 from odfa11y.families.spreadsheet import SetSheetNames, invalid_name_reason
 from odfa11y.families.spreadsheet.names import SheetNameChange
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
@@ -19,9 +17,6 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 PLAIN = (sheet("Sheet1", row(text_cell("a"))), sheet("Notes", row(text_cell("b"))))

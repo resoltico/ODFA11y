@@ -1,31 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 """Remediating real Writer documents: a plan is idempotent and never harms text or schema."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.content import GraphicAlternative
-from odfa11y.families.text import (
-    LinkifyAddresses,
-    RemoveEmptySpacers,
-    SetGraphicAlternatives,
-)
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import GraphicAlternative
+from odfa11y.families.text import LinkifyAddresses, RemoveEmptySpacers, SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, Part, validate
-from odfa11y.outcomes import StageStatus
-from odfa11y.remediation import SetMetadata
-from odfa11y.source_audit import audit_odf
+from odfa11y.remediate import SetMetadata
+from odfa11y.status import StageStatus
 from tests.fixtures.corpus import DOCUMENT_IDS, DOCUMENTS, visible_text
 from tests.fixtures.operations import execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation
-    from tests.fixtures.corpus import CorpusDocument
+lazy from odfa11y.concepts.edits import Operation
+lazy from tests.fixtures.corpus import CorpusDocument
 
 # Writer names the first picture and the first table of these documents "Image1" and "Table1".
 PLAN_EXTRAS: dict[str, Operation] = {

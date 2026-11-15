@@ -1,22 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Every family uses real source-bound questions, guarded publication and explicit rebinding."""
 
-from __future__ import annotations
-
 import hashlib
 import tomllib
 lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.odf import NS, OdfDocument, PackageStorage, Part
 from odfa11y.plans import Plan, parse_tables, registered_kinds
-from odfa11y.remediation import remediate
+from odfa11y.remediate import remediate
 from odfa11y.report import Location
-from odfa11y.source_audit import audit_odf, prepare_plan
 from tests.fixtures.paths import TESTS
 from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet, text_cell
 from tests.fixtures.writer import make_minimal_odt

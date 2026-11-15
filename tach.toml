@@ -2,216 +2,272 @@ source_roots = ["src"]
 exclude = ["tests", "tools", "**/__pycache__"]
 root_module = "forbid"
 forbid_circular_dependencies = true
-exact = true
+exact = false
+layers_explicit_depends_on = false
+layers = ["presentation", "application", "runs", "workflows", "families", "checks", "model", "infrastructure", "foundation"]
 
 [[modules]]
-path = "odfa11y.source_capture"
-depends_on = ["odfa11y.errors"]
-
-[[modules]]
-path = "odfa11y.language_tags"
-depends_on = []
-
-[[modules]]
-path = "odfa11y.decisions"
-depends_on = ["odfa11y.errors", "odfa11y.odf", "odfa11y.language_tags"]
-
-[[modules]]
-path = "odfa11y.plans"
-depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.pdf.fidelity", "odfa11y.report", "odfa11y.serialization", "odfa11y.families"]
-
-[[modules]]
-path = "odfa11y.serialization"
-depends_on = ["odfa11y.errors"]
-
-[[modules]]
-path = "odfa11y.records"
-depends_on = ["odfa11y.outcomes", "odfa11y.serialization"]
-
-[[modules]]
-path = "odfa11y.schemas"
-depends_on = ["odfa11y.errors"]
-
-[[modules]]
-path = "odfa11y.outcomes"
-depends_on = ["odfa11y.errors"]
+path = "odfa11y"
+layer = "application"
+depends_on = ["odfa11y.application", "odfa11y.application.tools", "odfa11y.audit", "odfa11y.batch", "odfa11y.decisions", "odfa11y.errors", "odfa11y.native.export", "odfa11y.native.process", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.remediate", "odfa11y.report", "odfa11y.run.profiles", "odfa11y.run.record", "odfa11y.status", "odfa11y.version"]
 
 [[modules]]
 path = "odfa11y.errors"
+layer = "foundation"
 depends_on = []
 
 [[modules]]
+path = "odfa11y.status"
+layer = "foundation"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
+path = "odfa11y.progress"
+layer = "foundation"
+depends_on = ["odfa11y.status"]
+
+[[modules]]
+path = "odfa11y.targets"
+layer = "foundation"
+depends_on = ["odfa11y.serialization"]
+
+[[modules]]
+path = "odfa11y.language_tags"
+layer = "foundation"
+depends_on = []
+
+[[modules]]
+path = "odfa11y.capture"
+layer = "foundation"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
+path = "odfa11y.version"
+layer = "foundation"
+depends_on = []
+
+[[modules]]
+path = "odfa11y.serialization"
+layer = "foundation"
+depends_on = ["odfa11y.errors"]
+
+[[modules]]
 path = "odfa11y.safe_xml"
+layer = "foundation"
 depends_on = []
 
 [[modules]]
 path = "odfa11y.staging"
+layer = "foundation"
 depends_on = []
 
 [[modules]]
-path = "odfa11y.pdf.reading.limits"
-depends_on = ["odfa11y.errors"]
+path = "odfa11y.concepts.review"
+layer = "foundation"
+depends_on = []
 
 [[modules]]
-path = "odfa11y.pdf.reading.content"
-depends_on = ["odfa11y.errors"]
-
-[[modules]]
-path = "odfa11y.pdf.reading.consumption"
-depends_on = ["odfa11y.errors", "odfa11y.pdf.reading.limits", "odfa11y.pdf.reading.content"]
-
-[[modules]]
-path = "odfa11y.report"
-depends_on = ["odfa11y.errors", "odfa11y.outcomes", "odfa11y.serialization", "odfa11y.decisions"]
-
-[[modules]]
-path = "odfa11y.native.process"
-depends_on = ["odfa11y.errors"]
+path = "odfa11y.remediate.violations"
+layer = "foundation"
+depends_on = []
 
 [[modules]]
 path = "odfa11y.odf"
+layer = "infrastructure"
 depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging"]
 
 [[modules]]
-path = "odfa11y.adapter"
-depends_on = ["odfa11y.errors", "odfa11y.outcomes"]
-
-[[modules]]
-path = "odfa11y.content"
-depends_on = ["odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.language_tags", "odfa11y.decisions", "odfa11y.native.resources"]
-
-[[modules]]
-path = "odfa11y.families.text"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions", "odfa11y.native.probes", "odfa11y.native.probe_sources", "odfa11y.native.probe_pdf", "odfa11y.language_tags"]
-
-[[modules]]
-path = "odfa11y.families.spreadsheet"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions", "odfa11y.native.probe_sources", "odfa11y.native.probes", "odfa11y.native.probe_pdf"]
-
-[[modules]]
-path = "odfa11y.families.pages"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions"]
-
-[[modules]]
-path = "odfa11y.families.formula"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions", "odfa11y.native.probe_sources", "odfa11y.native.probe_pdf", "odfa11y.native.probes"]
-
-[[modules]]
-path = "odfa11y.families.chart"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
-
-[[modules]]
-path = "odfa11y.families.image"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.safe_xml", "odfa11y.outcomes", "odfa11y.decisions", "odfa11y.native.resources"]
-
-[[modules]]
-path = "odfa11y.families.database"
-depends_on = ["odfa11y.content", "odfa11y.adapter", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes", "odfa11y.decisions"]
-
-[[modules]]
-path = "odfa11y.families"
-depends_on = ["odfa11y.adapter", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.odf", "odfa11y.report", "odfa11y.outcomes"]
-
-[[modules]]
-path = "odfa11y.source_audit"
-depends_on = ["odfa11y.source_capture", "odfa11y.errors", "odfa11y.families", "odfa11y.odf", "odfa11y.report", "odfa11y.language_tags", "odfa11y.plans", "odfa11y.native.export_context"]
-
-[[modules]]
-path = "odfa11y.remediation"
-depends_on = ["odfa11y.source_capture", "odfa11y.content", "odfa11y.adapter", "odfa11y.errors", "odfa11y.families", "odfa11y.odf", "odfa11y.outcomes", "odfa11y.serialization", "odfa11y.records", "odfa11y.language_tags", "odfa11y.decisions", "odfa11y.plans"]
-
-[[modules]]
-path = "odfa11y.pdf"
-depends_on = ["odfa11y.errors", "odfa11y.native.process", "odfa11y.pdf.reading.limits", "odfa11y.pdf.reading.consumption", "odfa11y.pdf.reading.content", "odfa11y.report", "odfa11y.safe_xml", "odfa11y.native.export", "odfa11y.pdf.structure_walk"]
-
-[[modules]]
-path = "odfa11y.pdf.fidelity"
-depends_on = ["odfa11y.errors", "odfa11y.pdf.reading.limits", "odfa11y.pdf.reading.consumption", "odfa11y.report", "odfa11y.decisions"]
-
-[[modules]]
-path = "odfa11y.evidence"
-depends_on = ["odfa11y.errors", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.outcomes"]
-
-[[modules]]
-path = "odfa11y.pipeline"
-depends_on = ["odfa11y.source_capture", "odfa11y.native.process", "odfa11y.source_audit", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families", "odfa11y.pdf.fidelity", "odfa11y.odf", "odfa11y.pdf", "odfa11y.remediation", "odfa11y.report", "odfa11y.outcomes", "odfa11y.adapter", "odfa11y.records", "odfa11y.serialization", "odfa11y.plans", "odfa11y.native.export", "odfa11y.native.export_context", "odfa11y.native.probes", "odfa11y.version", "odfa11y.tools"]
-
-[[modules]]
-path = "odfa11y.batch"
-depends_on = ["odfa11y.errors", "odfa11y.evidence", "odfa11y.native.process", "odfa11y.pipeline", "odfa11y.staging", "odfa11y.outcomes", "odfa11y.pdf.fidelity", "odfa11y.serialization", "odfa11y.records", "odfa11y.plans", "odfa11y.native.probes"]
-
-[[modules]]
-path = "odfa11y.cli"
-depends_on = ["odfa11y"]
-
-[[modules]]
-path = "odfa11y"
-depends_on = ["odfa11y.version", "odfa11y.native.process", "odfa11y.records", "odfa11y.native.export", "odfa11y.source_audit", "odfa11y.outcomes", "odfa11y.plans", "odfa11y.tools", "odfa11y.report", "odfa11y.batch", "odfa11y.errors", "odfa11y.decisions", "odfa11y.remediation", "odfa11y.pipeline", "odfa11y.application"]
-
-[[modules]]
-path = "odfa11y.__main__"
-depends_on = ["odfa11y.cli"]
-
-[[modules]]
 path = "odfa11y.native"
+layer = "infrastructure"
 depends_on = []
 
 [[modules]]
-path = "odfa11y.native.resources"
-depends_on = ["odfa11y.odf"]
-
-[[modules]]
-path = "odfa11y.native.formula_syntax"
-depends_on = []
-
-[[modules]]
-path = "odfa11y.native.formula_context"
-depends_on = ["odfa11y.odf", "odfa11y.native.formula_syntax"]
-
-[[modules]]
-path = "odfa11y.native.export_context"
-depends_on = ["odfa11y.errors", "odfa11y.odf", "odfa11y.native.formula_context", "odfa11y.native.formula_syntax", "odfa11y.native.resources"]
+path = "odfa11y.native.process"
+layer = "infrastructure"
+depends_on = ["odfa11y.errors"]
 
 [[modules]]
 path = "odfa11y.native.export"
+layer = "infrastructure"
 depends_on = ["odfa11y.errors", "odfa11y.native.process", "odfa11y.staging"]
 
 [[modules]]
-path = "odfa11y.pdf.reading"
-depends_on = []
-
-[[modules]]
 path = "odfa11y.native.probes"
-depends_on = ["odfa11y.odf", "odfa11y.outcomes", "odfa11y.native.export", "odfa11y.errors"]
+# Temporary until WP9: target layer infrastructure; upward edges odfa11y.decisions.
+depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.native.export", "odfa11y.native.process", "odfa11y.odf", "odfa11y.progress"]
 
 [[modules]]
 path = "odfa11y.native.probe_pdf"
-depends_on = ["odfa11y.pdf.reading.consumption", "odfa11y.pdf", "odfa11y.errors", "odfa11y.report", "odfa11y.pdf.structure_walk"]
+# Temporary until WP9: target layer infrastructure; upward edges odfa11y.pdf, odfa11y.pdf.structure_walk, odfa11y.report.
+depends_on = ["odfa11y.errors", "odfa11y.pdf", "odfa11y.pdf.reading", "odfa11y.pdf.structure_walk", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.native.probe_sources"
+layer = "infrastructure"
 depends_on = ["odfa11y.odf"]
 
 [[modules]]
-path = "odfa11y.pdf.structure_walk"
-depends_on = ["odfa11y.pdf.reading.limits", "odfa11y.errors"]
+path = "odfa11y.pdf.reading"
+layer = "infrastructure"
+depends_on = ["odfa11y.errors"]
 
 [[modules]]
-path = "odfa11y.version"
+path = "odfa11y.rules"
+layer = "model"
 depends_on = []
+cannot_depend_on = ["odfa11y.decisions", "odfa11y.report", "odfa11y.plans"]
 
 [[modules]]
-path = "odfa11y.tools"
-depends_on = ["odfa11y.native.export", "odfa11y.native.process"]
+path = "odfa11y.decisions"
+layer = "model"
+depends_on = ["odfa11y.errors", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.targets"]
+cannot_depend_on = ["odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.report"
+layer = "model"
+depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.rules", "odfa11y.serialization", "odfa11y.status", "odfa11y.targets"]
+
+[[modules]]
+path = "odfa11y.plans"
+# Temporary until WP6: target layer model; upward edges odfa11y.families, odfa11y.pdf.fidelity.
+depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.pdf.fidelity", "odfa11y.report", "odfa11y.serialization"]
+
+[[modules]]
+path = "odfa11y.records"
+layer = "model"
+depends_on = ["odfa11y.errors", "odfa11y.native.probes", "odfa11y.native.process", "odfa11y.serialization", "odfa11y.status"]
+
+[[modules]]
+path = "odfa11y.schemas"
+layer = "model"
+depends_on = ["odfa11y.errors", "odfa11y.serialization"]
+
+[[modules]]
+path = "odfa11y.concepts"
+layer = "checks"
+depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.report", "odfa11y.rules", "odfa11y.status"]
+cannot_depend_on = ["odfa11y.families"]
+
+[[modules]]
+path = "odfa11y.pdf"
+layer = "checks"
+depends_on = ["odfa11y.errors", "odfa11y.native.export", "odfa11y.native.process", "odfa11y.odf", "odfa11y.pdf.reading", "odfa11y.pdf.structure_walk", "odfa11y.report", "odfa11y.rules", "odfa11y.safe_xml"]
+
+[[modules]]
+path = "odfa11y.pdf.fidelity"
+layer = "checks"
+depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.pdf.reading", "odfa11y.report", "odfa11y.rules"]
+
+[[modules]]
+path = "odfa11y.pdf.structure_walk"
+layer = "checks"
+depends_on = ["odfa11y.errors", "odfa11y.pdf.reading"]
+
+[[modules]]
+path = "odfa11y.families"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.pages", "odfa11y.families.spec", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+
+[[modules]]
+path = "odfa11y.families.spec"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.errors", "odfa11y.native.probes", "odfa11y.odf", "odfa11y.report"]
+
+[[modules]]
+path = "odfa11y.families.text"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.native.probe_pdf", "odfa11y.native.probe_sources", "odfa11y.native.probes", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+cannot_depend_on = ["odfa11y.families.spreadsheet", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.chart", "odfa11y.families.image", "odfa11y.families.database"]
+
+[[modules]]
+path = "odfa11y.families.spreadsheet"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.families.spec", "odfa11y.native.probe_pdf", "odfa11y.native.probe_sources", "odfa11y.native.probes", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.chart", "odfa11y.families.image", "odfa11y.families.database"]
+
+[[modules]]
+path = "odfa11y.families.pages"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.families.spec", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.spreadsheet", "odfa11y.families.formula", "odfa11y.families.chart", "odfa11y.families.image", "odfa11y.families.database"]
+
+[[modules]]
+path = "odfa11y.families.formula"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.families.spec", "odfa11y.native.probe_pdf", "odfa11y.native.probe_sources", "odfa11y.native.probes", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.spreadsheet", "odfa11y.families.pages", "odfa11y.families.chart", "odfa11y.families.image", "odfa11y.families.database"]
+
+[[modules]]
+path = "odfa11y.families.chart"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.errors", "odfa11y.families.spec", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.spreadsheet", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.database"]
+
+[[modules]]
+path = "odfa11y.families.image"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.families.spec", "odfa11y.odf", "odfa11y.report", "odfa11y.rules", "odfa11y.safe_xml"]
+cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.spreadsheet", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.chart", "odfa11y.families.database"]
+
+[[modules]]
+path = "odfa11y.families.database"
+layer = "families"
+depends_on = ["odfa11y.concepts", "odfa11y.concepts.review", "odfa11y.decisions", "odfa11y.families.spec", "odfa11y.odf", "odfa11y.report", "odfa11y.rules"]
+cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.spreadsheet", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.chart", "odfa11y.families.image"]
+
+[[modules]]
+path = "odfa11y.audit"
+layer = "workflows"
+depends_on = ["odfa11y.capture", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.report", "odfa11y.rules"]
+
+[[modules]]
+path = "odfa11y.remediate"
+layer = "workflows"
+depends_on = ["odfa11y.capture", "odfa11y.concepts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.records", "odfa11y.remediate.violations", "odfa11y.serialization", "odfa11y.status"]
+
+[[modules]]
+path = "odfa11y.run"
+# Temporary until WP9: target layer runs; upward edges odfa11y.application.tools.
+depends_on = ["odfa11y.application.tools", "odfa11y.audit", "odfa11y.capture", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families", "odfa11y.families.spec", "odfa11y.native.export", "odfa11y.native.probes", "odfa11y.native.process", "odfa11y.odf", "odfa11y.pdf", "odfa11y.pdf.fidelity", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.remediate", "odfa11y.report", "odfa11y.run.profiles", "odfa11y.run.record", "odfa11y.status", "odfa11y.version"]
+
+[[modules]]
+path = "odfa11y.run.record"
+layer = "runs"
+depends_on = ["odfa11y.decisions", "odfa11y.families.spec", "odfa11y.native.export", "odfa11y.odf", "odfa11y.pdf.fidelity", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.remediate", "odfa11y.report", "odfa11y.run.profiles", "odfa11y.serialization", "odfa11y.status", "odfa11y.version"]
+
+[[modules]]
+path = "odfa11y.run.profiles"
+layer = "runs"
+depends_on = ["odfa11y.errors", "odfa11y.progress"]
+
+[[modules]]
+path = "odfa11y.batch"
+layer = "runs"
+depends_on = ["odfa11y.errors", "odfa11y.evidence", "odfa11y.native.probes", "odfa11y.native.process", "odfa11y.pdf.fidelity", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.run", "odfa11y.run.record", "odfa11y.serialization", "odfa11y.staging", "odfa11y.status"]
+
+[[modules]]
+path = "odfa11y.evidence"
+layer = "runs"
+depends_on = ["odfa11y.errors", "odfa11y.progress", "odfa11y.run.record", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.application"
-depends_on = ["odfa11y.pdf.fidelity", "odfa11y.errors", "odfa11y.plans", "odfa11y.tools", "odfa11y.remediation", "odfa11y.source_audit", "odfa11y.batch", "odfa11y.evidence", "odfa11y.pipeline", "odfa11y.serialization", "odfa11y.outcomes", "odfa11y.report", "odfa11y.native.process"]
+layer = "application"
+depends_on = ["odfa11y.application.tools", "odfa11y.audit", "odfa11y.batch", "odfa11y.errors", "odfa11y.evidence", "odfa11y.native.process", "odfa11y.pdf.fidelity", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.remediate", "odfa11y.report", "odfa11y.run", "odfa11y.run.profiles", "odfa11y.run.record", "odfa11y.serialization", "odfa11y.status"]
 
-[[interfaces]]
-from = ["odfa11y.batch", "odfa11y.content", "odfa11y.adapter", "odfa11y.source_audit", "odfa11y.cli", "odfa11y.evidence", "odfa11y.families", "odfa11y.families.chart", "odfa11y.families.database", "odfa11y.families.formula", "odfa11y.families.image", "odfa11y.families.pages", "odfa11y.families.spreadsheet", "odfa11y.families.text", "odfa11y.pdf.fidelity", "odfa11y.odf", "odfa11y.pdf", "odfa11y.pdf.reading.content", "odfa11y.remediation", "odfa11y.report"]
-expose = ["[^.]+"]
+[[modules]]
+path = "odfa11y.application.tools"
+layer = "application"
+depends_on = ["odfa11y.native.export", "odfa11y.native.process"]
 
-[[interfaces]]
-from = ["odfa11y"]
-expose = ["[^.]+"]
+[[modules]]
+path = "odfa11y.cli"
+layer = "presentation"
+depends_on = ["odfa11y"]
+cannot_depend_on = ["odfa11y.errors", "odfa11y.status", "odfa11y.progress", "odfa11y.targets", "odfa11y.language_tags", "odfa11y.capture", "odfa11y.version", "odfa11y.serialization", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.concepts.review", "odfa11y.remediate.violations", "odfa11y.odf", "odfa11y.native", "odfa11y.native.process", "odfa11y.native.export", "odfa11y.native.probes", "odfa11y.native.probe_pdf", "odfa11y.native.probe_sources", "odfa11y.pdf.reading", "odfa11y.rules", "odfa11y.decisions", "odfa11y.report", "odfa11y.plans", "odfa11y.records", "odfa11y.schemas", "odfa11y.concepts", "odfa11y.pdf", "odfa11y.pdf.fidelity", "odfa11y.pdf.structure_walk", "odfa11y.families", "odfa11y.families.spec", "odfa11y.families.text", "odfa11y.families.spreadsheet", "odfa11y.families.pages", "odfa11y.families.formula", "odfa11y.families.chart", "odfa11y.families.image", "odfa11y.families.database", "odfa11y.audit", "odfa11y.remediate", "odfa11y.run", "odfa11y.run.record", "odfa11y.run.profiles", "odfa11y.batch", "odfa11y.evidence", "odfa11y.application", "odfa11y.application.tools", "odfa11y.__main__"]
+
+[[modules]]
+path = "odfa11y.__main__"
+layer = "presentation"
+depends_on = ["odfa11y.cli"]

@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit presentation and drawing pages, content, descriptions and explicit navigation."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import TYPE_CHECKING
 
-from odfa11y.content import (
+lazy from lxml import etree
+
+from odfa11y.concepts import (
     SHAPE_TAGS,
     GraphicIdentity,
     audit_graphic_role,
@@ -22,29 +21,26 @@ from odfa11y.content import (
     visible_words,
 )
 from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kinds import PAGE_METADATA, PAGE_NAVIGATION
-from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
+from odfa11y.decisions.kind import PAGE_METADATA, PAGE_NAVIGATION
+from odfa11y.odf import NS, Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.families.pages.profiles import PageProfile
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
-
-    from .profiles import PageProfile
-
-XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
+XML_ID = xml_names.XML_ID
 
 
 def audit_document(document: OdfDocument, report: Report, profile: PageProfile) -> None:
     """Report semantic defects without executing scripts, links or rendering."""
     available = pages(document)
-    names = Counter(page.get(qn("draw", "name")) for page in available)
+    names = Counter(page.get(xml_names.DRAW_NAME) for page in available)
     identities = Counter(
         identity
         for node in document.tree(Part.CONTENT).iter()
-        if (identity := node.get(XML_ID) or node.get(qn("draw", "id")))
+        if (identity := node.get(XML_ID) or node.get(xml_names.DRAW_ID))
     )
     report.facts[FactKeys.PAGE_COUNT] = len(available)
     if not available:
@@ -65,7 +61,7 @@ def _audit_page(
     *,
     report: Report,
 ) -> None:
-    name = page.get(qn("draw", "name"))
+    name = page.get(xml_names.DRAW_NAME)
     location = page_location(page, index)
     fingerprint = page_fingerprint(page, document)
     details = {"page": name}
@@ -86,10 +82,10 @@ def _audit_page(
                     (rules.PAGE002.id,),
                 )
             )
-    order = page.get(qn("draw", "nav-order"))
+    order = page.get(xml_names.DRAW_NAV_ORDER)
     shapes = page_shapes(page)
     details["shape_identities"] = [
-        shape.get(XML_ID) or shape.get(qn("draw", "id")) for shape in shapes
+        shape.get(XML_ID) or shape.get(xml_names.DRAW_ID) for shape in shapes
     ]
     if order is not None:
         problem = navigation_problem(page, tuple(order.split()), identities)
@@ -128,9 +124,9 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
     report.facts[FactKeys.PAGE_SHAPE_COUNT] = len(shapes)
     for shape in shapes:
         decorative = audit_graphic_role(document, shape, report)
-        if decorative or shape.tag == qn("draw", "g"):
+        if decorative or shape.tag == xml_names.DRAW_G:
             continue
-        name = shape.get(qn("draw", "name"))
+        name = shape.get(xml_names.DRAW_NAME)
         description = (shape.findtext("svg:title", namespaces=NS) or "") + (
             shape.findtext("svg:desc", namespaces=NS) or ""
         )
@@ -182,6 +178,6 @@ def _review_content(document: OdfDocument, report: Report, profile: PageProfile)
 
 def _skipped_shape(shape: etree._Element, profile: PageProfile) -> bool:
     return profile.skip_presentation_shapes and (
-        shape.tag == qn("draw", "page-thumbnail")
-        or (shape.get(qn("presentation", "placeholder")) == "true" and not visible_words(shape))
+        shape.tag == xml_names.DRAW_PAGE_THUMBNAIL
+        or (shape.get(xml_names.PRESENTATION_PLACEHOLDER) == "true" and not visible_words(shape))
     )

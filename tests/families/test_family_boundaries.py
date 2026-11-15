@@ -1,35 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
 """Kinds are judged by what documents say they are; families never leak into each other."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.content import GraphicAlternative
+from odfa11y.concepts import GraphicAlternative
 from odfa11y.families import REGISTRY
 from odfa11y.families.generic import GenericAdapter
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.remediation import SetMetadata, SetOdfVersion
-from odfa11y.report import FactKeys, Location, Severity, rules
-from odfa11y.source_audit import audit_odf
+from odfa11y.remediate import SetMetadata, SetOdfVersion
+from odfa11y.report import FactKeys, Location, Severity
+from odfa11y.rules import registry as rules
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.plans import reviewed_plan
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 
 def ids(report: Report) -> set[str]:

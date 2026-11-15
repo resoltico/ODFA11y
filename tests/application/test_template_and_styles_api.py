@@ -1,23 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Document planning and family capabilities are available without command handlers."""
 
-from __future__ import annotations
-
 import tomllib
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y import audit
+from odfa11y.audit import plan_blockers, prepare_plan
 from odfa11y.families import REGISTRY
 from odfa11y.odf import Family
-from odfa11y.report import FactKeys, Report, rules
-from odfa11y.source_audit import plan_blockers, prepare_plan
+from odfa11y.report import FactKeys, Report
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import make_flat, make_package
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])

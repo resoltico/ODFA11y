@@ -1,13 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Bundled schemas: integrity, validation of synthetic documents and the differential rule."""
 
-from __future__ import annotations
-
 import itertools
 import shutil
 import tomllib
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import pytest
 from lxml import etree
@@ -28,9 +26,7 @@ from odfa11y.odf import (
 )
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 FEATURES = [
     "with_plain_email",

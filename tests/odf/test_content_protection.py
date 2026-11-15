@@ -1,24 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Negative controls prove that silent payload/data damage cannot be published."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, cast, override
+from typing import ClassVar, cast, override
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import GraphicAlternative, protected_xml
+from odfa11y.concepts import GraphicAlternative, protected_xml
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)

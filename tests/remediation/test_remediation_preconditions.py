@@ -1,26 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Remediation refuses documents it cannot edit safely and keeps what it does not touch."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError, RemediationError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 
 def ids(report: Report) -> set[str]:

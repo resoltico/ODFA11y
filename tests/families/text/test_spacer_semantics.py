@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Empty text does not make identities, references or metadata removable."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Outcome, Status
+from odfa11y.concepts.edits import Outcome, Status
 from odfa11y.families.text import RemoveEmptySpacers
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 PARAGRAPHS = [
     '<text:p xml:id="anchor"/>',

@@ -1,20 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Whole-plan refusals before any supported text operation mutates XML."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Sequence
 
 from odfa11y.errors import RemediationError
+from odfa11y.families.text.contexts import has_revisions
 from odfa11y.odf import Part
-
-from .contexts import has_revisions
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from odfa11y.adapter import Operation
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.concepts.edits import Operation
+lazy from odfa11y.odf import OdfDocument
 
 
 def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> None:
@@ -28,7 +21,7 @@ def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> No
     """
     if has_revisions(document.tree(Part.CONTENT)) and any(
         operation.name != "set_metadata"
-        or type(operation).__module__ != "odfa11y.remediation.metadata"
+        or type(operation).__module__ != "odfa11y.remediate.metadata"
         or getattr(operation, "language", None) is not None
         for operation in operations
     ):

@@ -1,21 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """State invariants that must hold for every input, not just hand-picked examples."""
 
-from __future__ import annotations
-
 import contextlib
 import json
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from hypothesis import example, given
 from hypothesis import strategies as st
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative
+from odfa11y.concepts import GraphicAlternative
+from odfa11y.concepts.edits import Status
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families.text import (
     URI_RE,
@@ -30,13 +27,11 @@ from odfa11y.families.text import (
 )
 from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
 from odfa11y.plans import load_plan
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import RULES, Report
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.writer import TEXT_MEDIA_TYPE, make_minimal_odt
-
-if TYPE_CHECKING:
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 PROSE = st.text(alphabet="abc XYZ.,;:()[]{}/@-_&", max_size=12)
 ADDRESSES = st.sampled_from([

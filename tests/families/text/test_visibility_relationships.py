@@ -1,25 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Revision and visibility relationships never authorize accepting or evaluating content."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.families.text import SetTargetLanguages, TargetLanguage
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
 from odfa11y.odf import OdfDocument, Part, select_elements
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 INFO = "<office:change-info><dc:creator>Invented Author</dc:creator></office:change-info>"
 

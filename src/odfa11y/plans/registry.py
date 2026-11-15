@@ -1,29 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Collect the decision contracts explicitly declared by document families."""
 
-from __future__ import annotations
-
-import dataclasses
-from typing import TYPE_CHECKING, cast
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kinds import COMMON_KINDS
+from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.decisions.validation import ANSWER_FORMATS
 from odfa11y.errors import PlanError
 from odfa11y.families import REGISTRY
+from odfa11y.plans.codec import parse_plan
 from odfa11y.report import RULES, FactKeys
-
-from .codec import parse_plan
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from _typeshed import DataclassInstance
-
-    from odfa11y.decisions import DecisionKind
-    from odfa11y.plans.models import Plan
-    from odfa11y.report import Report
+from odfa11y.serialization import fields_of
+lazy from odfa11y.decisions import DecisionKind
+lazy from odfa11y.plans.model import Plan
+lazy from odfa11y.report import Report
 
 
 def registered_kinds() -> dict[str, DecisionKind]:
@@ -66,7 +57,7 @@ def registered_formats() -> dict[str, Callable[[str], object]]:
     """
     result: dict[str, Callable[[str], object]] = dict(ANSWER_FORMATS)
     for kind in registered_kinds().values():
-        for field in dataclasses.fields(cast("type[DataclassInstance]", kind.answer_type)):
+        for field in fields_of(kind.answer_type):
             name = field.metadata.get("schema", {}).get("format")
             validator = field.metadata.get("validate")
             if name and validator:

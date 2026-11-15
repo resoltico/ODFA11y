@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Target language follows scoped styles while retaining text and unrelated overrides."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
@@ -20,16 +21,10 @@ from odfa11y.families.text.language import effective_languages
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation, Outcome
+lazy from odfa11y.concepts.edits import Operation, Outcome
 
 STYLES = (
     '<style:style style:name="Body" style:family="paragraph"><style:text-properties '

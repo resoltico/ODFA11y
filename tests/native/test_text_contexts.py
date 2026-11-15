@@ -1,27 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Writer-produced revision fixture retains word boundaries and excluded contexts."""
 
-from __future__ import annotations
-
 import re
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 from pypdf import PdfReader
 
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.pipeline.native import export_document
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.run.native import export_document
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 FIXTURE = TESTS / "reproductions/text-contexts.odt"
 

@@ -1,20 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Validator process and report handling with stub executables (no real veraPDF needed)."""
 
-from __future__ import annotations
-
 import os
 import shlex
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.pdf import add_verapdf_findings, find_verapdf, validate_pdfua
 from odfa11y.report import FactKeys, Report
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 REPORT = """<?xml version="1.0" encoding="utf-8"?>
 <report>

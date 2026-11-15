@@ -1,23 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Classify declared table relationships without inferring intent from visual typography."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.families.text.tables.classification import TableKind, classify
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 CELL = "<table:table-cell><text:p>Label</text:p></table:table-cell>"
 COMPLEX = (

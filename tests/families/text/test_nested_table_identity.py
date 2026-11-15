@@ -1,20 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Nested table identity retains protected contents across legal header representations."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.content import table_content_fingerprint, table_fingerprint
+from odfa11y.concepts import table_content_fingerprint, table_fingerprint
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 BODY = (
     '<office:text><table:table table:name="Outer"><table:table-column/>'

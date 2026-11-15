@@ -1,28 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Core document comparison owns input refusal, private renders and source identity."""
 
-from __future__ import annotations
-
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
 import pytest
 
+from odfa11y.application.tools import Tools
 from odfa11y.errors import PackageError, ToolFailedError
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.comparison import compare_documents, is_pdf
-from odfa11y.pipeline.native import export_document
-from odfa11y.tools import Tools
+from odfa11y.run import comparison as run_comparison
+from odfa11y.run import native as run_native
+from odfa11y.run.comparison import compare_documents, is_pdf
+from odfa11y.run.native import export_document
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.export import ExportSettings
 
 
 def test_core_comparison_preflights_both_inputs_before_export(
@@ -30,9 +26,7 @@ def test_core_comparison_preflights_both_inputs_before_export(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     calls: list[object] = []
-    monkeypatch.setattr(
-        "odfa11y.pipeline.comparison.export_pdfua", lambda *args: calls.append(args)
-    )
+    monkeypatch.setattr(run_comparison, "export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(FileNotFoundError):
         compare_documents(source, tmp_path / "missing", FidelityPolicy())
     assert not calls
@@ -86,7 +80,7 @@ def test_core_odf_comparison_keeps_renders_alive_and_cleans_scratch(
         rendered.append(destination)
         return text_pdf(destination, [["Example"]])
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", render)
+    monkeypatch.setattr(run_comparison, "export_pdfua", render)
     report = compare_documents(source, candidate, FidelityPolicy())
     assert report.passed
     assert profiles[0] == profiles[1]
@@ -102,7 +96,7 @@ def test_guarded_core_export_refuses_unresolved_resources_before_native_boundary
     source = writer_resource(tmp_path, "https://example.test/image.png")
     before = source.read_bytes()
     calls: list[object] = []
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
+    monkeypatch.setattr(run_native, "export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(ToolFailedError, match="rendering dependencies"):
         export_document(source, tmp_path / "out.pdf", Tools(soffice="missing-tool"))
     assert not calls
@@ -140,7 +134,7 @@ def test_core_comparison_cleans_private_render_after_candidate_export_failure(
         rendered.append(destination)
         return text_pdf(destination, [["Example"]])
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", render)
+    monkeypatch.setattr(run_comparison, "export_pdfua", render)
     with pytest.raises(ToolFailedError, match="Candidate native export failed"):
         compare_documents(source, candidate, FidelityPolicy())
     assert rendered

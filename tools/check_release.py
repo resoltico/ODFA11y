@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Require version tags and distribution metadata to agree before a draft release."""
 
-from __future__ import annotations
-
 import argparse
 import email
 import hashlib
@@ -12,15 +10,9 @@ import tarfile
 import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+lazy from email.message import Message
 
-if TYPE_CHECKING or __package__:
-    from .source_inventory import archive_errors
-else:
-    from source_inventory import archive_errors
-
-if TYPE_CHECKING:
-    from email.message import Message
+from tools.source_inventory import archive_errors
 
 
 def check_release(tag: str, directory: Path) -> list[str]:

@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Locate and identify the external applications ODFA11y drives."""
 
-from __future__ import annotations
-
 import math
 import os
 import re
@@ -15,11 +13,9 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
-    from types import FrameType
+from typing import IO
+lazy from collections.abc import Generator
+lazy from types import FrameType
 
 from odfa11y.errors import PlanError, ToolNotFoundError
 

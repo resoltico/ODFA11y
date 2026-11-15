@@ -1,18 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Set a supplied spoken formula alternative without rewriting mathematics."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
 
-from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.families.formula.expression import expression, fingerprint
 from odfa11y.odf import Family
-
-from .expression import expression, fingerprint
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)

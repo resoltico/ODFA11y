@@ -1,25 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Only legal applicable style containers can establish graphic roles."""
 
-from __future__ import annotations
-
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import effective_graphic_role, normalized_role_attributes
-from odfa11y.content.graphic_styles import GraphicRoleEditor, GraphicStyles
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import effective_graphic_role, normalized_role_attributes
+from odfa11y.concepts.edits import Status
+from odfa11y.concepts.graphic_styles import GraphicRoleEditor, GraphicStyles
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.source_audit import audit_odf
 from tests.content.test_graphic_roles_links import _decision, _graphic
 from tests.fixtures.graphics import _style
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("kind", ["styles", "automatic-styles"])

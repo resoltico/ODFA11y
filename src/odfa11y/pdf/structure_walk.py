@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Walk the PDF structure tree into nodes with resolved standard roles."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterator
 
 from pypdf.errors import PdfReadError
 from pypdf.generic import (
@@ -18,9 +16,6 @@ from pypdf.generic import (
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.reading.limits import MAX_STRUCTURE_NODES
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 STANDARD_STRUCTURE_TYPES = {
     "Document",

@@ -1,22 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Apply reviewed target-local language without rewriting text or shared styles."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from collections.abc import Mapping
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import protected_xml
+lazy from lxml import etree
+
+from odfa11y.concepts import protected_xml
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.errors import RemediationError
-from odfa11y.families.text.style_properties import paragraph_style_name
-from odfa11y.families.text.styles import adopt_style, catalog_of
-from odfa11y.language_tags import normalize_language
-from odfa11y.odf import NS, Family, qn
-
-from .effective import (
+from odfa11y.families.text.language.effective import (
     BLOCKS,
     INLINE,
     effective_languages,
@@ -24,16 +20,20 @@ from .effective import (
     language_targets,
     languages_from_properties,
 )
-from .styles import STYLE_NAME, binding_of, derive, family_of, normalized_language_tree
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-
-    from .styles import Binding
+from odfa11y.families.text.language.styles import (
+    STYLE_NAME,
+    binding_of,
+    derive,
+    family_of,
+    normalized_language_tree,
+)
+from odfa11y.families.text.styles.catalogue import adopt_style, catalog_of
+from odfa11y.families.text.styles.properties import paragraph_style_name
+from odfa11y.language_tags import normalize_language
+from odfa11y.odf import NS, Family
+from odfa11y.odf import names as xml_names
+lazy from odfa11y.families.text.language.styles import Binding
+lazy from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,7 +157,7 @@ def _require_effective_override(
     catalog = catalog_of(document)
     family = family_of(node)
     chain = catalog.inheritance_chain(family, binding.base)
-    parent = chain[-1].get(qn("style", "parent-style-name")) if chain else None
+    parent = chain[-1].get(xml_names.STYLE_PARENT_STYLE_NAME) if chain else None
     container = node.getparent()
     props = (
         effective_text_properties(document, container)

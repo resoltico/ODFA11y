@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Verify declared Writer fixture bytes, authoring sources, producer and schema baselines."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 

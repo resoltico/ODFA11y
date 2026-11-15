@@ -1,29 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Load, edit and atomically save ODF ZIP packages."""
 
-from __future__ import annotations
-
 import lzma
 import zipfile
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy import os
+lazy from collections.abc import Iterable
 
 from odfa11y.errors import MissingMemberError, PackageError
-from odfa11y.staging import staging_sibling
-
-from .archive import (
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.archive import (
     check_archive_limits,
     clone_zipinfo,
     is_unsafe_member_name,
     validate_archive,
 )
-from .storage import OdfStorage, Part
-
-if TYPE_CHECKING:
-    import os
-    from collections.abc import Iterable
+from odfa11y.odf.storage import OdfStorage, Part
+from odfa11y.staging import staging_sibling
 
 # Errors raised while reading malformed or unsupported ZIP structure or damaged member data.
 UNREADABLE_ARCHIVE_ERRORS = (
@@ -42,7 +37,7 @@ PART_MEMBERS = {
     Part.SETTINGS: "settings.xml",
     Part.MANIFEST: "META-INF/manifest.xml",
 }
-MIMETYPE_MEMBER = "mimetype"
+MIMETYPE_MEMBER = xml_names.MIMETYPE_MEMBER
 
 
 def _read_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytes:

@@ -1,27 +1,23 @@
 # SPDX-License-Identifier: MPL-2.0
 """All guarded native entry points refuse offending declarations before application launch."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline import engine as pipeline_engine
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
+from odfa11y.run import comparison as run_comparison
+from odfa11y.run import engine as pipeline_engine
+from odfa11y.run import native as run_native
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.declarations import declaration
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.export import ExportSettings
 
 
 @pytest.mark.parametrize("kind", ["fill", "bullet", "symbol", "font", "form-image"])
@@ -38,8 +34,8 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
         text_pdf(destination, "Safe operand")
         return destination
 
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", export)
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", export)
+    monkeypatch.setattr(run_native, "export_pdfua", export)
+    monkeypatch.setattr(run_comparison, "export_pdfua", export)
     monkeypatch.setattr(pipeline_engine, "export_pdfua", export)
     assert main(["export", str(source), str(tmp_path / "export.pdf")]) == 3
     for left, right in [(source, safe), (safe, source)]:

@@ -1,21 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Render privacy-preserving SARIF using explicit physical source identities."""
 
-from __future__ import annotations
-
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import quote, unquote
+lazy from collections.abc import Iterable
 
 from odfa11y.errors import PackageError, ReportError
-
-from .rules import RULES, Severity
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from .models import Finding, Report
+from odfa11y.rules.registry import RULES, Severity
+lazy from odfa11y.report.model import Finding, Report
 
 SCHEMA_URI = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json"
 _LEVELS = {Severity.ERROR: "error", Severity.WARNING: "warning", Severity.INFO: "note"}

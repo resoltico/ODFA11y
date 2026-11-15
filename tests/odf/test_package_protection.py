@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Protection declarations stop guarded work before content parsing or operation calls."""
 
-from __future__ import annotations
-
 import zipfile
 from pathlib import Path
 
@@ -10,11 +8,12 @@ import pytest
 from lxml import etree
 
 import odfa11y.odf
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
-from odfa11y.pipeline.native import export_document
-from odfa11y.remediation import SetMetadata
-from odfa11y.source_audit import audit_odf, prepare_plan
+from odfa11y.remediate import SetMetadata
+from odfa11y.run import native as run_native
+from odfa11y.run.native import export_document
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.writer import make_minimal_odt
 
@@ -130,7 +129,7 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
         pytest.fail("guarded operation/native invocation executed for encrypted input")
 
     monkeypatch.setattr(SetMetadata, "apply", forbidden)
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", forbidden)
+    monkeypatch.setattr(run_native, "export_pdfua", forbidden)
     report, template = prepare_plan(source)
     assert [finding.rule_id for finding in report.findings] == ["PKG009"]
     assert template is None

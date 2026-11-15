@@ -1,20 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """The public batch command uses ordinary pipeline options and exit statuses."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
+
+lazy import pytest
 
 from odfa11y.cli import main
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    import pytest
 
 
 def test_batch_cli_publishes_json_and_returns_aggregate_status(

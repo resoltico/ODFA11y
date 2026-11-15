@@ -1,30 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reconcile the marked content of each page with the structure tree that should own it."""
 
-from __future__ import annotations
-
 from collections import Counter, defaultdict
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterable
 
 from pypdf.generic import ArrayObject, StreamObject
+lazy from pypdf import PageObject
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.pdf.form_content import FormScanner
+from odfa11y.pdf.graphic_presence import described_graphics
+from odfa11y.pdf.link_structure import MAX_LISTED
 from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
-from odfa11y.report import FactKeys, rules
-
-from .form_content import FormScanner
-from .graphic_presence import described_graphics
-from .link_structure import MAX_LISTED
-from .structure_walk import pdf_dictionary
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from pypdf import PageObject
-
-    from odfa11y.report import Report
-
-    from .structure_walk import StructureNode
+from odfa11y.pdf.structure_walk import pdf_dictionary
+from odfa11y.report import FactKeys
+from odfa11y.rules import registry as rules
+lazy from odfa11y.pdf.structure_walk import StructureNode
+lazy from odfa11y.report import Report
 
 
 def check_marked_content(

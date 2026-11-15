@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Supply-chain hygiene shared by every workflow."""
 
-from __future__ import annotations
-
 import re
 lazy from pathlib import Path
 

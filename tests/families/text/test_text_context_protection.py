@@ -1,26 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 """Current flow and protected references are independent of displayed word equality."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.families.text import LinkifyAddresses, NormalizeSpacing, RemoveEmptySpacers
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediation import SetMetadata, SetOdfVersion
+from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 BODY = """<office:text>
 <text:tracked-changes><text:changed-region text:id="revision">

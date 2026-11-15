@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Exit aggregation honors severity across inputs, stages and batch items."""
 
-from __future__ import annotations
-
 from itertools import permutations
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterator
 lazy from pathlib import Path
 
 import pytest
@@ -12,11 +10,9 @@ import pytest
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.cli import main
 from odfa11y.errors import PackageError, PlanError
-from odfa11y.outcomes import ExitStatus, combine_statuses
-from odfa11y.report import Report, rules
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
+from odfa11y.report import Report
+from odfa11y.rules import registry as rules
+from odfa11y.status import ExitStatus, combine_statuses
 
 
 @pytest.mark.parametrize(

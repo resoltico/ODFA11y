@@ -1,19 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Exercise the actual operation engine separately from plan authoring and binding."""
 
-from __future__ import annotations
-
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy from collections.abc import Sequence
 
-from odfa11y.remediation.apply import _document, _execute
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from odfa11y.adapter import Operation
-    from odfa11y.remediation import RemediationResult
+from odfa11y.remediate.execute import _document, _execute
+lazy from odfa11y.concepts.edits import Operation
+lazy from odfa11y.remediate import RemediationResult
 
 
 def execute_operations(

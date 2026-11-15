@@ -1,15 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Each operation: applies once, then reports unchanged; every failure is explicit."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative
+from odfa11y.concepts import GraphicAlternative
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
@@ -19,16 +18,12 @@ from odfa11y.families.text import (
     TableHeaders,
     derived_style_name,
 )
-from odfa11y.families.text.styles import catalog_of
+from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import SetMetadata, SetOdfVersion
+from odfa11y.remediate import SetMetadata, SetOdfVersion
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation
-    from tests.fixtures.writer import Features
+lazy from odfa11y.concepts.edits import Operation
+lazy from tests.fixtures.writer import Features
 
 
 def run(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:

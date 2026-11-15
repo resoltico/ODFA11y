@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Bound raw inline image extents without interpreting sample bytes as PDF operators."""
 
-from __future__ import annotations
-
 import re
 
 from odfa11y.errors import ToolFailedError

@@ -1,31 +1,28 @@
 # SPDX-License-Identifier: MPL-2.0
 """Inspect list membership, counter relationships and manually simulated list cues."""
 
-from __future__ import annotations
-
 import re
 from collections import Counter, defaultdict
-from typing import TYPE_CHECKING
 
-from odfa11y.content import reading_context_path, visible_words
+lazy from lxml import etree
+
+from odfa11y.concepts import reading_context_path, visible_words
 from odfa11y.families.text.contexts import text_nodes
-from odfa11y.odf import Part, qn
-from odfa11y.report import FactKeys, Location, rules
+from odfa11y.odf import Part
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
-
-XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
-LIST = qn("text", "list")
-ITEM = qn("text", "list-item")
-HEADER = qn("text", "list-header")
+XML_ID = xml_names.XML_ID
+LIST = xml_names.TEXT_LIST
+ITEM = xml_names.TEXT_LIST_ITEM
+HEADER = xml_names.TEXT_LIST_HEADER
 COUNTER_BOUNDARIES = frozenset({
-    qn("table", "table-cell"),
-    qn("table", "covered-table-cell"),
-    qn("draw", "text-box"),
+    xml_names.TABLE_TABLE_CELL,
+    xml_names.TABLE_COVERED_TABLE_CELL,
+    xml_names.DRAW_TEXT_BOX,
 })
 TYPED_MARKER = re.compile(r"^\s*(?:[•◦▪‣*-]|\(?\d{1,3}[.)]|[A-Za-z][.)])\s+\S")
 
@@ -74,7 +71,7 @@ def audit_lists(document: OdfDocument, report: Report) -> None:
             location=locations[node],
         )
     simulated = 0
-    for index, node in enumerate(text_nodes(tree, qn("text", "p")), 1):
+    for index, node in enumerate(text_nodes(tree, xml_names.TEXT_P), 1):
         if not any(parent.tag == LIST for parent in node.iterancestors()) and TYPED_MARKER.match(
             visible_words(node)
         ):
@@ -108,7 +105,7 @@ def _membership(node: etree._Element, location: Location, report: Report) -> Non
         report.add(
             rules.LIST001, "A nested list must belong to a list item or header.", location=location
         )
-    if node.get(qn("text", "continue-numbering")) not in {None, "true", "false", "1", "0"}:
+    if node.get(xml_names.TEXT_CONTINUE_NUMBERING) not in {None, "true", "false", "1", "0"}:
         report.add(
             rules.LIST001,
             "List continuation has an invalid boolean declaration.",
@@ -127,7 +124,7 @@ def _continuations(
     preceding = {}
     for node in available:
         key = (_domain(node), list_level(node), _style(node))
-        reference = node.get(qn("text", "continue-list"))
+        reference = node.get(xml_names.TEXT_CONTINUE_LIST)
         if reference:
             targets = by_id.get(reference, [])
             if len(targets) != 1 or ids[reference] != 1:
@@ -147,7 +144,7 @@ def _continuations(
                         "List continuation crosses a reading or counter domain.",
                         location=locations[node],
                     )
-        elif node.get(qn("text", "continue-numbering")) in {"true", "1"}:
+        elif node.get(xml_names.TEXT_CONTINUE_NUMBERING) in {"true", "1"}:
             if key not in preceding or key[-1] is None:
                 report.add(rules.LIST003, location=locations[node])
             else:
@@ -183,6 +180,6 @@ def _style(node: etree._Element) -> str | None:
     for candidate in [node, *node.iterancestors()]:
         if candidate.tag in COUNTER_BOUNDARIES:
             break
-        if candidate.tag == LIST and (name := candidate.get(qn("text", "style-name"))):
+        if candidate.tag == LIST and (name := candidate.get(xml_names.TEXT_STYLE_NAME)):
             return name
     return None

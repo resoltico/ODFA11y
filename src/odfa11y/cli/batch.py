@@ -1,20 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Present manifest-driven pipeline execution through the command line."""
 
-from __future__ import annotations
-
 import json
 import sys
 import textwrap
-from typing import TYPE_CHECKING
+lazy import argparse
 
 import odfa11y as api
 from odfa11y import terminal_text
 
 from .progress import progress_callback
-
-if TYPE_CHECKING:
-    import argparse
 
 
 def batch_command(args: argparse.Namespace) -> int:

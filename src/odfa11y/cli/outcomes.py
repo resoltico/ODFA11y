@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Describe the command's actual exit status separately from individual checks."""
 
-from __future__ import annotations
-
 from odfa11y import ExitStatus
 
 

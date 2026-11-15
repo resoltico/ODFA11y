@@ -1,36 +1,34 @@
 # SPDX-License-Identifier: MPL-2.0
 """Independent declaration controls for formula-aware native preflight."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import ToolFailedError
-from odfa11y.native.export_context import native_export_limitations, require_native_context
-from odfa11y.native.formula_context import FORMULA_ATTRIBUTES
-from odfa11y.native.formula_syntax import (
+from odfa11y.odf import OdfDocument, Part, qn
+from odfa11y.odf.export_context import native_export_limitations, require_native_context
+from odfa11y.odf.formula import (
     CELL_QUERIES,
+    FORMULA_ATTRIBUTES,
     INFO_QUERIES,
     MAX_CHARACTERS,
     OPENFORMULA,
-    FormulaFacts,
+    FormulaAnalysis,
     classify_formula,
 )
-from odfa11y.odf import OdfDocument, Part, qn
-from odfa11y.pipeline.native import export_document
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.run import native as run_native
+from odfa11y.run.native import export_document
 from tests.fixtures.writer import make_minimal_odt
 
-if TYPE_CHECKING:
-    from pathlib import Path
 
-
-def classify(expression: str, prefix: str = "of") -> FormulaFacts:
-    return classify_formula(expression, {prefix: OPENFORMULA}, lambda _: FormulaFacts(incomplete=1))
+def classify(expression: str, prefix: str = "of") -> FormulaAnalysis:
+    return classify_formula(
+        expression, {prefix: OPENFORMULA}, lambda _: FormulaAnalysis(incomplete=1)
+    )
 
 
 @pytest.mark.parametrize(
@@ -48,8 +46,8 @@ def classify(expression: str, prefix: str = "of") -> FormulaFacts:
     ],
 )
 def test_supported_local_grammar_never_scans_string_literals(expression: str) -> None:
-    assert classify(expression) == FormulaFacts()
-    assert classify(expression.replace("of:", "formula:"), "formula") == FormulaFacts()
+    assert classify(expression) == FormulaAnalysis()
+    assert classify(expression.replace("of:", "formula:"), "formula") == FormulaAnalysis()
 
 
 @pytest.mark.parametrize(
@@ -88,12 +86,14 @@ def test_unestablished_syntax_or_dynamic_context_cannot_pass_clean(expression: s
 
 @pytest.mark.parametrize("query", sorted(CELL_QUERIES))
 def test_normative_cell_queries_are_classified(query: str) -> None:
-    assert classify(f'of:=CELL("{query}";[.A1])') == FormulaFacts(identity=int(query == "FILENAME"))
+    assert classify(f'of:=CELL("{query}";[.A1])') == FormulaAnalysis(
+        identity=int(query == "FILENAME")
+    )
 
 
 @pytest.mark.parametrize("query", sorted(INFO_QUERIES))
 def test_normative_info_queries_are_classified(query: str) -> None:
-    assert classify(f'of:=INFO("{query.lower()}")') == FormulaFacts(
+    assert classify(f'of:=INFO("{query.lower()}")') == FormulaAnalysis(
         identity=int(query == "DIRECTORY")
     )
 
@@ -124,7 +124,7 @@ def test_every_standard_formula_attribute_reaches_the_native_guard(
     )
     original = source.read_bytes()
     calls = []
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
+    monkeypatch.setattr(run_native, "export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(ToolFailedError, match="formula context"):
         export_document(source, tmp_path / "destination.pdf")
     assert calls == []

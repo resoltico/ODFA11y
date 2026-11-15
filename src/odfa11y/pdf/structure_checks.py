@@ -1,27 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check a PDF's logical structure: roles, headings, lists, tables, figures, links, content."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterable
 
-from odfa11y.report import FactKeys, rules
+lazy from pypdf import PageObject
+lazy from pypdf.generic import DictionaryObject
 
-from .link_structure import check_link_structure
-from .marked_content import check_marked_content
-from .structure_walk import build_tree, role_map_of
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from pypdf import PageObject
-    from pypdf.generic import DictionaryObject
-
-    from odfa11y.report import Report
-
-    from .link_structure import LinkAnnotation
-    from .structure_walk import StructureNode
+from odfa11y.pdf.link_structure import check_link_structure
+from odfa11y.pdf.marked_content import check_marked_content
+from odfa11y.pdf.structure_walk import build_tree, role_map_of
+from odfa11y.report import FactKeys
+from odfa11y.rules import registry as rules
+lazy from odfa11y.pdf.link_structure import LinkAnnotation
+lazy from odfa11y.pdf.structure_walk import StructureNode
+lazy from odfa11y.report import Report
 
 LIST_CHILDREN = {"LI", "L", "Caption"}
 LIST_ITEM_CHILDREN = {"Lbl", "LBody"}

@@ -1,29 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 """Publish an evidence directory atomically."""
 
-from __future__ import annotations
-
 import json
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy from collections.abc import Mapping
 
 from lxml import etree
 
 from odfa11y.errors import OutputError
+from odfa11y.evidence.manifest import sha256_file, write_manifest
+from odfa11y.evidence.paths import is_reserved_bundle_file, unsafe_reason
+from odfa11y.evidence.review import render_review
 from odfa11y.safe_xml import parse_secure
 from odfa11y.staging import staging_sibling
-
-from .manifest import sha256_file, write_manifest
-from .paths import is_reserved_bundle_file, unsafe_reason
-from .review import render_review
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from odfa11y.pipeline.record import RunRecord
-
-    from .redact import Redactor
+lazy from odfa11y.evidence.redact import Redactor
+lazy from odfa11y.run.record import RunRecord
 
 
 def require_free_directory(directory: Path) -> None:

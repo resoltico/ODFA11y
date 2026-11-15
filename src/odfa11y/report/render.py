@@ -1,24 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Render reports as text, JSON or SARIF and map them to exit statuses."""
 
-from __future__ import annotations
-
 import json
 import textwrap
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterable
+lazy from pathlib import Path
 
 from odfa11y.errors import ReportError
-from odfa11y.outcomes import ExitStatus
-
-from .facts import FactKeys
-from .sarif import sarif_log
-from .terminal import terminal_text
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from pathlib import Path
-
-    from .models import Report
+from odfa11y.report.facts import FactKeys
+from odfa11y.report.sarif import sarif_log
+from odfa11y.report.terminal import terminal_text
+from odfa11y.status import ExitStatus
+lazy from odfa11y.report.model import Report
 
 FORMATS = ("text", "json", "sarif")
 

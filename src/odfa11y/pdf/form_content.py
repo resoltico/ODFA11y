@@ -1,13 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Inspect invoked Form streams in their resource and marked-content scopes."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
 from pypdf.generic import NumberObject, StreamObject
+lazy from pypdf.generic import DictionaryObject
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.pdf.graphic_presence import page_images
 from odfa11y.pdf.reading.consumption import (
     MAX_FORM_DEPTH,
     MAX_FORM_INVOCATIONS,
@@ -15,11 +13,6 @@ from odfa11y.pdf.reading.consumption import (
     resolve,
 )
 from odfa11y.pdf.reading.content import ContentScan, scan_content
-
-from .graphic_presence import page_images
-
-if TYPE_CHECKING:
-    from pypdf.generic import DictionaryObject
 
 
 class FormScanner:

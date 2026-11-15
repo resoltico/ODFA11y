@@ -1,20 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Writer-authored real lists retain list tags; typed markers remain ordinary text."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfReader
 
-from odfa11y.pipeline.native import export_document
-from odfa11y.tools import Tools
+from odfa11y.application.tools import Tools
+from odfa11y.run.native import export_document
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 
 @pytest.mark.integration

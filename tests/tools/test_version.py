@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check project, installed metadata and runtime version reporting agree."""
 
-from __future__ import annotations
-
 import importlib.metadata
 import tomllib
 

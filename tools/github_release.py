@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Fail-closed inspection of exact GitHub release state and preserved asset bytes."""
 
-from __future__ import annotations
-
 import argparse
 import json
 import subprocess

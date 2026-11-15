@@ -1,30 +1,25 @@
 # SPDX-License-Identifier: MPL-2.0
 """Graphic review binds real resources while repeated audit work stays bounded."""
 
-from __future__ import annotations
-
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import (
+from odfa11y.concepts import (
     GraphicAlternative,
     GraphicIdentity,
     graphic_identity,
     graphics_fingerprint,
 )
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import SetGraphicAlternatives
-from odfa11y.families.text.semantics import audit_images
-from odfa11y.native.resources import local_resource_path
+from odfa11y.families.text.headings.audit import audit_images
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.odf.resources import local_resource_path
 from odfa11y.report import Report
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _graphic(tmp_path: Path) -> tuple[OdfDocument, etree._Element]:

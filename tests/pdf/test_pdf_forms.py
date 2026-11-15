@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Invoked Forms have independent MCIDs and actual content-presence controls."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import (
@@ -13,16 +11,12 @@ from pypdf.generic import (
     NameObject,
     NumberObject,
 )
+lazy from pypdf import PdfWriter
+lazy from pypdf.generic import IndirectObject
 
 from odfa11y.pdf import audit_pdfua
 from tests.fixtures.pdf import dictionary, marked_text, register, set_page_content, tagged_writer
 from tests.pdf.test_pdf_marked_content import leaves
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-    from pypdf.generic import IndirectObject
 
 
 def add_form(writer: PdfWriter, data: str) -> IndirectObject:

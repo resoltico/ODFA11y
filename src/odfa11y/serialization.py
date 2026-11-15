@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Serialize typed records and derive their published JSON schemas."""
 
-from __future__ import annotations
-
 import dataclasses
 import enum
 import math
@@ -10,13 +8,9 @@ import sys
 import types
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Protocol, cast, get_args, get_origin, get_type_hints
+from typing import Any, Literal, Protocol, cast, get_args, get_origin, get_type_hints
 
 from odfa11y.errors import ReportError
-
-if TYPE_CHECKING:
-    from _typeshed import DataclassInstance
-
 
 type JsonValue = bool | int | float | str | list[JsonValue] | dict[str, JsonValue] | None
 type JsonObject = dict[str, JsonValue]
@@ -76,9 +70,9 @@ def encode(value: object) -> JsonValue:
     raise ReportError(msg)
 
 
-def _dataclass_dict(value: DataclassInstance) -> JsonObject:
+def _dataclass_dict(value: object) -> JsonObject:
     result: JsonObject = {}
-    for field in dataclasses.fields(value):
+    for field in fields_of(value):
         if field.metadata.get("serialize", True):
             item = getattr(value, field.name)
             if field.metadata.get("basename") and item is not None:
@@ -192,3 +186,11 @@ def _class_schema(
         "required": required,
         "additionalProperties": False,
     }
+
+
+def fields_of(value: object) -> tuple[dataclasses.Field[Any], ...]:
+    """Return dataclass fields using a runtime-visible stdlib type guard."""
+    if not dataclasses.is_dataclass(value):
+        msg = "A record contract requires a dataclass"
+        raise TypeError(msg)
+    return dataclasses.fields(value)

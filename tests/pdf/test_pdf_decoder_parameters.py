@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Malformed decoder parameters refuse at the real written/read PDF boundary."""
 
-from __future__ import annotations
-
 import importlib
 import json
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, NumberObject
@@ -18,16 +16,12 @@ from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.pipeline.context import RunSettings
+from odfa11y.run.context import RunSettings
 from tests.fixtures.pdf import register, tagged_writer
 from tests.fixtures.plans import plan_header
 from tests.fixtures.probes import conclusive_probe
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.export import ExportSettings
 
 
 def predictor_pdf(path: Path, predictor: object) -> Path:
@@ -104,7 +98,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
         destination.write_bytes((bad if calls <= 2 else good).read_bytes())
         return destination
 
-    runner = importlib.import_module("odfa11y.pipeline.engine")
+    runner = importlib.import_module("odfa11y.run.engine")
     monkeypatch.setattr(runner, "find_soffice", lambda _: "synthetic-exporter")
     monkeypatch.setattr(
         runner,

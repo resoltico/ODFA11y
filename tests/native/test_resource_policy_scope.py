@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Navigation, chart context and metadata have distinct native resource semantics."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.errors import ToolFailedError
-from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, Part, qn, validate
+from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from tests.fixtures.declarations import declaration
 from tests.fixtures.documents import Variant, make_package
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("kind", ["form-button", "form-image"])

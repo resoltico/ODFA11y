@@ -1,15 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Compare source archives with the authoritative contributor file inventory."""
 
-from __future__ import annotations
-
 import subprocess
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import tarfile
-    from pathlib import Path
+lazy import tarfile
+lazy from pathlib import Path
 
 # Development outputs are absent in an untouched extracted archive. Exclude only the
 # documented generated directories/files when tests subsequently run in that archive.

@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Facts preserve registered identity and reject incorrect measurement types."""
 
-from __future__ import annotations
-
 from typing import cast
 
 import pytest

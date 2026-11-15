@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Validate documents against the bundled, unmodified OASIS ODF Relax NG schemas."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 import tomllib
@@ -10,19 +8,16 @@ from collections import Counter
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from lxml import etree
 
 from odfa11y.errors import XmlParseError
-
-from .detect import declared_version
-from .kinds import Family
-from .namespaces import NS, is_office_element, qn
-from .storage import Part
-
-if TYPE_CHECKING:
-    from .document import OdfDocument
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.detect import declared_version
+from odfa11y.odf.kinds import Family
+from odfa11y.odf.names import NS, is_office_element
+from odfa11y.odf.storage import Part
+lazy from odfa11y.odf.document import OdfDocument
 
 SUPPORTED_VERSIONS = ("1.3", "1.4")
 SCHEMA_DIRECTORY = Path(__file__).parent / "schemas"
@@ -30,7 +25,7 @@ SCHEMA_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.SETTINGS, Part.MANIFE
 FINGERPRINT_LENGTH = 16
 # Attributes ODFA11y itself rewrites when it relabels a document; they must not make a
 # pre-existing violation look new.
-FINGERPRINT_IGNORED_ATTRIBUTES = frozenset({qn("office", "version"), qn("manifest", "version")})
+FINGERPRINT_IGNORED_ATTRIBUTES = frozenset({xml_names.OFFICE_VERSION, xml_names.MANIFEST_VERSION})
 
 
 @dataclass(frozen=True, slots=True)

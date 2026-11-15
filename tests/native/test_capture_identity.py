@@ -1,27 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Real leaf exchanges reject wrong bytes; parent namespace guarantees remain separate."""
 
-from __future__ import annotations
-
 import os
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y import source_capture as capture
+from odfa11y import capture
 from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import plan_header, reviewed_plan
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("kind", ["symlink", "regular", "symlink-without-nofollow"])

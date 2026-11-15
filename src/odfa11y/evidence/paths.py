@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """The one definition of a safe bundle-relative file name, shared by writer and verifier."""
 
-from __future__ import annotations
-
 import re
 from pathlib import PurePosixPath
 

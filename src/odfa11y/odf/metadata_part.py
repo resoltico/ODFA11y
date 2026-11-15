@@ -1,22 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Create an explicitly requested standard optional metadata part without replacing data."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
 from lxml import etree
 
 from odfa11y.errors import RemediationError
-
-from .detect import declared_version
-from .namespaces import NS, qn
-from .schema import SUPPORTED_VERSIONS
-from .storage import Part
-from .xpath import select_elements
-
-if TYPE_CHECKING:
-    from .document import OdfDocument
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.detect import declared_version
+from odfa11y.odf.names import NS
+from odfa11y.odf.schema import SUPPORTED_VERSIONS
+from odfa11y.odf.storage import Part
+from odfa11y.odf.xpath import select_elements
+lazy from odfa11y.odf.document import OdfDocument
 
 
 def ensure_metadata_part(document: OdfDocument) -> None:
@@ -44,22 +38,24 @@ def ensure_metadata_part(document: OdfDocument) -> None:
     entries = [
         node
         for node in select_elements(manifest, "//manifest:file-entry")
-        if node.get(qn("manifest", "full-path")) == name
+        if node.get(xml_names.MANIFEST_FULL_PATH) == name
     ]
-    if len(entries) > 1 or (entries and entries[0].get(qn("manifest", "media-type")) != "text/xml"):
+    if len(entries) > 1 or (
+        entries and entries[0].get(xml_names.MANIFEST_MEDIA_TYPE) != "text/xml"
+    ):
         msg = "The metadata manifest declaration is duplicate or has a conflicting media type."
         raise RemediationError(msg)
     root = etree.Element(
-        qn("office", "document-meta"),
+        xml_names.OFFICE_DOCUMENT_META,
         nsmap={prefix: NS[prefix] for prefix in ("office", "meta", "dc")},
     )
-    root.set(qn("office", "version"), version)
-    etree.SubElement(root, qn("office", "meta"))
+    root.set(xml_names.OFFICE_VERSION, version)
+    etree.SubElement(root, xml_names.OFFICE_META)
     if not entries:
         parent = document.tree(Part.MANIFEST).getroot()
-        entry = etree.SubElement(parent, qn("manifest", "file-entry"))
-        entry.set(qn("manifest", "full-path"), name)
-        entry.set(qn("manifest", "media-type"), "text/xml")
+        entry = etree.SubElement(parent, xml_names.MANIFEST_FILE_ENTRY)
+        entry.set(xml_names.MANIFEST_FULL_PATH, name)
+        entry.set(xml_names.MANIFEST_MEDIA_TYPE, "text/xml")
     document.storage.write_member(
         name, etree.tostring(root, xml_declaration=True, encoding="UTF-8")
     )

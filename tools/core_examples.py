@@ -1,14 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Executable root-API examples, including outside-checkout installed-wheel qualification."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import odfa11y as api
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def inspect_source(source: Path, work: Path) -> list[api.Report]:

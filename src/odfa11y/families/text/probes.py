@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Writer's declared link, decorative-image and header-column experiments."""
 
-from __future__ import annotations
-
 from functools import partial
 from io import BytesIO
 lazy from pathlib import Path

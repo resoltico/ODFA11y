@@ -1,22 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check tracked-region identities and current-flow change marks without accepting changes."""
 
-from __future__ import annotations
-
 from collections import defaultdict
-from typing import TYPE_CHECKING
 
-from odfa11y.content import eligible_text_node, reading_context_path
+lazy from lxml import etree
+
+from odfa11y.concepts import eligible_text_node, reading_context_path
 from odfa11y.families.text.contexts import has_revisions
+from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.report import Report
 
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.report import Report
-
-XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
+XML_ID = xml_names.XML_ID
 KINDS = {qn("text", name) for name in ("insertion", "deletion", "format-change")}
 RANGE_MARK_COUNT = 2
 MARKS = {qn("text", name) for name in ("change", "change-start", "change-end")}
@@ -30,7 +27,7 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
     positions = {}
     unresolved = 0
     for index, region in enumerate(regions, 1):
-        identity = region.get(XML_ID) or region.get(qn("text", "id")) or ""
+        identity = region.get(XML_ID) or region.get(xml_names.TEXT_ID) or ""
         declarations[identity].append(region)
         if not _valid_region(region, identity):
             report.add(
@@ -42,7 +39,7 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
     for index, node in enumerate(select_elements(tree, "//office:body//*")):
         if _authored_mark(node):
             positions[node] = index
-            markers[node.get(qn("text", "change-id")) or ""].append(node)
+            markers[node.get(xml_names.TEXT_CHANGE_ID) or ""].append(node)
     unresolved += _audit_missing_declarations(declarations, markers, report)
     unanchored = 0
     for identity, owners in declarations.items():
@@ -101,7 +98,7 @@ def _audit_missing_declarations(
 
 
 def _valid_region(region: etree._Element, identity: str) -> bool:
-    old = region.get(qn("text", "id"))
+    old = region.get(xml_names.TEXT_ID)
     return (
         bool(identity)
         and (old is None or region.get(XML_ID) in {None, old})
@@ -110,7 +107,7 @@ def _valid_region(region: etree._Element, identity: str) -> bool:
 
 
 def _authored_mark(node: etree._Element) -> bool:
-    excluded = {qn("text", "tracked-changes"), qn("office", "annotation")}
+    excluded = {xml_names.TEXT_TRACKED_CHANGES, xml_names.OFFICE_ANNOTATION}
     return node.tag in MARKS and not any(parent.tag in excluded for parent in node.iterancestors())
 
 
@@ -120,10 +117,10 @@ def _valid_marks(
     kinds = [child.tag for child in region if child.tag in KINDS]
     if len(kinds) != 1:
         return False
-    if kinds[0] == qn("text", "deletion"):
-        return len(marks) == 1 and marks[0].tag == qn("text", "change")
-    starts = [node for node in marks if node.tag == qn("text", "change-start")]
-    ends = [node for node in marks if node.tag == qn("text", "change-end")]
+    if kinds[0] == xml_names.TEXT_DELETION:
+        return len(marks) == 1 and marks[0].tag == xml_names.TEXT_CHANGE
+    starts = [node for node in marks if node.tag == xml_names.TEXT_CHANGE_START]
+    ends = [node for node in marks if node.tag == xml_names.TEXT_CHANGE_END]
     return (
         len(marks) == RANGE_MARK_COUNT
         and len(starts) == len(ends) == 1

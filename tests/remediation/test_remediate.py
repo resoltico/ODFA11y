@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """The executor: fail-closed publication, postconditions and byte preservation."""
 
-from __future__ import annotations
-
 import zipfile
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import GraphicAlternative
+from odfa11y.concepts import GraphicAlternative
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.errors import OutputError
 from odfa11y.families.text import (
     ADAPTER,
@@ -21,13 +20,10 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
-from odfa11y.outcomes import StageStatus
-from odfa11y.remediation import SetMetadata, SetOdfVersion
+from odfa11y.remediate import SetMetadata, SetOdfVersion
+from odfa11y.status import StageStatus
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)

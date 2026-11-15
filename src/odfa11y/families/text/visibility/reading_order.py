@@ -1,20 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Identify authored layout conditions whose reading order needs native human review."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import TYPE_CHECKING
+
+lazy from lxml import etree
 
 from odfa11y.families.text.contexts import text_nodes
-from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.odf import Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 
 def audit_reading_order(document: OdfDocument, report: Report) -> None:
@@ -26,11 +23,11 @@ def audit_reading_order(document: OdfDocument, report: Report) -> None:
                 counts["multi-column"] += 1
     content = document.tree(Part.CONTENT)
     counts["floating-frame"] = sum(
-        node.get(qn("text", "anchor-type")) != "as-char"
-        for node in text_nodes(content, qn("draw", "frame"))
+        node.get(xml_names.TEXT_ANCHOR_TYPE) != "as-char"
+        for node in text_nodes(content, xml_names.DRAW_FRAME)
     )
-    counts["section"] = len(text_nodes(content, qn("text", "section")))
-    counts["note"] = len(text_nodes(content, qn("text", "note")))
+    counts["section"] = len(text_nodes(content, xml_names.TEXT_SECTION))
+    counts["note"] = len(text_nodes(content, xml_names.TEXT_NOTE))
     for kind in ("multi-column", "floating-frame", "section"):
         if counts[kind]:
             report.add(
@@ -46,10 +43,10 @@ def audit_reading_order(document: OdfDocument, report: Report) -> None:
 
 
 def _multiple(columns: etree._Element) -> bool:
-    declared = columns.get(qn("fo", "column-count"))
+    declared = columns.get(xml_names.FO_COLUMN_COUNT)
     try:
         return (declared is not None and int(declared) > 1) or len(
-            columns.findall(qn("style", "column"))
+            columns.findall(xml_names.STYLE_COLUMN)
         ) > 1
     except ValueError:
         return True  # Unresolved layout count still requires native reading-order review.

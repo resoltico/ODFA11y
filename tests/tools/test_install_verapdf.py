@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """The veraPDF installer refuses a download that is not the pinned release."""
 
-from __future__ import annotations
-
 import hashlib
 lazy from pathlib import Path
 

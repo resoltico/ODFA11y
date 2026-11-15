@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """LibreOffice export against the built-in inspector and against real veraPDF."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
@@ -19,9 +18,6 @@ from tests.fixtures.writer import make_minimal_odt
 WRITER = "writer_pdf_Export"
 LINK_DESCRIPTION_RULES = {("7.18.1", "2"), ("7.18.5", "2")}
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 RICH_BODY = (
     b'<text:h text:outline-level="1" text:style-name="Heading1">Items</text:h>'

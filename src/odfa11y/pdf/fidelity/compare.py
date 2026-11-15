@@ -1,23 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Compare two PDFs: pages, text, links and rendered pixels."""
 
-from __future__ import annotations
-
 import sys
 from contextlib import closing
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pypdfium2
 from PIL import Image, ImageChops
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
-from odfa11y.report import FactKeys, Report, rules
-
-if TYPE_CHECKING:
-    from odfa11y.pdf.fidelity.policy import FidelityPolicy
-    from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
+from odfa11y.report import FactKeys, Report
+from odfa11y.rules import registry as rules
+lazy from odfa11y.pdf.fidelity.policy import FidelityPolicy
+lazy from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
 
 MAX_RENDER_PIXELS = 20_000_000
 EXCERPT_CONTEXT = 40

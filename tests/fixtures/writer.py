@@ -1,14 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Build synthetic ODT documents with selected structural features."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING, TypedDict
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
+from typing import TypedDict
+lazy from pathlib import Path
 
 TEXT_MEDIA_TYPE = "application/vnd.oasis.opendocument.text"
 

@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Synthetic four-color resources with an independent decoded-pixel oracle."""
 
-from __future__ import annotations
-
 import base64
 from io import BytesIO
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 from PIL import Image
 from pypdf import PdfReader
@@ -13,9 +11,6 @@ from pypdf import PdfReader
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from tests.fixtures.documents import Variant, make_flat
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255)] * 4
 PIXELS = bytes(channel for color in COLORS for channel in color)

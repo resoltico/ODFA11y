@@ -1,16 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Footnotes and page annotations consistently require review under strict acceptance."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.report import Report, Severity, exit_status
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.paths import TESTS
 
 ROOT = TESTS

@@ -1,14 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """A plan must mean what its author reviewed: selector conflicts, fingerprints, style identity."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
+lazy from pathlib import Path
 
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, graphics_fingerprint, table_fingerprint
+from odfa11y.concepts import GraphicAlternative, graphics_fingerprint, table_fingerprint
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import (
     MarkTableHeaders,
     NormalizeSpacing,
@@ -18,12 +17,8 @@ from odfa11y.families.text import (
 )
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation
-    from tests.fixtures.writer import Features
+lazy from odfa11y.concepts.edits import Operation
+lazy from tests.fixtures.writer import Features
 
 WRONG = "000000000000"
 

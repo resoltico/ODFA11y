@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Finding locations are logical: the same document audits alike as a package or flat XML."""
 
-from __future__ import annotations
-
 import json
 import zipfile
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat, make_package
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 BODY = (
     "<office:text>"

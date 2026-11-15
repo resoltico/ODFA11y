@@ -1,26 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 """Binding verifies the same private input bytes that were audited and edited."""
 
-from __future__ import annotations
-
 import hashlib
 import importlib
 import tomllib
-from typing import TYPE_CHECKING
 lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import prepare_plan
 from odfa11y.errors import PlanError
 from odfa11y.plans import Plan, parse_tables, registered_kinds
-from odfa11y.remediation import remediate
-from odfa11y.source_audit import prepare_plan
+from odfa11y.remediate import remediate
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 
 def test_remediation_refuses_unreviewed_loaded_bytes_after_source_exchange(
@@ -32,7 +27,7 @@ def test_remediation_refuses_unreviewed_loaded_bytes_after_source_exchange(
         tmp_path, "text", Variant(body="<office:text><text:p>Unreviewed</text:p></office:text>")
     )
     plan = Plan.for_source(reviewed)
-    module = importlib.import_module("odfa11y.remediation.apply")
+    module = importlib.import_module("odfa11y.remediate.execute")
     original = module._document
 
     def exchange(path: Path, destination: Path) -> OdfDocument:
@@ -55,7 +50,7 @@ def test_plan_header_binds_audited_bytes_when_original_source_changes(
     audited_bytes = source.read_bytes()
     replacement = make_minimal_odt(tmp_path / "replacement.odt", title="Different document")
     replacement_bytes = replacement.read_bytes()
-    module = importlib.import_module("odfa11y.source_audit.plan")
+    module = importlib.import_module("odfa11y.audit.plan")
     original = module.audit_odf
 
     def exchange(path: Path) -> Report:

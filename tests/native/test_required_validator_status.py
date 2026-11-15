@@ -1,37 +1,32 @@
 # SPDX-License-Identifier: MPL-2.0
 """Required validator absence is execution failure at its actual pipeline boundary."""
 
-from __future__ import annotations
-
 import importlib
 import json
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.probes import conclusive_probe
 from tests.fixtures.writer import make_minimal_odt
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
 
 @pytest.fixture
 def successful_exports(monkeypatch: pytest.MonkeyPatch) -> None:
-    runner = importlib.import_module("odfa11y.pipeline.engine")
+    runner = importlib.import_module("odfa11y.run.engine")
     monkeypatch.setattr(runner, "find_soffice", lambda _requested: "soffice")
     monkeypatch.setattr(
         runner, "identify_soffice", lambda _path: ToolIdentity("LibreOffice", "26.8.0.3")

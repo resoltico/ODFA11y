@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Run veraPDF and turn its machine-validation report into findings."""
 
-from __future__ import annotations
-
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +10,8 @@ from lxml import etree
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import ToolIdentity, find_executable, run_bounded, validate_timeout
-from odfa11y.report import FactKeys, Report, rules
+from odfa11y.report import FactKeys, Report
+from odfa11y.rules import registry as rules
 from odfa11y.safe_xml import parse_secure
 
 MAX_REPORTED_CHECKS = 3

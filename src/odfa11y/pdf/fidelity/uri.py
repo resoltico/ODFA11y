@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Resolve supported PDF URI actions without accessing their destinations."""
 
-from __future__ import annotations
-
 import re
 from urllib.parse import urlsplit, urlunsplit
 

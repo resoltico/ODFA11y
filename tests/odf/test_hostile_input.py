@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Inputs that are malformed, adversarial or merely unusual must not crash or corrupt output."""
 
-from __future__ import annotations
-
 import os
 import stat
 import sys
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
+lazy from pathlib import Path
 
 import pypdfium2
 import pytest
 
-from odfa11y.adapter import Status
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.edits import Status
 from odfa11y.errors import PackageError, ToolFailedError
 from odfa11y.families.text import (
     LinkifyAddresses,
@@ -20,23 +21,17 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
-from odfa11y.outcomes import StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity import compare as compare_module
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.remediation import SetMetadata, SetOdfVersion
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.remediate import SetMetadata, SetOdfVersion
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.status import StageStatus
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 CENTRAL_DIRECTORY_SIGNATURE = b"PK\x01\x02"
 ENCRYPTED_FLAG_OFFSET = 8

@@ -1,26 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Core tool inspection returns facts and probe failures without rendering a UI."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.tools import Tools
 from odfa11y.errors import ToolFailedError, ToolNotFoundError, UnsupportedKindError
 from odfa11y.families import REGISTRY
 from odfa11y.native.probes import CapabilityStatus, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument
-from odfa11y.pipeline import diagnostics
-from odfa11y.tools import Tools
+from odfa11y.run import diagnostics
 from tests.fixtures.probes import fake_export
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.export import ExportSettings
 
 
 def identities(monkeypatch: pytest.MonkeyPatch) -> None:

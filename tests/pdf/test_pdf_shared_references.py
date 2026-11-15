@@ -1,12 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Incoming ownership edges survive shared PDF containers."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pathlib import Path
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject

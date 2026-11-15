@@ -1,35 +1,32 @@
 # SPDX-License-Identifier: MPL-2.0
 """Resolve Writer anchors and references without inventing missing destinations."""
 
-from __future__ import annotations
-
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
-from odfa11y.content import reading_context_path, visible_words
+lazy from lxml import etree
+
+from odfa11y.concepts import reading_context_path, visible_words
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.odf import Part, qn
-from odfa11y.report import FactKeys, Location, rules
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
-
-XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
+XML_ID = xml_names.XML_ID
 FIELDS = {
     qn("text", name + "-ref"): kind
     for name, kind in (("bookmark", "bookmark"), ("reference", "reference-mark"), ("note", "note"))
 }
-LINKS = {qn("text", "a"), qn("draw", "a")}
+LINKS = {xml_names.TEXT_A, xml_names.DRAW_A}
 NAMED_TARGETS = {
-    **{tag: qn("office", "name") for tag in LINKS},
-    qn("text", "section"): qn("text", "name"),
-    qn("table", "table"): qn("table", "name"),
-    qn("draw", "frame"): qn("draw", "name"),
+    **{tag: xml_names.OFFICE_NAME for tag in LINKS},
+    xml_names.TEXT_SECTION: xml_names.TEXT_NAME,
+    xml_names.TABLE_TABLE: xml_names.TABLE_NAME,
+    xml_names.DRAW_FRAME: xml_names.DRAW_NAME,
 }
 
 
@@ -59,7 +56,7 @@ def audit_references(document: OdfDocument, report: Report) -> None:
         index.positions[node] = position
         index.locations[node] = Location.indexed(context, "reference", counters[context])
         _collect(node, index)
-        if node.tag == qn("text", "note"):
+        if node.tag == xml_names.TEXT_NOTE:
             _note(node, index.locations[node], report)
     outside = _Index([])
     current = set(index.nodes)
@@ -90,14 +87,14 @@ def _collect(node: etree._Element, index: _Index) -> None:
     if (attribute := NAMED_TARGETS.get(str(node.tag))) and (name := node.get(attribute)):
         index.targets["link", name].add(node)
     for kind in ("bookmark", "reference-mark"):
-        name = node.get(qn("text", "name")) or ""
+        name = node.get(xml_names.TEXT_NAME) or ""
         if node.tag in {qn("text", kind), qn("text", kind + "-start")}:
             index.targets[kind, name].add(node)
             index.targets["link", name].add(node)
         elif node.tag == qn("text", kind + "-end"):
             index.ends[kind, name].append(node)
-    if node.tag == qn("text", "note"):
-        index.targets["note", node.get(qn("text", "id")) or ""].add(node)
+    if node.tag == xml_names.TEXT_NOTE:
+        index.targets["note", node.get(xml_names.TEXT_ID) or ""].add(node)
 
 
 def _audit_ranges(index: _Index, report: Report) -> None:
@@ -126,8 +123,8 @@ def _valid_range(owner: etree._Element, ends: list[etree._Element], index: _Inde
 
 def _reference(node: etree._Element) -> tuple[str, str] | None:
     if kind := FIELDS.get(str(node.tag)):
-        return kind, node.get(qn("text", "ref-name")) or ""
-    href = node.get(qn("xlink", "href"), "")
+        return kind, node.get(xml_names.TEXT_REF_NAME) or ""
+    href = node.get(xml_names.XLINK_HREF, "")
     if node.tag in LINKS and href.startswith("#") and len(href) > 1:
         return "link", unquote(href[1:])
     return None
@@ -165,7 +162,7 @@ def _audit_reference(
         )
     elif kind == "note":
         owner = next(iter(owners))
-        if node.get(qn("text", "note-class")) not in {None, owner.get(qn("text", "note-class"))}:
+        if node.get(xml_names.TEXT_NOTE_CLASS) not in {None, owner.get(xml_names.TEXT_NOTE_CLASS)}:
             report.add(
                 rules.NOTE002,
                 "Note reference class differs from its destination.",
@@ -174,28 +171,28 @@ def _audit_reference(
 
 
 def _note(node: etree._Element, location: Location, report: Report) -> None:
-    citations = list(node.iterchildren(qn("text", "note-citation")))
-    bodies = list(node.iterchildren(qn("text", "note-body")))
+    citations = list(node.iterchildren(xml_names.TEXT_NOTE_CITATION))
+    bodies = list(node.iterchildren(xml_names.TEXT_NOTE_BODY))
     complete = len(citations) == 1 and len(bodies) == 1
-    if not node.get(qn("text", "id")) or not complete or not visible_words(bodies[0]):
+    if not node.get(xml_names.TEXT_ID) or not complete or not visible_words(bodies[0]):
         report.add(rules.NOTE002, location=location)
 
 
 def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
-    notes = text_nodes(tree, qn("text", "note"))
+    notes = text_nodes(tree, xml_names.TEXT_NOTE)
     if not notes:
         return
-    identities = Counter(note.get(qn("text", "id")) for note in notes)
+    identities = Counter(note.get(xml_names.TEXT_ID) for note in notes)
     classes: dict[str, int] = {}
     for note in notes:
-        identity = note.get(qn("text", "id"))
+        identity = note.get(xml_names.TEXT_ID)
         if identity and identities[identity] > 1:
             report.add(
                 rules.NOTE002,
                 "Note identity is duplicated.",
                 location=Location.named(reading_context_path(note), "note", identity),
             )
-        cls = note.get(qn("text", "note-class")) or "unknown"
+        cls = note.get(xml_names.TEXT_NOTE_CLASS) or "unknown"
         classes[cls] = classes.get(cls, 0) + 1
     report.add(
         rules.NOTE001,

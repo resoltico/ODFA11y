@@ -1,19 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native page-family differences: hidden content, skipped shapes and review scope."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
-from odfa11y.adapter import ReviewItem
-from odfa11y.odf import Family, Part, qn, select_elements
-from odfa11y.outcomes import ReviewTopic
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from odfa11y.odf import OdfDocument
+from odfa11y.concepts.review import ReviewTopic
+from odfa11y.families.spec import ReviewItem
+from odfa11y.odf import Family, Part, select_elements
+from odfa11y.odf import names as xml_names
+lazy from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,14 +32,14 @@ def hidden_pages(document: OdfDocument) -> dict[str, int]:
 
     """
     styles = {
-        node.get(qn("style", "name"))
+        node.get(xml_names.STYLE_NAME)
         for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
         for node in select_elements(
             tree, "//style:style[style:drawing-page-properties[@presentation:visibility='hidden']]"
         )
     }
     hidden = select_elements(document.tree(Part.CONTENT), "//draw:page")
-    count = sum(page.get(qn("draw", "style-name")) in styles for page in hidden)
+    count = sum(page.get(xml_names.DRAW_STYLE_NAME) in styles for page in hidden)
     return {"hidden_pages": count} if count else {}
 
 

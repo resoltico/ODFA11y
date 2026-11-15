@@ -1,21 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check declared grid occupancy independently of semantic table intent."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-from odfa11y.content import axis_count, declarations, repeated
+lazy from lxml import etree
+
+from odfa11y.concepts import axis_count, declarations, repeated
 from odfa11y.errors import RemediationError
-from odfa11y.odf import qn, select_elements
-
-if TYPE_CHECKING:
-    from lxml import etree
+from odfa11y.odf import names as xml_names
+from odfa11y.odf import select_elements
 
 MAX_COMPLEX_CELLS = 100_000
-CELL = qn("table", "table-cell")
-COVERED = qn("table", "covered-table-cell")
+CELL = xml_names.TABLE_TABLE_CELL
+COVERED = xml_names.TABLE_COVERED_TABLE_CELL
 
 
 @dataclass(frozen=True)

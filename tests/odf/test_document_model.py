@@ -1,20 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Live XML changes, cache generations and access policy do not rely on edit declarations."""
 
-from __future__ import annotations
-
 import tomllib
 lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Outcome, Status
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.edits import Outcome, Status
 from odfa11y.errors import PackageError
 from odfa11y.odf import KINDS, NS, OdfDocument, PackageStorage, Part, Use, qn
-from odfa11y.odf.protection import PackageProtection
-from odfa11y.remediation import SetMetadata
-from odfa11y.source_audit import audit_odf
+from odfa11y.odf.encryption import PackageProtection
+from odfa11y.remediate import SetMetadata
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.paths import TESTS
 from tests.fixtures.writer import make_minimal_odt

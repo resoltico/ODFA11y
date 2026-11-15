@@ -363,7 +363,7 @@ jobs:
           uv run --no-sync python -m tools.github_release absent "$REPOSITORY" "$tag"
       - name: Verify release inputs and extract exact changelog notes
         run: >-
-          uv run --no-sync python tools/check_release.py "$RELEASE_TAG" dist
+          uv run --no-sync python -m tools.check_release "$RELEASE_TAG" dist
           --notes-output "$RUNNER_TEMP/release-notes.md"
       - name: Attest build provenance of the distributions
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

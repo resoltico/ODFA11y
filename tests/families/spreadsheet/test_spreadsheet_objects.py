@@ -1,22 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Alt text on spreadsheet frames, and the snapshot that guards what a sheet shows."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative
-from odfa11y.families.spreadsheet import (
-    SetGraphicAlternatives,
-    sheet_snapshot,
-    sheets_preserved,
-)
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import GraphicAlternative
+from odfa11y.concepts.edits import Status
+from odfa11y.families.spreadsheet import SetGraphicAlternatives, sheet_snapshot, sheets_preserved
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.plans import question_for
 from tests.fixtures.spreadsheets import (
     LAYOUTS,
@@ -27,11 +21,7 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation
+lazy from odfa11y.concepts.edits import Operation
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 SHEETS = (

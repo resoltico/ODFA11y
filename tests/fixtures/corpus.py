@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Read the Writer corpus manifest: each document's expectations and recorded identity."""
 
-from __future__ import annotations
-
 import tomllib
 from dataclasses import dataclass
 lazy from pathlib import Path

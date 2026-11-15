@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Review targets compose within established current contexts across both ODF layouts."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, LinkDescription, link_fingerprint, link_location
+from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.concepts import GraphicAlternative, LinkDescription, link_fingerprint, link_location
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import (
     LinkifyAddresses,
     MarkTableHeaders,
@@ -18,14 +18,9 @@ from odfa11y.families.text import (
     TableHeaders,
 )
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.source_audit import audit_odf, prepare_plan
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.plans import question_for
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 FRAME = (
     '<draw:frame draw:name="Shared"><draw:image xlink:href="Pictures/shared.png" '

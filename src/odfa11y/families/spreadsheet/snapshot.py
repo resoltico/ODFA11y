@@ -1,20 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Protect spreadsheet formulas, values, references, geometry and hidden content."""
 
-from __future__ import annotations
+lazy from lxml import etree
 
-from typing import TYPE_CHECKING
-
-from odfa11y.content import normalized_graphic_tree, protected_xml
+from odfa11y.concepts import normalized_graphic_tree, protected_xml
+from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.odf import Part, qn
-
-from .sheets import sheet_name, sheets
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+from odfa11y.odf import names as xml_names
+lazy from odfa11y.odf import OdfDocument
 
 SHEET_TAG = "sheet\t"
 
@@ -65,10 +58,10 @@ def sheet_identity(document: OdfDocument, sheet: etree._Element) -> str:
     """
     return protected_xml(
         normalized_graphic_tree(document, sheet),
-        omitted_root_attributes=(qn("table", "name"),),
-        omitted_elements=(qn("svg", "title"), qn("svg", "desc")),
+        omitted_root_attributes=(xml_names.TABLE_NAME,),
+        omitted_elements=(xml_names.SVG_TITLE, xml_names.SVG_DESC),
         omitted_element_attributes={
-            qn(ns, "a"): (qn("office", "title"),) for ns in ("draw", "text")
+            qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")
         },
     )
 

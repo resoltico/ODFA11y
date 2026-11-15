@@ -1,26 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Negative controls challenge normalization for actual supported operations."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Sequence
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.families.text import LinkifyAddresses, MarkTableHeaders, TableHeaders
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from tests.families.text.test_text_context_protection import BODY
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation, Outcome
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.concepts.edits import Operation, Outcome
+lazy from odfa11y.odf import OdfDocument
 
 
 def test_new_exact_address_wrapper_inside_field_is_rejected(

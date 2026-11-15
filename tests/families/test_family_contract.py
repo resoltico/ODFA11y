@@ -1,14 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Family implementations must supply audit and protected-content semantics."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.adapter import FamilyAdapter, PreservationSnapshot
+from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.families import REGISTRY
+from odfa11y.families.spec import FamilyAdapter
 from odfa11y.odf import OdfDocument
 from tests.fixtures.writer import make_minimal_odt
 

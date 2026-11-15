@@ -1,29 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native standard roles and link titles keep exporter limitations visible."""
 
-from __future__ import annotations
-
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, LinkDescription, graphics_fingerprint
-from odfa11y.content.links import document_links, link_fingerprint, link_location
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import GraphicAlternative, LinkDescription, graphics_fingerprint
+from odfa11y.concepts.edits import Status
+from odfa11y.concepts.links import document_links, link_fingerprint, link_location
 from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 pytestmark = pytest.mark.integration
 

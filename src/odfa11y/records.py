@@ -1,20 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Typed identities and assurance measurements shared by workflow records."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-from odfa11y.outcomes import ExitStatus, failure_status
 from odfa11y.serialization import JsonProperty, record_dict
-lazy from odfa11y.outcomes import StageStatus
-
-if TYPE_CHECKING:
-    from odfa11y.errors import OdfA11yError
-    from odfa11y.native.probes import CapabilityResult
-    from odfa11y.native.process import ToolIdentity
-    from odfa11y.serialization import JsonObject
+from odfa11y.status import ExitStatus, failure_status
+lazy from odfa11y.errors import OdfA11yError
+lazy from odfa11y.native.probes import CapabilityResult
+lazy from odfa11y.native.process import ToolIdentity
+lazy from odfa11y.serialization import JsonObject
+lazy from odfa11y.status import StageStatus
 
 
 @dataclass(slots=True)

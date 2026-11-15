@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit a spreadsheet: sheet names, header rows, merged cells, graphics, links and clutter."""
 
-from __future__ import annotations
-
 import re
 from collections import Counter
-from typing import TYPE_CHECKING
 
-from odfa11y.content import (
+lazy from lxml import etree
+
+from odfa11y.concepts import (
     SHAPE_TAGS,
     GraphicIdentity,
     audit_graphic_role,
@@ -19,18 +18,21 @@ from odfa11y.content import (
     visible_words,
 )
 from odfa11y.decisions import OpenDecision
-from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .decisions import SHEET_NAME
-from .sheets import cell_text, is_data_sheet, is_empty, sheet_name, sheets
-from .snapshot import sheet_fingerprint
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.families.spreadsheet.kinds import SHEET_NAME
+from odfa11y.families.spreadsheet.sheets import (
+    cell_text,
+    is_data_sheet,
+    is_empty,
+    sheet_name,
+    sheets,
+)
+from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
+from odfa11y.odf import NS, Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 DEFAULT_SHEET_NAME = re.compile(r"sheet\s*\d+", re.IGNORECASE)
 RAW_URL = re.compile(r"(?:[a-z][a-z0-9+.-]*://|www\.|mailto:)\S+", re.IGNORECASE)
@@ -133,7 +135,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
     frames = [
         node
         for node in select_elements(content, "//office:body//*")
-        if node.tag in SHAPE_TAGS and node.tag != qn("draw", "g") and eligible_text_node(node)
+        if node.tag in SHAPE_TAGS and node.tag != xml_names.DRAW_G and eligible_text_node(node)
     ]
     report.facts[FactKeys.SHEET_GRAPHIC_COUNT] = len(frames)
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
@@ -150,9 +152,9 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         desc = frame.findtext("svg:desc", namespaces=NS)
         if (title and title.strip()) or (desc and desc.strip()):
             continue
-        declared_name = frame.get(qn("draw", "name"))
+        declared_name = frame.get(xml_names.DRAW_NAME)
         image = frame.find("draw:image", NS)
-        href = image.get(qn("xlink", "href")) if image is not None else None
+        href = image.get(xml_names.XLINK_HREF) if image is not None else None
         report.add(
             rules.GRAPHIC003,
             "Picture, chart or object has neither accessible title nor description.",
@@ -170,7 +172,7 @@ def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         for link in select_elements(sheet, ".//text:a"):
             text = cell_text(link)
-            if RAW_URL.fullmatch(text) and not link.get(qn("office", "title"), "").strip():
+            if RAW_URL.fullmatch(text) and not link.get(xml_names.OFFICE_TITLE, "").strip():
                 report.add(
                     rules.LINK002,
                     "Hyperlink text is a raw address instead of a description of its target.",
@@ -196,12 +198,12 @@ def _audit_hidden(
     content: etree._ElementTree, all_sheets: list[etree._Element], report: Report
 ) -> None:
     hidden_styles = {
-        style.get(qn("style", "name")) for style in select_elements(content, HIDDEN_SHEET_STYLES)
+        style.get(xml_names.STYLE_NAME) for style in select_elements(content, HIDDEN_SHEET_STYLES)
     } - {None}
     sheet_names = [
         sheet_name(sheet)
         for sheet in all_sheets
-        if sheet.get(qn("table", "style-name")) in hidden_styles
+        if sheet.get(xml_names.TABLE_STYLE_NAME) in hidden_styles
     ]
     rows = len(select_elements(content, HIDDEN_ROWS))
     columns = len(select_elements(content, HIDDEN_COLUMNS))

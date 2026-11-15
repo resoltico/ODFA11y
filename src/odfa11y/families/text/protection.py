@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Protect Writer content and normalize only the metadata each operation may change."""
 
-from __future__ import annotations
-
 import hashlib
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
-from odfa11y.content import (
+lazy from lxml import etree
+
+from odfa11y.concepts import (
     SHAPE_TAGS,
     GraphicIdentity,
     document_links,
@@ -17,29 +17,28 @@ from odfa11y.content import (
     repeated,
 )
 from odfa11y.errors import XmlParseError
+from odfa11y.families.text.contexts import context_location, text_nodes
+from odfa11y.families.text.graphics import SetGraphicAlternatives, SetLinkDescriptions
+from odfa11y.families.text.headings.edit import SetHeadingLevels, heading_location
+from odfa11y.families.text.language.operations import SetTargetLanguages
+from odfa11y.families.text.language.styles import STYLE_NAME
+from odfa11y.families.text.links.edit import LinkifyAddresses
+from odfa11y.families.text.links.prose import address_wrapper_scope
+from odfa11y.families.text.links.urls import URI_RE, split_trailing_punctuation
+from odfa11y.families.text.spacing.candidates import spacer_candidates
+from odfa11y.families.text.spacing.edit import NormalizeSpacing
+from odfa11y.families.text.spacing.remove import RemoveEmptySpacers
+from odfa11y.families.text.styles.catalogue import (
+    NO_STYLE,
+    catalog_of,
+    derived_style_name,
+    is_generated_from,
+)
+from odfa11y.families.text.tables import MarkTableHeaders
 from odfa11y.odf import NS, Part, qn
-
-from .contexts import context_location, text_nodes
-from .graphics import SetGraphicAlternatives, SetLinkDescriptions
-from .headings import SetHeadingLevels, heading_location
-from .language.operations import SetTargetLanguages
-from .language.styles import STYLE_NAME
-from .linkify import LinkifyAddresses
-from .links import URI_RE, split_trailing_punctuation
-from .prose import address_wrapper_scope
-from .remove_spacers import RemoveEmptySpacers
-from .spacers import spacer_candidates
-from .spacing import NormalizeSpacing
-from .styles import NO_STYLE, catalog_of, derived_style_name, is_generated_from
-from .tables import MarkTableHeaders
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from lxml import etree
-
-    from odfa11y.adapter import Operation
-    from odfa11y.odf import OdfDocument
+from odfa11y.odf import names as xml_names
+lazy from odfa11y.concepts.edits import Operation
+lazy from odfa11y.odf import OdfDocument
 
 
 class ProtectedEdit:
@@ -55,7 +54,7 @@ class ProtectedEdit:
         self.tables: set[etree._Element] = set()
         self.spacing: dict[str, str] = {}
         self.spacing_targets: set[etree._Element] = set()
-        self.links = set(document.tree(Part.CONTENT).iter(qn("text", "a")))
+        self.links = set(document.tree(Part.CONTENT).iter(xml_names.TEXT_A))
         self.roles: set[etree._Element] = set()
         self.language_targets: dict[etree._Element, tuple[str | None, str]] = {}
         self.language_styles: dict[str, str] = {}
@@ -68,23 +67,23 @@ class ProtectedEdit:
         if type(op) is SetTargetLanguages:
             self._establish_language(op)
         elif type(op) is SetHeadingLevels:
-            for index, node in enumerate(text_nodes(tree, qn("text", "h"), main_only=True), 1):
+            for index, node in enumerate(text_nodes(tree, xml_names.TEXT_H, main_only=True), 1):
                 if heading_location(node, index).path in op.entries:
-                    self.allowed[node] = {qn("text", "outline-level")}
+                    self.allowed[node] = {xml_names.TEXT_OUTLINE_LEVEL}
         elif type(op) is RemoveEmptySpacers:
             self.spacers = {
                 node
                 for node in spacer_candidates(tree)
                 if not catalog_of(self.document).has_break_semantics(
-                    node.get(qn("text", "style-name"))
+                    node.get(xml_names.TEXT_STYLE_NAME)
                 )
             }
         elif type(op) is MarkTableHeaders:
             self.tables = {
                 node
-                for index, node in enumerate(text_nodes(tree, qn("table", "table")), 1)
-                if node.get(qn("table", "name")) in op.entries
-                or context_location(node, "table", index, node.get(qn("table", "name"))).path
+                for index, node in enumerate(text_nodes(tree, xml_names.TABLE_TABLE), 1)
+                if node.get(xml_names.TABLE_NAME) in op.entries
+                or context_location(node, "table", index, node.get(xml_names.TABLE_NAME)).path
                 in op.entries
             }
         elif type(op) is NormalizeSpacing:
@@ -99,12 +98,14 @@ class ProtectedEdit:
         for base in operation.target_styles:
             self.spacing[derived_style_name(base)] = base
         tags = (
-            (qn("text", "p"), qn("text", "h")) if operation.include_headings else (qn("text", "p"),)
+            (xml_names.TEXT_P, xml_names.TEXT_H)
+            if operation.include_headings
+            else (xml_names.TEXT_P,)
         )
         self.spacing_targets = {
             node
             for node in text_nodes(tree, *tags, main_only=True)
-            if (node.get(qn("text", "style-name")) or NO_STYLE)
+            if (node.get(xml_names.TEXT_STYLE_NAME) or NO_STYLE)
             in {*operation.target_styles, *self.spacing}
         }
 
@@ -120,8 +121,8 @@ class ProtectedEdit:
         for selector, entry in operation.entries.items():
             matches = identity.matching(selector)
             for field, tag in (
-                (entry.title, qn("svg", "title")),
-                (entry.description, qn("svg", "desc")),
+                (entry.title, xml_names.SVG_TITLE),
+                (entry.description, xml_names.SVG_DESC),
             ):
                 if field is not None:
                     for match in matches:
@@ -132,7 +133,7 @@ class ProtectedEdit:
     def _links(self, operation: SetLinkDescriptions) -> None:
         for index, node in enumerate(document_links(self.document), 1):
             if link_location(node, index).path in operation.entries:
-                self.allowed[node] = {qn("office", "title")}
+                self.allowed[node] = {xml_names.OFFICE_TITLE}
 
     def intact(self) -> bool:
         """Whether all protected facts remain identical after the operation.
@@ -172,14 +173,14 @@ class ProtectedEdit:
         for source, target in list(zip(root.iter(), clone.iter(), strict=True)):
             generated.update(self._node(source, target))
         self._spacing(clone)
-        for style in list(clone.iter(qn("style", "style"))):
+        for style in list(clone.iter(xml_names.STYLE_STYLE)):
             if (
-                style.get(qn("style", "name")) in generated
+                style.get(xml_names.STYLE_NAME) in generated
                 and (parent := style.getparent()) is not None
             ):
                 parent.remove(style)
-        for style in list(clone.iter(qn("style", "style"))):
-            name = style.get(qn("style", "name"))
+        for style in list(clone.iter(xml_names.STYLE_STYLE)):
+            name = style.get(xml_names.STYLE_NAME)
             if (
                 name in self.language_styles
                 and protected_xml(style) == self.language_styles[name]
@@ -187,7 +188,7 @@ class ProtectedEdit:
             ):
                 parent.remove(style)
         normalize_metadata(clone, self.operation, creating_metadata=self.creating_metadata)
-        for container in list(clone.iter(qn("office", "automatic-styles"))):
+        for container in list(clone.iter(xml_names.OFFICE_AUTOMATIC_STYLES)):
             if (
                 not len(container)
                 and not container.attrib
@@ -195,9 +196,9 @@ class ProtectedEdit:
             ):
                 parent.remove(container)
         if (
-            clone.tag == qn("office", "document-meta")
+            clone.tag == xml_names.OFFICE_DOCUMENT_META
             and not len(clone)
-            and set(clone.attrib) <= {qn("office", "version")}
+            and set(clone.attrib) <= {xml_names.OFFICE_VERSION}
         ):
             return None
         return protected_xml(clone)
@@ -219,7 +220,7 @@ class ProtectedEdit:
             normalize_headers(target)
         if (
             type(self.operation) is LinkifyAddresses
-            and source.tag == qn("text", "a")
+            and source.tag == xml_names.TEXT_A
             and source not in self.links
             and address_wrapper_scope(source)
         ):
@@ -264,14 +265,14 @@ class ProtectedEdit:
                 proven.add(name)
         for node in list(root.iter()):
             if (
-                node.tag == qn("style", "style")
-                and node.get(qn("style", "name")) in proven
+                node.tag == xml_names.STYLE_STYLE
+                and node.get(xml_names.STYLE_NAME) in proven
                 and (parent := node.getparent()) is not None
             ):
                 parent.remove(node)
 
     def _spacing_reference(self, source: etree._Element, target: etree._Element) -> None:
-        name = source.get(qn("text", "style-name"))
+        name = source.get(xml_names.TEXT_STYLE_NAME)
         if name not in self.spacing:
             return
         base = self.spacing[name]
@@ -281,9 +282,9 @@ class ProtectedEdit:
             catalog, style, None if base == NO_STYLE else base, name
         ):
             if base == NO_STYLE:
-                target.attrib.pop(qn("text", "style-name"), None)
+                target.attrib.pop(xml_names.TEXT_STYLE_NAME, None)
             else:
-                target.set(qn("text", "style-name"), base)
+                target.set(xml_names.TEXT_STYLE_NAME, base)
 
 
 def protect_edit(document: OdfDocument, operation: Operation) -> Callable[[], bool]:
@@ -323,12 +324,12 @@ def normalize_metadata(
     """Normalize supported metadata effects without masking unrelated styles."""
     if (
         operation.name == "set_odf_version"
-        and type(operation).__module__ == "odfa11y.remediation.version"
+        and type(operation).__module__ == "odfa11y.remediate.version"
     ):
         _version(root)
     if (
         operation.name != "set_metadata"
-        or type(operation).__module__ != "odfa11y.remediation.metadata"
+        or type(operation).__module__ != "odfa11y.remediate.metadata"
     ):
         return
     if creating_metadata:
@@ -351,17 +352,17 @@ def normalize_metadata(
 
 
 def _version(root: etree._Element) -> None:
-    root.attrib.pop(qn("office", "version"), None)
-    if root.tag == qn("manifest", "manifest"):
-        root.attrib.pop(qn("manifest", "version"), None)
+    root.attrib.pop(xml_names.OFFICE_VERSION, None)
+    if root.tag == xml_names.MANIFEST_MANIFEST:
+        root.attrib.pop(xml_names.MANIFEST_VERSION, None)
         for entry in root.findall("manifest:file-entry", NS):
-            if entry.get(qn("manifest", "full-path")) == "/":
-                entry.attrib.pop(qn("manifest", "version"), None)
+            if entry.get(xml_names.MANIFEST_FULL_PATH) == "/":
+                entry.attrib.pop(xml_names.MANIFEST_VERSION, None)
 
 
 def _language_defaults(root: etree._Element) -> None:
     for default in root.findall("office:styles/style:default-style", NS):
-        if default.get(qn("style", "family")) != "paragraph":
+        if default.get(xml_names.STYLE_FAMILY) != "paragraph":
             continue
         _default_properties(default)
     for styles in root.findall("office:styles", NS):
@@ -370,13 +371,13 @@ def _language_defaults(root: etree._Element) -> None:
 
 
 def _metadata_entry(root: etree._Element) -> None:
-    if root.tag != qn("manifest", "manifest"):
+    if root.tag != xml_names.MANIFEST_MANIFEST:
         return
     for entry in list(root):
         if (
-            entry.tag == qn("manifest", "file-entry")
+            entry.tag == xml_names.MANIFEST_FILE_ENTRY
             and dict(entry.attrib)
-            == {qn("manifest", "full-path"): "meta.xml", qn("manifest", "media-type"): "text/xml"}
+            == {xml_names.MANIFEST_FULL_PATH: "meta.xml", xml_names.MANIFEST_MEDIA_TYPE: "text/xml"}
             and not len(entry)
         ):
             root.remove(entry)
@@ -391,7 +392,7 @@ def _default_properties(default: etree._Element) -> None:
             default.remove(props)
     if (
         len(default) == 0
-        and dict(default.attrib) == {qn("style", "family"): "paragraph"}
+        and dict(default.attrib) == {xml_names.STYLE_FAMILY: "paragraph"}
         and (parent := default.getparent()) is not None
     ):
         parent.remove(default)
@@ -406,8 +407,8 @@ def unwrap_address(source: etree._Element, target: etree._Element) -> None:
     address, punctuation = split_trailing_punctuation(token)
     expected = f"mailto:{address}" if match.group("email") else address
     if punctuation or dict(source.attrib) != {
-        qn("xlink", "type"): "simple",
-        qn("xlink", "href"): expected,
+        xml_names.XLINK_TYPE: "simple",
+        xml_names.XLINK_HREF: expected,
     }:
         return
     parent = target.getparent()
@@ -425,10 +426,10 @@ def unwrap_address(source: etree._Element, target: etree._Element) -> None:
 def normalize_headers(table: etree._Element) -> None:
     """Ignore this table's header wrappers and coalesce proven identical repeated runs."""
     for node in list(
-        table.iter(qn("table", "table-header-rows"), qn("table", "table-header-columns"))
+        table.iter(xml_names.TABLE_TABLE_HEADER_ROWS, xml_names.TABLE_TABLE_HEADER_COLUMNS)
     ):
         parent = node.getparent()
-        owner = next(node.iterancestors(qn("table", "table")), None)
+        owner = next(node.iterancestors(xml_names.TABLE_TABLE), None)
         if parent is None or owner is not table:
             continue
         position = parent.index(node)
@@ -438,8 +439,8 @@ def normalize_headers(table: etree._Element) -> None:
     for parent in table.iter():
         owner = (
             parent
-            if parent.tag == qn("table", "table")
-            else next(parent.iterancestors(qn("table", "table")), None)
+            if parent.tag == xml_names.TABLE_TABLE
+            else next(parent.iterancestors(xml_names.TABLE_TABLE), None)
         )
         if owner is not table:
             continue
@@ -449,13 +450,13 @@ def normalize_headers(table: etree._Element) -> None:
 def _coalesce_declarations(parent: etree._Element) -> None:
     previous = None
     for child in list(parent):
-        if child.tag not in {qn("table", "table-row"), qn("table", "table-column")}:
+        if child.tag not in {xml_names.TABLE_TABLE_ROW, xml_names.TABLE_TABLE_COLUMN}:
             previous = None
             continue
         repeat = qn(
             "table",
             "number-rows-repeated"
-            if child.tag == qn("table", "table-row")
+            if child.tag == xml_names.TABLE_TABLE_ROW
             else "number-columns-repeated",
         )
         count = str(repeated(child, repeat.rsplit("}", 1)[-1]))

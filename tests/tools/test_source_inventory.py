@@ -1,18 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Independent archive inventory controls include contributor and corpus bytes."""
 
-from __future__ import annotations
-
 import io
 import tarfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from tools.source_inventory import archive_errors, source_files
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 FILES = {
     "docs/guide.md": b"Contributor documentation",

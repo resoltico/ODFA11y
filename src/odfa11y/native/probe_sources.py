@@ -1,17 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Write isolated synthetic ODF probe packages with explicit metadata and local assets."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
 from xml.sax.saxutils import quoteattr
+lazy from collections.abc import Mapping
 lazy from pathlib import Path
 
 from odfa11y.odf import NS
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
+from odfa11y.odf import names as xml_names
 
 NAMESPACES = " ".join(f"xmlns:{prefix}={quoteattr(uri)}" for prefix, uri in NS.items())
 
@@ -69,7 +65,7 @@ def write_probe_package(
         f"{entries}</manifest:manifest>"
     )
     with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr("mimetype", media_type, compress_type=zipfile.ZIP_STORED)
+        archive.writestr(xml_names.MIMETYPE_MEMBER, media_type, compress_type=zipfile.ZIP_STORED)
         archive.writestr("META-INF/manifest.xml", manifest)
         for name, value in resources.items():
             archive.writestr(name, value, compress_type=zipfile.ZIP_DEFLATED)

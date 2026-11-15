@@ -1,14 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Bind the text family's language to its paragraph style."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.content import set_style_language, style_language
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+from odfa11y.concepts import set_style_language, style_language
+lazy from odfa11y.odf import OdfDocument
 
 
 def default_language(document: OdfDocument) -> str | None:

@@ -1,24 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """A hidden-paragraph condition excludes its whole block, regardless of cached visibility."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, document_links, eligible_text_node
+from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.concepts import GraphicAlternative, document_links, eligible_text_node
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf, prepare_plan
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])

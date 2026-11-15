@@ -1,31 +1,26 @@
 # SPDX-License-Identifier: MPL-2.0
 """Known rendering dependencies are distinct from navigational links and document identity."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
 from odfa11y.errors import ToolFailedError
 from odfa11y.evidence import check_bundle
-from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, Part, qn
+from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize(

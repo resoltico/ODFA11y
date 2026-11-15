@@ -49,7 +49,7 @@ no destination. Production runs reject warnings and require veraPDF; review the 
 Created and maintained by Ervins Strauhmanis. Project code uses [MPL-2.0](LICENSE).
 Bundled unmodified OASIS schemas retain their [OASIS notice](src/odfa11y/odf/schemas/NOTICE.txt);
 MathML retains its [W3C notice](src/odfa11y/odf/schemas/mathml/NOTICE.txt), and formula
-classifications their [OASIS notice](src/odfa11y/native/formula_data/NOTICE.txt).
+classifications their [OASIS notice](src/odfa11y/odf/formula_data/NOTICE.txt).
 [Schema provenance](src/odfa11y/odf/schemas/PROVENANCE.toml) records sources and digests.
 Dependencies and external applications retain their licenses. ODFA11y is not affiliated
 with OASIS, LibreOffice or veraPDF and does not redistribute those applications.

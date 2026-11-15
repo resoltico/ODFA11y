@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Generated spacing must not mask changes to excluded authored contexts."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 from lxml import etree
 
-from odfa11y.adapter import Status
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import NormalizeSpacing
 from odfa11y.families.text.protection import ProtectedEdit
-from odfa11y.families.text.spacing import derived_style_name
+from odfa11y.families.text.spacing.edit import derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_proven_spacing_derivation_does_not_mask_annotation_style_change(tmp_path: Path) -> None:

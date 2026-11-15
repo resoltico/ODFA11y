@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Atomic, path-free progress records for batch execution."""
 
-from __future__ import annotations
-
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
+lazy from pathlib import Path
 
-from odfa11y.outcomes import BatchStatus, ExitStatus, combine_statuses
 from odfa11y.serialization import JsonProperty, record_dict
 from odfa11y.staging import staging_sibling
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.outcomes import StageName
-    from odfa11y.serialization import JsonObject
+from odfa11y.status import BatchStatus, ExitStatus, combine_statuses
+lazy from odfa11y.progress import StageName
+lazy from odfa11y.serialization import JsonObject
 
 BATCH_FORMAT = 2
 

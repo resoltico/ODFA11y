@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Marked-content reconciliation, verified against independently built content streams."""
 
-from __future__ import annotations
-
 import time
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject
+lazy from pypdf import PdfWriter
+lazy from pypdf.generic import IndirectObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua
@@ -15,14 +16,7 @@ from odfa11y.pdf import marked_content as marked
 from odfa11y.pdf.reading.content import scan_content
 from odfa11y.report import FactKeys
 from tests.fixtures.pdf import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-    from pypdf.generic import IndirectObject
-
-    from odfa11y.report import Finding, Report
+lazy from odfa11y.report import Finding, Report
 
 CONTENT_RULES = {"PDF020", "PDF021", "PDF022", "PDF023"}
 TEXT = "BT /F1 12 Tf 10 50 Td (x) Tj ET"

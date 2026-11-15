@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Redaction keeps local paths out of everything a bundle publishes."""
 
-from __future__ import annotations
-
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -10,11 +8,7 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.evidence import (
-    Redactor,
-    check_bundle,
-    write_bundle,
-)
+from odfa11y.evidence import Redactor, check_bundle, write_bundle
 from odfa11y.families.text import ADAPTER
 from tests.fixtures.records import record
 

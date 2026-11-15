@@ -1,22 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Evidence bundles: atomic publication, safe verification, path hygiene, honest review sheets."""
 
-from __future__ import annotations
-
 from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.errors import OutputError
-from odfa11y.evidence import (
-    Redactor,
-    render_review,
-    require_free_directory,
-    write_bundle,
-)
+from odfa11y.evidence import Redactor, render_review, require_free_directory, write_bundle
 from odfa11y.families.text import ADAPTER
-from odfa11y.outcomes import StageStatus
+from odfa11y.status import StageStatus
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.records import record
 

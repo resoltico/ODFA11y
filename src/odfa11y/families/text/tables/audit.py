@@ -1,23 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Report table intent and header relationships from source declarations."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.content import table_fingerprint
+from odfa11y.concepts import table_fingerprint
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import RemediationError
 from odfa11y.families.text.contexts import context_location, text_nodes
-from odfa11y.families.text.decisions import TABLE_HEADERS
-from odfa11y.odf import Part, qn
-from odfa11y.report import FactKeys, rules
-
-from .classification import TableKind, classify
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.families.text.kinds import TABLE_HEADERS
+from odfa11y.families.text.tables.classification import TableKind, classify
+from odfa11y.odf import Part
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 NATIVE_GUIDANCE = (
     "Review table intent and header relationships in Writer; no layout/data conversion is inferred."
@@ -26,11 +21,11 @@ NATIVE_GUIDANCE = (
 
 def audit_tables(document: OdfDocument, report: Report) -> None:
     """Audit actual grid and band relationships, preserving ambiguous table intent."""
-    tables = text_nodes(document.tree(Part.CONTENT), qn("table", "table"))
+    tables = text_nodes(document.tree(Part.CONTENT), xml_names.TABLE_TABLE)
     report.facts[FactKeys.TEXT_TABLE_COUNT] = len(tables)
     rows: list[dict[str, object]] = []
     for index, table in enumerate(tables, 1):
-        name = table.get(qn("table", "name"))
+        name = table.get(xml_names.TABLE_NAME)
         location = context_location(table, "table", index, name)
         try:
             classification = classify(table)

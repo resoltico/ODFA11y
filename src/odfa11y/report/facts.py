@@ -1,16 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Registered measurements and their declared value types."""
 
-from __future__ import annotations
-
 import types
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast, get_args, get_origin
+from typing import cast, get_args, get_origin
+lazy from collections.abc import Iterator, Mapping
 
 from odfa11y.errors import ReportError
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
 
 
 @dataclass(frozen=True, slots=True)

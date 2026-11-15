@@ -1,20 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Prove local cached chart-range boundaries without materializing repeated table data."""
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterator
 
-from odfa11y.content import axis_count, cell_at, declarations, repeated
+lazy from lxml import etree
+
+from odfa11y.concepts import axis_count, cell_at, declarations, repeated
 from odfa11y.errors import RemediationError
-from odfa11y.odf import qn, select_elements
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from lxml import etree
+from odfa11y.odf import names as xml_names
+from odfa11y.odf import select_elements
 
 TABLE_NAME = r"(?:'(?:[^']|'')+'|[^.\s:]+)"
 RANGE = re.compile(
@@ -102,8 +98,8 @@ def resolve_range(chart: etree._Element, address: str) -> LocalRange | None:
     tables = select_elements(chart, "./table:table")
     name = _table_name(match["table"])
     if name is None and len(tables) == 1:
-        name = tables[0].get(qn("table", "name"))
-    matches = [table for table in tables if table.get(qn("table", "name")) == name]
+        name = tables[0].get(xml_names.TABLE_NAME)
+    matches = [table for table in tables if table.get(xml_names.TABLE_NAME) == name]
     if len(matches) != 1 or _table_name(match["endtable"]) not in {None, name}:
         return None
     table = matches[0]

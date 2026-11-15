@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Validate registered answer dataclasses without coercing unsupported input types."""
 
-from __future__ import annotations
-
 import dataclasses
 import enum
 import math
 import re
 import types
-from typing import TYPE_CHECKING, Literal, cast, get_args, get_origin, get_type_hints
+from typing import Literal, cast, get_args, get_origin, get_type_hints
+lazy from collections.abc import Mapping
 
 from odfa11y.errors import PlanError
 from odfa11y.language_tags import normalize_language
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from _typeshed import DataclassInstance
+from odfa11y.serialization import fields_of
 
 
 def decode_answer[T](answer_type: type[T], values: Mapping[str, object], label: str) -> T:
@@ -37,10 +32,7 @@ def validate_answer(answer: object, label: str) -> None:
     """Apply the same field contract to answers constructed by Python callers."""
     _validated_arguments(
         type(answer),
-        {
-            field.name: getattr(answer, field.name)
-            for field in dataclasses.fields(cast("DataclassInstance", answer))
-        },
+        {field.name: getattr(answer, field.name) for field in fields_of(answer)},
         label,
     )
 
@@ -51,7 +43,7 @@ def _validated_arguments(
     if not all(isinstance(key, str) for key in values):
         msg = f"{label} requires string field names"
         raise PlanError(msg)
-    fields = dataclasses.fields(cast("type[DataclassInstance]", answer_type))
+    fields = fields_of(answer_type)
     unknown = values.keys() - {field.name for field in fields}
     if unknown:
         msg = f"Unknown {label} keys: {', '.join(sorted(unknown))}"

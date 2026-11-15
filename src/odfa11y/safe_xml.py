@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Parse untrusted XML without entity expansion or network access, within a depth limit."""
 
-from __future__ import annotations
-
 from lxml import etree
 
 MAX_DEPTH = 256

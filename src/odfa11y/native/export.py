@@ -1,15 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Export ODF documents to PDF/UA through LibreOffice."""
 
-from __future__ import annotations
-
 import json
 import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from odfa11y.errors import OutputError, ToolFailedError
 from odfa11y.native.process import (
@@ -19,9 +16,7 @@ from odfa11y.native.process import (
     validate_timeout,
 )
 from odfa11y.staging import staging_sibling
-
-if TYPE_CHECKING:
-    from odfa11y.native.process import ToolIdentity
+lazy from odfa11y.native.process import ToolIdentity
 
 DEFAULT_TIMEOUT_SECONDS = 120
 MINIMUM_LIBREOFFICE_VERSION = (26, 8)

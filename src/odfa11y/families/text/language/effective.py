@@ -1,27 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Resolve paragraph and nested inline language through scoped ODF styles."""
 
-from __future__ import annotations
+lazy from lxml import etree
 
-from typing import TYPE_CHECKING
-
-from odfa11y.content import CHANNEL_ATTRIBUTES, reading_context_path
+from odfa11y.concepts import CHANNEL_ATTRIBUTES, reading_context_path
 from odfa11y.errors import RemediationError
 from odfa11y.families.text.contexts import text_nodes
-from odfa11y.families.text.style_properties import paragraph_style_name
-from odfa11y.families.text.styles import catalog_of
+from odfa11y.families.text.styles.catalogue import catalog_of
+from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.language_tags import normalize_language
-from odfa11y.odf import Part, qn
+from odfa11y.odf import Part
+from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf import OdfDocument
 
 CHANNELS = ("western", "asian", "complex")
-BLOCKS = {qn("text", "p"), qn("text", "h")}
-INLINE = {qn("text", "span"), qn("text", "a")}
+BLOCKS = {xml_names.TEXT_P, xml_names.TEXT_H}
+INLINE = {xml_names.TEXT_SPAN, xml_names.TEXT_A}
 
 
 def language_nodes(document: OdfDocument) -> list[etree._Element]:

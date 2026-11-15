@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Decision parsing, templates and schemas share one strict registered answer contract."""
 
-from __future__ import annotations
-
 import tomllib
 from dataclasses import dataclass, field
 from typing import ClassVar, cast

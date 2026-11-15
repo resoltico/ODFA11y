@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Observe native resources using synthetic assets and a healthy loopback server."""
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import json
@@ -14,6 +12,8 @@ from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
 from odfa11y.evidence import require_free_directory
 from odfa11y.native.export import (
     EXPORT_OPTIONS,
@@ -23,12 +23,10 @@ from odfa11y.native.export import (
     identify_soffice,
 )
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import Plan
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.native_resources import (
     PIXELS,
     author_package,

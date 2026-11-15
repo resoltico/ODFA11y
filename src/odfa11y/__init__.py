@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """ODFA11y's application API: explicit decisions, guarded workflows and typed results."""
 
-from .application import (
+from odfa11y.application import (
     AuditFailure,
     AuditInput,
     AuditRun,
@@ -9,39 +9,38 @@ from .application import (
     ExportResult,
     PlanResult,
     VerificationResult,
-    audit,
     compare,
     doctor,
     export,
     plan,
-    remediate,
-    run,
     run_batch,
     verify_evidence,
 )
-from .batch import BatchRecord
-from .decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
-from .errors import OdfA11yError, OutputError, PlanError, ReportError, ToolNotFoundError
-from .native.export import DEFAULT_TIMEOUT_SECONDS
-from .native.process import validate_timeout
-from .outcomes import (
-    ExitStatus,
-    ProgressEvent,
-    ProgressObserver,
-    StageName,
-    StepName,
-    StepState,
-    failure_status,
+from odfa11y.application import (
+    audit as _audit,
 )
-from .pipeline.profiles import DEFAULT_PROFILE, PROFILES, Profile, profile_named
-from .pipeline.record import RunRecord, StageResult
-from .plans import Plan, PlanHeader, SourceBinding, load_plan, registered_kinds
-from .records import DoctorRecord
-from .remediation import RemediationResult
-from .report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
-from .source_audit import plan_blockers
-from .tools import Tools
-from .version import __version__
+from odfa11y.application import (
+    remediate as _remediate,
+)
+from odfa11y.application import (
+    run as _run,
+)
+from odfa11y.application.tools import Tools
+from odfa11y.audit import plan_blockers
+from odfa11y.batch import BatchRecord
+from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
+from odfa11y.errors import OdfA11yError, OutputError, PlanError, ReportError, ToolNotFoundError
+from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
+from odfa11y.native.process import validate_timeout
+from odfa11y.plans import Plan, PlanHeader, SourceBinding, load_plan, registered_kinds
+from odfa11y.progress import ProgressEvent, ProgressObserver, StageName, StepName, StepState
+from odfa11y.records import DoctorRecord
+from odfa11y.remediate import RemediationResult
+from odfa11y.report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
+from odfa11y.run.profiles import DEFAULT_PROFILE, PROFILES, Profile, profile_named
+from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.status import ExitStatus, failure_status
+from odfa11y.version import __version__
 
 __all__ = [
     "DEFAULT_PROFILE",
@@ -103,3 +102,7 @@ __all__ = [
     "validate_timeout",
     "verify_evidence",
 ]
+
+audit = _audit
+remediate = _remediate
+run = _run

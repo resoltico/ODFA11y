@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Rules, findings, rendering and exit statuses."""
 
-from __future__ import annotations
-
 import json
 import re
 
@@ -20,8 +18,8 @@ from odfa11y.report import (
     Severity,
     exit_status,
     render_reports,
-    rules,
 )
+from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
 
 

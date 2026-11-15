@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Only described Figures tied to executed graphic content satisfy the content gate."""
 
-from __future__ import annotations
-
 import zlib
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import (
@@ -21,11 +19,7 @@ from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.reading.content import scan_content
 from odfa11y.report import FactKeys
 from tests.fixtures.pdf import set_page_content, tagged_writer
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 DRAW = "0 0 m 10 10 l S"
 

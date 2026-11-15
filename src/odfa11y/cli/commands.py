@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Execute the commands and map failures to exit statuses."""
 
-from __future__ import annotations
-
 import json
 import sys
-from typing import TYPE_CHECKING
+lazy import argparse
+lazy from collections.abc import Callable
 
 import odfa11y as api
 from odfa11y import (
@@ -23,10 +22,6 @@ from .guidance import error_hint
 from .parser import build_parser
 from .pipeline import pipeline_command
 from .progress import progress_callback
-
-if TYPE_CHECKING:
-    import argparse
-    from collections.abc import Callable
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,26 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Configure Hypothesis for deterministic, bounded runs."""
 
-from __future__ import annotations
-
 import os
 import shutil
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable, Iterator
 
 import pytest
 from hypothesis import HealthCheck, settings
 from jsonschema import Draft202012Validator, FormatChecker
+lazy from jsonschema.protocols import Validator
 
 from odfa11y.plans.registry import registered_formats
 from odfa11y.schemas import read_schema
 from tools.generate_reference import FORMATS
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-
-    from jsonschema.protocols import Validator
-
-    from odfa11y.serialization import JsonObject
+lazy from odfa11y.serialization import JsonObject
 
 
 def _format_test(validator: Callable[[str], object]) -> Callable[[object], bool]:

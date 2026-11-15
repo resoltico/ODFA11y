@@ -1,29 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Rename sheets, refusing any rename that could break a reference to the old name."""
 
-from __future__ import annotations
-
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
 from urllib.parse import unquote
+lazy from collections.abc import Mapping
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.odf import Family, PackageStorage, Part, qn, select_elements
+from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
+from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
+from odfa11y.odf import Family, PackageStorage, Part, select_elements
+from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
-
-from .sheets import sheet_name, sheets
-from .snapshot import sheet_fingerprint
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf import OdfDocument
 
 FORBIDDEN_CHARACTERS = frozenset("[]*?:/\\")
 DYNAMIC_REFERENCE = re.compile(r"\b(?:INDIRECT|ADDRESS|HYPERLINK)\s*\(", re.IGNORECASE)
-CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
+CONFIG = xml_names.CONFIG_NAMESPACE
 EMBEDDED_OBJECTS = "//office:body//draw:object | //office:body//draw:object-ole"
 
 
@@ -88,7 +83,7 @@ class SetSheetNames(Operation):
                     )
                 )
             else:
-                node.set(qn("table", "name"), entry.name)
+                node.set(xml_names.TABLE_NAME, entry.name)
                 _rename_settings(document, old, entry.name)
                 outcomes.append(
                     Outcome(
@@ -191,14 +186,14 @@ def _is_referenced(document: OdfDocument, name: str) -> bool:
     quoted = "'" + name.replace("'", "''") + "'"
     dotted = (f"{name}.".casefold(), f"{quoted}.".casefold())
     links = {f"#{name}".casefold(), f"#{quoted}".casefold()}
-    own_name = qn("table", "name")
-    sheet_tag = qn("table", "table")
+    own_name = xml_names.TABLE_NAME
+    sheet_tag = xml_names.TABLE_TABLE
     for tree in document.distinct_trees(Part.CONTENT, Part.STYLES):
         for element in tree.iter("*"):
             for attribute, value in element.attrib.items():
                 if attribute == own_name and element.tag == sheet_tag:
                     continue
-                if attribute == qn("table", "formula") and DYNAMIC_REFERENCE.search(value):
+                if attribute == xml_names.TABLE_FORMULA and DYNAMIC_REFERENCE.search(value):
                     return True
                 reference = unquote(value).casefold()
                 if reference in links or any(token in reference for token in dotted):

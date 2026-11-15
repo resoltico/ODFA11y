@@ -1,32 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
 """Batch continuation, strict inputs, confined publication and privacy."""
 
-from __future__ import annotations
-
 import importlib
 import json
 import os
 from dataclasses import asdict
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
 from odfa11y.batch import load_manifest, run_batch
-from odfa11y.batch.manifest import preflight
+from odfa11y.batch.batch_file import preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OutputError, PlanError
 from odfa11y.evidence import check_bundle
-from odfa11y.outcomes import BatchStatus, ExitStatus
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.profiles import profile_named
+from odfa11y.run.context import RunSettings
+from odfa11y.run.profiles import profile_named
+from odfa11y.status import BatchStatus, ExitStatus
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from odfa11y.native.probes import ProbeCache
-    from odfa11y.pipeline.record import RunRecord
-    from odfa11y.plans import Plan
+lazy from odfa11y.native.probes import ProbeCache
+lazy from odfa11y.plans import Plan
+lazy from odfa11y.run.record import RunRecord
 
 
 def manifest_file(tmp_path: Path, entries: list[tuple[str, str, str]]) -> Path:
@@ -165,7 +160,7 @@ def test_repeated_sources_and_hardlinked_plans_are_read_only(tmp_path: Path) -> 
 def test_execution_and_publication_failures_do_not_stop_later_items(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runner = importlib.import_module("odfa11y.batch.run")
+    runner = importlib.import_module("odfa11y.batch.execute")
     original = runner.execute
     make_minimal_odt(tmp_path / "doc.odt")
     (tmp_path / "plan.toml").write_text(
@@ -228,7 +223,7 @@ def test_aggregate_precedence_and_atomic_summary_failure(
 def test_unpublishable_item_is_explicit_and_later_document_still_runs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    runner = importlib.import_module("odfa11y.batch.run")
+    runner = importlib.import_module("odfa11y.batch.execute")
     make_minimal_odt(tmp_path / "doc.odt")
     (tmp_path / "plan.toml").write_text(
         plan_header(tmp_path / "doc.odt")

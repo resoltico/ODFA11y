@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit native MathML structure and supplied spoken alternatives."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from lxml import etree
 
 from odfa11y.decisions import OpenDecision
+from odfa11y.families.formula.expression import expression
+from odfa11y.families.formula.kinds import FORMULA_ALTERNATIVE
 from odfa11y.odf import Part, qn
-from odfa11y.report import FactKeys, Location, rules
-
-from .decisions import FORMULA_ALTERNATIVE
-from .expression import expression
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 TOKENS = {qn("math", name) for name in ("mi", "mn", "mo", "mtext", "ms", "ci", "cn", "csymbol")}
 CONTENT_VALUES = {
@@ -53,11 +48,11 @@ def _meaningful(node: etree._Element) -> bool:
         return False
     if node.tag in CONTENT_VALUES:
         return True
-    if node.tag == qn("math", "ms") and (node.get("lquote", '"') or node.get("rquote", '"')):
+    if node.tag == xml_names.MATH_MS and (node.get("lquote", '"') or node.get("rquote", '"')):
         return True
-    if node.tag == qn("math", "csymbol") and (node.get("definitionURL") or "").strip():
+    if node.tag == xml_names.MATH_CSYMBOL and (node.get("definitionURL") or "").strip():
         return True
-    if node.tag == qn("math", "mglyph"):
+    if node.tag == xml_names.MATH_MGLYPH:
         return bool((node.get("src") or "").strip())
     return node.tag in TOKENS and bool("".join(node.itertext()).strip())
 
@@ -89,7 +84,7 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
             )
         )
     if any(
-        node.get("href") or node.get("src") or node.get("altimg") or node.get(qn("xlink", "href"))
+        node.get("href") or node.get("src") or node.get("altimg") or node.get(xml_names.XLINK_HREF)
         for node in nodes
     ):
         report.add(rules.MATH003, location=location)

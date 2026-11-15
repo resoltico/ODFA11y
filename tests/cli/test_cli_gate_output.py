@@ -1,29 +1,26 @@
 # SPDX-License-Identifier: MPL-2.0
 """Human command outcomes describe the actual gate and retain actionable evidence."""
 
-from __future__ import annotations
-
 import json
 from dataclasses import replace
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.evidence import render_review
-from odfa11y.outcomes import StageName, StageStatus
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.profiles import PROFILES
-from odfa11y.pipeline.record import RunRecord, StageResult
+from odfa11y.progress import StageName
 from odfa11y.records import DocumentIdentity
-from odfa11y.report import Report, rules
+from odfa11y.report import Report
+from odfa11y.rules import registry as rules
+from odfa11y.run.profiles import PROFILES
+from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.status import StageStatus
 from tests.fixtures.plans import plan_header
 from tests.fixtures.records import record
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_strict_text_warning_has_one_authoritative_failed_outcome(

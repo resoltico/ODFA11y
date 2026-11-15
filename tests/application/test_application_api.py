@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """The root use cases own continuation, effective policy and native tool selection."""
 
-from __future__ import annotations
-
 import ast
 import json
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterator
 lazy from pathlib import Path
 
 import pytest
@@ -13,13 +11,10 @@ import pytest
 import odfa11y as api
 from odfa11y.errors import ToolFailedError
 from odfa11y.records import DoctorRecord, Toolchain
-from odfa11y.report import rules
+from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 def test_cli_imports_only_the_root_application_surface() -> None:

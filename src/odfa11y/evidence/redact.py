@@ -1,14 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Keep local paths out of evidence: known locations become placeholders, the rest `<path>/name`."""
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from typing import Any, cast
+lazy from pathlib import Path
 
 # A path-looking run: a segment may contain single spaces ("My Documents"), so a directory
 # named after a person cannot survive. Anchors: an absolute POSIX path of two or more

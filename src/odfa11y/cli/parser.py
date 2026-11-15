@@ -1,12 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Define the command-line arguments for every command."""
 
-from __future__ import annotations
-
 import argparse
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Never
+from typing import Never
 
 from odfa11y import (
     DEFAULT_PROFILE,
@@ -20,11 +18,7 @@ from odfa11y import (
     terminal_text,
     validate_timeout,
 )
-
-if TYPE_CHECKING:
-    from odfa11y import (
-        Profile,
-    )
+lazy from odfa11y import Profile
 
 
 class TerminalParser(argparse.ArgumentParser):

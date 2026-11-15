@@ -1,17 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Schema-defined declaration fixtures with real package members and inline image data."""
 
-from __future__ import annotations
-
 import base64
 lazy from pathlib import Path
 
 from lxml import etree
 
-from odfa11y.content import GraphicAlternative, PageDecision
+from odfa11y.concepts import GraphicAlternative, PageDecision
 from odfa11y.families.pages import SetGraphicAlternatives, SetPageSemantics
 from odfa11y.odf import OdfDocument, Part, qn
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from tests.fixtures.native_resources import png_bytes
 from tests.fixtures.paths import TESTS
 

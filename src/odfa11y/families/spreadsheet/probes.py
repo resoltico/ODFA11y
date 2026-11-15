@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Calc's declared PDF/UA experiment uses an explicit semantic header row."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 from odfa11y.native.probe_pdf import calc_pdfua

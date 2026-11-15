@@ -1,31 +1,23 @@
 # SPDX-License-Identifier: MPL-2.0
 """Declared native capability experiments and batch-lifetime identity caching."""
 
-from __future__ import annotations
-
 import tempfile
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable, Sequence
 
 from odfa11y.errors import OdfA11yError, ToolFailedError
-from odfa11y.outcomes import ProgressEvent, StepName, StepState
+from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.progress import ProgressEvent, StepName, StepState
+lazy from odfa11y.decisions import Decision
+lazy from odfa11y.native.process import ToolIdentity
 lazy from odfa11y.odf import Family
+lazy from odfa11y.progress import ProgressObserver
 
-from .export import ExportSettings, export_pdfua
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-
-    from odfa11y.decisions import Decision
-    from odfa11y.outcomes import ProgressObserver
-
-    from .process import ToolIdentity
-
-    SourceWriter = Callable[[Path], Path]
-    Evaluation = Callable[[Path, str | Path | None, float], bool]
-    Exporter = Callable[[Path, Path, ExportSettings], Path]
+SourceWriter = Callable[[Path], Path]
+Evaluation = Callable[[Path, str | Path | None, float], bool]
+Exporter = Callable[[Path, Path, ExportSettings], Path]
 
 
 class ProbeId(StrEnum):

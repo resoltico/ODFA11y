@@ -1,24 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit standalone chart identity, descriptions, cached ranges and labels."""
 
-from __future__ import annotations
+lazy from lxml import etree
 
-from typing import TYPE_CHECKING
-
-from odfa11y.content import visible_words
+from odfa11y.concepts import visible_words
 from odfa11y.errors import RemediationError
+from odfa11y.families.chart.ranges import range_shape, resolve_range
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .ranges import range_shape, resolve_range
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
-
-    from .ranges import LocalRange
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.families.chart.ranges import LocalRange
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 
 def audit_chart(document: OdfDocument, report: Report) -> None:
@@ -53,7 +47,7 @@ def audit_chart(document: OdfDocument, report: Report) -> None:
             "Chart has no readable cached category or series labels.",
             location=location,
         )
-    if chart.get(qn("xlink", "href")) not in {None, ".", "./"}:
+    if chart.get(xml_names.XLINK_HREF) not in {None, ".", "./"}:
         report.add(
             rules.CHART005,
             "Chart refers to an external data provider; it was not fetched.",
@@ -68,9 +62,9 @@ def _ranges(chart: etree._Element, report: Report) -> None:
     )
     for index, node in enumerate(select_elements(chart, selectors), 1):
         for attribute in (
-            qn("chart", "values-cell-range-address"),
-            qn("chart", "label-cell-address"),
-            qn("table", "cell-range-address"),
+            xml_names.CHART_VALUES_CELL_RANGE_ADDRESS,
+            xml_names.CHART_LABEL_CELL_ADDRESS,
+            xml_names.TABLE_CELL_RANGE_ADDRESS,
         ):
             address = node.get(attribute)
             if address is None:
@@ -99,12 +93,12 @@ def _series_consistency(chart: etree._Element, report: Report) -> None:
     for plot in select_elements(chart, "./chart:plot-area"):
         categories = select_elements(plot, "./chart:axis/chart:categories")
         category = (
-            _resolved(chart, categories[0].get(qn("table", "cell-range-address")))
+            _resolved(chart, categories[0].get(xml_names.TABLE_CELL_RANGE_ADDRESS))
             if len(categories) == 1
             else None
         )
         for index, series in enumerate(select_elements(plot, "./chart:series"), 1):
-            values = _resolved(chart, series.get(qn("chart", "values-cell-range-address")))
+            values = _resolved(chart, series.get(xml_names.CHART_VALUES_CELL_RANGE_ADDRESS))
             if values is None:
                 continue
             location = Location.indexed(Part.CONTENT, "chart-series", index)
@@ -144,10 +138,10 @@ def _resolved(chart: etree._Element, address: str | None) -> LocalRange | None:
 
 
 def _nonnumeric(cell: etree._Element) -> bool:
-    if cell.tag == qn("table", "covered-table-cell"):
+    if cell.tag == xml_names.TABLE_COVERED_TABLE_CELL:
         return False
     numeric = {"float", "percentage", "currency", "date", "time"}
-    if cell.get(qn("office", "value-type")) in numeric:
+    if cell.get(xml_names.OFFICE_VALUE_TYPE) in numeric:
         return False
     has_value = any(
         (cell.get(qn("office", name)) or "").strip()

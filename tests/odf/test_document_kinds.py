@@ -1,23 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Every ODF kind, in both layouts, is recognised, audited and kept apart from other families."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.odf import KINDS, OdfDocument, validate
 from odfa11y.report import RULES, FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import KIND_SPECS, make_flat, make_package
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 LAYOUTS = {"package": make_package, "flat": make_flat}
 CASES = [(name, layout) for name in KIND_SPECS for layout in LAYOUTS]

@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Author invented Writer structure fixtures through the installed LibreOffice converter."""
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import json

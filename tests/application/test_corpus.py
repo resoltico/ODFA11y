@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """The Writer corpus: stored bytes, audit findings and schema validity of real documents."""
 
-from __future__ import annotations
-
 import hashlib
 from collections import defaultdict
-from typing import TYPE_CHECKING
 
 import pytest
 
-from odfa11y.content import visible_words
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import visible_words
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.corpus import CORPUS, DOCUMENT_IDS, DOCUMENT_SUFFIXES, DOCUMENTS
-
-if TYPE_CHECKING:
-    from tests.fixtures.corpus import CorpusDocument
+lazy from tests.fixtures.corpus import CorpusDocument
 
 EVERY_DOCUMENT = pytest.mark.parametrize("document", DOCUMENTS, ids=DOCUMENT_IDS)
 CORPUS_RULES = {

@@ -1,27 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Lossless language declarations and native default-channel persistence."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import style_language
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import style_language
+from odfa11y.concepts.edits import Status
 from odfa11y.language_tags import normalize_language
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import make_flat, make_package
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 
 @pytest.mark.parametrize(

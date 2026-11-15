@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Keep untrusted human-readable fields from controlling terminal presentation."""
 
-from __future__ import annotations
-
 BYTE_MAX = 0xFF
 BIDI_CONTROLS = frozenset({0x061C, 0x200E, 0x200F, *range(0x202A, 0x202F), *range(0x2066, 0x206A)})
 

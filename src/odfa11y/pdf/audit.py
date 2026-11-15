@@ -1,30 +1,26 @@
 # SPDX-License-Identifier: MPL-2.0
 """Inspect parsed PDF objects for accessibility diagnostics."""
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from lxml import etree
 from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import BooleanObject, StreamObject
+lazy from pypdf.generic import DictionaryObject
 
 from odfa11y.errors import ToolFailedError
+from odfa11y.odf import names as xml_names
+from odfa11y.pdf.link_structure import link_annotations
 from odfa11y.pdf.reading.consumption import check_consumption
 from odfa11y.pdf.reading.limits import check_file_size, check_limits
-from odfa11y.report import FactKeys, Report, rules
+from odfa11y.pdf.structure_checks import audit_structure
+from odfa11y.pdf.structure_walk import pdf_dictionary
+from odfa11y.report import FactKeys, Report
+from odfa11y.rules import registry as rules
 from odfa11y.safe_xml import parse_secure
 
-from .link_structure import link_annotations
-from .structure_checks import audit_structure
-from .structure_walk import pdf_dictionary
-
-if TYPE_CHECKING:
-    from pypdf.generic import DictionaryObject
-
-PDFUA_PART = "{http://www.aiim.org/pdfua/ns/id/}part"
+PDFUA_PART = xml_names.PDFUA_PART
 
 
 def audit_pdfua(pdf_path: str | Path) -> Report:

@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """A batch reuses relevant native observations without leaking identity or failure state."""
 
-from __future__ import annotations
-
 import json
 from dataclasses import replace
 lazy from pathlib import Path
@@ -10,14 +8,15 @@ lazy from pathlib import Path
 lazy import pytest
 
 from odfa11y.batch import run_batch
-from odfa11y.content import document_links, link_fingerprint
+from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.errors import ToolFailedError
 from odfa11y.families.text.probes import PROBES
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument, PackageStorage
-from odfa11y.pipeline.context import RunSettings
+from odfa11y.run import engine as run_engine
+from odfa11y.run.context import RunSettings
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.plans import plan_header
@@ -114,9 +113,10 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
     manifest = manifest_file(
         tmp_path, [(name, "source.odt", plan.name) for name in ["one", "two", "three"]]
     )
-    monkeypatch.setattr("odfa11y.pipeline.engine.find_soffice", lambda _: "controlled-soffice")
+    monkeypatch.setattr(run_engine, "find_soffice", lambda _: "controlled-soffice")
     monkeypatch.setattr(
-        "odfa11y.pipeline.engine.identify_soffice",
+        run_engine,
+        "identify_soffice",
         lambda _: ToolIdentity("LibreOffice", "26.8.1.1"),
     )
     control = fake_export(ProbeId.LINK_DESCRIPTIONS, supported=True)
@@ -125,7 +125,7 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
         tagged_writer(["H1", "P"]).write(destination)
         return destination
 
-    monkeypatch.setattr("odfa11y.pipeline.engine.export_pdfua", document_export)
+    monkeypatch.setattr(run_engine, "export_pdfua", document_export)
     calls = []
 
     def probe_export(source: Path, destination: Path, settings: ExportSettings) -> Path:

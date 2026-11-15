@@ -1,42 +1,33 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit a text document's structure: headings, graphics, tables, links, spacers, notes."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import TYPE_CHECKING
 
-from odfa11y.content import (
-    document_links,
-    link_decision,
-    link_has_description,
-    link_location,
-)
+lazy from lxml import etree
+
+from odfa11y.concepts import document_links, link_decision, link_has_description, link_location
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import RemediationError
-from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .contexts import context_location, text_nodes
-from .decisions import LINKIFY_ADDRESSES, REMOVE_SPACERS
-from .language.audit import audit_languages
-from .links import URI_RE, split_trailing_punctuation
-from .lists import audit_lists
-from .prose import prose_slots
-from .references import audit_references
-from .semantics import audit_headings, audit_images
-from .spacers import spacer_candidates
-from .style_properties import paragraph_style_name
-from .styles import catalog_of
-from .tables.audit import audit_tables
-from .visibility import audit_visibility
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.adapter import StyleUsage
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.families.text.contexts import context_location, text_nodes
+from odfa11y.families.text.headings.audit import audit_headings, audit_images
+from odfa11y.families.text.kinds import LINKIFY_ADDRESSES, REMOVE_SPACERS
+from odfa11y.families.text.language.audit import audit_languages
+from odfa11y.families.text.links.prose import prose_slots
+from odfa11y.families.text.links.urls import URI_RE, split_trailing_punctuation
+from odfa11y.families.text.lists import audit_lists
+from odfa11y.families.text.references import audit_references
+from odfa11y.families.text.spacing.candidates import spacer_candidates
+from odfa11y.families.text.styles.catalogue import catalog_of
+from odfa11y.families.text.styles.properties import paragraph_style_name
+from odfa11y.families.text.tables.audit import audit_tables
+from odfa11y.families.text.visibility import audit_visibility
+from odfa11y.odf import Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.families.text.styles.usage import StyleUsage
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 
 def audit_text(document: OdfDocument, report: Report) -> None:
@@ -69,8 +60,8 @@ def audit_text(document: OdfDocument, report: Report) -> None:
 def _audit_links(tree: etree._ElementTree, report: Report) -> None:
     """Report URLs and addresses in prose, exactly where linkification would act."""
     counts = {"heading": 0, "paragraph": 0}
-    for block in text_nodes(tree, qn("text", "p"), qn("text", "h")):
-        kind = "heading" if block.tag == qn("text", "h") else "paragraph"
+    for block in text_nodes(tree, xml_names.TEXT_P, xml_names.TEXT_H):
+        kind = "heading" if block.tag == xml_names.TEXT_H else "paragraph"
         counts[kind] += 1
         for owner, attr in prose_slots(block):
             for match in URI_RE.finditer(getattr(owner, attr)):
@@ -88,7 +79,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
     styles = []
     breaks = 0
     for paragraph in spacer_candidates(document.tree(Part.CONTENT)):
-        name = paragraph.get(qn("text", "style-name"))
+        name = paragraph.get(xml_names.TEXT_STYLE_NAME)
         try:
             breaks += catalog.has_break_semantics(name)
         except RemediationError:
@@ -135,9 +126,9 @@ def _style_rows(document: OdfDocument) -> tuple[list[StyleUsage], dict[str, str]
     counts: Counter[str] = Counter()
     problems = {}
     for node in text_nodes(
-        document.tree(Part.CONTENT), qn("text", "p"), qn("text", "h"), main_only=True
+        document.tree(Part.CONTENT), xml_names.TEXT_P, xml_names.TEXT_H, main_only=True
     ):
-        name = node.get(qn("text", "style-name")) or "(none)"
+        name = node.get(xml_names.TEXT_STYLE_NAME) or "(none)"
         try:
             paragraph_style_name(node)
         except RemediationError as exc:

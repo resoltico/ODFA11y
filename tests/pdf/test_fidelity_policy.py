@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Invalid fidelity choices refuse before export or evidence publication."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
+lazy from pathlib import Path
 
 import pytest
 
@@ -15,9 +14,6 @@ from odfa11y.plans import load_plan
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("value", ["nan", "inf", "-inf"])

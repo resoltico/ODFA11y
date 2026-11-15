@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Build synthetic spreadsheets, as packages or flat XML, with selected structural features."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
 lazy from collections.abc import Mapping
+lazy from pathlib import Path
 
 from odfa11y.families.spreadsheet import SetSheetNames
 from odfa11y.families.spreadsheet.names import SheetNameChange
@@ -12,9 +10,6 @@ from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import OdfDocument, Part
 from tests.fixtures.documents import Variant, make_flat, make_package
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 LAYOUTS = {"package": make_package, "flat": make_flat}
 HIDDEN_SHEET_STYLE = (

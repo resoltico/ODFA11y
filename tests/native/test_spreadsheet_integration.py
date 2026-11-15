@@ -1,29 +1,28 @@
 # SPDX-License-Identifier: MPL-2.0
 """Spreadsheets authored by LibreOffice itself: audited, edited, reloaded, exported and compared."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfReader
 
-from odfa11y.content import GraphicAlternative
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import GraphicAlternative
 from odfa11y.families.spreadsheet import SetGraphicAlternatives
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.outcomes import PIPELINE_STAGES
 from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.remediation import SetMetadata
+from odfa11y.progress import PIPELINE_STAGES
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.spreadsheets import (
@@ -36,12 +35,7 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from odfa11y.pipeline.record import RunRecord
+lazy from odfa11y.run.record import RunRecord
 
 pytestmark = pytest.mark.integration
 PNG = (

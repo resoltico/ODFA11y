@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """PDF size, page-count and structure limits are enforced at their inspection boundaries."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
@@ -13,9 +11,6 @@ from odfa11y.pdf import structure_walk as walk
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.reading import limits
 from tests.fixtures.pdf import tagged_writer, text_pdf
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_an_oversized_pdf_is_a_finding_not_a_crash(

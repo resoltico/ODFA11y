@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Install the pinned veraPDF release on any runner and print the directory to put on PATH."""
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import subprocess

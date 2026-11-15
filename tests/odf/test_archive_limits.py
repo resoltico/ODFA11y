@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reject corrupt, ambiguous and resource-exhausting ZIP inputs at their real boundary."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError
 from odfa11y.odf import PackageStorage
 from odfa11y.odf import archive as archive_limits
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.writer import TEXT_MEDIA_TYPE, make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_duplicate_zip_members_are_reported_and_cannot_be_rewritten(tmp_path: Path) -> None:

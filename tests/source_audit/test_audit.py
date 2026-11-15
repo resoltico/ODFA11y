@@ -1,25 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Report accessibility findings for synthetic ODT documents."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import PackageStorage
 from odfa11y.plans import load_plan
 from odfa11y.report import RULES, FactKeys, Location, Severity
-from odfa11y.source_audit import audit_odf, prepare_plan
 from tests.fixtures.plans import question_for
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
-    from tests.fixtures.writer import Features
+lazy from odfa11y.report import Report
+lazy from tests.fixtures.writer import Features
 
 
 def ids(report: Report) -> set[str]:

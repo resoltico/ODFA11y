@@ -1,21 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Link-description self-test, native Name controls and pipeline evidence."""
 
-from __future__ import annotations
-
 import json
 import runpy
 import sys
 import zipfile
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import NameObject, TextStringObject
 
 from odfa11y import __version__
+from odfa11y.application.tools import Tools
 from odfa11y.cli import main
-from odfa11y.content import LinkDescription, document_links, link_fingerprint
+from odfa11y.concepts import LinkDescription, document_links, link_fingerprint
 from odfa11y.errors import ToolFailedError, ToolNotFoundError
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text import SetLinkDescriptions
@@ -32,9 +31,9 @@ from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import Family, OdfDocument, PackageStorage, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.tools import Tools
+from odfa11y.run import diagnostics as run_diagnostics
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
 from tests.fixtures.paths import TESTS
 from tests.fixtures.pdf import (
     annotation_references,
@@ -46,13 +45,7 @@ from tests.fixtures.pdf import (
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.probes import conclusive_probe
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from odfa11y.native.probes import (
-        CapabilityProbe,
-    )
+lazy from odfa11y.native.probes import CapabilityProbe
 
 WRITER = "writer_pdf_Export"
 SETTINGS = ExportSettings(WRITER)
@@ -87,18 +80,16 @@ def probe(tmp_path: Path) -> Path:
 @pytest.fixture
 def reported_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     """Supply explicit identities for doctor output tests without launching native tools."""
+    monkeypatch.setattr(run_diagnostics, "find_soffice", lambda _requested: "test-soffice")
     monkeypatch.setattr(
-        "odfa11y.pipeline.diagnostics.find_soffice", lambda _requested: "test-soffice"
-    )
-    monkeypatch.setattr(
-        "odfa11y.pipeline.diagnostics.identify_soffice",
+        run_diagnostics,
+        "identify_soffice",
         lambda _executable: ToolIdentity("LibreOffice", "26.8.0.3"),
     )
+    monkeypatch.setattr(run_diagnostics, "find_verapdf", lambda _requested=None: "test-verapdf")
     monkeypatch.setattr(
-        "odfa11y.pipeline.diagnostics.find_verapdf", lambda _requested=None: "test-verapdf"
-    )
-    monkeypatch.setattr(
-        "odfa11y.pipeline.diagnostics.identify",
+        run_diagnostics,
+        "identify",
         lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.3"),
     )
 

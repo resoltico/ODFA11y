@@ -1,24 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Read what a comparison needs from a PDF: page sizes, text and link targets."""
 
-from __future__ import annotations
-
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError, PyPdfError
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject
+lazy from pypdf import PageObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.fidelity.uri import effective_uri, uri_base
 from odfa11y.pdf.reading.consumption import check_consumption, resolve
 from odfa11y.pdf.reading.limits import check_file_size, check_limits
-
-if TYPE_CHECKING:
-    from pypdf import PageObject
 
 SIZE_PRECISION = 1
 

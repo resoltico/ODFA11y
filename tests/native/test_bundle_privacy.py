@@ -1,32 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
 """Diagnostic evidence redacts local directories on successful and failed runs."""
 
-from __future__ import annotations
-
 import re
 import stat
 import sys
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.content import GraphicAlternative
+from odfa11y.application.tools import Tools
+from odfa11y.concepts import GraphicAlternative
 from odfa11y.evidence import check_bundle
 from odfa11y.evidence.redact import ABSOLUTE_PATH
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.remediation import SetMetadata
-from odfa11y.tools import Tools
+from odfa11y.remediate import SetMetadata
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 SENTINEL = "zz-private-person-zz"
 DIAGNOSTIC_NAMES = {"run.json", "REVIEW.md", "verapdf.xml", "manifest.json"}

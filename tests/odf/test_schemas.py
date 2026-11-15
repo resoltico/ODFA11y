@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Published schemas reject invalid formats and facts and match generated authorities."""
 
-from __future__ import annotations
-
 from copy import deepcopy
 
 import pytest

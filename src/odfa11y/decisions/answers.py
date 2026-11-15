@@ -1,14 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Shared answer fields, constraints and help for cross-family human decisions."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from odfa11y.decisions.validation import LANGUAGE_TAG_FORMAT, xml_text_constraints
 from odfa11y.odf import SUPPORTED_VERSIONS
-
-from .validation import LANGUAGE_TAG_FORMAT, xml_text_constraints
 
 
 @dataclass(frozen=True, slots=True)

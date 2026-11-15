@@ -1,28 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Inspect database privacy, declared bindings and descriptions without executing anything."""
 
-from __future__ import annotations
-
 import re
-from typing import TYPE_CHECKING
+
+lazy from lxml import etree
 
 from odfa11y.decisions import OpenDecision
-from odfa11y.odf import PackageStorage, Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .decisions import DATABASE_DESCRIPTION
-from .descriptions import description_attribute, fingerprint, targets
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.families.database.descriptions import description_attribute, fingerprint, targets
+from odfa11y.families.database.kinds import DATABASE_DESCRIPTION
+from odfa11y.odf import PackageStorage, Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 CREDENTIALS = re.compile(
     r"(?:password|passwd|pwd|user|username|token|secret)\s*[=:]|://[^/\s]+@", re.IGNORECASE
 )
-CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
+CONFIG = xml_names.CONFIG_NAMESPACE
 AUTHENTICATION_SETTINGS = {
     "password",
     "passwd",
@@ -69,7 +65,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
     )
     _connections(resources, names, report)
     logins = select_elements(databases[0], ".//db:login")
-    if any(node.get(qn("db", "user-name")) for node in logins):
+    if any(node.get(xml_names.DB_USER_NAME) for node in logins):
         report.add(rules.BASE003, "Database stores a login identity; its value is not reported.")
     _sensitive_settings(document, report)
     _objects(document, report)
@@ -78,7 +74,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
 
 def _connections(resources: list[etree._Element], names: tuple[str, ...], report: Report) -> None:
     for resource in resources:
-        connection = resource.get(qn("xlink", "href"), "")
+        connection = resource.get(xml_names.XLINK_HREF, "")
         if not connection.startswith("sdbc:embedded:"):
             report.add(rules.BASE002, "Database connection is external; it was not opened.")
         elif not any(name.startswith("database/") and not name.endswith("/") for name in names):
@@ -93,10 +89,10 @@ def _connections(resources: list[etree._Element], names: tuple[str, ...], report
 def _sensitive_settings(document: OdfDocument, report: Report) -> None:
     for tree in document.distinct_trees(Part.CONTENT, Part.SETTINGS):
         for node in tree.iter():
-            if node.tag == qn("db", "data-source-setting"):
-                name = node.get(qn("db", "data-source-setting-name"), "")
-                kind = node.get(qn("db", "data-source-setting-type"))
-                values = node.iter(qn("db", "data-source-setting-value"))
+            if node.tag == xml_names.DB_DATA_SOURCE_SETTING:
+                name = node.get(xml_names.DB_DATA_SOURCE_SETTING_NAME, "")
+                kind = node.get(xml_names.DB_DATA_SOURCE_SETTING_TYPE)
+                values = node.iter(xml_names.DB_DATA_SOURCE_SETTING_VALUE)
             elif node.tag == CONFIG + "config-item":
                 name = node.get(CONFIG + "name", "")
                 kind = node.get(CONFIG + "type")

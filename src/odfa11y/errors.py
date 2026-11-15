@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Domain exceptions: every expected failure is one of these, never a bare builtin."""
 
-from __future__ import annotations
-
 
 class OdfA11yError(Exception):
     """Base class for failures the command line reports without a traceback."""

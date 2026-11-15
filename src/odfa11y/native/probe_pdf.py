@@ -1,25 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Evaluate precisely scoped exported-PDF capability observations."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
 lazy from pathlib import Path
 
 from pypdf import PdfReader
 from pypdf.generic import ContentStream, StreamObject
+lazy from pypdf.generic import DictionaryObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
 from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
 from odfa11y.report import FactKeys, exit_status
-
-if TYPE_CHECKING:
-    from pypdf.generic import DictionaryObject
-
-    from odfa11y.report import Report
-
+lazy from odfa11y.report import Report
 
 PROBE_IMAGES = 2
 PROBE_HEADERS = 2

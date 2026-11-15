@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Explicit graphic descriptions for the text family."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from collections.abc import Mapping
 
-from odfa11y.adapter import Operation
-from odfa11y.content import SHAPE_TAGS, GraphicEditor, LinkEditor
+from odfa11y.concepts import SHAPE_TAGS, GraphicEditor, LinkEditor
+from odfa11y.concepts.edits import Operation
 from odfa11y.odf import Family
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from odfa11y.adapter import Outcome
-    from odfa11y.content import GraphicAlternative, LinkDescription
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.concepts import GraphicAlternative, LinkDescription
+lazy from odfa11y.concepts.edits import Outcome
+lazy from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)

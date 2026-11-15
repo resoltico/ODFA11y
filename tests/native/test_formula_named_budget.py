@@ -1,30 +1,26 @@
 # SPDX-License-Identifier: MPL-2.0
 """Parser nesting and named dependency nesting must not multiply Python stack depth."""
 
-from __future__ import annotations
-
 import json
 import sys
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import ToolFailedError
-from odfa11y.native.formula_syntax import OPENFORMULA, FormulaFacts, classify_formula
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
+from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.native import export_document
-from odfa11y.pipeline.profiles import profile_named
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.run import native as run_native
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.native import export_document
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.documents import TABLE_BODY, Variant, make_flat
 from tests.fixtures.plans import reviewed_plan
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def named_chain(tmp_path: Path, count: int, wrappers: int) -> Path:
@@ -55,7 +51,7 @@ def test_valid_named_chains_do_not_multiply_lexical_parser_stack(
     report = audit_odf(source)
     assert "NATIVE001" not in {finding.rule_id for finding in report.findings}
     calls = []
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
+    monkeypatch.setattr(run_native, "export_pdfua", lambda *args: calls.append(args))
     export_document(source, tmp_path / "output.pdf")
     assert len(calls) == 1
 
@@ -69,7 +65,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     assert "NATIVE001" in {finding.rule_id for finding in report.findings}
     assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_incomplete"] > 0
     calls = []
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", lambda *args: calls.append(args))
+    monkeypatch.setattr(run_native, "export_pdfua", lambda *args: calls.append(args))
     with pytest.raises(ToolFailedError, match="formula context"):
         export_document(source, tmp_path / "output.pdf")
     record = execute(
@@ -92,10 +88,10 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
 
 
 def test_remaining_python_stack_exhaustion_is_explicitly_incomplete() -> None:
-    def unavailable_stack(_: str) -> FormulaFacts:
+    def unavailable_stack(_: str) -> FormulaAnalysis:
         message = "Caller stack exhausted"
         raise RecursionError(message)
 
-    assert classify_formula("of:=Named", {"of": OPENFORMULA}, unavailable_stack) == FormulaFacts(
+    assert classify_formula("of:=Named", {"of": OPENFORMULA}, unavailable_stack) == FormulaAnalysis(
         incomplete=1
     )

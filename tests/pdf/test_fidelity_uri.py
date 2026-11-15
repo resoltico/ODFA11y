@@ -1,24 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Effective URI destinations, independent expected references and malformed contexts."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject, TextStringObject
+lazy from pypdf.generic import PdfObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from tests.fixtures.pdf import register, text_pdf
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf.generic import PdfObject
 
 
 def _with_base(path: Path, links: list[str], base: PdfObject | None) -> Path:

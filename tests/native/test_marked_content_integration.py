@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Real veraPDF independently rejects controlled damage to a compliant Writer export."""
 
-from __future__ import annotations
-
 import re
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
@@ -13,10 +12,6 @@ from pypdf.generic import ContentStream, DecodedStreamObject
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 SEQUENCE = re.compile(rb"/[A-Za-z0-9]+\s*<<\s*/MCID\s+(\d+)\s*>>\s*BDC")
 

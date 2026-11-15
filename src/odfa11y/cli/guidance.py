@@ -1,18 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Offer safe next actions for findings and typed command failures."""
 
-from __future__ import annotations
-
 import shlex
-from typing import TYPE_CHECKING
+lazy import argparse
+lazy from collections.abc import Iterable
 
 from odfa11y import OutputError, PlanError, ToolNotFoundError, plan_blockers, terminal_text
-
-if TYPE_CHECKING:
-    import argparse
-    from collections.abc import Iterable
-
-    from odfa11y import Report
+lazy from odfa11y import Report
 
 
 def error_hint(args: argparse.Namespace, exc: Exception) -> str | None:

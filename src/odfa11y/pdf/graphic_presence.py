@@ -1,21 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reconcile described Figures with graphical operations on their declared pages."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
 from pypdf.generic import NumberObject, StreamObject
+lazy from pypdf import PageObject
+lazy from pypdf.generic import DictionaryObject
 
-from .structure_walk import pdf_dictionary
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from pypdf import PageObject
-    from pypdf.generic import DictionaryObject
-
-    from .structure_walk import StructureNode
+from odfa11y.pdf.structure_walk import pdf_dictionary
+lazy from odfa11y.pdf.structure_walk import StructureNode
 
 
 def page_images(page: PageObject | DictionaryObject) -> Callable[[str], bool]:

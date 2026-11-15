@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Independent PDF controls and explicit probe doubles for native workflow tests."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 from pypdf.generic import (
     ArrayObject,
@@ -13,6 +12,7 @@ from pypdf.generic import (
     NumberObject,
     TextStringObject,
 )
+lazy from pypdf import PdfWriter
 
 from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeExecution, ProbeId
 from tests.fixtures.pdf import (
@@ -25,16 +25,9 @@ from tests.fixtures.pdf import (
     set_page_content,
     tagged_writer,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-
-    from odfa11y.native.export import ExportSettings
-    from odfa11y.native.probes import CapabilityProbe, ProbeCache
-    from odfa11y.native.process import ToolIdentity
+lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.probes import CapabilityProbe, ProbeCache
+lazy from odfa11y.native.process import ToolIdentity
 
 PURPOSE = "ODFA11y reviewed link purpose."
 

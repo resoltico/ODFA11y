@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Stored-size and traversal limits for PDF inspection; OS isolation remains necessary."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from odfa11y.errors import ToolFailedError

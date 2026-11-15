@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Independent Base controls cover nested review identity and flat settings boundaries."""
 
-from __future__ import annotations
-
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import ClassVar, override
@@ -11,13 +9,13 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.paths import TESTS
 

@@ -1,23 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Describe declared database objects without opening connections or changing bindings."""
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from collections.abc import Mapping
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import protected_xml
+lazy from lxml import etree
+
+from odfa11y.concepts import protected_xml
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf import OdfDocument
 
 OBJECTS = {
     qn("db", name)
@@ -62,7 +58,7 @@ def description_attribute(node: etree._Element) -> str:
         ``db:description`` or a form control's ``form:title``.
 
     """
-    return qn("form", "title") if _form_target(node) else qn("db", "description")
+    return xml_names.FORM_TITLE if _form_target(node) else xml_names.DB_DESCRIPTION
 
 
 def fingerprint(node: etree._Element) -> str:
@@ -86,18 +82,18 @@ def description_attributes(root: etree._Element) -> dict[str, tuple[str, ...]]:
         Standard object attributes, including independently described descendants.
 
     """
-    attributes: dict[str, tuple[str, ...]] = {tag: (qn("db", "description"),) for tag in OBJECTS}
+    attributes: dict[str, tuple[str, ...]] = {tag: (xml_names.DB_DESCRIPTION,) for tag in OBJECTS}
     for node in root.iter():
         if _form_target(node):
-            attributes[str(node.tag)] = (qn("form", "title"),)
+            attributes[str(node.tag)] = (xml_names.FORM_TITLE,)
     return attributes
 
 
 def _form_target(node: etree._Element) -> bool:
     return (
         isinstance(node.tag, str)
-        and node.tag.startswith(qn("form", ""))
-        and bool(node.get(qn("form", "name")))
+        and node.tag.startswith(xml_names.FORM_)
+        and bool(node.get(xml_names.FORM_NAME))
     )
 
 
@@ -107,7 +103,7 @@ def _path(node: etree._Element, positions: dict[etree._Element, dict[etree._Elem
         if item.tag not in OBJECTS and not _form_target(item):
             continue
         kind = str(item.tag).rpartition("}")[2]
-        name = item.get(qn("db", "name")) or item.get(qn("form", "name"))
+        name = item.get(xml_names.DB_NAME) or item.get(xml_names.FORM_NAME)
         segment = (
             Location.named("content", kind, name).path
             if name

@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Validate and represent lossless RFC 5646 language-tag values without XML dependencies."""
 
-from __future__ import annotations
-
 import re
 
 # RFC 5646 grandfathered tags have an explicitly enumerated syntax.

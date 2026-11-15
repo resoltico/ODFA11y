@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """List the fonts a PDF uses and whether each is embedded."""
 
-from __future__ import annotations
-
 import re
 from pathlib import Path
 
@@ -12,8 +10,7 @@ from pypdf.generic import ArrayObject
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.reading.limits import MAX_PDF_PAGES, check_file_size
-
-from .structure_walk import pdf_dictionary
+from odfa11y.pdf.structure_walk import pdf_dictionary
 
 SUBSET_TAG = re.compile(r"^[A-Z]{6}\+")
 FONT_FILE_KEYS = ("/FontFile", "/FontFile2", "/FontFile3")

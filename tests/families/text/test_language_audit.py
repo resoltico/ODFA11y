@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Read-only language inspection reports unresolved declarations without guessing a remedy."""
 
-from __future__ import annotations
-
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf, prepare_plan
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize(

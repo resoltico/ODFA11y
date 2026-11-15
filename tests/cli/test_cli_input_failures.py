@@ -1,24 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """CLI input refusals terminate promptly and preserve independent audit results."""
 
-from __future__ import annotations
-
 import json
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import EncodedStreamObject, NameObject, StreamObject
 
 from odfa11y.cli import main
-from odfa11y.pipeline.comparison import is_pdf
+from odfa11y.run import comparison as run_comparison
+from odfa11y.run.comparison import is_pdf
 from tests.fixtures.pdf import register, tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("operand", ["audit", "source", "candidate"])
@@ -144,9 +140,7 @@ def test_compare_preflight_rejects_candidate_before_export(
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     calls = []
-    monkeypatch.setattr(
-        "odfa11y.pipeline.comparison.export_pdfua", lambda *args: calls.append(args)
-    )
+    monkeypatch.setattr(run_comparison, "export_pdfua", lambda *args: calls.append(args))
     assert main(["compare", str(source), str(tmp_path / "missing")]) == 3
     assert not calls
 

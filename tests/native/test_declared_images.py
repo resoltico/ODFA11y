@@ -1,23 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 """Supported Draw fills and Writer image bullets retain independently known pixels."""
 
-from __future__ import annotations
-
 import base64
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.cli import main
-from odfa11y.native.export_context import require_native_context
 from odfa11y.odf import OdfDocument, Part, qn, validate
+from odfa11y.odf.export_context import require_native_context
 from tests.fixtures.declarations import declaration
 from tests.fixtures.native_resources import PIXELS, decoded_images, png_bytes, writer_resource
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 pytestmark = pytest.mark.integration
 

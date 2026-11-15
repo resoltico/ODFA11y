@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Expose authored visibility declarations without evaluating conditions or cached state."""
 
-from __future__ import annotations
+lazy from lxml import etree
 
-from typing import TYPE_CHECKING
-
-from odfa11y.content import reading_context_path
+from odfa11y.concepts import reading_context_path
+from odfa11y.families.text.visibility.reading_order import audit_reading_order
+from odfa11y.families.text.visibility.revisions import audit_revisions
 from odfa11y.odf import Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .reading_order import audit_reading_order
-from .revisions import audit_revisions
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.odf import names as xml_names
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 FIELDS = {qn("text", name) for name in ("hidden-text", "conditional-text", "hidden-paragraph")}
 BOOLEAN = {None, "true", "false", "1", "0"}
@@ -28,9 +23,9 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
     audit_revisions(tree, report)
     rows: list[dict[str, object]] = []
     for node in select_elements(tree, "//office:body//*"):
-        section = node.tag == qn("text", "section")
-        conditional = node.get(qn("text", "condition"))
-        display = node.get(qn("text", "display"))
+        section = node.tag == xml_names.TEXT_SECTION
+        conditional = node.get(xml_names.TEXT_CONDITION)
+        display = node.get(xml_names.TEXT_DISPLAY)
         if node.tag not in FIELDS and not (
             section and (conditional is not None or display in {"none", "condition"})
         ):
@@ -41,8 +36,8 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
             "kind": str(node.tag).split("}")[-1],
             "condition": conditional,
             "display": display,
-            "cached_hidden": node.get(qn("text", "is-hidden")),
-            "cached_condition": node.get(qn("text", "current-value")),
+            "cached_hidden": node.get(xml_names.TEXT_IS_HIDDEN),
+            "cached_condition": node.get(xml_names.TEXT_CURRENT_VALUE),
         })
         if not _coherent(node):
             report.add(
@@ -61,9 +56,9 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
 
 
 def _coherent(node: etree._Element) -> bool:
-    condition = node.get(qn("text", "condition"))
-    if node.tag == qn("text", "section"):
-        display = node.get(qn("text", "display"))
+    condition = node.get(xml_names.TEXT_CONDITION)
+    if node.tag == xml_names.TEXT_SECTION:
+        display = node.get(xml_names.TEXT_DISPLAY)
         return (display == "none" and condition is None) or (
             display == "condition" and bool(condition and condition.strip())
         )
@@ -73,9 +68,9 @@ def _coherent(node: etree._Element) -> bool:
         return False
     required = (
         ("string-value-if-true", "string-value-if-false")
-        if node.tag == qn("text", "conditional-text")
+        if node.tag == xml_names.TEXT_CONDITIONAL_TEXT
         else ("string-value",)
-        if node.tag == qn("text", "hidden-text")
+        if node.tag == xml_names.TEXT_HIDDEN_TEXT
         else ()
     )
     return all(qn("text", name) in node.attrib for name in required)

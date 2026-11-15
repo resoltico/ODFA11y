@@ -1,25 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed group, link and page metadata binds descendant graphic style definitions."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, LinkDescription, PageDecision, graphics_fingerprint
-from odfa11y.content.links import link_fingerprint, link_location
-from odfa11y.content.pages import page_fingerprint, pages
+from odfa11y.concepts import GraphicAlternative, LinkDescription, PageDecision, graphics_fingerprint
+from odfa11y.concepts.edits import Status
+from odfa11y.concepts.links import link_fingerprint, link_location
+from odfa11y.concepts.pages import page_fingerprint, pages
 from odfa11y.families.pages import SetGraphicAlternatives, SetLinkDescriptions, SetPageSemantics
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.graphics import _style
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 BODY = (
     '<office:drawing><draw:page draw:name="Overview" draw:master-page-name="Default">'

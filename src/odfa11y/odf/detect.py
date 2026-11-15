@@ -1,25 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Identify what kind of document a storage holds and which ODF version it declares."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+
+lazy from lxml import etree
 
 from odfa11y.errors import PackageError
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.kinds import kind_for_media_type
+from odfa11y.odf.names import NS, is_office_element
+from odfa11y.odf.storage import Part
+from odfa11y.odf.xpath import select_elements
+lazy from odfa11y.odf.document import OdfDocument
+lazy from odfa11y.odf.kinds import DocumentKind
 
-from .kinds import kind_for_media_type
-from .namespaces import NS, is_office_element, qn
-from .storage import Part
-from .xpath import select_elements
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from .document import OdfDocument
-    from .kinds import DocumentKind
-
-MIMETYPE_MEMBER = "mimetype"
+MIMETYPE_MEMBER = xml_names.MIMETYPE_MEMBER
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,13 +70,13 @@ def declared_version(document: OdfDocument) -> str | None:
     """
     root = _root(document, Part.CONTENT)
     if root is not None and is_office_element(root):
-        return root.get(qn("office", "version"))
+        return root.get(xml_names.OFFICE_VERSION)
     manifest = _root(document, Part.MANIFEST)
     if manifest is None:
         return None
     entry = _root_entry(manifest)
-    return (entry.get(qn("manifest", "version")) if entry is not None else None) or manifest.get(
-        qn("manifest", "version")
+    return (entry.get(xml_names.MANIFEST_VERSION) if entry is not None else None) or manifest.get(
+        xml_names.MANIFEST_VERSION
     )
 
 
@@ -89,7 +84,7 @@ def _declared_media_type(document: OdfDocument) -> tuple[str | None, str]:
     storage = document.storage
     if storage.layout == "flat":
         root = _root(document, Part.CONTENT)
-        value = root.get(qn("office", "mimetype")) if root is not None else None
+        value = root.get(xml_names.OFFICE_MIMETYPE) if root is not None else None
         return value, "office:mimetype"
     if storage.has(MIMETYPE_MEMBER):
         try:
@@ -102,7 +97,7 @@ def _declared_media_type(document: OdfDocument) -> tuple[str | None, str]:
 def _manifest_media_type(document: OdfDocument) -> str | None:
     manifest = _root(document, Part.MANIFEST)
     entry = _root_entry(manifest) if manifest is not None else None
-    return entry.get(qn("manifest", "media-type")) if entry is not None else None
+    return entry.get(xml_names.MANIFEST_MEDIA_TYPE) if entry is not None else None
 
 
 def _root_entry(manifest: etree._Element) -> etree._Element | None:

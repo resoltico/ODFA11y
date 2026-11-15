@@ -1,30 +1,25 @@
 # SPDX-License-Identifier: MPL-2.0
 """Derive and independently recognize target-local language styles."""
 
-from __future__ import annotations
-
 import base64
 import binascii
 import json
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from odfa11y.content import CHANNEL_ATTRIBUTES, protected_xml
+from odfa11y.concepts import CHANNEL_ATTRIBUTES, protected_xml
 from odfa11y.errors import RemediationError
-from odfa11y.families.text.styles import catalog_of
+from odfa11y.families.text.language.effective import BLOCKS, CHANNELS, language_targets
+from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.language_tags import language_parts, normalize_language
-from odfa11y.odf import NS, qn
-
-from .effective import BLOCKS, CHANNELS, language_targets
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+from odfa11y.odf import NS
+from odfa11y.odf import names as xml_names
+lazy from odfa11y.odf import OdfDocument
 
 PREFIX = "A11yLanguage_"
-STYLE_NAME = qn("text", "style-name")
+STYLE_NAME = xml_names.TEXT_STYLE_NAME
 
 
 @dataclass(frozen=True)
@@ -76,13 +71,13 @@ def derive(document: OdfDocument, family: str, binding: Binding) -> etree._Eleme
     style = (
         deepcopy(base)
         if base is not None
-        else etree.Element(qn("style", "style"), nsmap=catalog.content_tree.getroot().nsmap)
+        else etree.Element(xml_names.STYLE_STYLE, nsmap=catalog.content_tree.getroot().nsmap)
     )
-    style.set(qn("style", "name"), binding.name)
-    style.set(qn("style", "family"), family)
+    style.set(xml_names.STYLE_NAME, binding.name)
+    style.set(xml_names.STYLE_FAMILY, family)
     props = style.find("style:text-properties", NS)
     if props is None:
-        props = etree.SubElement(style, qn("style", "text-properties"))
+        props = etree.SubElement(style, xml_names.STYLE_TEXT_PROPERTIES)
     for channel, tag in enumerate(binding.overrides):
         if tag is None:
             continue
@@ -120,7 +115,7 @@ def binding_of(document: OdfDocument, node: etree._Element, target: str) -> Bind
         raise RemediationError(message)
     parent = actual.getparent()
     expected = derive(document, family_of(node), binding)
-    if parent is None or parent.tag != qn("office", "automatic-styles"):
+    if parent is None or parent.tag != xml_names.OFFICE_AUTOMATIC_STYLES:
         raise RemediationError(message)
     if protected_xml(actual) != protected_xml(expected):
         raise RemediationError(message)

@@ -1,26 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Correlate link annotations with the Link structure elements that should represent them."""
 
-from __future__ import annotations
-
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, IndirectObject, PdfObject
+lazy from pypdf import PdfReader
+lazy from pypdf.generic import DictionaryObject
 
-from odfa11y.report import FactKeys, rules
-
-from .structure_walk import pdf_dictionary
-
-if TYPE_CHECKING:
-    from pypdf import PdfReader
-    from pypdf.generic import DictionaryObject
-
-    from odfa11y.report import Report
-
-    from .structure_walk import StructureNode
+from odfa11y.pdf.structure_walk import pdf_dictionary
+from odfa11y.report import FactKeys
+from odfa11y.rules import registry as rules
+lazy from odfa11y.pdf.structure_walk import StructureNode
+lazy from odfa11y.report import Report
 
 MAX_LISTED = 20
 

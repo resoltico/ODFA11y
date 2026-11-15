@@ -1,23 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """List relationships are inspected without changing authored typography or content."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.families.text.lists import audit_lists
 from odfa11y.odf import OdfDocument, Part, select_elements
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 ITEM = "<text:list-item><text:p>Apples</text:p></text:list-item>"
 

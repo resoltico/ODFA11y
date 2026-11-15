@@ -1,20 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """How an ODF document is stored, and the logical parts every layout provides."""
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
+lazy import os
+lazy from pathlib import Path
 
 from lxml import etree
 
 from odfa11y.errors import XmlParseError
 from odfa11y.safe_xml import parse_secure
-
-if TYPE_CHECKING:
-    import os
-    from pathlib import Path
 
 
 class Part(StrEnum):

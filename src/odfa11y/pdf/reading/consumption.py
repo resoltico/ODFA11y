@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Bound decoded streams and invocation work before PDF inspection or extraction."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
 
 from pypdf import apply_configuration
 from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, DictionaryObject, IndirectObject, StreamObject
+lazy from pypdf import PdfReader
 
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.reading.content import scan_content
 from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
-
-if TYPE_CHECKING:
-    from pypdf import PdfReader
 
 MAX_CONTENT_STREAMS = 10_000
 MAX_FORM_DEPTH = 50

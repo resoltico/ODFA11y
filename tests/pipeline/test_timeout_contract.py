@@ -1,28 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native durations are validated before side effects and reach real validator work."""
 
-from __future__ import annotations
-
 import math
 import os
 import sys
 import time
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
 
+from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
 from odfa11y.errors import PlanError, ToolFailedError
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import MAX_TIMEOUT_SECONDS, run_bounded, validate_timeout
 from odfa11y.pdf import check_pdfua, validate_pdfua
-from odfa11y.pipeline.inspection import audit_document
-from odfa11y.tools import Tools
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from odfa11y.run.inspection import audit_document
 
 
 @pytest.mark.parametrize(

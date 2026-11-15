@@ -1,16 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Scan a page content stream for marked-content identifiers and unmarked text."""
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
 from odfa11y.pdf.reading.content.inline_image import inline_image_end
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 _SPACE = rb"\x00\t\n\x0c\r "
 _REGULAR = rb"[^" + _SPACE + rb"()<>\[\]{}/%]"

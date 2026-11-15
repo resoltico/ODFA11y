@@ -1,20 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit the standard image body without fetching or converting its graphic."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.content import GraphicIdentity, audit_graphic_role
-from odfa11y.native.resources import local_resource_path
-from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .payload import inspect_payload
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.concepts import GraphicIdentity, audit_graphic_role
+from odfa11y.families.image.payload import inspect_payload
+from odfa11y.odf import NS, Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.resources import local_resource_path
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 
 def audit_image(document: OdfDocument, report: Report) -> None:
@@ -25,7 +20,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
         report.add(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
         return
     frame = frames[0]
-    name = frame.get(qn("draw", "name"))
+    name = frame.get(xml_names.DRAW_NAME)
     location = (
         Location.named(Part.CONTENT, "frame", name)
         if name
@@ -37,7 +32,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     description = (frame.findtext("svg:title", namespaces=NS) or "") + (
         frame.findtext("svg:desc", namespaces=NS) or ""
     )
-    href = images[0].get(qn("xlink", "href")) if images else None
+    href = images[0].get(xml_names.XLINK_HREF) if images else None
     identity = GraphicIdentity(document, frames)
     decorative = audit_graphic_role(document, frame, report)
     if not description.strip() and not decorative:
@@ -51,7 +46,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
             report.add(rules.IMAGE004, problem, location=location)
         if review:
             report.add(rules.IMAGE005, location=location)
-        href = image.get(qn("xlink", "href"))
+        href = image.get(xml_names.XLINK_HREF)
         embedded = image.find("office:binary-data", NS)
         local = local_resource_path(href) if href else None
         if embedded is None and (local is None or not document.storage.has(local)):

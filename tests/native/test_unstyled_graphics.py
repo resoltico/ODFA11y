@@ -1,24 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native implicit Writer placement cannot be replaced by an unproven graphic style."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, graphics_fingerprint
+from odfa11y.concepts import GraphicAlternative, graphics_fingerprint
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
 from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 pytestmark = pytest.mark.integration
 

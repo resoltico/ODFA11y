@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native chart metadata edits preserve its data, references and source-only boundary."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import ClassVar, override
 lazy from pathlib import Path
@@ -10,18 +8,18 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Operation, Outcome, Status
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.errors import PlanError, RemediationError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
 from odfa11y.plans import load_plan
-from odfa11y.remediation import SetMetadata
-from odfa11y.source_audit import audit_odf
+from odfa11y.remediate import SetMetadata
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan

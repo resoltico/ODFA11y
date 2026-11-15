@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit independent inputs and report the effective command gate."""
 
-from __future__ import annotations
-
 import sys
-from typing import TYPE_CHECKING
+lazy import argparse
 
 import odfa11y as api
 from odfa11y import terminal_text
@@ -12,9 +10,6 @@ from odfa11y import terminal_text
 from .guidance import audit_next_step
 from .outcomes import render_command_outcome
 from .progress import progress_callback
-
-if TYPE_CHECKING:
-    import argparse
 
 
 def audit_command(args: argparse.Namespace) -> int:

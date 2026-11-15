@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native compound documents retain reviewed semantics and exporter failure controls."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
 from zipfile import ZipFile
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.content import table_fingerprint
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import table_fingerprint
 from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
@@ -17,9 +17,8 @@ from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.spreadsheets import picture, reviewed_sheet_names, row, sheet, text_cell
@@ -31,10 +30,6 @@ from tests.native.test_spreadsheet_integration import (
     author,
     validation_failures,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 pytestmark = pytest.mark.integration
 

@@ -1,29 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """A functioning responder independently pairs guarded refusals with request observations."""
 
-from __future__ import annotations
-
 import threading
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.declarations import declaration
 from tests.fixtures.native_resources import png_bytes
 from tests.fixtures.plans import reviewed_plan
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 pytestmark = pytest.mark.integration
 

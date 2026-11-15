@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Hash every file of an evidence bundle and verify the hashes later."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 import os
@@ -12,8 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from odfa11y.errors import OutputError, PackageError
-
-from .paths import MANIFEST_NAME, unsafe_reason
+from odfa11y.evidence.paths import MANIFEST_NAME, unsafe_reason
 
 MANIFEST_FORMAT = 1
 CHUNK_BYTES = 1 << 20

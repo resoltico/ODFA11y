@@ -1,22 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Expose effective script-channel languages and safe target-specific review questions."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.content import visible_words
+from odfa11y.concepts import visible_words
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import RemediationError
-from odfa11y.families.text.decisions import TARGET_LANGUAGE
-from odfa11y.report import FactKeys, Location, rules
-
-from .effective import CHANNELS, effective_languages, language_targets
-from .operations import language_fingerprint
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.families.text.kinds import TARGET_LANGUAGE
+from odfa11y.families.text.language.effective import CHANNELS, effective_languages, language_targets
+from odfa11y.families.text.language.operations import language_fingerprint
+from odfa11y.report import FactKeys, Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 
 def audit_languages(document: OdfDocument, report: Report) -> None:

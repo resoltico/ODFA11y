@@ -1,15 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Decide which document uses declared protection and package names permit."""
 
-from __future__ import annotations
-
 from enum import StrEnum
-from typing import TYPE_CHECKING
 
 from odfa11y.errors import PackageError
-
-if TYPE_CHECKING:
-    from .protection import PackageProtection
+lazy from odfa11y.odf.encryption import PackageProtection
 
 
 class Use(StrEnum):

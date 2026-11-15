@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Math's declared experiment checks tagging of an expression-only native document."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 from odfa11y.native.probe_pdf import math_tagging

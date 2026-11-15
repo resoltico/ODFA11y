@@ -5,8 +5,6 @@ Pure data about the standard. What a family's documents *mean* belongs to the fa
 adapter, never here.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import StrEnum
 

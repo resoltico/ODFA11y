@@ -1,24 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Schema-valid named inputs cannot silently bypass the native declaration boundary."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
-from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, validate
+from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.run import native as run_native
 from tests.fixtures.documents import TABLE_BODY, Variant, make_package
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.export import ExportSettings
 
 TEXT_FIELDS = ["display", "name", "next", "row-number", "row-select"]
 TABLE_SOURCES = {"sql": "sql-statement", "table": "database-table-name", "query": "query-name"}
@@ -106,7 +101,7 @@ def _assert_binding(source: Path, monkeypatch: pytest.MonkeyPatch, *, expected: 
         def refuse_launch(_source: Path, _destination: Path, _settings: ExportSettings) -> Path:
             pytest.fail("named source bypassed preflight and reached native application export")
 
-        monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", refuse_launch)
+        monkeypatch.setattr(run_native, "export_pdfua", refuse_launch)
         assert (
             main([
                 "export",

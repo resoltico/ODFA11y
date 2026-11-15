@@ -1,15 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed graphic roles and normative link descriptions protect their source boundary."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import (
+from odfa11y.concepts import (
     GraphicAlternative,
     LinkDescription,
     PageDecision,
@@ -17,22 +14,20 @@ from odfa11y.content import (
     page_fingerprint,
     pages,
 )
-from odfa11y.content.links import link_fingerprint, link_location
+from odfa11y.concepts.edits import Status
+from odfa11y.concepts.links import link_fingerprint, link_location
 from odfa11y.errors import PlanError
 from odfa11y.families import image, spreadsheet, text
 from odfa11y.families import pages as page_family
 from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans import load_plan
-from odfa11y.remediation.planning import compile_operations
+from odfa11y.remediate.compile import compile_operations
 from tests.content.test_graphic_roles_links import _graphic
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.graphics import _style
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.plans import plan_header
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("family", ["presentation", "drawing"])

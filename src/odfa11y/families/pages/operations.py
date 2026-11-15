@@ -1,21 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Explicit page and graphic decisions for presentation and drawing documents."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from collections.abc import Mapping
 
-from odfa11y.adapter import Operation
-from odfa11y.content import SHAPE_TAGS, GraphicEditor, LinkEditor, PageEditor
+from odfa11y.concepts import SHAPE_TAGS, GraphicEditor, LinkEditor, PageEditor
+from odfa11y.concepts.edits import Operation
 from odfa11y.odf import Family
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from odfa11y.adapter import Outcome
-    from odfa11y.content import GraphicAlternative, LinkDescription, PageDecision
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.concepts import GraphicAlternative, LinkDescription, PageDecision
+lazy from odfa11y.concepts.edits import Outcome
+lazy from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)

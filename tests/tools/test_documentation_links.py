@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check shipped Markdown's local targets and GitHub-style heading anchors offline."""
 
-from __future__ import annotations
-
 import html
 import re
 import unicodedata

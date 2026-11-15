@@ -1,20 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """Open an ODF file as the storage layout it actually has."""
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy import os
 
 from odfa11y.errors import PackageError
-
-from .flat import FlatXmlStorage
-from .package import PackageStorage
-
-if TYPE_CHECKING:
-    import os
-
-    from .storage import OdfStorage
+from odfa11y.odf.flat import FlatXmlStorage
+from odfa11y.odf.package import PackageStorage
+lazy from odfa11y.odf.storage import OdfStorage
 
 ZIP_SIGNATURES = (b"PK\x03\x04", b"PK\x05\x06")
 SNIFF_BYTES = 512

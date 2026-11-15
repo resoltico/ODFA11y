@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Exporter capability verdicts require positive/negative evidence and scoped identities."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 import pytest
@@ -16,10 +14,6 @@ from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument, validate
 from tests.fixtures.probes import fake_export, pdf_control
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 
 PROBES = {probe.id: probe for adapter in REGISTRY.values() for probe in adapter.probes}
 

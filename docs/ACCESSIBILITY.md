@@ -131,7 +131,7 @@ execution context. Inline/exact package files or subdocuments can pass, but pres
 not prove decoding/loading. Captured filename/path fields (`NATIVE002`) refuse; original
 export/comparison can retain identity. See [source capture](EVIDENCE.md#source-capture).
 
-The [native policy](../src/odfa11y/native/export_context.py) covers content/styles/meta,
+The [native policy](../src/odfa11y/odf/export_context.py) covers content/styles/meta,
 reachable embedded ODF, reloads, fill/bullet images, chart symbols, SVG definitions/fonts,
 form images and rendering XML bases. Files require exact non-directory members; object
 folders require content.xml, while OLE needs a file/inline data. Chart self-data `.` is
@@ -154,7 +154,7 @@ and dynamic `INDIRECT` refuse. External references/DDE remain limitations even i
 branches. HYPERLINK is navigation but arguments are inspected; string contents are inert.
 
 `CELL("FILENAME")`/`INFO("directory")` refuse captured export; other supported literal
-queries classify normally. [Bundled function/query provenance](../src/odfa11y/native/formula_data/functions.toml)
+queries classify normally. [Bundled function/query provenance](../src/odfa11y/odf/formula_data/functions.toml)
 is offline. Expressions permit 32,768 characters, 4,096 tokens and depth 64; iterative
 named work permits 4,096 expansions/depth 64, 100,000 declarations/tree and 64 embedded
 directories within package budgets. Exhaustion is explicit incomplete-context refusal.

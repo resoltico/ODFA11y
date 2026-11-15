@@ -1,34 +1,29 @@
 # SPDX-License-Identifier: MPL-2.0
 """Writer exports establish heading behavior and the header-column capability boundary."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
 from odfa11y.families.text import HeadingLevel, MarkTableHeaders, SetHeadingLevels, TableHeaders
-from odfa11y.families.text.headings import heading_fingerprint, heading_location
+from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.corpus import CORPUS
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 
 @pytest.mark.integration

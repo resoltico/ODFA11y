@@ -1,23 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Present pipeline gates, their findings and the retained review evidence."""
 
-from __future__ import annotations
-
 import json
 import sys
 from textwrap import fill
-from typing import TYPE_CHECKING
+lazy import argparse
 
 import odfa11y as api
 from odfa11y import StageName, render_reports, terminal_text
+lazy from odfa11y import RunRecord
 
 from .outcomes import render_command_outcome
 from .progress import progress_callback
-
-if TYPE_CHECKING:
-    import argparse
-
-    from odfa11y import RunRecord
 
 
 def pipeline_command(args: argparse.Namespace) -> int:

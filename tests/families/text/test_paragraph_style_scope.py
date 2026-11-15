@@ -1,28 +1,23 @@
 # SPDX-License-Identifier: MPL-2.0
 """Paragraph style scopes establish safe break and spacing decisions before mutations."""
 
-from __future__ import annotations
-
 import zipfile
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.edits import Status
 from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers
-from odfa11y.families.text.styles import catalog_of
+from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
-from odfa11y.outcomes import StageStatus
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.status import StageStatus
 from tests.fixtures.documents import Variant, make_package
 from tests.fixtures.operations import assert_refused, execute_operations
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _style(document: OdfDocument, name: str, *, automatic: bool = False) -> etree._Element:

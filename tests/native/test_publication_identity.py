@@ -1,30 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Published bytes, structured diagnostics and recorded hashes agree."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 import os
-from typing import TYPE_CHECKING
-
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.tools import Tools
-from tests.fixtures.plans import reviewed_plan
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.application.tools import Tools
 from odfa11y.evidence import Redactor, check_bundle, write_bundle
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.documents import make_flat
+from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.records import record
 from tests.fixtures.writer import make_minimal_odt
 

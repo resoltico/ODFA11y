@@ -1,26 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 """Set reviewed leading row and column header boundaries in text tables."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
+lazy from collections.abc import Mapping
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import axis_count, header_count, require_safe_boundary, table_fingerprint
+lazy from lxml import etree
+
+from odfa11y.concepts import axis_count, header_count, require_safe_boundary, table_fingerprint
+from odfa11y.concepts.edits import Operation, Outcome, Status
 from odfa11y.errors import RemediationError
 from odfa11y.families.text.contexts import context_location, text_nodes
-from odfa11y.odf import Family, Part, qn
-
-from .classification import TableKind, classify
-from .edit import mark_axis
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
+from odfa11y.families.text.tables.classification import TableKind, classify
+from odfa11y.families.text.tables.edit import mark_axis
+from odfa11y.odf import Family, Part
+from odfa11y.odf import names as xml_names
+lazy from odfa11y.odf import OdfDocument
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,15 +37,15 @@ class MarkTableHeaders(Operation):
 
     @override
     def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        tables = text_nodes(document.tree(Part.CONTENT), qn("table", "table"))
+        tables = text_nodes(document.tree(Part.CONTENT), xml_names.TABLE_TABLE)
         plans = []
         failures = []
         for name, entry in self.entries.items():
             matches = [
                 table
                 for index, table in enumerate(tables, 1)
-                if table.get(qn("table", "name")) == name
-                or context_location(table, "table", index, table.get(qn("table", "name"))).path
+                if table.get(xml_names.TABLE_NAME) == name
+                or context_location(table, "table", index, table.get(xml_names.TABLE_NAME)).path
                 == name
             ]
             try:
@@ -98,7 +93,7 @@ def _preflight(
         msg = "The table name must resolve to exactly one table."
         raise RemediationError(msg)
     table = matches[0]
-    if not table.get(qn("table", "name")) and not entry.fingerprint:
+    if not table.get(xml_names.TABLE_NAME) and not entry.fingerprint:
         msg = "An ordinal table target requires its reviewed fingerprint."
         raise RemediationError(msg)
     if entry.fingerprint is not None and entry.fingerprint != table_fingerprint(table, document):

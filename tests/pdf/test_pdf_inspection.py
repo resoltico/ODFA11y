@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Verify parsed PDF diagnostics with independent synthetic PDF objects."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import (
@@ -14,6 +12,7 @@ from pypdf.generic import (
     NumberObject,
     TextStringObject,
 )
+lazy from pypdf import PdfWriter
 
 from odfa11y.pdf import audit_pdfua
 from odfa11y.report import FactKeys
@@ -24,13 +23,7 @@ from tests.fixtures.pdf import (
     map_link,
     tagged_writer,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 
 def audit(tmp_path: Path, writer: PdfWriter) -> Report:

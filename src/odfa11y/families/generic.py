@@ -1,18 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
 """The adapter for document kinds without a family implementation."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.adapter import FamilyAdapter, PreservationSnapshot, ReviewItem
+from odfa11y.concepts.preservation import PreservationSnapshot
+from odfa11y.concepts.review import ReviewTopic
+from odfa11y.families.spec import FamilyAdapter, ReviewItem
 from odfa11y.odf import body_text_snapshot
-from odfa11y.outcomes import ReviewTopic
-from odfa11y.report import rules
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 REVIEW_ITEMS = (
     ReviewItem(

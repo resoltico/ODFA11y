@@ -1,31 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
 """Ambiguous and unsafe ZIP names never establish a native or editing package view."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y import audit
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.native import export_document
-from odfa11y.pipeline.profiles import profile_named
-from odfa11y.remediation import SetMetadata
+from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf, prepare_plan
+from odfa11y.run import native as run_native
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.native import export_document
+from odfa11y.run.profiles import profile_named
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 from tests.odf.test_package_protection import encrypted_manifest
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize(
@@ -85,7 +81,7 @@ def _assert_guarded_refusal(
 
     monkeypatch.setattr(OdfDocument, "kind", property(forbidden_kind))
     monkeypatch.setattr(OdfDocument, "detection", property(forbidden_kind))
-    monkeypatch.setattr("odfa11y.pipeline.native.export_pdfua", forbidden_native)
+    monkeypatch.setattr(run_native, "export_pdfua", forbidden_native)
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == [rule]
     assert "complete inspection" in report.findings[0].message

@@ -1,16 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Read versioned JSON schema resources from the installed package."""
 
-from __future__ import annotations
-
 import json
 from importlib.resources import files
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from odfa11y.errors import ReportError
-
-if TYPE_CHECKING:
-    from odfa11y.serialization import JsonObject
+lazy from odfa11y.serialization import JsonObject
 
 
 def read_schema(name: str) -> JsonObject:

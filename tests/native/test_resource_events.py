@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Event navigation and declared database inputs have distinct resource contracts."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import ToolFailedError
-from odfa11y.native.export_context import native_export_limitations, require_native_context
 from odfa11y.odf import OdfDocument, Part, qn, validate
+from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.declarations import declaration
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("action", ["show", "execute", "next-page", "sound"])

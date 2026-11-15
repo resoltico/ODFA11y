@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Real parser objects exercise fidelity's annotation boundary."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import (
@@ -20,9 +18,6 @@ from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from tests.fixtures.pdf import register, tagged_writer
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("shape", ["array", "item", "action"])

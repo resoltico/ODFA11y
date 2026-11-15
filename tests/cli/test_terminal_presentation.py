@@ -3,7 +3,8 @@
 
 import json
 
-from odfa11y.report import FactKeys, FactSet, Location, Report, render_reports, rules, terminal_text
+from odfa11y.report import FactKeys, FactSet, Location, Report, render_reports, terminal_text
+from odfa11y.rules import registry as rules
 
 
 def test_terminal_fields_escape_controls_and_preserve_unicode() -> None:

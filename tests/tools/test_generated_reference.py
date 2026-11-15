@@ -1,19 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Generated command/schema/capability references fail closed when stale."""
 
-from __future__ import annotations
-
 import shutil
 import sys
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from tests.fixtures.paths import REPOSITORY
 from tools import generate_reference
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("name", ["CLI.md", "SCHEMAS.md", "CAPABILITIES.md"])

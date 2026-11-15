@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Fidelity comparison: each kind of difference fails with the right rule; equal renders pass."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
@@ -12,11 +10,7 @@ from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity import compare as comparison
 from odfa11y.report import FactKeys
 from tests.fixtures.pdf import text_pdf
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
+lazy from odfa11y.report import Report
 
 LINES = ["Heading line", "A paragraph of body text on the page.", "Another line of text."]
 

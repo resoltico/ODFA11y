@@ -1,14 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 """Build minimal synthetic ODF documents of every kind, as packages or flat XML files."""
 
-from __future__ import annotations
-
 import zipfile
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pathlib import Path
+lazy from pathlib import Path
 
 OASIS = "application/vnd.oasis.opendocument."
 NAMESPACES = (

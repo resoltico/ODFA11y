@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Check exact changelog-section extraction and meaningful rejection cases."""
 
-from __future__ import annotations
-
 import pytest
 
 from tools.check_release import extract_release_notes

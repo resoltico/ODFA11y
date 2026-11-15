@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Page mechanics preserve content and require complete, globally unambiguous navigation."""
 
-from __future__ import annotations
-
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import (
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import (
     SHAPE_TAGS,
     GraphicAlternative,
     GraphicEditor,
@@ -21,13 +20,9 @@ from odfa11y.content import (
     page_snapshot,
     pages,
 )
+from odfa11y.concepts.edits import Status
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.source_audit import audit_odf
 from tests.fixtures.documents import Variant, make_flat, make_package
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
 
 SHAPES = (
     '<draw:frame draw:name="Title" xml:id="title" draw:id="title">'

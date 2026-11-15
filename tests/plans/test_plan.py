@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Bound plan files validate registered answers and compile in dependency order."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 import pytest
@@ -12,7 +10,7 @@ from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
-from odfa11y.remediation.planning import compile_operations
+from odfa11y.remediate.compile import compile_operations
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.writer import make_minimal_odt
 

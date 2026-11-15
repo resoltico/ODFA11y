@@ -1,27 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
 """Progress reaches interactive stderr before work and never changes evidence facts."""
 
-from __future__ import annotations
-
 import io
-from typing import TYPE_CHECKING, override
+from typing import override
+lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
 from odfa11y.errors import OutputError
-from odfa11y.outcomes import ProgressEvent, StepName, StepState
 from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
+from odfa11y.progress import ProgressEvent, StepName, StepState
+from odfa11y.run import publication as run_publication
+from odfa11y.run.context import RunSettings
+from odfa11y.run.engine import execute
+from odfa11y.run.profiles import profile_named
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class Terminal(io.StringIO):
@@ -155,7 +152,7 @@ def test_publication_failure_never_emits_passed_progress(
         msg = "Evidence storage unavailable"
         raise OSError(msg)
 
-    monkeypatch.setattr("odfa11y.pipeline.publication.write_bundle", unavailable_bundle)
+    monkeypatch.setattr(run_publication, "write_bundle", unavailable_bundle)
     with pytest.raises(OSError, match="storage unavailable"):
         execute(
             source,
@@ -184,7 +181,7 @@ def test_batch_interruption_emits_no_completion(
     def interrupted_pipeline(*_args: object, **_kwargs: object) -> None:
         raise KeyboardInterrupt
 
-    monkeypatch.setattr("odfa11y.batch.run.execute", interrupted_pipeline)
+    monkeypatch.setattr("odfa11y.batch.execute.execute", interrupted_pipeline)
     record = run_batch(
         manifest,
         tmp_path / "batch",
@@ -220,7 +217,7 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
     def failed_bundle(*_args: object, **_kwargs: object) -> dict[str, str]:
         raise failure
 
-    monkeypatch.setattr("odfa11y.pipeline.publication.write_bundle", failed_bundle)
+    monkeypatch.setattr(run_publication, "write_bundle", failed_bundle)
     with pytest.raises(type(failure)) as caught:
         execute(
             source,
