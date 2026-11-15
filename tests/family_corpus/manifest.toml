@@ -39,3 +39,19 @@ file = "fruit-database.odb"
 family = "database"
 sha256 = "dd01697b58faa3d686c5c4106742ebe9bbe7db97d66a7ab02cfd251bb5e78871"
 schema_violations = 0
+
+[[documents]]
+file = "sheet-values.ods"
+family = "spreadsheet"
+producer = "ODFA11y synthetic ODF fixture"
+authoring = "Explicit ODF values, header rows, hidden sheet, embedded PNG"
+sha256 = "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c"
+schema_violations = 0
+
+[[documents]]
+file = "sheet-references.ods"
+family = "spreadsheet"
+producer = "ODFA11y synthetic ODF fixture"
+authoring = "Explicit ODF values, header rows, hidden sheet, embedded PNG, and a sheet reference"
+sha256 = "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158"
+schema_violations = 0

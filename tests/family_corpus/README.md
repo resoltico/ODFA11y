@@ -57,3 +57,5 @@ private paths, review schema and audit results, and update the manifest delibera
 Run source-preservation tests and the applicable native family integration tests; a
 matching hash cannot replace those checks. Fixtures must contain invented content without
 scripts, external image references or personal metadata.
+
+`sheet-values.ods` and `sheet-references.ods` are synthetic ODF fixtures for the preservation matrix, not native-save measurements. Both contain values, header rows, a hidden sheet and an embedded PNG; the latter also has a formula referencing the first sheet.
