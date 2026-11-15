@@ -1,15 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 """Expose authored visibility declarations without evaluating conditions or cached state."""
 
-lazy from lxml import etree
+from typing import Annotated, Literal
+lazy from dataclasses import dataclass, field
+
+from lxml import etree
 
 from odfa11y.concepts import reading_context_path
+from odfa11y.contracts import Description
 from odfa11y.families.text.visibility.reading_order import audit_reading_order
 from odfa11y.families.text.visibility.revisions import audit_revisions
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import TargetPath
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -17,11 +22,32 @@ FIELDS = {qn("text", name) for name in ("hidden-text", "conditional-text", "hidd
 BOOLEAN = {None, "true", "false", "1", "0"}
 
 
+@dataclass(frozen=True, slots=True)
+class VisibilityContext:
+    target: TargetPath
+    kind: str
+    condition: str | None
+    display: str | None
+    cached_hidden: str | None
+    cached_condition: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class VisibilityMeasurements:
+    """Measurements produced by text-visibility analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-visibility"] = field(default="text-visibility", init=False)
+    visibility_contexts: Annotated[
+        list[VisibilityContext] | None,
+        Description("Visibility conditions and cached states, without evaluation."),
+    ] = None
+
+
 def audit_visibility(document: OdfDocument, report: Report) -> None:
     """Inspect relationships and retain visibility uncertainty for human/native review."""
     tree = document.tree(Part.CONTENT)
     audit_revisions(tree, report)
-    rows: list[dict[str, object]] = []
+    rows: list[VisibilityContext] = []
     for node in select_elements(tree, "//office:body//*"):
         section = node.tag == xml_names.TEXT_SECTION
         conditional = node.get(xml_names.TEXT_CONDITION)
@@ -31,14 +57,16 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
         ):
             continue
         location = Location.indexed(reading_context_path(node), "visibility", len(rows) + 1)
-        rows.append({
-            "target": location.path,
-            "kind": str(node.tag).split("}")[-1],
-            "condition": conditional,
-            "display": display,
-            "cached_hidden": node.get(xml_names.TEXT_IS_HIDDEN),
-            "cached_condition": node.get(xml_names.TEXT_CURRENT_VALUE),
-        })
+        rows.append(
+            VisibilityContext(
+                location.path,
+                str(node.tag).split("}")[-1],
+                conditional,
+                display,
+                node.get(xml_names.TEXT_IS_HIDDEN),
+                node.get(xml_names.TEXT_CURRENT_VALUE),
+            )
+        )
         if not _coherent(node):
             report.raise_(
                 rules.HIDDEN002,
@@ -51,7 +79,7 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
             )
     if rows:
         report.raise_(rules.HIDDEN001, details={"contexts": len(rows)})
-    report.facts[FactKeys.TEXT_VISIBILITY_CONTEXTS] = rows
+    report.measure(VisibilityMeasurements(visibility_contexts=rows))
     audit_reading_order(document, report)
 
 

@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Report table intent and header relationships from source declarations."""
 
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
+
 from odfa11y.concepts import table_fingerprint
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import context_location, text_nodes
@@ -9,9 +13,8 @@ from odfa11y.families.text.kinds import TABLE_HEADERS
 from odfa11y.families.text.tables.classification import TableKind, classify
 from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys
 from odfa11y.rules import registry as rules
-from odfa11y.targets import Fingerprint, Target
+from odfa11y.targets import Fingerprint, Target, TargetPath
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -20,11 +23,41 @@ NATIVE_GUIDANCE = (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class MeasuredTable:
+    target: TargetPath
+    classification: TableKind
+    rows: int
+    columns: int
+    header_rows: int
+    header_columns: int
+    state: Literal["measured"] = field(default="measured", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class UnresolvedTable:
+    target: TargetPath
+    reason: str
+    state: Literal["unresolved"] = field(default="unresolved", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class TableMeasurements:
+    """Measurements produced by text-tables analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-tables"] = field(default="text-tables", init=False)
+    table_count: Annotated[int | None, Description("Tables in current reading contexts.")] = None
+    table_classifications: Annotated[
+        list[MeasuredTable | UnresolvedTable] | None,
+        Description("Per-table source-supported intent, grid and semantic header bands."),
+    ] = None
+
+
 def audit_tables(document: OdfDocument, report: Report) -> None:
     """Audit actual grid and band relationships, preserving ambiguous table intent."""
     tables = text_nodes(document.tree(Part.CONTENT), xml_names.TABLE_TABLE)
-    report.facts[FactKeys.TEXT_TABLE_COUNT] = len(tables)
-    rows: list[dict[str, object]] = []
+    report.measure(TableMeasurements(table_count=len(tables)))
+    rows: list[MeasuredTable | UnresolvedTable] = []
     for index, table in enumerate(tables, 1):
         name = table.get(xml_names.TABLE_NAME)
         location = context_location(table, "table", index, name)
@@ -37,20 +70,18 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
                 location=location,
                 details={"native_editing": NATIVE_GUIDANCE},
             )
-            rows.append({
-                "target": location.path,
-                "classification": "unresolved",
-                "reason": str(error),
-            })
+            rows.append(UnresolvedTable(location.path, str(error)))
             continue
-        rows.append({
-            "target": location.path,
-            "classification": classification.kind.value,
-            "rows": classification.grid.rows,
-            "columns": classification.grid.columns,
-            "header_rows": classification.header_rows,
-            "header_columns": classification.header_columns,
-        })
+        rows.append(
+            MeasuredTable(
+                location.path,
+                classification.kind,
+                classification.grid.rows,
+                classification.grid.columns,
+                classification.header_rows,
+                classification.header_columns,
+            )
+        )
         if classification.kind in {TableKind.LAYOUT_CANDIDATE, TableKind.AMBIGUOUS}:
             report.raise_(
                 rules.TABLE001,
@@ -72,4 +103,4 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
                     {"rows": 0, "columns": 0},
                 ),
             )
-    report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS] = rows
+    report.measure(TableMeasurements(table_classifications=rows))

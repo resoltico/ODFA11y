@@ -10,10 +10,10 @@ import pytest
 from odfa11y import audit
 from odfa11y.application.tools import Tools
 from odfa11y.errors import ToolFailure
+from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.records import DoctorRecord, Toolchain
-from odfa11y.report import FactKeys
 from tests.fixtures.documents import make_flat, make_package
 from tools import core_examples
 
@@ -61,7 +61,9 @@ assert not any(n == "odfa11y.cli" or n.startswith("odfa11y.cli.") for n in sys.m
 
 def test_style_example_contract_refuses_unsupported_families(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "spreadsheet")
-    assert FactKeys.TEXT_PARAGRAPH_STYLES not in audit(source).reports[0].facts
+    assert not any(
+        isinstance(record, TextStyleMeasurements) for record in audit(source).reports[0].facts
+    )
 
 
 def test_native_example_retains_controlled_probe_failure_before_export(

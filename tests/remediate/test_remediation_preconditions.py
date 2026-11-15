@@ -8,11 +8,12 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.errors import DocumentRefusal, PackageError, PlanError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers
 lazy from odfa11y.report import Report
 lazy from tests.fixtures.answers import apply_in_memory
@@ -41,7 +42,7 @@ def test_explicit_metadata_creates_a_missing_optional_package_part(tmp_path: Pat
                 cut.writestr(member, full.read(member.filename))
     destination = tmp_path / "out.odt"
     assert apply_answers(source, destination, [metadata_input(title="x")]).changed
-    assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "x"
+    assert measured(measurement(audit_odf(destination), DocumentMetadata).title) == "x"
     with zipfile.ZipFile(destination) as created:
         manifest = created.read("META-INF/manifest.xml")
         assert manifest.count(b'manifest:full-path="meta.xml"') == 1
@@ -109,7 +110,7 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
     source.write_text(text[:start] + text[end:], encoding="utf-8")
     destination = tmp_path / "out.fodt"
     apply_answers(source, destination, [metadata_input(title="Added")])
-    assert audit_odf(destination).facts[FactKeys.DOCUMENT_TITLE] == "Added"
+    assert measured(measurement(audit_odf(destination), DocumentMetadata).title) == "Added"
     assert "SCHEMA001" not in ids(audit_odf(destination, schema=True))
 
 
@@ -128,7 +129,7 @@ def test_language_tags_are_normalised_or_private_use_and_stay_schema_valid(
     source = make_package(tmp_path, "text")
     destination = tmp_path / "out.odt"
     apply_answers(source, destination, [metadata_input(language=given)])
-    assert audit_odf(destination).facts[FactKeys.DOCUMENT_LANGUAGE] == written
+    assert measurement(audit_odf(destination), DocumentMetadata).language == written
 
 
 def test_remediation_refuses_a_document_whose_parts_contradict_each_other(tmp_path: Path) -> None:

@@ -11,9 +11,9 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.families.database.audit import DatabaseMeasurements
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import (
     FaultEdit,
     RawDecisions,
@@ -21,6 +21,7 @@ from tests.fixtures.answers import (
     database_inputs,
     metadata_input,
 )
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
@@ -166,7 +167,7 @@ def test_standard_server_database_declaration_is_external_instead_of_missing(
     report = audit_odf(source)
     assert "BASE002" in {finding.rule_id for finding in report.findings}
     assert "BASE001" not in {finding.rule_id for finding in report.findings}
-    assert report.facts[FactKeys.DATABASE_CONNECTION_DECLARATION_COUNT] == 1
+    assert measured(measurement(report, DatabaseMeasurements).connection_declaration_count) == 1
     assert "invalid.example" not in str(report.as_dict())
     assert "private-invented-database" not in str(report.as_dict())
 

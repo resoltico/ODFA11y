@@ -6,8 +6,8 @@ import textwrap
 lazy from collections.abc import Iterable
 lazy from pathlib import Path
 
+from odfa11y.contracts import record_dict
 from odfa11y.errors import InvalidOption
-from odfa11y.report.facts import FactKeys
 from odfa11y.report.sarif import sarif_log
 from odfa11y.report.terminal import terminal_text
 from odfa11y.status import ExitStatus, combine_statuses, gate_outcome
@@ -89,33 +89,18 @@ def _render_text(report: Report) -> str:
             lines.extend(_field(f"  {decision.kind.id}: ", target))
     if report.facts:
         lines.append("Facts:")
-        for key in sorted(report.facts, key=lambda item: item.id):
-            lines.extend(_field(f"  {terminal_text(key.id)}: ", _summarize(report.facts[key])))
-    lines.extend(_style_lines(report))
+        lines.extend(_fact_lines(report))
     return "\n".join(lines)
 
 
-def _style_lines(report: Report) -> list[str]:
-    lines = []
-    rows = report.facts.get(FactKeys.TEXT_PARAGRAPH_STYLES) or []
-    if rows:
-        lines.append("Paragraph styles:")
-        for row in rows:
-            lines.extend(
-                _field(
-                    f"- {terminal_text(row.get('style', ''))}: ", f"{row.get('count', 0)} use(s)"
-                )
-            )
-            lines.extend(_field("  Parent: ", row.get("parent") or "none"))
-            spacing = row.get("spacing")
-            if isinstance(spacing, dict):
-                lines.extend(
-                    _field(
-                        "  Spacing: ",
-                        "; ".join(f"{key}={value}" for key, value in spacing.items())
-                        or "not declared",
-                    )
-                )
+def _fact_lines(report: Report) -> list[str]:
+    lines: list[str] = []
+    for record in report.facts:
+        values = record_dict(record)
+        producer = str(values.pop("producer"))
+        for name, value in values.items():
+            if value is not None:
+                lines.extend(_field(f"  {producer}.{name}: ", _summarize(value)))
     return lines
 
 

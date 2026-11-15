@@ -4,10 +4,11 @@
 from dataclasses import replace
 
 from odfa11y.families.text import SPEC
+from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
 from odfa11y.records import DocumentIdentity
-from odfa11y.report import FactKeys, FactSet, Report
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.run.profiles import PROFILES
@@ -24,8 +25,8 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
         A typed pipeline record, ready for publication or review rendering.
 
     """
-    report = Report(
-        kind=ReportKind.PDF, subject="doc.pdf", facts=FactSet({FactKeys.PDF_PAGE_COUNT: 2})
+    report = Report[object](
+        kind=ReportKind.PDF, subject="doc.pdf", facts=(PdfMeasurements(page_count=2),)
     )
     report.raise_(rules.PDF005, "No title display.")
     stages = [

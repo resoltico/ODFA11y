@@ -4,6 +4,7 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions import Decision, DecisionKind
@@ -54,7 +55,7 @@ class FamilySpec:
     """The source semantics and explicit optional capabilities of one supported family."""
 
     family: Family
-    audit: Callable[[OdfDocument, Report], None]
+    audit: Callable[[OdfDocument, Report, DocumentMetadata], None]
     kinds: tuple[DecisionKind, ...]
     export: PdfExport | Unsupported
     snapshot: Callable[[OdfDocument], PreservationSnapshot]

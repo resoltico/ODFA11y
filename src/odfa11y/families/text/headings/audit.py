@@ -2,8 +2,10 @@
 """Audit headings, graphics and tables for accessible structure."""
 
 import re
+from typing import Annotated, Literal
+lazy from dataclasses import dataclass, field
 
-lazy from lxml import etree
+from lxml import etree
 
 from odfa11y.concepts import (
     SHAPE_TAGS,
@@ -13,6 +15,7 @@ from odfa11y.concepts import (
     visible_words,
 )
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.text.answers import MAX_HEADING_LEVEL
 from odfa11y.families.text.contexts import text_nodes
@@ -23,7 +26,7 @@ from odfa11y.families.text.headings.edit import (
 from odfa11y.families.text.kinds import HEADING_LEVEL
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target, require_target
 lazy from odfa11y.odf import OdfDocument
@@ -35,12 +38,25 @@ MANUAL_NUMBER_RE = re.compile(r"^\s*(?P<num>\d+(?:\.\d+)*)(?P<punct>[.)])?\s+")
 MAX_SIMPLE_HEADING_NUMBER = 99
 
 
+@dataclass(frozen=True, slots=True)
+class TextContentMeasurements:
+    """Measurements produced by text-content analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-content"] = field(default="text-content", init=False)
+    heading_count: Annotated[
+        int | None, Description("Structural headings in current reading contexts.")
+    ] = None
+    graphic_count: Annotated[
+        int | None, Description("Graphic objects in current reading contexts.")
+    ] = None
+
+
 def audit_headings(
     tree: etree._ElementTree, report: Report, document: OdfDocument | None = None
 ) -> None:
     """Report heading-structure defects such as skipped levels and empty headings."""
     headings = text_nodes(tree, xml_names.TEXT_H, main_only=True)
-    report.facts[FactKeys.TEXT_HEADING_COUNT] = len(headings)
+    report.measure(TextContentMeasurements(heading_count=len(headings)))
     previous_level: int | None = None
     for index, heading in enumerate(headings, start=1):
         raw = heading.get(xml_names.TEXT_OUTLINE_LEVEL)
@@ -118,7 +134,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)
-    report.facts[FactKeys.TEXT_GRAPHIC_COUNT] = len(frames)
+    report.measure(TextContentMeasurements(graphic_count=len(frames)))
     for frame in frames:
         if audit_graphic_role(document, frame, report):
             continue

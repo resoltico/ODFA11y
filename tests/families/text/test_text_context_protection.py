@@ -10,8 +10,8 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import (
     FaultEdit,
     RawDecisions,
@@ -23,6 +23,7 @@ from tests.fixtures.answers import (
     version_input,
 )
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 
 BODY = """<office:text>
@@ -141,7 +142,7 @@ def test_revision_edit_refuses_before_first_metadata_edit(
 def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
-    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
+    assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
     assert {"REVISION001", "HIDDEN001"} <= {f.rule_id for f in report.findings}
     plain = [f.details["text"] for f in report.findings if f.rule_id == "LINK001"]
     assert plain == ["https://note.example"]

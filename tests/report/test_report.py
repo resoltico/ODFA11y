@@ -6,13 +6,13 @@ import re
 
 import pytest
 
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import InvalidOption
+from odfa11y.pdf.fidelity.compare import FidelityMeasurements
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.report import (
     RULES,
-    FactKeys,
-    FactSet,
     Location,
     Report,
     Severity,
@@ -26,13 +26,13 @@ from tests.fixtures.schema import assert_record_schema
 
 
 def _report() -> Report:
-    report = Report(
+    report = Report[object](
         kind=ReportKind.ODF,
         subject="sample.odt",
-        facts=FactSet({
-            FactKeys.DOCUMENT_TITLE: "T",
-            FactKeys.FIDELITY_RASTER_CHANGED_RATIOS: [0.0, 1.0],
-        }),
+        facts=(
+            DocumentMetadata(title="T"),
+            FidelityMeasurements(raster_changed_ratios=[0.0, 1.0]),
+        ),
     )
     report.raise_(
         rules.LINK001,
@@ -53,8 +53,8 @@ def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
         "Check: no errors",
         "Findings: 0 error(s), 1 warning(s), 0 info",
     ]
-    assert "  document.title: T" in lines
-    assert "  fidelity.raster_changed_ratios: 2 record(s)" in lines
+    assert "  odf-metadata.title: T" in lines
+    assert "  pdf-fidelity.raster_changed_ratios: 2 record(s)" in lines
     assert "  WARNING LINK001: Needs review" in lines
     assert "    location: content/paragraph[2]" in lines
     assert any("text.linkify_addresses" in line for line in lines)

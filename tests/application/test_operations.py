@@ -217,7 +217,7 @@ def test_spacing_follows_a_changed_reference_without_new_style_names(tmp_path: P
     clones = [
         s
         for s in select_elements(doc.tree(Part.CONTENT), "//style:style")
-        if "A11ySpacing" in (s.get(qn("style", "name")) or "")
+        if "ODFA11y_spacing_" in (s.get(qn("style", "name")) or "")
     ]
     assert len(clones) == 1
 

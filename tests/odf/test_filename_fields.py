@@ -8,12 +8,13 @@ import pytest
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.cli import main
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
-from odfa11y.report import FactKeys
 from tests.fixtures.documents import TABLE_BODY, Variant, make_package
+from tests.fixtures.measurements import measured, measurement
 lazy from odfa11y.native.export import ExportSettings
 
 TEXT_FIELDS = ["display", "name", "next", "row-number", "row-select"]
@@ -100,7 +101,12 @@ def _assert_binding(
     assert native_export_limitations(document)["rendering_dependencies"] == count
     report = audit_odf(source)
     assert ("NATIVE001" in {f.rule_id for f in report.findings}) == expected
-    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)[
+            "rendering_dependencies"
+        ]
+        == count
+    )
     if expected:
         with pytest.raises(DocumentRefusal):
             require_native_context(document)

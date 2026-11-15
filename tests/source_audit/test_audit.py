@@ -7,9 +7,11 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.odf import PackageStorage
 from odfa11y.plans.registry import load_plan
-from odfa11y.report import RULES, FactKeys, Location, Severity
+from odfa11y.report import RULES, Location, Severity
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.plans import question_for
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.report import Report
@@ -31,13 +33,13 @@ def ids(report: Report) -> set[str]:
 def test_minimal_document_passes_core_audit(tmp_path: Path) -> None:
     report = audit_odf(make_minimal_odt(tmp_path / "ok.odt"))
     assert report.error_count == 0
-    assert report.facts[FactKeys.DOCUMENT_ODF_VERSION] == "1.4"
+    assert measured(measurement(report, PackageMeasurements).odf_version) == "1.4"
 
 
 def test_older_consistent_version_is_reported_not_rejected(tmp_path: Path) -> None:
     report = audit_odf(make_minimal_odt(tmp_path / "old.odt", version="1.3"))
     assert report.error_count == 0
-    assert report.facts[FactKeys.DOCUMENT_ODF_VERSION] == "1.3"
+    assert measured(measurement(report, PackageMeasurements).odf_version) == "1.3"
 
 
 def test_members_declaring_different_versions_are_an_error(tmp_path: Path) -> None:
@@ -97,8 +99,8 @@ def test_unreadable_source_is_a_finding_not_an_exception(tmp_path: Path) -> None
 
 def test_schema_audit_records_version_and_violations(tmp_path: Path) -> None:
     report = audit_odf(make_minimal_odt(tmp_path / "ok.odt"), schema=True)
-    assert report.facts[FactKeys.SCHEMA_VERSION] == "1.4"
-    assert report.facts[FactKeys.SCHEMA_VIOLATION_COUNT] == 0
+    assert measurement(report, PackageMeasurements).version == "1.4"
+    assert measured(measurement(report, PackageMeasurements).violation_count) == 0
     assert "SCHEMA001" not in ids(report)
 
 

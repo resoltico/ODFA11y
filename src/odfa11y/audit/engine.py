@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Run the read-only audit of an ODF document and collect its findings."""
 
+from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
+from typing import Annotated, Literal
 
 from odfa11y.audit.metadata import audit_metadata
 from odfa11y.audit.package import (
@@ -11,12 +14,14 @@ from odfa11y.audit.package import (
     audit_versions,
     storage_location,
 )
+from odfa11y.concepts.metadata import read_metadata
+from odfa11y.contracts import Description
 from odfa11y.errors import PackageError
 from odfa11y.families import spec_for
-from odfa11y.odf import OdfDocument, Part, Use
+from odfa11y.odf import OdfDocument, Part, Use, declared_version
 from odfa11y.odf.export_context import native_export_limitations
 from odfa11y.remediate.document_ops import document_question
-from odfa11y.report import FactKeys, Report
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 
@@ -32,6 +37,17 @@ BLOCKING_RULES = frozenset({
     rules.ODF005,
     rules.ODF010,
 })
+
+
+@dataclass(frozen=True, slots=True)
+class ExportContextMeasurements:
+    """Measurements produced by export-context analysis; None denotes unmeasured data."""
+
+    producer: Literal["export-context"] = field(default="export-context", init=False)
+    limitations: Annotated[
+        dict[str, int] | None,
+        Description("Counts of declarations requiring native export refusal or review."),
+    ] = None
 
 
 def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
@@ -63,7 +79,6 @@ def audit_document(
         kind=ReportKind.ODF,
         subject=subject,
         _sources=(source,) if source else (),
-        _question_for=document_question,
     )
     protection = document.protection
     if protection.signatures:
@@ -95,10 +110,14 @@ def audit_document(
         if schema:
             audit_schema(document, report)
         return report
-    report.facts[FactKeys.DOCUMENT_ADAPTER] = adapter.family.value
+
+    analysis = read_metadata(document, adapter.language.read if adapter.language else None)
+    report._question_for = partial(
+        document_question, metadata=analysis.metadata, version=declared_version(document)
+    )
     audit_versions(document, report)
-    audit_metadata(document, adapter, report)
-    adapter.audit(document, report)
+    metadata = audit_metadata(analysis, report)
+    adapter.audit(document, report, metadata)
     _audit_export_context(document, report)
     if schema:
         audit_schema(document, report)
@@ -137,7 +156,7 @@ def _describe(exc: PackageError | OSError, source: Path) -> str:
 
 def _audit_export_context(document: OdfDocument, report: Report) -> None:
     limits = native_export_limitations(document)
-    report.facts[FactKeys.NATIVE_LIMITATIONS] = limits
+    report.measure(ExportContextMeasurements(limitations=limits))
     if limits["rendering_dependencies"]:
         report.raise_(rules.NATIVE001, details={"count": limits["rendering_dependencies"]})
     if limits["location_fields"]:

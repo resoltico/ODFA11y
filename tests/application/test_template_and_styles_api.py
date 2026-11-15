@@ -8,12 +8,15 @@ import pytest
 
 from odfa11y import audit
 from odfa11y.audit import plan_blockers, prepare_plan
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.families import REGISTRY
+from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import Family
-from odfa11y.report import FactKeys, Report
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.errors import DocumentRefusal
 
@@ -24,7 +27,7 @@ def test_template_api_prepares_loadable_configuration_for_source_layout(
 ) -> None:
     source = (make_package if layout == "package" else make_flat)(tmp_path, "text")
     report, template = prepare_plan(source)
-    assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
+    assert measured(measurement(report, PackageMeasurements).layout) == layout
     assert template is not None
     assert set(tomllib.loads(template)) == {"plan", "decisions"}
     assert plan_blockers(report) is None
@@ -81,7 +84,7 @@ def test_planning_refuses_a_family_without_a_registered_spec(
 
 def test_style_usage_api_reports_text_family_usage(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
-    rows = audit(source).reports[0].facts[FactKeys.TEXT_PARAGRAPH_STYLES]
+    rows = measured(measurement(audit(source).reports[0], TextStyleMeasurements).paragraph_styles)
     body = next(row for row in rows if row["style"] == "Body")
     count = body["count"]
     assert isinstance(count, int)
@@ -92,7 +95,9 @@ def test_style_usage_api_reports_text_family_usage(tmp_path: Path) -> None:
 @pytest.mark.parametrize("layout", ["package", "flat"])
 def test_style_usage_api_rejects_unsupported_family(tmp_path: Path, layout: str) -> None:
     source = (make_package if layout == "package" else make_flat)(tmp_path, "spreadsheet")
-    assert FactKeys.TEXT_PARAGRAPH_STYLES not in audit(source).reports[0].facts
+    assert not any(
+        isinstance(record, TextStyleMeasurements) for record in audit(source).reports[0].facts
+    )
 
 
 def test_unavailable_family_does_not_produce_an_empty_supported_plan(

@@ -7,11 +7,12 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
-from odfa11y.report import FactKeys
 from tests.fixtures.declarations import declaration
+from tests.fixtures.measurements import measured, measurement
 
 
 @pytest.mark.parametrize("action", ["show", "execute", "next-page", "sound"])
@@ -63,5 +64,10 @@ def test_form_input_binding_is_distinct_from_form_submission_navigation(
     count = 1 if binding else 0
     assert native_export_limitations(reopened)["rendering_dependencies"] == count
     report = audit_odf(source)
-    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == count
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)[
+            "rendering_dependencies"
+        ]
+        == count
+    )
     assert ("NATIVE001" in {f.rule_id for f in report.findings}) == bool(binding)

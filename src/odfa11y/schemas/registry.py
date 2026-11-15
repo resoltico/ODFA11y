@@ -11,10 +11,34 @@ from odfa11y.application import (
     PlanResult,
     VerificationResult,
 )
+from odfa11y.audit.engine import ExportContextMeasurements
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.batch.record import BatchRecord
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import JsonObject, schema_for
 from odfa11y.contracts.types import computed_hints, record_hints, split
 from odfa11y.decisions import Decision, OpenDecision
+from odfa11y.families.chart.audit import ChartMeasurements
+from odfa11y.families.database.audit import DatabaseMeasurements
+from odfa11y.families.formula.audit import FormulaMeasurements
+from odfa11y.families.image.audit import ImageMeasurements
+from odfa11y.families.pages.audit import PageMeasurements
+from odfa11y.families.spreadsheet.audit import SpreadsheetMeasurements
+from odfa11y.families.text.audit import TextStyleMeasurements
+from odfa11y.families.text.headings.audit import TextContentMeasurements
+from odfa11y.families.text.language.audit import LanguageMeasurements
+from odfa11y.families.text.lists.audit import ListMeasurements
+from odfa11y.families.text.references.audit import ReferenceMeasurements
+from odfa11y.families.text.tables.audit import TableMeasurements
+from odfa11y.families.text.visibility.audit import VisibilityMeasurements
+from odfa11y.families.text.visibility.reading_order import ReadingOrderMeasurements
+from odfa11y.families.text.visibility.revisions import RevisionMeasurements
+from odfa11y.pdf.audit import PdfMeasurements
+from odfa11y.pdf.fidelity.compare import FidelityMeasurements
+from odfa11y.pdf.link_structure import PdfLinkMeasurements
+from odfa11y.pdf.marked_content import MarkedContentMeasurements
+from odfa11y.pdf.structure_checks import PdfStructureMeasurements
+from odfa11y.pdf.validate import ValidationMeasurements
 from odfa11y.plans import PlanHeader
 from odfa11y.plans.contracts import decision_contract, file_contract
 from odfa11y.plans.registry import registered_kinds
@@ -64,7 +88,34 @@ def registered_contracts() -> tuple[RecordContract, ...]:
 def generated_schemas() -> dict[str, JsonObject]:
     """Generate published files from this registry and runtime annotations alone."""
     kinds = registered_kinds()
+    measurements = (
+        ExportContextMeasurements
+        | DocumentMetadata
+        | PackageMeasurements
+        | ChartMeasurements
+        | DatabaseMeasurements
+        | FormulaMeasurements
+        | ImageMeasurements
+        | PageMeasurements
+        | SpreadsheetMeasurements
+        | TextStyleMeasurements
+        | TextContentMeasurements
+        | LanguageMeasurements
+        | ListMeasurements
+        | ReferenceMeasurements
+        | TableMeasurements
+        | VisibilityMeasurements
+        | ReadingOrderMeasurements
+        | RevisionMeasurements
+        | PdfMeasurements
+        | FidelityMeasurements
+        | PdfLinkMeasurements
+        | MarkedContentMeasurements
+        | PdfStructureMeasurements
+        | ValidationMeasurements
+    )
     overrides: dict[object, object] = {
+        Report: Report[measurements],
         Decision: decision_contract(kinds, open_decision=False),
         OpenDecision: decision_contract(kinds, open_decision=True),
     }

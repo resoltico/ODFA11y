@@ -8,13 +8,14 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import style_language
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.documents import make_flat, make_package
+from tests.fixtures.measurements import measurement
 lazy from tests.fixtures.answers import apply_in_memory
 
 
@@ -55,7 +56,7 @@ def test_language_preserves_all_subtags_and_replaces_stale_defaults(
     destination = tmp_path / ("changed.fodt" if flat else "changed.odt")
     document.save(destination)
     report = audit_odf(destination, schema=True)
-    assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == tag
+    assert measurement(report, DocumentMetadata).language == tag
     assert "SCHEMA001" not in {finding.rule_id for finding in report.findings}
     assert all(
         outcome.status is Status.UNCHANGED for outcome in apply_in_memory(document, operation)

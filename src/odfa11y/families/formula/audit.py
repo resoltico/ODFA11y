@@ -1,14 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit native MathML structure and supplied spoken alternatives."""
 
-lazy from lxml import etree
+from typing import Annotated, Literal
+lazy from dataclasses import dataclass, field
 
+from lxml import etree
+
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.formula.expression import expression, fingerprint
 from odfa11y.families.formula.kinds import FORMULA_ALTERNATIVE
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Target, TargetPath
 lazy from odfa11y.odf import OdfDocument
@@ -42,6 +47,14 @@ CONTENT_VALUES = {
 NONEXPRESSION = {qn("math", name) for name in ("annotation", "annotation-xml", "mphantom")}
 
 
+@dataclass(frozen=True, slots=True)
+class FormulaMeasurements:
+    """Measurements produced by formula analysis; None denotes unmeasured data."""
+
+    producer: Literal["formula"] = field(default="formula", init=False)
+    element_count: Annotated[int | None, Description("Inspected MathML elements.")] = None
+
+
 def _meaningful(node: etree._Element) -> bool:
     if node.tag in NONEXPRESSION or any(
         parent.tag in NONEXPRESSION for parent in node.iterancestors()
@@ -58,7 +71,7 @@ def _meaningful(node: etree._Element) -> bool:
     return node.tag in TOKENS and bool("".join(node.itertext()).strip())
 
 
-def audit_formula(document: OdfDocument, report: Report) -> None:
+def audit_formula(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Check formula applicability and semantics; formal MathML validation is a schema gate."""
     root = expression(document)
     location = Location(f"{Part.CONTENT}/formula")
@@ -70,7 +83,7 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
         )
         return
     nodes = [node for node in root.iter() if isinstance(node.tag, str)]
-    report.facts[FactKeys.FORMULA_ELEMENT_COUNT] = len(nodes)
+    report.measure(FormulaMeasurements(element_count=len(nodes)))
     if not any(_meaningful(node) for node in nodes):
         report.raise_(rules.MATH001, "The mathematical expression is empty.", location=location)
     if not (root.get("alttext") or "").strip():

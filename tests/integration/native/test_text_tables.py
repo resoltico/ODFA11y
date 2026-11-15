@@ -9,11 +9,12 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.families.text.tables.audit import MeasuredTable, TableMeasurements
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
 from tests.fixtures.answers import header_answer, header_inputs
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
@@ -24,9 +25,10 @@ def test_writer_table_classification_and_pdf_scope(
 ) -> None:
     source = TESTS / "text_corpus" / f"tables-{case}.odt"
     report = audit_odf(source)
-    row = report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS][0]
+    row = measured(measurement(report, TableMeasurements).table_classifications)[0]
     expected = {"positive": "complex-data", "negative": "ambiguous", "data-no-headers": "data"}
-    assert row["classification"] == expected[case]
+    assert isinstance(row, MeasuredTable)
+    assert row.classification == expected[case]
     findings = {finding.rule_id for finding in report.findings}
     if case == "negative":
         assert "TABLE001" in findings

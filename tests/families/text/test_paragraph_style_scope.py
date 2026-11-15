@@ -10,9 +10,10 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Status
+from odfa11y.families.text.audit import TextStyleMeasurements
+from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.odf.styles import styles_of
-from odfa11y.report import FactKeys
 from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     apply_in_memory,
@@ -20,6 +21,7 @@ from tests.fixtures.answers import (
     spacing_input,
 )
 from tests.fixtures.documents import Variant, make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.writer import make_minimal_odt
 
@@ -124,9 +126,12 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
     assert not destination.exists()
     report = audit_odf(source)
     assert "STYLE001" in {finding.rule_id for finding in report.findings}
-    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
+    assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
     if problem not in {"default", "containers"}:
-        assert any(row["style"] == "Body" for row in report.facts[FactKeys.TEXT_PARAGRAPH_STYLES])
+        assert any(
+            row["style"] == "Body"
+            for row in measured(measurement(report, TextStyleMeasurements).paragraph_styles)
+        )
 
 
 def test_spacing_refuses_conditional_target_before_creating_a_style(tmp_path: Path) -> None:

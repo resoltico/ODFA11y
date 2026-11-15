@@ -14,9 +14,10 @@ from odfa11y.decisions.edit import Status
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.pdf.link_structure import PdfLinkMeasurements
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import (
     apply_in_memory,
     graphic_answer,
@@ -24,6 +25,7 @@ from tests.fixtures.answers import (
     link_answer,
     link_inputs,
 )
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
 
 
@@ -94,8 +96,8 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     pdf = export_pdfua(edited, tmp_path / "decorative-role.pdf", settings)
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
-    assert report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] > 0
-    assert report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] >= 1
+    assert measured(measurement(report, PdfMeasurements).text_character_count) > 0
+    assert measured(measurement(report, PdfMeasurements).described_graphic_count) >= 1
     assert ((4, 4), PIXELS) in decoded_images(pdf)
     assert compare_pdfs(control_pdf, pdf, Pagination.SAME(raster_tolerance=0.0)).error_count == 0
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
@@ -136,7 +138,7 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     pdf = export_pdfua(described, tmp_path / "link-title.pdf", settings)
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
-    assert report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] == 1
+    assert measured(measurement(report, PdfLinkMeasurements).link_annotation_count) == 1
     assert compare_pdfs(control_pdf, pdf, Pagination.SAME()).error_count == 0
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:

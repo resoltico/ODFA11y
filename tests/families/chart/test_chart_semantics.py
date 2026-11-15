@@ -9,17 +9,21 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
+from odfa11y.concepts.metadata import read_metadata
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, PlanError
 from odfa11y.families import require_spec
+from odfa11y.families.chart.audit import ChartMeasurements, audit_chart
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
+from odfa11y.report import Report, ReportKind
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
 from tests.fixtures.answers import Authored, FaultEdit, metadata_input
+from tests.fixtures.measurements import measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
@@ -153,3 +157,16 @@ def test_chart_series_category_and_value_consistency_requires_review(
         series.set(qn("chart", "values-cell-range-address"), "local-table.$B$1:.$B$3")
     report = audit_odf(document.save(tmp_path / "inconsistent.odc"))
     assert "CHART006" in {f.rule_id for f in report.findings}
+
+
+def test_chart_audit_uses_typed_metadata_without_a_report_fact_channel() -> None:
+    document = OdfDocument.open(SOURCE)
+    metadata = read_metadata(document, None).metadata
+    standalone = Report(ReportKind.ODF, SOURCE.name)
+    audit_chart(document, standalone, metadata)
+    full = audit_odf(SOURCE)
+    expected = [
+        finding.as_dict() for finding in full.findings if finding.rule.id.startswith("CHART")
+    ]
+    assert [finding.as_dict() for finding in standalone.findings] == expected
+    assert measurement(standalone, ChartMeasurements) == measurement(full, ChartMeasurements)

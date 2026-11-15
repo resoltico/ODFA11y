@@ -3,16 +3,17 @@
 
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import Annotated, Literal, Protocol
 
 from lxml import etree
 
+from odfa11y.contracts import Description
 from odfa11y.errors import ToolFailure
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import ToolIdentity, find_executable, run_bounded, validate_timeout
-from odfa11y.report import FactKeys, Report
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.safe_xml import parse_secure
@@ -20,6 +21,25 @@ from odfa11y.safe_xml import parse_secure
 MAX_REPORTED_CHECKS = 3
 MAX_REPORT_BYTES = 32 * 1024 * 1024
 DETAIL_CHARS = 4096
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationIdentity:
+    version: str
+    profile: str
+    compliant: bool
+    failed_rules: int
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationMeasurements:
+    """Measurements produced by pdf-validation analysis; None denotes unmeasured data."""
+
+    producer: Literal["pdf-validation"] = field(default="pdf-validation", init=False)
+    identity: Annotated[
+        ValidationIdentity | None,
+        Description("Validator identity, profile, verdict and failed-rule count."),
+    ] = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,12 +168,13 @@ def check_pdfua(
 
 def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:
     """Record the verdict, validator identity and one finding per failed rule."""
-    report.facts[FactKeys.VERAPDF_IDENTITY] = {
-        "version": result.identity.version,
-        "profile": result.profile,
-        "compliant": result.compliant,
-        "failed_rules": len(result.failures),
-    }
+    report.measure(
+        ValidationMeasurements(
+            identity=ValidationIdentity(
+                result.identity.version, result.profile, result.compliant, len(result.failures)
+            )
+        )
+    )
     for failure in result.failures:
         report.raise_(
             rules.VERA001,

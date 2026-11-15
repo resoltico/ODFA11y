@@ -9,15 +9,16 @@ from lxml import etree
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
@@ -36,7 +37,12 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
     source = writer_resource(tmp_path, href)
     report = audit_odf(source)
     assert "NATIVE001" in {finding.rule_id for finding in report.findings}
-    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)[
+            "rendering_dependencies"
+        ]
+        == 1
+    )
     with pytest.raises(DocumentRefusal, match="resource"):
         require_native_context(OdfDocument.open(source))
     # Verify reaches the explicit native refusal even without any installed application.

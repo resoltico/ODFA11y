@@ -3,14 +3,17 @@
 
 from collections.abc import Callable
 from contextlib import closing
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Annotated, Literal
 
 import pypdfium2
 from PIL import Image, ImageChops
 
+from odfa11y.contracts import Description
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
-from odfa11y.report import FactKeys, Report
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 lazy from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
@@ -25,6 +28,32 @@ RATIO_PRECISION = 6
 type Rasterizer = Callable[
     [tuple[Path, Path], PdfSnapshot, SamePagination, Report, Path | None], list[float]
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactCounts:
+    source: int
+    candidate: int
+
+
+@dataclass(frozen=True, slots=True)
+class FidelityMeasurements:
+    """Measurements produced by pdf-fidelity analysis; None denotes unmeasured data."""
+
+    producer: Literal["pdf-fidelity"] = field(default="pdf-fidelity", init=False)
+    policy: Annotated[FidelityPolicy | None, Description("Effective comparison policy.")] = None
+    page_count: Annotated[
+        ArtifactCounts | None, Description("Source and candidate page counts.")
+    ] = None
+    link_count: Annotated[
+        ArtifactCounts | None, Description("Source and candidate link counts.")
+    ] = None
+    raster_changed_ratios: Annotated[
+        list[float] | None, Description("Changed-pixel ratio for each compared page.")
+    ] = None
+    raster_max_changed_ratio: Annotated[
+        float | None, Description("Largest changed-pixel ratio.")
+    ] = None
 
 
 def compare_pdfs(
@@ -51,12 +80,11 @@ def compare_pdfs(
         subject=f"{candidate.name} vs {source.name}",
         _sources=(candidate, source),
     )
-    report.facts[FactKeys.FIDELITY_POLICY] = policy.as_dict()
+    report.measure(FidelityMeasurements(policy=policy))
     before, after = read_snapshot(source), read_snapshot(candidate)
-    report.facts[FactKeys.FIDELITY_PAGE_COUNT] = {
-        "source": len(before.pages),
-        "candidate": len(after.pages),
-    }
+    report.measure(
+        FidelityMeasurements(page_count=ArtifactCounts(len(before.pages), len(after.pages)))
+    )
     _compare_text(before, after, report)
     _compare_links(before, after, report)
     if isinstance(policy, SamePagination) and _compare_pages(before, after, report):
@@ -92,10 +120,11 @@ def _compare_text(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> No
 def _compare_links(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> None:
     missing = before.links - after.links
     added = after.links - before.links
-    report.facts[FactKeys.FIDELITY_LINK_COUNT] = {
-        "source": sum(before.links.values()),
-        "candidate": sum(after.links.values()),
-    }
+    report.measure(
+        FidelityMeasurements(
+            link_count=ArtifactCounts(sum(before.links.values()), sum(after.links.values()))
+        )
+    )
     if missing:
         report.raise_(rules.FID004, details={"missing": sorted(missing.elements())})
     if added:
@@ -142,8 +171,8 @@ def _compare_raster(
     except pypdfium2.PdfiumError as exc:
         msg = f"Cannot render PDF for comparison: {exc}"
         raise ToolFailure(msg) from exc
-    report.facts[FactKeys.FIDELITY_RASTER_CHANGED_RATIOS] = ratios
-    report.facts[FactKeys.FIDELITY_RASTER_MAX_CHANGED_RATIO] = max(ratios, default=0.0)
+    report.measure(FidelityMeasurements(raster_changed_ratios=ratios))
+    report.measure(FidelityMeasurements(raster_max_changed_ratio=max(ratios, default=0.0)))
 
 
 def _difference(

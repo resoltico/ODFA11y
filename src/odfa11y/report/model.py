@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Findings and the report container shared by every check."""
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, is_dataclass, replace
 from enum import StrEnum
 from typing import Literal
 lazy from collections.abc import Callable, Mapping
 lazy from pathlib import Path
 
-from odfa11y.contracts import JsonProperty, record_dict
+from odfa11y.contracts import JsonProperty, record_dict, validate
 from odfa11y.decisions.decision import QuestionContext
 from odfa11y.errors import PackageError
-from odfa11y.report.facts import FactSet
 from odfa11y.rules.registry import Severity
 from odfa11y.targets import Location, TargetPath
 lazy from odfa11y.contracts import JsonObject
@@ -89,17 +88,39 @@ class FindingCounts:
 
 
 @dataclass(slots=True)
-class Report:
+class Report[F = object]:
     """Collect findings and registered facts about one artifact or comparison."""
 
     kind: ReportKind
     subject: str
     findings: list[Finding] = field(default_factory=list)
-    facts: FactSet = field(default_factory=FactSet)
+    facts: tuple[F, ...] = ()
     _sources: tuple[Path, ...] = field(default=())
-    _question_for: Callable[[Rule, Report], OpenDecision | None] | None = field(
-        default=None, repr=False
-    )
+    _question_for: Callable[[Rule], OpenDecision | None] | None = field(default=None, repr=False)
+
+    def measure(self, record: F) -> None:
+        """Retain producer-owned typed measurements, merging measured fragment fields."""
+        if not is_dataclass(record) or isinstance(record, type):
+            message = "Report measurements must be dataclass values"
+            raise TypeError(message)
+        validate(record)
+        records = list(self.facts)
+        for index, previous in enumerate(records):
+            if (
+                is_dataclass(previous)
+                and not isinstance(previous, type)
+                and type(previous) is type(record)
+            ):
+                updates = {
+                    item.name: getattr(record, item.name)
+                    for item in fields(record)
+                    if item.init and getattr(record, item.name) is not None
+                }
+                records[index] = replace(previous, **updates)
+                break
+        else:
+            records.append(record)
+        self.facts = tuple(records)
 
     def raise_(
         self,
@@ -112,7 +133,7 @@ class Report:
     ) -> None:
         """Append a finding for a rule, defaulting the message to the rule title."""
         if decision is None and self._question_for is not None:
-            decision = self._question_for(rule, self)
+            decision = self._question_for(rule)
         if decision is not None and rule not in decision.kind.resolves:
             message = f"Decision {decision.kind.id!r} does not address rule {rule.id}"
             raise ValueError(message)

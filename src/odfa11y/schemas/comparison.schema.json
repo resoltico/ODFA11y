@@ -1748,275 +1748,1383 @@
           "type": "array"
         },
         "facts": {
-          "additionalProperties": false,
-          "properties": {
-            "chart.count": {
-              "type": "integer"
-            },
-            "chart.series_count": {
-              "type": "integer"
-            },
-            "database.connection_declaration_count": {
-              "type": "integer"
-            },
-            "database.query_declaration_count": {
-              "type": "integer"
-            },
-            "document.adapter": {
-              "type": "string"
-            },
-            "document.description": {
-              "type": "string"
-            },
-            "document.family": {
-              "type": "string"
-            },
-            "document.kind": {
-              "type": "string"
-            },
-            "document.language": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "document.media_type": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "document.odf_version": {
-              "type": "string"
-            },
-            "document.title": {
-              "type": "string"
-            },
-            "fidelity.link_count": {
-              "additionalProperties": {
-                "type": "integer"
-              },
-              "type": "object"
-            },
-            "fidelity.page_count": {
-              "additionalProperties": {
-                "type": "integer"
-              },
-              "type": "object"
-            },
-            "fidelity.policy": {
-              "additionalProperties": {
-                "anyOf": [
-                  {
-                    "type": "string"
+          "items": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "limitations": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "integer"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Counts of declarations requiring native export refusal or review."
                   },
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "boolean"
+                  "producer": {
+                    "enum": [
+                      "export-context"
+                    ]
                   }
-                ]
-              },
-              "type": "object"
-            },
-            "fidelity.raster_changed_ratios": {
-              "items": {
-                "type": "number"
-              },
-              "type": "array"
-            },
-            "fidelity.raster_max_changed_ratio": {
-              "type": "number"
-            },
-            "formula.element_count": {
-              "type": "integer"
-            },
-            "image.graphic_count": {
-              "type": "integer"
-            },
-            "native.limitations": {
-              "additionalProperties": {
-                "type": "integer"
-              },
-              "type": "object"
-            },
-            "package.layout": {
-              "type": "string"
-            },
-            "page.count": {
-              "type": "integer"
-            },
-            "page.link_count": {
-              "type": "integer"
-            },
-            "page.shape_count": {
-              "type": "integer"
-            },
-            "pdf.described_graphic_count": {
-              "type": "integer"
-            },
-            "pdf.format": {
-              "type": "string"
-            },
-            "pdf.language": {
-              "type": "string"
-            },
-            "pdf.link_annotation_count": {
-              "type": "integer"
-            },
-            "pdf.link_structure_element_count": {
-              "type": "integer"
-            },
-            "pdf.marked_content_id_count": {
-              "type": "integer"
-            },
-            "pdf.page_count": {
-              "type": "integer"
-            },
-            "pdf.role_map": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            "pdf.structure_tags": {
-              "additionalProperties": {
-                "type": "integer"
-              },
-              "type": "object"
-            },
-            "pdf.text_character_count": {
-              "type": "integer"
-            },
-            "pdf.title": {
-              "type": "string"
-            },
-            "pdf.ua_part": {
-              "type": "integer"
-            },
-            "schema.unlocated_violation_count": {
-              "type": "integer"
-            },
-            "schema.version": {
-              "anyOf": [
-                {
-                  "type": "string"
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "schema.violation_count": {
-              "type": "integer"
-            },
-            "sheet.count": {
-              "type": "integer"
-            },
-            "sheet.graphic_count": {
-              "type": "integer"
-            },
-            "text.bookmark_count": {
-              "type": "integer"
-            },
-            "text.effective_languages": {
-              "items": {
-                "additionalProperties": {},
+                "required": [
+                  "producer",
+                  "limitations"
+                ],
                 "type": "object"
               },
-              "type": "array"
-            },
-            "text.graphic_count": {
-              "type": "integer"
-            },
-            "text.heading_count": {
-              "type": "integer"
-            },
-            "text.list_continuation_count": {
-              "type": "integer"
-            },
-            "text.list_count": {
-              "type": "integer"
-            },
-            "text.list_max_level": {
-              "type": "integer"
-            },
-            "text.note_count": {
-              "type": "integer"
-            },
-            "text.paragraph_styles": {
-              "items": {
-                "additionalProperties": {},
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "text.reading_order_counts": {
-              "additionalProperties": {
-                "type": "integer"
-              },
-              "type": "object"
-            },
-            "text.reference_count": {
-              "type": "integer"
-            },
-            "text.revision_relationships": {
-              "additionalProperties": {
-                "type": "integer"
-              },
-              "type": "object"
-            },
-            "text.simulated_list_count": {
-              "type": "integer"
-            },
-            "text.table_classifications": {
-              "items": {
-                "additionalProperties": {},
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "text.table_count": {
-              "type": "integer"
-            },
-            "text.visibility_contexts": {
-              "items": {
-                "additionalProperties": {},
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "verapdf.identity": {
-              "additionalProperties": {
-                "anyOf": [
-                  {
-                    "type": "string"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Authored document description."
                   },
-                  {
-                    "type": "integer"
+                  "language": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Effective document language."
                   },
-                  {
-                    "type": "boolean"
+                  "producer": {
+                    "enum": [
+                      "odf-metadata"
+                    ]
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Document title."
                   }
-                ]
+                },
+                "required": [
+                  "producer",
+                  "title",
+                  "description",
+                  "language"
+                ],
+                "type": "object"
               },
-              "type": "object"
-            }
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "family": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Detected ODF family."
+                  },
+                  "kind": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Detected ODF document kind."
+                  },
+                  "layout": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Physical ODF representation."
+                  },
+                  "media_type": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Declared source media type."
+                  },
+                  "odf_version": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Declared ODF version."
+                  },
+                  "producer": {
+                    "enum": [
+                      "odf-package"
+                    ]
+                  },
+                  "unlocated_violation_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Violations without established element locations."
+                  },
+                  "version": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Version of the selected bundled schema."
+                  },
+                  "violation_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Reported schema violations."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "layout",
+                  "media_type",
+                  "kind",
+                  "family",
+                  "version",
+                  "violation_count",
+                  "unlocated_violation_count",
+                  "odf_version"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Native charts in a Chart document."
+                  },
+                  "producer": {
+                    "enum": [
+                      "chart"
+                    ]
+                  },
+                  "series_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Declared chart series."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "count",
+                  "series_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "connection_declaration_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Database connection declarations."
+                  },
+                  "producer": {
+                    "enum": [
+                      "database"
+                    ]
+                  },
+                  "query_declaration_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Declared database queries."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "connection_declaration_count",
+                  "query_declaration_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "element_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Inspected MathML elements."
+                  },
+                  "producer": {
+                    "enum": [
+                      "formula"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "element_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "graphic_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Graphic frames in an Image document."
+                  },
+                  "producer": {
+                    "enum": [
+                      "image"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "graphic_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Drawing or presentation pages."
+                  },
+                  "link_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Links on drawing or presentation pages."
+                  },
+                  "producer": {
+                    "enum": [
+                      "pages"
+                    ]
+                  },
+                  "shape_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Shapes on drawing or presentation pages."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "count",
+                  "shape_count",
+                  "link_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Sheets in document order."
+                  },
+                  "graphic_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Graphic objects on sheets."
+                  },
+                  "producer": {
+                    "enum": [
+                      "spreadsheet"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "count",
+                  "graphic_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "paragraph_styles": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "count": {
+                              "type": "integer"
+                            },
+                            "parent": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "spacing": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "type": "object"
+                            },
+                            "style": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "parent",
+                            "spacing",
+                            "style"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Paragraph style usage and effective spacing."
+                  },
+                  "producer": {
+                    "enum": [
+                      "text-styles"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "paragraph_styles"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "graphic_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Graphic objects in current reading contexts."
+                  },
+                  "heading_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Structural headings in current reading contexts."
+                  },
+                  "producer": {
+                    "enum": [
+                      "text-content"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "heading_count",
+                  "graphic_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "effective_languages": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "asian": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "complex": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "enum": [
+                                    "measured"
+                                  ]
+                                },
+                                "target": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "western": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "western",
+                                "asian",
+                                "complex",
+                                "state"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "state": {
+                                  "enum": [
+                                    "unresolved"
+                                  ]
+                                },
+                                "target": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "reason",
+                                "state"
+                              ],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Per-target effective western, Asian and complex languages or refusal reasons."
+                  },
+                  "producer": {
+                    "enum": [
+                      "text-language"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "effective_languages"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "list_continuation_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Resolved list continuation relationships."
+                  },
+                  "list_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Lists in established current reading contexts."
+                  },
+                  "list_max_level": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Deepest counter level, resetting at cells and text boxes."
+                  },
+                  "producer": {
+                    "enum": [
+                      "text-lists"
+                    ]
+                  },
+                  "simulated_list_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Paragraphs resembling typed list markers; review only."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "list_count",
+                  "list_max_level",
+                  "list_continuation_count",
+                  "simulated_list_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "bookmark_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Bookmark destinations in current reading contexts."
+                  },
+                  "note_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Notes anchored in current reading contexts."
+                  },
+                  "producer": {
+                    "enum": [
+                      "text-references"
+                    ]
+                  },
+                  "reference_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Internal links and typed cross-reference fields."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "reference_count",
+                  "bookmark_count",
+                  "note_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "producer": {
+                    "enum": [
+                      "text-tables"
+                    ]
+                  },
+                  "table_classifications": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "classification": {
+                                  "enum": [
+                                    "data",
+                                    "complex-data",
+                                    "layout-candidate",
+                                    "ambiguous"
+                                  ]
+                                },
+                                "columns": {
+                                  "type": "integer"
+                                },
+                                "header_columns": {
+                                  "type": "integer"
+                                },
+                                "header_rows": {
+                                  "type": "integer"
+                                },
+                                "rows": {
+                                  "type": "integer"
+                                },
+                                "state": {
+                                  "enum": [
+                                    "measured"
+                                  ]
+                                },
+                                "target": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "classification",
+                                "rows",
+                                "columns",
+                                "header_rows",
+                                "header_columns",
+                                "state"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "state": {
+                                  "enum": [
+                                    "unresolved"
+                                  ]
+                                },
+                                "target": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "target",
+                                "reason",
+                                "state"
+                              ],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Per-table source-supported intent, grid and semantic header bands."
+                  },
+                  "table_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Tables in current reading contexts."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "table_count",
+                  "table_classifications"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "producer": {
+                    "enum": [
+                      "text-visibility"
+                    ]
+                  },
+                  "visibility_contexts": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cached_condition": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "cached_hidden": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "condition": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "display": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "target": {
+                              "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "target",
+                            "kind",
+                            "condition",
+                            "display",
+                            "cached_hidden",
+                            "cached_condition"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Visibility conditions and cached states, without evaluation."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "visibility_contexts"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "producer": {
+                    "enum": [
+                      "text-reading-order"
+                    ]
+                  },
+                  "reading_order_counts": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "integer"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Declared layout conditions needing native reading-order review."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "reading_order_counts"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "producer": {
+                    "enum": [
+                      "text-revisions"
+                    ]
+                  },
+                  "revision_relationships": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "integer"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Tracked declarations, authored markers and unresolved relationships."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "revision_relationships"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "described_graphic_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Inspected graphical content with descriptions."
+                  },
+                  "format": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "PDF header format declaration."
+                  },
+                  "language": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "PDF catalog language."
+                  },
+                  "page_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Pages in the inspected PDF."
+                  },
+                  "producer": {
+                    "enum": [
+                      "pdf-document"
+                    ]
+                  },
+                  "text_character_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Extractable text characters."
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "PDF document title."
+                  },
+                  "ua_part": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Declared PDF/UA part."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "page_count",
+                  "format",
+                  "text_character_count",
+                  "described_graphic_count",
+                  "title",
+                  "language",
+                  "ua_part"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "link_count": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "candidate": {
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "source",
+                          "candidate"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Source and candidate link counts."
+                  },
+                  "page_count": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "candidate": {
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "source",
+                          "candidate"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Source and candidate page counts."
+                  },
+                  "policy": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "ink_threshold": {
+                                "description": "Luminance below which a rendered pixel is ink.",
+                                "maximum": 255,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "pagination": {
+                                "enum": [
+                                  "same"
+                                ]
+                              },
+                              "raster_tolerance": {
+                                "description": "Largest permitted changed-ink ratio.",
+                                "minimum": 0,
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "raster_tolerance",
+                              "ink_threshold",
+                              "pagination"
+                            ],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "pagination": {
+                                "enum": [
+                                  "may-change"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "pagination"
+                            ],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Effective comparison policy."
+                  },
+                  "producer": {
+                    "enum": [
+                      "pdf-fidelity"
+                    ]
+                  },
+                  "raster_changed_ratios": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "type": "number"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Changed-pixel ratio for each compared page."
+                  },
+                  "raster_max_changed_ratio": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Largest changed-pixel ratio."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "policy",
+                  "page_count",
+                  "link_count",
+                  "raster_changed_ratios",
+                  "raster_max_changed_ratio"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "link_annotation_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Inspected link annotations."
+                  },
+                  "link_structure_element_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Link elements in the structure tree."
+                  },
+                  "producer": {
+                    "enum": [
+                      "pdf-links"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "link_annotation_count",
+                  "link_structure_element_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "marked_content_id_count": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Marked content identifiers."
+                  },
+                  "producer": {
+                    "enum": [
+                      "pdf-marked-content"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "marked_content_id_count"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "producer": {
+                    "enum": [
+                      "pdf-structure"
+                    ]
+                  },
+                  "role_map": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "PDF custom-to-standard structure role mapping."
+                  },
+                  "structure_tags": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": {
+                          "type": "integer"
+                        },
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Reachable structure roles and their counts."
+                  }
+                },
+                "required": [
+                  "producer",
+                  "structure_tags",
+                  "role_map"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "identity": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "compliant": {
+                            "type": "boolean"
+                          },
+                          "failed_rules": {
+                            "type": "integer"
+                          },
+                          "profile": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "version",
+                          "profile",
+                          "compliant",
+                          "failed_rules"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Validator identity, profile, verdict and failed-rule count."
+                  },
+                  "producer": {
+                    "enum": [
+                      "pdf-validation"
+                    ]
+                  }
+                },
+                "required": [
+                  "producer",
+                  "identity"
+                ],
+                "type": "object"
+              }
+            ]
           },
-          "required": [],
-          "type": "object"
+          "type": "array"
         },
         "findings": {
           "items": {

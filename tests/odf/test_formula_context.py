@@ -9,6 +9,7 @@ from lxml import etree
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
@@ -21,8 +22,8 @@ from odfa11y.odf.formula import (
     FormulaAnalysis,
     classify_formula,
 )
-from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import refusing
 from tests.fixtures.writer import make_minimal_odt
 
@@ -134,7 +135,10 @@ def test_every_standard_formula_attribute_reaches_the_native_guard(
     report = audit_odf(source)
     assert "NATIVE001" in {f.rule_id for f in report.findings}
     assert "credentials" not in str(report.facts)
-    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_declarations"] == 1
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)["formula_declarations"]
+        == 1
+    )
     assert source.read_bytes() == original
 
 

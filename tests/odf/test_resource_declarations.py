@@ -6,11 +6,12 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
-from odfa11y.report import FactKeys
 from tests.fixtures.declarations import declaration
+from tests.fixtures.measurements import measured, measurement
 
 KINDS = ["fill", "bullet", "symbol", "font", "form-button", "form-image", "form-image-frame"]
 
@@ -25,7 +26,12 @@ def test_schema_valid_declarations_are_reported_and_refused(
     assert validate(document).count == 0
     report = audit_odf(source)
     assert "NATIVE001" in {f.rule_id for f in report.findings}
-    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["rendering_dependencies"] == 1
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)[
+            "rendering_dependencies"
+        ]
+        == 1
+    )
     with pytest.raises(DocumentRefusal, match="resource"):
         require_native_context(document)
 

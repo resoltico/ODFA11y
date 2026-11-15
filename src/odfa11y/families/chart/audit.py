@@ -1,37 +1,51 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit standalone chart identity, descriptions, cached ranges and labels."""
 
-lazy from lxml import etree
+from typing import Annotated, Literal
+lazy from dataclasses import dataclass, field
+
+from lxml import etree
 
 from odfa11y.concepts import visible_words
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.chart.ranges import range_shape, resolve_range
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.families.chart.ranges import LocalRange
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
 
-def audit_chart(document: OdfDocument, report: Report) -> None:
+@dataclass(frozen=True, slots=True)
+class ChartMeasurements:
+    """Measurements produced by chart analysis; None denotes unmeasured data."""
+
+    producer: Literal["chart"] = field(default="chart", init=False)
+    count: Annotated[int | None, Description("Native charts in a Chart document.")] = None
+    series_count: Annotated[int | None, Description("Declared chart series.")] = None
+
+
+def audit_chart(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Inspect source semantics without loading external data or inventing an export filter."""
     charts = select_elements(document.tree(Part.CONTENT), "//office:body/office:chart/chart:chart")
-    report.facts[FactKeys.CHART_COUNT] = len(charts)
+    report.measure(ChartMeasurements(count=len(charts)))
     location = Location(f"{Part.CONTENT}/chart")
     if len(charts) != 1:
         report.raise_(rules.CHART001, location=location)
         return
     chart = charts[0]
-    if not report.facts.get(FactKeys.DOCUMENT_TITLE) and not any(
+    if not metadata.title and not any(
         visible_words(node) for node in select_elements(chart, "./chart:title")
     ):
         report.raise_(rules.CHART002, location=location)
-    if not report.facts.get(FactKeys.DOCUMENT_DESCRIPTION):
+    if not metadata.description:
         report.raise_(rules.CHART003, location=Location("meta/description"))
     series = select_elements(chart, "./chart:plot-area/chart:series")
-    report.facts[FactKeys.CHART_SERIES_COUNT] = len(series)
+    report.measure(ChartMeasurements(series_count=len(series)))
     if not series:
         report.raise_(rules.CHART001, "The chart declares no data series.", location=location)
     _ranges(chart, report)

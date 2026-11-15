@@ -10,8 +10,9 @@ from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf.audit import PdfMeasurements
+from odfa11y.pdf.structure_checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -21,6 +22,7 @@ from tests.fixtures.answers import (
     metadata_input,
     page_answer,
 )
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.plans import reviewed_plan
 lazy from tests.fixtures.answers import graphic_inputs, page_inputs
 
@@ -50,7 +52,14 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     assert not damaged.compliant
     assert {(failure.clause, failure.test_number) for failure in damaged.failures} == {("7.3", "1")}
     assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant
-    assert audit_pdfua(root / "remediated.pdf").facts[FactKeys.PDF_STRUCTURE_TAGS]["Figure"] == 1
+    assert (
+        measured(
+            measurement(
+                audit_pdfua(root / "remediated.pdf"), PdfStructureMeasurements
+            ).structure_tags
+        )["Figure"]
+        == 1
+    )
 
 
 def test_described_illustration_only_draw_export_passes_both_content_checks(
@@ -85,7 +94,7 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     report = audit_pdfua(root / "remediated.pdf")
-    assert report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] == 0
-    assert report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] == 1
+    assert measured(measurement(report, PdfMeasurements).text_character_count) == 0
+    assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 1
     assert "PDF010" not in {finding.rule_id for finding in report.findings}
     assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant

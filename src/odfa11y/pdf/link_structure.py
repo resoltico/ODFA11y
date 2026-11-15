@@ -2,20 +2,32 @@
 """Correlate link annotations with the Link structure elements that should represent them."""
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 from pypdf.errors import PdfReadError
 from pypdf.generic import ArrayObject, IndirectObject, PdfObject
 lazy from pypdf import PdfReader
 lazy from pypdf.generic import DictionaryObject
 
+from odfa11y.contracts import Description
 from odfa11y.pdf.structure_walk import pdf_dictionary
-from odfa11y.report import FactKeys
 from odfa11y.rules import registry as rules
 lazy from odfa11y.pdf.structure_walk import StructureNode
 lazy from odfa11y.report import Report
 
 MAX_LISTED = 20
+
+
+@dataclass(frozen=True, slots=True)
+class PdfLinkMeasurements:
+    """Measurements produced by pdf-links analysis; None denotes unmeasured data."""
+
+    producer: Literal["pdf-links"] = field(default="pdf-links", init=False)
+    link_annotation_count: Annotated[int | None, Description("Inspected link annotations.")] = None
+    link_structure_element_count: Annotated[
+        int | None, Description("Link elements in the structure tree.")
+    ] = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,8 +115,8 @@ def check_link_structure(
                 mapped[reference.object_xref].append(reference.page_xref)
                 if _has_text(node.element.get("/Alt")):
                     alternates.add(reference.object_xref)
-    report.facts[FactKeys.PDF_LINK_ANNOTATION_COUNT] = len(annotations)
-    report.facts[FactKeys.PDF_LINK_STRUCTURE_ELEMENT_COUNT] = len(link_nodes)
+    report.measure(PdfLinkMeasurements(link_annotation_count=len(annotations)))
+    report.measure(PdfLinkMeasurements(link_structure_element_count=len(link_nodes)))
     unmatched = [a for a in annotations if a.xref is None or a.xref not in mapped]
     if unmatched:
         report.raise_(

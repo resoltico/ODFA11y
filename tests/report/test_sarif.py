@@ -9,12 +9,11 @@ import pytest
 from jsonschema import Draft7Validator
 
 from odfa11y.audit import audit_odf
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.errors import InvalidOption, IoFailure, PlanError
 from odfa11y.pdf import check_pdfua
 from odfa11y.report import (
     Category,
-    FactKeys,
-    FactSet,
     Finding,
     Location,
     Report,
@@ -127,11 +126,11 @@ def test_package_and_flat_findings_have_equivalent_logical_locations(tmp_path: P
 def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) -> None:
     source = _source(tmp_path, "sample.odb")
     connection = "postgres://alice:super-secret@database/private"
-    report = Report(
+    report = Report[object](
         kind=ReportKind.ODF,
         subject=str(source),
         _sources=(source,),
-        facts=FactSet({FactKeys.DOCUMENT_DESCRIPTION: connection}),
+        facts=(DocumentMetadata(description=connection),),
     )
     report.raise_(rules.META001, f"{connection} at {source}", details={"connection": connection})
     rendered = render_reports([report], output_format="sarif", source_root=tmp_path)

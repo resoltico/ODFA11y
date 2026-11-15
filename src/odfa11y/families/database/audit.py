@@ -2,15 +2,19 @@
 """Inspect database privacy, declared bindings and descriptions without executing anything."""
 
 import re
+from typing import Annotated, Literal
+lazy from dataclasses import dataclass, field
 
-lazy from lxml import etree
+from lxml import etree
 
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.database.descriptions import description_attribute, fingerprint, targets
 from odfa11y.families.database.kinds import DATABASE_DESCRIPTION
 from odfa11y.odf import PackageStorage, Part, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
@@ -41,7 +45,18 @@ AUTHENTICATION_SETTINGS = {
 }
 
 
-def audit_database(document: OdfDocument, report: Report) -> None:
+@dataclass(frozen=True, slots=True)
+class DatabaseMeasurements:
+    """Measurements produced by database analysis; None denotes unmeasured data."""
+
+    producer: Literal["database"] = field(default="database", init=False)
+    connection_declaration_count: Annotated[
+        int | None, Description("Database connection declarations.")
+    ] = None
+    query_declaration_count: Annotated[int | None, Description("Declared database queries.")] = None
+
+
+def audit_database(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Read declarations and package bytes; never open a DB or execute SQL/macros."""
     tree = document.tree(Part.CONTENT)
     databases = select_elements(tree, "//office:body/office:database")
@@ -52,7 +67,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
         databases[0],
         ".//db:connection-resource | .//db:file-based-database | .//db:server-database",
     )
-    report.facts[FactKeys.DATABASE_CONNECTION_DECLARATION_COUNT] = len(resources)
+    report.measure(DatabaseMeasurements(connection_declaration_count=len(resources)))
     if not resources:
         report.raise_(
             rules.BASE001,
@@ -134,7 +149,7 @@ def _objects(document: OdfDocument, report: Report) -> None:
 
 def _executable_content(document: OdfDocument, database: etree._Element, report: Report) -> None:
     queries = select_elements(database, ".//db:query")
-    report.facts[FactKeys.DATABASE_QUERY_DECLARATION_COUNT] = len(queries)
+    report.measure(DatabaseMeasurements(query_declaration_count=len(queries)))
     if queries:
         report.raise_(rules.BASE006, details={"query_count": len(queries)})
     scripts = select_elements(document.tree(Part.CONTENT), "//office:scripts/*")

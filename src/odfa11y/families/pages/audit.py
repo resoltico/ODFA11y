@@ -2,6 +2,8 @@
 """Audit presentation and drawing pages, content, descriptions and explicit navigation."""
 
 from collections import Counter
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 lazy from lxml import etree
 
@@ -26,10 +28,12 @@ from odfa11y.concepts.kinds import (
     PAGE_METADATA,
     PAGE_NAVIGATION,
 )
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.families.pages.profiles import PageProfile
@@ -39,7 +43,21 @@ lazy from odfa11y.report import Report
 XML_ID = xml_names.XML_ID
 
 
-def audit_document(document: OdfDocument, report: Report, profile: PageProfile) -> None:
+@dataclass(frozen=True, slots=True)
+class PageMeasurements:
+    """Measurements produced by pages analysis; None denotes unmeasured data."""
+
+    producer: Literal["pages"] = field(default="pages", init=False)
+    count: Annotated[int | None, Description("Drawing or presentation pages.")] = None
+    shape_count: Annotated[int | None, Description("Shapes on drawing or presentation pages.")] = (
+        None
+    )
+    link_count: Annotated[int | None, Description("Links on drawing or presentation pages.")] = None
+
+
+def audit_document(
+    document: OdfDocument, report: Report, metadata: DocumentMetadata, profile: PageProfile
+) -> None:
     """Report semantic defects without executing scripts, links or rendering."""
     available = pages(document)
     names = Counter(page.get(xml_names.DRAW_NAME) for page in available)
@@ -48,7 +66,7 @@ def audit_document(document: OdfDocument, report: Report, profile: PageProfile) 
         for node in document.tree(Part.CONTENT).iter()
         if (identity := node.get(XML_ID) or node.get(xml_names.DRAW_ID))
     )
-    report.facts[FactKeys.PAGE_COUNT] = len(available)
+    report.measure(PageMeasurements(count=len(available)))
     if not available:
         report.raise_(rules.PAGE001, location=Location(Part.CONTENT))
     for index, page in enumerate(available, 1):
@@ -122,7 +140,7 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
         if node.tag in SHAPE_TAGS
     ]
     identity = GraphicIdentity(document, shapes)
-    report.facts[FactKeys.PAGE_SHAPE_COUNT] = len(shapes)
+    report.measure(PageMeasurements(shape_count=len(shapes)))
     for shape in shapes:
         decorative = audit_graphic_role(document, shape, report)
         if decorative or shape.tag == xml_names.DRAW_G:
@@ -151,7 +169,7 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
 
 def _links(document: OdfDocument, report: Report) -> None:
     links = document_links(document)
-    report.facts[FactKeys.PAGE_LINK_COUNT] = len(links)
+    report.measure(PageMeasurements(link_count=len(links)))
     for index, link in enumerate(links, 1):
         if not link_has_description(link):
             report.raise_(

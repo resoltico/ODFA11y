@@ -8,6 +8,7 @@ import pytest
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import GraphicAlternativeAnswer
 from odfa11y.decisions.edit import Outcome, Status
@@ -18,7 +19,6 @@ from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.remediate.compile import compile_decisions
-from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.status import StageStatus
@@ -29,6 +29,7 @@ from tests.fixtures.answers import (
     graphic_inputs,
     metadata_input,
 )
+from tests.fixtures.measurements import measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.spreadsheets import (
@@ -158,7 +159,7 @@ def test_the_language_reaches_the_default_cell_style(tmp_path: Path, layout: str
     output = tmp_path / f"out{source.suffix}"
     apply_answers(source, output, [metadata_input(language="fr-FR")])
     report = audit_odf(output, schema=True)
-    assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
+    assert measurement(report, DocumentMetadata).language == "fr-FR"
     assert "META003" not in {f.rule_id for f in report.findings}
     assert "SCHEMA001" not in {f.rule_id for f in report.findings}
     again = apply_answers(

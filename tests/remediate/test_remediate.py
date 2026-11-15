@@ -2,7 +2,7 @@
 """The executor: fail-closed publication, postconditions and byte preservation."""
 
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import ClassVar, override
 lazy from pathlib import Path
 
@@ -10,8 +10,9 @@ import pytest
 
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import OutputOccupied, PlanError
+from odfa11y.families import REGISTRY
 from odfa11y.families.text import SPEC
-from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
+from odfa11y.odf import Family, OdfDocument, PackageStorage, Part, qn, select_elements
 from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     FaultEdit,
@@ -154,7 +155,9 @@ def test_new_schema_violations_are_rejected_before_publication(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Isolate the schema regression check from the stronger protected-XML check.
-    monkeypatch.setattr(SPEC, "protect_edit", lambda _document, _operation: None)
+    monkeypatch.setitem(
+        REGISTRY, Family.TEXT, replace(SPEC, protect_edit=lambda _document, _operation: None)
+    )
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     assert_refused(

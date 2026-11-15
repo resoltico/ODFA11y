@@ -51,7 +51,12 @@ def test_multi_input_audit_retains_success_after_execution_failure(tmp_path: Pat
     assert "error" not in first
     rendered = result.render("json")
     assert rendered is not None
-    assert json.loads(rendered)["facts"]["document.title"] == "Synthetic accessible document"
+    assert (
+        next(item for item in json.loads(rendered)["facts"] if item["producer"] == "odf-metadata")[
+            "title"
+        ]
+        == "Synthetic accessible document"
+    )
 
 
 def test_partial_input_reports_survive_later_failure_and_sarif_is_fail_closed(

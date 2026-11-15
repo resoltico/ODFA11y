@@ -9,9 +9,10 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.families.text.references.audit import ReferenceMeasurements
 from odfa11y.pdf import audit_pdfua, validate_pdfua
-from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.paths import TESTS
 
 
@@ -38,10 +39,10 @@ def test_writer_reference_wording_and_source_scope(
         assert pdf_rules == {"PDF008", "PDF017"}
         assert validation.compliant
     report = audit_odf(source)
-    assert report.facts[FactKeys.TEXT_REFERENCE_COUNT] == 1
+    assert measured(measurement(report, ReferenceMeasurements).reference_count) == 1
     if case == "positive":
         assert "Fruit grows on trees." in text
-        assert report.facts[FactKeys.TEXT_NOTE_COUNT] == 1
+        assert measured(measurement(report, ReferenceMeasurements).note_count) == 1
         assert "NOTE001" in {finding.rule_id for finding in report.findings}
         assert any(
             annotation.get_object().get("/Dest") is not None

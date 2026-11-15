@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Rules, findings and report rendering shared by every check."""
 
-from odfa11y.report.facts import FACT_REGISTRY, FactKey, FactKeys, FactSet
 from odfa11y.report.model import Finding, Location, Report, ReportKind
 from odfa11y.report.render import FORMATS, exit_status, render_reports
 from odfa11y.report.sarif import preflight_sarif
@@ -10,13 +9,9 @@ from odfa11y.rules import registry as rules
 from odfa11y.rules.registry import RULES, Category, Rule, Severity
 
 __all__ = [
-    "FACT_REGISTRY",
     "FORMATS",
     "RULES",
     "Category",
-    "FactKey",
-    "FactKeys",
-    "FactSet",
     "Finding",
     "Location",
     "Report",

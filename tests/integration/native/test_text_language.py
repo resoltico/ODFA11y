@@ -10,10 +10,11 @@ from pypdf import PdfReader
 from odfa11y import plan, remediate
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.families.text.language.audit import LanguageMeasurements, MeasuredLanguages
 from odfa11y.odf import OdfDocument, validate
-from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header
 
@@ -40,8 +41,8 @@ def test_writer_language_source_decision_and_pdf_tags(
         assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
         source = edited
         report = audit_odf(source)
-    rows = report.facts[FactKeys.TEXT_EFFECTIVE_LANGUAGES]
-    assert any(row.get("western") == "fr-FR" for row in rows)
+    rows = measured(measurement(report, LanguageMeasurements).effective_languages)
+    assert any(isinstance(row, MeasuredLanguages) and row.western == "fr-FR" for row in rows)
     output = tmp_path / "language.pdf"
     export_document(source, output, Tools(soffice=external_tool("soffice", "libreoffice")))
     reader = PdfReader(output)

@@ -42,7 +42,11 @@ def test_audit_prints_json_for_one_file_and_an_array_for_several(
     second = make_minimal_odt(tmp_path / "b.odt")
     assert main(["audit", str(first), "--format", "json"]) == 0
     one = json.loads(capsys.readouterr().out)
-    assert (one["kind"], one["summary"]["errors"] == 0, one["facts"]["document.title"]) == (
+    assert (
+        one["kind"],
+        one["summary"]["errors"] == 0,
+        next(item for item in one["facts"] if item["producer"] == "odf-metadata")["title"],
+    ) == (
         "odf",
         True,
         "Synthetic accessible document",
@@ -79,7 +83,14 @@ def test_audit_with_schema_flag_validates(
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
     assert main(["audit", str(source), "--schema", "--format", "json"]) == 0
-    assert json.loads(capsys.readouterr().out)["facts"]["schema.violation_count"] == 0
+    assert (
+        next(
+            item
+            for item in json.loads(capsys.readouterr().out)["facts"]
+            if item["producer"] == "odf-package"
+        )["violation_count"]
+        == 0
+    )
 
 
 def test_missing_verapdf_is_a_tool_failure_without_a_fake_finding(
@@ -185,12 +196,14 @@ def test_removed_flags_and_commands_are_rejected() -> None:
 def test_styles_prints_usage(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
     assert main(["audit", str(source), "--format", "json"]) == 0
-    rows = json.loads(capsys.readouterr().out)["facts"]["text.paragraph_styles"]
+    rows = next(
+        item
+        for item in json.loads(capsys.readouterr().out)["facts"]
+        if item["producer"] == "text-styles"
+    )["paragraph_styles"]
     assert any(row["style"] == "Body" for row in rows)
     assert main(["audit", str(source)]) == 0
-    assert "Paragraph styles:" in capsys.readouterr().out
-    assert main(["audit", str(source)]) == 0
-    assert "- Body:" in capsys.readouterr().out
+    assert "text-styles.paragraph_styles:" in capsys.readouterr().out
 
 
 def test_compare_pdfs_directly_gates_on_the_policy(

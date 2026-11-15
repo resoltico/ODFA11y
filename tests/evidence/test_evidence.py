@@ -60,7 +60,7 @@ def test_failed_publication_leaves_no_partial_bundle(tmp_path: Path) -> None:
 def test_review_separates_facts_from_decisions_and_never_overclaims() -> None:
     text = render_review(record())
     assert "## Machine-established facts" in text
-    assert "- `audit-pdf` pdf.page_count: 2" in text
+    assert "- `audit-pdf` pdf-document.page_count: 2" in text
     assert "PDF005: No title display." in text
     assert "not PDF/UA validation" in text
     for item in REVIEW_ITEMS:

@@ -10,17 +10,18 @@ import pytest
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.native import export_document
 from odfa11y.run.profiles import profile_named
 from tests.fixtures.documents import TABLE_BODY, Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import recording, refusing
 from tests.fixtures.plans import reviewed_plan
 
@@ -69,7 +70,10 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     original = source.read_bytes()
     report = audit_odf(source)
     assert "NATIVE001" in {finding.rule_id for finding in report.findings}
-    assert report.facts[FactKeys.NATIVE_LIMITATIONS]["formula_incomplete"] > 0
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)["formula_incomplete"]
+        > 0
+    )
     calls = []
     native_tools = replace(native_tools, export=refusing(calls))
     with pytest.raises(DocumentRefusal, match="formula context"):

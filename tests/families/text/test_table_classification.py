@@ -6,11 +6,12 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
+from odfa11y.families.text.tables.audit import MeasuredTable, TableMeasurements
 from odfa11y.families.text.tables.classification import TableKind, classify
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import header_answer, header_inputs
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
@@ -56,7 +57,9 @@ def test_untyped_visual_labels_do_not_establish_data_intent(tmp_path: Path, colu
     source = make_flat(tmp_path, "text", Variant(body=f"<office:text>{table}</office:text>"))
     report = audit_odf(source)
     expected = "layout-candidate" if columns == 1 else "ambiguous"
-    assert report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS][0]["classification"] == expected
+    row = measured(measurement(report, TableMeasurements).table_classifications)[0]
+    assert isinstance(row, MeasuredTable)
+    assert row.classification == expected
     assert "TABLE001" in {finding.rule_id for finding in report.findings}
     assert not any(question.kind.id == "table.headers" for question in report.decisions)
     output = tmp_path / "refused.fodt"
@@ -139,7 +142,9 @@ def test_large_simple_repeats_stay_arithmetic_and_complex_expansion_is_bounded(
     )
     source = make_flat(tmp_path, "text", Variant(body=f"<office:text>{simple}</office:text>"))
     report = audit_odf(source)
-    assert report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS][0]["rows"] == 1000000000000
+    row = measured(measurement(report, TableMeasurements).table_classifications)[0]
+    assert isinstance(row, MeasuredTable)
+    assert row.rows == 1000000000000
     assert "TABLE003" in {finding.rule_id for finding in report.findings}
     complex_grid = (
         '<table:table table:name="Large"><table:table-column table:number-columns-repeated="2"/>'

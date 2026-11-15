@@ -7,9 +7,10 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.native import NativeTools
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.errors import ToolFailure, ToolUnavailable
-from odfa11y.report import FactKeys
 from odfa11y.run.inspection import audit_document
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import validation_result
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.writer import make_minimal_odt
@@ -22,7 +23,7 @@ def test_core_dispatch_uses_content_and_applies_odf_schema(
     reports = list(audit_document(odf, schema=True, verapdf=True))
     assert len(reports) == 1
     assert reports[0].kind == "odf"
-    assert reports[0].facts[FactKeys.SCHEMA_VIOLATION_COUNT] == 0
+    assert measured(measurement(reports[0], PackageMeasurements).violation_count) == 0
     assert reports[0].sources == (odf,)
     output = capsys.readouterr()
     assert not output.out

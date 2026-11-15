@@ -9,14 +9,16 @@ from lxml import etree
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.concepts import document_links, eligible_text_node
 from odfa11y.errors import PlanError
+from odfa11y.families.text.headings.audit import TextContentMeasurements
+from odfa11y.families.text.tables.audit import TableMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import (
     address_input,
     graphic_answer,
     graphic_inputs,
 )
 from tests.fixtures.documents import Variant, make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers
 lazy from tests.fixtures.answers import apply_in_memory
 
@@ -47,8 +49,8 @@ Conditional heading https://hidden.example
     before = etree.tostring(excluded)
     assert all(not eligible_text_node(node) for node in excluded.iter())
     report, template = prepare_plan(source)
-    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
-    assert report.facts[FactKeys.TEXT_TABLE_COUNT] == 0
+    assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
+    assert measured(measurement(report, TableMeasurements).table_count) == 0
     assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
     addresses = [
         finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
@@ -74,7 +76,7 @@ Conditional heading https://hidden.example
     retained = select_elements(reloaded.tree(Part.CONTENT), "//text:hidden-paragraph/..")[0]
     assert etree.tostring(retained) == before
     after = audit_odf(destination)
-    assert after.facts[FactKeys.TEXT_HEADING_COUNT] == 1
+    assert measured(measurement(after, TextContentMeasurements).heading_count) == 1
     assert "HIDDEN001" in {finding.rule_id for finding in after.findings}
 
 

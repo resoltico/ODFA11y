@@ -3,14 +3,17 @@
 
 import re
 from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 lazy from lxml import etree
 
 from odfa11y.concepts import reading_context_path, visible_words
+from odfa11y.contracts import Description
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
@@ -25,6 +28,25 @@ COUNTER_BOUNDARIES = frozenset({
     xml_names.DRAW_TEXT_BOX,
 })
 TYPED_MARKER = re.compile(r"^\s*(?:[•◦▪‣*-]|\(?\d{1,3}[.)]|[A-Za-z][.)])\s+\S")
+
+
+@dataclass(frozen=True, slots=True)
+class ListMeasurements:
+    """Measurements produced by text-lists analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-lists"] = field(default="text-lists", init=False)
+    list_count: Annotated[
+        int | None, Description("Lists in established current reading contexts.")
+    ] = None
+    list_max_level: Annotated[
+        int | None, Description("Deepest counter level, resetting at cells and text boxes.")
+    ] = None
+    list_continuation_count: Annotated[
+        int | None, Description("Resolved list continuation relationships.")
+    ] = None
+    simulated_list_count: Annotated[
+        int | None, Description("Paragraphs resembling typed list markers; review only.")
+    ] = None
 
 
 def list_level(node: etree._Element) -> int:
@@ -86,12 +108,12 @@ def audit_lists(document: OdfDocument, report: Report) -> None:
                     )
                 },
             )
-    report.facts[FactKeys.TEXT_LIST_COUNT] = len(available)
-    report.facts[FactKeys.TEXT_LIST_MAX_LEVEL] = max(
-        (list_level(node) for node in available), default=0
+    report.measure(ListMeasurements(list_count=len(available)))
+    report.measure(
+        ListMeasurements(list_max_level=max((list_level(node) for node in available), default=0))
     )
-    report.facts[FactKeys.TEXT_LIST_CONTINUATION_COUNT] = len(edges)
-    report.facts[FactKeys.TEXT_SIMULATED_LIST_COUNT] = simulated
+    report.measure(ListMeasurements(list_continuation_count=len(edges)))
+    report.measure(ListMeasurements(simulated_list_count=simulated))
 
 
 def _membership(node: etree._Element, location: Location, report: Report) -> None:

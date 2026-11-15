@@ -142,8 +142,8 @@ def test_registry_without_any_probes_returns_partial_unsupported_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     native_tools = identities(native_tools)
-    for adapter in REGISTRY.values():
-        monkeypatch.setattr(adapter, "probes", ())
+    for family, spec in tuple(REGISTRY.items()):
+        monkeypatch.setitem(REGISTRY, family, replace(spec, probes=()))
     facts, error = diagnostics.inspect_tools(native_tools=native_tools)
     assert isinstance(error, DocumentRefusal)
     assert all(

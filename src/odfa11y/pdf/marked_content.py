@@ -2,21 +2,33 @@
 """Reconcile the marked content of each page with the structure tree that should own it."""
 
 from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
 from pypdf.generic import ArrayObject, StreamObject
 lazy from pypdf import PageObject
 
+from odfa11y.contracts import Description
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.form_content import FormScanner
 from odfa11y.pdf.graphic_presence import described_graphics
 from odfa11y.pdf.link_structure import MAX_LISTED
 from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
 from odfa11y.pdf.structure_walk import pdf_dictionary
-from odfa11y.report import FactKeys
 from odfa11y.rules import registry as rules
 lazy from odfa11y.pdf.structure_walk import StructureNode
 lazy from odfa11y.report import Report
+
+
+@dataclass(frozen=True, slots=True)
+class MarkedContentMeasurements:
+    """Measurements produced by pdf-marked-content analysis; None denotes unmeasured data."""
+
+    producer: Literal["pdf-marked-content"] = field(default="pdf-marked-content", init=False)
+    marked_content_id_count: Annotated[int | None, Description("Marked content identifiers.")] = (
+        None
+    )
 
 
 def check_marked_content(
@@ -74,7 +86,11 @@ def check_marked_content(
                     "text_operations": scan.unmarked_text_operations,
                     **stream_details,
                 })
-    report.facts[FactKeys.PDF_MARKED_CONTENT_ID_COUNT] = sum(len(ids) for ids in contents.values())
+    report.measure(
+        MarkedContentMeasurements(
+            marked_content_id_count=sum(len(ids) for ids in contents.values())
+        )
+    )
     _report(report, unreferenced, untagged, _dangling(references, page_numbers, contents))
     duplicated = [
         {

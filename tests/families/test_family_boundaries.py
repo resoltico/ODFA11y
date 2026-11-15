@@ -9,13 +9,15 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.cli import main
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.errors import PlanError
 from odfa11y.families import REGISTRY
 from odfa11y.families.spec import Unsupported
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys, Location, Severity
+from odfa11y.report import Location, Severity
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -25,6 +27,7 @@ from tests.fixtures.answers import (
     version_input,
 )
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
 lazy from odfa11y.report import Report
@@ -39,7 +42,7 @@ def test_an_unrecognised_media_type_stops_the_audit_with_one_finding(tmp_path: P
     path = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
     report = audit_odf(path)
     assert "ODF005" in ids(report)
-    assert report.facts.get(FactKeys.DOCUMENT_ADAPTER) is None
+    assert measurement(report, PackageMeasurements).family is None
 
 
 def test_a_body_that_contradicts_the_media_type_is_an_error(tmp_path: Path) -> None:
@@ -59,7 +62,9 @@ def test_a_misleading_extension_is_only_a_warning(tmp_path: Path) -> None:
     report = audit_odf(make_package(tmp_path, "text", Variant(extension=".ods")))
     finding = next(f for f in report.findings if f.rule_id == "ODF007")
     assert finding.severity is Severity.WARNING
-    assert report.facts[FactKeys.DOCUMENT_KIND] == "text"  # the extension never selects the kind
+    assert (
+        measured(measurement(report, PackageMeasurements).kind) == "text"
+    )  # the extension never selects the kind
 
 
 def test_a_package_without_mimetype_falls_back_to_the_manifest(tmp_path: Path) -> None:
@@ -147,7 +152,7 @@ def test_setting_the_language_on_a_flat_text_document_edits_its_default_style(
     destination = tmp_path / "out.fodt"
     apply_answers(source, destination, [metadata_input(language="fr-FR")])
     report = audit_odf(destination)
-    assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
+    assert measurement(report, DocumentMetadata).language == "fr-FR"
     assert "META003" not in ids(report)
 
 
@@ -226,13 +231,13 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
 def test_a_new_family_needs_only_a_registry_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def audit(_document: OdfDocument, report: Report) -> None:
+    def audit(_document: OdfDocument, report: Report, _metadata: DocumentMetadata) -> None:
         report.raise_(rules.ODF009, "Presentation adapter ran.", location=Location("document"))
 
     presentation = replace(REGISTRY[Family.PRESENTATION], audit=audit)
     monkeypatch.setitem(REGISTRY, Family.PRESENTATION, presentation)
     report = audit_odf(make_package(tmp_path, "presentation"))
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "presentation"
+    assert measured(measurement(report, PackageMeasurements).family) == "presentation"
     assert any(f.message == "Presentation adapter ran." for f in report.findings)
 
 
@@ -244,5 +249,5 @@ def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -
     assert "declares no ODF version" in finding.message
 
 
-def _source_only(_document: OdfDocument, report: Report) -> None:
+def _source_only(_document: OdfDocument, report: Report, _metadata: DocumentMetadata) -> None:
     report.raise_(rules.ODF009, "Controlled source-only family audit.")

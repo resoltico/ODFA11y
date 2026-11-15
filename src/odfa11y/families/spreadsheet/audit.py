@@ -3,6 +3,8 @@
 
 import re
 from collections import Counter
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 lazy from lxml import etree
 
@@ -18,6 +20,8 @@ from odfa11y.concepts import (
     visible_words,
 )
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.spreadsheet.kinds import SHEET_NAME
 from odfa11y.families.spreadsheet.sheets import (
@@ -30,7 +34,7 @@ from odfa11y.families.spreadsheet.sheets import (
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
@@ -49,11 +53,20 @@ HIDDEN_ROWS = ".//table:table-row[@table:visibility='collapse' or @table:visibil
 HIDDEN_COLUMNS = ".//table:table-column[@table:visibility='collapse' or @table:visibility='filter']"
 
 
-def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
+@dataclass(frozen=True, slots=True)
+class SpreadsheetMeasurements:
+    """Measurements produced by spreadsheet analysis; None denotes unmeasured data."""
+
+    producer: Literal["spreadsheet"] = field(default="spreadsheet", init=False)
+    count: Annotated[int | None, Description("Sheets in document order.")] = None
+    graphic_count: Annotated[int | None, Description("Graphic objects on sheets.")] = None
+
+
+def audit_spreadsheet(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Report the accessibility findings that belong to spreadsheets."""
     content = document.tree(Part.CONTENT)
     all_sheets = sheets(content)
-    report.facts[FactKeys.SHEET_COUNT] = len(all_sheets)
+    report.measure(SpreadsheetMeasurements(count=len(all_sheets)))
     _audit_names(document, all_sheets, report)
     _audit_data_sheets(all_sheets, report)
     _audit_graphics(document, report)
@@ -137,7 +150,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         for node in select_elements(content, "//office:body//*")
         if node.tag in SHAPE_TAGS and node.tag != xml_names.DRAW_G and eligible_text_node(node)
     ]
-    report.facts[FactKeys.SHEET_GRAPHIC_COUNT] = len(frames)
+    report.measure(SpreadsheetMeasurements(graphic_count=len(frames)))
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)

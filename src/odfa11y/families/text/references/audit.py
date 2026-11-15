@@ -3,15 +3,17 @@
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from typing import Annotated, Literal
 from urllib.parse import unquote
 
 lazy from lxml import etree
 
 from odfa11y.concepts import reading_context_path, visible_words
+from odfa11y.contracts import Description
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
@@ -28,6 +30,22 @@ NAMED_TARGETS = {
     xml_names.TABLE_TABLE: xml_names.TABLE_NAME,
     xml_names.DRAW_FRAME: xml_names.DRAW_NAME,
 }
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceMeasurements:
+    """Measurements produced by text-references analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-references"] = field(default="text-references", init=False)
+    reference_count: Annotated[
+        int | None, Description("Internal links and typed cross-reference fields.")
+    ] = None
+    bookmark_count: Annotated[
+        int | None, Description("Bookmark destinations in current reading contexts.")
+    ] = None
+    note_count: Annotated[
+        int | None, Description("Notes anchored in current reading contexts.")
+    ] = None
 
 
 @dataclass
@@ -71,14 +89,17 @@ def audit_references(document: OdfDocument, report: Report) -> None:
         if reference := _reference(node):
             references += 1
             _audit_reference(node, reference, index, report)
-    report.facts[FactKeys.TEXT_REFERENCE_COUNT] = references
-    for kind, key in (
-        ("bookmark", FactKeys.TEXT_BOOKMARK_COUNT),
-        ("note", FactKeys.TEXT_NOTE_COUNT),
-    ):
-        report.facts[key] = sum(
-            len(owners) for (target_kind, _), owners in index.targets.items() if target_kind == kind
+    report.measure(ReferenceMeasurements(reference_count=references))
+    report.measure(
+        ReferenceMeasurements(
+            bookmark_count=sum(
+                len(owners) for (kind, _), owners in index.targets.items() if kind == "bookmark"
+            ),
+            note_count=sum(
+                len(owners) for (kind, _), owners in index.targets.items() if kind == "note"
+            ),
         )
+    )
 
 
 def _collect(node: etree._Element, index: _Index) -> None:

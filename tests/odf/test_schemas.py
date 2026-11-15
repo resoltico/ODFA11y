@@ -9,7 +9,8 @@ from jsonschema import Draft202012Validator, ValidationError
 from odfa11y.contracts import encode
 from odfa11y.errors import InvalidOption
 from odfa11y.families import REGISTRY
-from odfa11y.report import FactKeys, FactSet, Report
+from odfa11y.pdf.audit import PdfMeasurements
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from tests.fixtures.schema import read_schema
 from tools.generate_reference import schemas
@@ -24,8 +25,8 @@ def test_shipped_schema_is_current_and_valid(name: str) -> None:
 
 @pytest.mark.parametrize("change", ["format", "unknown", "count", "obsolete"])
 def test_report_schema_detects_wrong_format_fields_and_measurement_types(change: str) -> None:
-    report = Report(
-        kind=ReportKind.PDF, subject="sample.pdf", facts=FactSet({FactKeys.PDF_PAGE_COUNT: 1})
+    report = Report[object](
+        kind=ReportKind.PDF, subject="sample.pdf", facts=(PdfMeasurements(page_count=1),)
     )
     payload = deepcopy(report.as_dict())
     if change == "format":
@@ -34,8 +35,10 @@ def test_report_schema_detects_wrong_format_fields_and_measurement_types(change:
         payload["metadata"] = {}
     else:
         facts = payload["facts"]
-        assert isinstance(facts, dict)
-        facts["arbitrary" if change == "unknown" else "pdf.page_count"] = True
+        assert isinstance(facts, list)
+        row = facts[0]
+        assert isinstance(row, dict)
+        row["arbitrary" if change == "unknown" else "page_count"] = True
     with pytest.raises(ValidationError):
         Draft202012Validator(read_schema("report")).validate(payload)
 

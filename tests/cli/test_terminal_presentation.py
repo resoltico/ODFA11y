@@ -3,7 +3,8 @@
 
 import json
 
-from odfa11y.report import FactKeys, FactSet, Location, Report, render_reports, terminal_text
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.report import Location, Report, render_reports, terminal_text
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 
@@ -16,10 +17,10 @@ def test_terminal_fields_escape_controls_and_preserve_unicode() -> None:
 
 
 def test_text_report_prioritizes_findings_and_wraps_without_breaking_tokens() -> None:
-    report = Report(
+    report = Report[object](
         kind=ReportKind.ODF,
         subject="sample.odt",
-        facts=FactSet({FactKeys.DOCUMENT_TITLE: "Metadata"}),
+        facts=(DocumentMetadata(title="Metadata"),),
     )
     token = "https://example.test/" + "a" * 90
     report.raise_(
@@ -37,8 +38,8 @@ def test_text_report_prioritizes_findings_and_wraps_without_breaking_tokens() ->
 
 
 def test_controls_are_escaped_in_all_text_fields_and_retained_in_json() -> None:
-    report = Report(
-        kind=ReportKind.ODF, subject="doc\n.odt", facts=FactSet({FactKeys.DOCUMENT_TITLE: "v\x85"})
+    report = Report[object](
+        kind=ReportKind.ODF, subject="doc\n.odt", facts=(DocumentMetadata(title="v\x85"),)
     )
     report.raise_(
         rules.META001,

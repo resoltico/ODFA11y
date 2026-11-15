@@ -9,14 +9,16 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
+from odfa11y.families.text.visibility.audit import VisibilityMeasurements
+from odfa11y.families.text.visibility.revisions import RevisionMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import (
     language_answer,
     language_inputs,
     metadata_input,
 )
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 
 INFO = "<office:change-info><dc:creator>Invented Author</dc:creator></office:change-info>"
@@ -105,7 +107,7 @@ def test_cached_visibility_never_overrides_condition_scope(
     report = audit_odf(source)
     assert "HIDDEN001" in {f.rule_id for f in report.findings}
     assert ("HIDDEN002" in {f.rule_id for f in report.findings}) is unresolved
-    assert len(report.facts[FactKeys.TEXT_VISIBILITY_CONTEXTS]) == 1
+    assert len(measured(measurement(report, VisibilityMeasurements).visibility_contexts)) == 1
 
 
 def test_revision_title_edit_preserves_history_but_target_language_is_refused(
@@ -190,7 +192,10 @@ def test_xml_identity_is_authoritative_and_must_agree_with_text_identity(tmp_pat
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
     assert "REVISION002" in {finding.rule_id for finding in report.findings}
-    assert report.facts[FactKeys.TEXT_REVISION_RELATIONSHIPS]["unresolved"] == 1
+    assert (
+        measured(measurement(report, RevisionMeasurements).revision_relationships)["unresolved"]
+        == 1
+    )
 
 
 def test_conditionally_hidden_anchor_remains_unestablished_current_flow(tmp_path: Path) -> None:

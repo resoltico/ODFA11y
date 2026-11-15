@@ -6,12 +6,14 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.families import require_spec
+from odfa11y.families.spreadsheet.audit import SpreadsheetMeasurements
 from odfa11y.odf import OdfDocument
 from odfa11y.plans.registry import load_plan
-from odfa11y.report import FactKeys
 from odfa11y.targets import require_target
 from tests.fixtures.documents import make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.plans import question_for
 from tests.fixtures.spreadsheets import (
     HIDDEN_SHEET_STYLE,
@@ -43,9 +45,9 @@ def found(report: Report, rule_id: str) -> list[Finding]:
 def test_a_clean_spreadsheet_has_no_spreadsheet_findings(tmp_path: Path, layout: str) -> None:
     report = audit(tmp_path, layout, data_sheet("Prices", header_rows=1))
     assert not [f for f in report.findings if f.rule_id.startswith("SHEET")]
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "spreadsheet"
-    assert report.facts[FactKeys.SHEET_COUNT] == 1
-    assert report.facts[FactKeys.SHEET_GRAPHIC_COUNT] == 0
+    assert measured(measurement(report, PackageMeasurements).family) == "spreadsheet"
+    assert measured(measurement(report, SpreadsheetMeasurements).count) == 1
+    assert measured(measurement(report, SpreadsheetMeasurements).graphic_count) == 0
 
 
 @by_layout
@@ -122,7 +124,7 @@ def test_a_picture_without_accessible_text_is_an_error_with_a_fingerprinted_sele
     assert finding.details["frame"] == "Logo"
     assert finding.details["href"] == "Pictures/logo.png"
     assert len(str(require_target(question_for(report, finding).target).fingerprint)) == 16
-    assert report.facts[FactKeys.SHEET_GRAPHIC_COUNT] == 2
+    assert measured(measurement(report, SpreadsheetMeasurements).graphic_count) == 2
 
 
 @by_layout
@@ -210,7 +212,7 @@ def test_a_sheet_style_hiding_one_sheet_does_not_hide_unstyled_sheets(tmp_path: 
 def test_text_documents_never_produce_spreadsheet_rules(tmp_path: Path) -> None:
     report = audit_odf(make_package(tmp_path, "text"))
     assert not [f for f in report.findings if f.rule_id.startswith("SHEET")]
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "text"
+    assert measured(measurement(report, PackageMeasurements).family) == "text"
 
 
 def test_the_template_lists_each_decision_with_its_fingerprint(tmp_path: Path) -> None:

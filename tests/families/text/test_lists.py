@@ -7,9 +7,10 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.lists import audit_lists
+from odfa11y.families.text.lists.audit import ListMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements
-from odfa11y.report import FactKeys
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.paths import TESTS
 lazy from odfa11y.report import Report
 
@@ -50,7 +51,7 @@ def test_explicit_continuation_overrides_false_and_accepts_acyclic_forward_refer
         + "</text:list>",
     )
     assert not [f for f in report.findings if f.rule_id.startswith("LIST")]
-    assert report.facts[FactKeys.TEXT_LIST_CONTINUATION_COUNT] == 1
+    assert measured(measurement(report, ListMeasurements).list_continuation_count) == 1
 
 
 def test_cycles_report_every_member_but_not_its_dependants(tmp_path: Path) -> None:
@@ -95,8 +96,8 @@ def test_table_cells_reset_nesting_and_do_not_share_implicit_counters(tmp_path: 
         + "</text:list></table:table-cell></table:table-row></table:table>"
         "</text:list-item></text:list>",
     )
-    assert report.facts[FactKeys.TEXT_LIST_MAX_LEVEL] == 1
-    assert report.facts[FactKeys.TEXT_LIST_CONTINUATION_COUNT] == 0
+    assert measured(measurement(report, ListMeasurements).list_max_level) == 1
+    assert measured(measurement(report, ListMeasurements).list_continuation_count) == 0
     assert len([f for f in report.findings if f.rule_id == "LIST003"]) == 1
 
 
@@ -110,8 +111,12 @@ def test_writer_list_fixtures_and_read_only_preservation(case: str) -> None:
     checkpoint = document.checkpoint()
     audit_lists(document, report)
     assert not document.changed_since(checkpoint)
-    assert report.facts[FactKeys.TEXT_LIST_COUNT] == (3 if case == "positive" else 0)
-    assert report.facts[FactKeys.TEXT_LIST_MAX_LEVEL] == (2 if case == "positive" else 0)
+    assert measured(measurement(report, ListMeasurements).list_count) == (
+        3 if case == "positive" else 0
+    )
+    assert measured(measurement(report, ListMeasurements).list_max_level) == (
+        2 if case == "positive" else 0
+    )
 
 
 def test_implicit_continuation_resolves_same_style_and_nested_level(tmp_path: Path) -> None:
@@ -123,7 +128,7 @@ def test_implicit_continuation_resolves_same_style_and_nested_level(tmp_path: Pa
         + "</text:list>",
     )
     assert not [f for f in report.findings if f.rule_id.startswith("LIST")]
-    assert report.facts[FactKeys.TEXT_LIST_CONTINUATION_COUNT] == 1
+    assert measured(measurement(report, ListMeasurements).list_continuation_count) == 1
 
 
 def test_explicit_continuation_across_cells_requires_native_review(tmp_path: Path) -> None:

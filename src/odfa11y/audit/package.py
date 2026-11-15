@@ -2,8 +2,10 @@
 """Audit storage structure, the document kind and ODF version declarations."""
 
 import zipfile
-from typing import cast
+from dataclasses import dataclass, field
+from typing import Annotated, Literal, cast
 
+from odfa11y.contracts import Description
 from odfa11y.errors import XmlParseError
 from odfa11y.odf import (
     Family,
@@ -14,7 +16,7 @@ from odfa11y.odf import (
     validate,
 )
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.odf import OdfDocument, PackageStorage
 lazy from odfa11y.report import Report
@@ -23,6 +25,23 @@ MAX_REPORTED_VIOLATIONS = 20
 MIMETYPE = xml_names.MIMETYPE_MEMBER
 MIMETYPE_LOCATION = Location("package/mimetype", MIMETYPE)
 OFFICE_ROOT_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.SETTINGS)
+
+
+@dataclass(frozen=True, slots=True)
+class PackageMeasurements:
+    """Measurements produced by odf-package analysis; None denotes unmeasured data."""
+
+    producer: Literal["odf-package"] = field(default="odf-package", init=False)
+    layout: Annotated[str | None, Description("Physical ODF representation.")] = None
+    media_type: Annotated[str | None, Description("Declared source media type.")] = None
+    kind: Annotated[str | None, Description("Detected ODF document kind.")] = None
+    family: Annotated[str | None, Description("Detected ODF family.")] = None
+    version: Annotated[str | None, Description("Version of the selected bundled schema.")] = None
+    violation_count: Annotated[int | None, Description("Reported schema violations.")] = None
+    unlocated_violation_count: Annotated[
+        int | None, Description("Violations without established element locations.")
+    ] = None
+    odf_version: Annotated[str | None, Description("Declared ODF version.")] = None
 
 
 def storage_location(document: OdfDocument, part: Part) -> Location:
@@ -150,8 +169,8 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
     """
     detection = document.detection
     kind = detection.kind
-    report.facts[FactKeys.PACKAGE_LAYOUT] = document.layout
-    report.facts[FactKeys.DOCUMENT_MEDIA_TYPE] = detection.media_type
+    report.measure(PackageMeasurements(layout=document.layout))
+    report.measure(PackageMeasurements(media_type=detection.media_type))
     if kind is None:
         report.raise_(
             rules.ODF005,
@@ -159,8 +178,8 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
             details={"media_type": detection.media_type, "declared_by": detection.declared_by},
         )
         return False
-    report.facts[FactKeys.DOCUMENT_KIND] = kind.name
-    report.facts[FactKeys.DOCUMENT_FAMILY] = kind.family.value
+    report.measure(PackageMeasurements(kind=kind.name))
+    report.measure(PackageMeasurements(family=kind.family.value))
     if (
         detection.manifest_media_type is not None
         and detection.media_type is not None
@@ -227,7 +246,7 @@ def audit_versions(document: OdfDocument, report: Report) -> None:
         if is_office_element(root):
             declared[name] = root.get(xml_names.OFFICE_VERSION)
     if version is not None:
-        report.facts[FactKeys.DOCUMENT_ODF_VERSION] = version
+        report.measure(PackageMeasurements(odf_version=version))
     if version is None or len(set(declared.values())) > 1:
         report.raise_(
             rules.ODF001,
@@ -266,7 +285,7 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
 def audit_schema(document: OdfDocument, report: Report) -> None:
     """Report members that violate the bundled ODF schema for the declared version."""
     result = validate(document)
-    report.facts[FactKeys.SCHEMA_VERSION] = result.version
+    report.measure(PackageMeasurements(version=result.version))
     if not result.available:
         reason = (
             f"No ODF schema is bundled for declared version {result.version!r}."
@@ -275,8 +294,8 @@ def audit_schema(document: OdfDocument, report: Report) -> None:
         )
         report.raise_(rules.SCHEMA002, reason)
         return
-    report.facts[FactKeys.SCHEMA_VIOLATION_COUNT] = result.count
-    report.facts[FactKeys.SCHEMA_UNLOCATED_VIOLATION_COUNT] = result.unlocated
+    report.measure(PackageMeasurements(violation_count=result.count))
+    report.measure(PackageMeasurements(unlocated_violation_count=result.unlocated))
     for member, messages in result.messages().items():
         location = storage_location(document, _part_of(document, member))
         report.raise_(

@@ -9,6 +9,8 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.audit.package import PackageMeasurements
+from odfa11y.families.spreadsheet.audit import SpreadsheetMeasurements
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
@@ -16,7 +18,6 @@ from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -26,6 +27,7 @@ from tests.fixtures.answers import (
     graphic_inputs,
     metadata_input,
 )
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.spreadsheets import (
@@ -144,8 +146,8 @@ def test_libreoffice_authored_packages_are_recognised_and_audited(
     }
     hidden = next(f for f in report.findings if f.rule_id == "HIDDEN001")
     assert hidden.details == {"sheets": ["Data"], "rows": 1, "columns": 0}
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "spreadsheet"
-    assert report.facts[FactKeys.SHEET_COUNT] == 3
+    assert measured(measurement(report, PackageMeasurements).family) == "spreadsheet"
+    assert measured(measurement(report, SpreadsheetMeasurements).count) == 3
 
 
 def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_name(

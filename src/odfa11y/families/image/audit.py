@@ -1,22 +1,35 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit the standard image body without fetching or converting its graphic."""
 
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
+
 from odfa11y.concepts import GraphicIdentity, audit_graphic_role
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.families.image.payload import inspect_payload
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.resources import local_resource_path
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
 
-def audit_image(document: OdfDocument, report: Report) -> None:
+@dataclass(frozen=True, slots=True)
+class ImageMeasurements:
+    """Measurements produced by image analysis; None denotes unmeasured data."""
+
+    producer: Literal["image"] = field(default="image", init=False)
+    graphic_count: Annotated[int | None, Description("Graphic frames in an Image document.")] = None
+
+
+def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Check the mandatory frame, description and local/embedded resource boundary."""
     frames = select_elements(document.tree(Part.CONTENT), "//office:body/office:image/draw:frame")
-    report.facts[FactKeys.IMAGE_GRAPHIC_COUNT] = len(frames)
+    report.measure(ImageMeasurements(graphic_count=len(frames)))
     if len(frames) != 1:
         report.raise_(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
         return

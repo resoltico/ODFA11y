@@ -9,8 +9,9 @@ import pytest
 from odfa11y.application.native import NativeTools
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.pdf.fidelity.compare import FidelityMeasurements
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
-from odfa11y.report import FactKeys
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import refusing
 from tests.fixtures.pdf import text_pdf
 lazy from odfa11y.report import Report
@@ -49,7 +50,7 @@ def test_identical_documents_pass_with_zero_difference(tmp_path: Path) -> None:
     right = text_pdf(tmp_path / "b.pdf", [LINES])
     report = compare(tmp_path, left, right)
     assert report.findings == []
-    assert report.facts[FactKeys.FIDELITY_RASTER_MAX_CHANGED_RATIO] == 0.0
+    assert measured(measurement(report, FidelityMeasurements).raster_max_changed_ratio) == 0.0
     assert not (tmp_path / "diff").exists()
 
 

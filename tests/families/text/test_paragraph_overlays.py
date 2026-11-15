@@ -9,10 +9,11 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.families.text import derived_style_name
+from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import spacer_input, spacing_input
 from tests.fixtures.documents import Variant, make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 
 STYLES = (
@@ -49,7 +50,7 @@ def test_overlay_on_reference_or_target_refuses_before_mutation(
     destination.write_bytes(b"retain destination")
     report = audit_odf(source)
     assert "STYLE001" in {finding.rule_id for finding in report.findings}
-    rows = report.facts[FactKeys.TEXT_PARAGRAPH_STYLES]
+    rows = measured(measurement(report, TextStyleMeasurements).paragraph_styles)
     total = 0
     for row in rows:
         count = row["count"]

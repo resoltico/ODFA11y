@@ -8,24 +8,24 @@ from pypdf.generic import ContentStream, StreamObject
 lazy from pypdf.generic import DictionaryObject
 
 from odfa11y.errors import ToolFailure
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import validate_pdfua
+from odfa11y.pdf.audit import PdfInspection, inspect_pdf
 from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
 from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
 from odfa11y.pdf.validate import PdfValidator
-from odfa11y.report import FactKeys, exit_status
+from odfa11y.report import exit_status
 from odfa11y.rules import registry as rules
-lazy from odfa11y.report import Report
 
 PROBE_IMAGES = 2
 PROBE_HEADERS = 2
 
 
-def _inspect(pdf: Path) -> Report:
-    report = audit_pdfua(pdf)
-    if any(f.rule is rules.PDF000 for f in report.findings):
+def _inspect(pdf: Path) -> PdfInspection:
+    inspection = inspect_pdf(pdf)
+    if any(f.rule is rules.PDF000 for f in inspection.report.findings):
         msg = "The capability probe PDF cannot be inspected."
         raise ToolFailure(msg)
-    return report
+    return inspection
 
 
 def link_descriptions(
@@ -49,11 +49,12 @@ def link_descriptions(
         The export contains no link annotation to inspect.
 
     """
-    report = _inspect(pdf)
-    if not report.facts.get(FactKeys.PDF_LINK_ANNOTATION_COUNT):
+    inspection = _inspect(pdf)
+    report = inspection.report
+    if inspection.structure is None or not inspection.structure.link_annotations:
         msg = "The capability probe PDF contains no hyperlink."
         raise ToolFailure(msg)
-    tags = report.facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}
+    tags = inspection.structure.tags if inspection.structure is not None else {}
     if not tags.get("Link") or any(
         f.rule
         in {rules.PDF003, rules.PDF004, rules.PDF016, rules.PDF017, rules.PDF018, rules.PDF019}
@@ -126,7 +127,8 @@ def decorative_role(
         Whether one described Figure and a painted artifact image survive export.
 
     """
-    report = _inspect(pdf)
+    inspection = _inspect(pdf)
+    report = inspection.report
     reader = PdfReader(pdf, strict=True)
     check_consumption(reader)
     counts = [
@@ -134,7 +136,7 @@ def decorative_role(
         for page in reader.pages
     ]
     total, artifacts = sum(c[0] for c in counts), sum(c[1] for c in counts)
-    tags = report.facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}
+    tags = inspection.structure.tags if inspection.structure is not None else {}
     return (
         total == PROBE_IMAGES
         and artifacts == 1
@@ -154,7 +156,8 @@ def writer_header_columns(
         Whether a two-row table exports both declared column headers as TH.
 
     """
-    tags = _inspect(pdf).facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}
+    inspection = _inspect(pdf)
+    tags = inspection.structure.tags if inspection.structure is not None else {}
     return tags.get("Table", 0) >= 1 and tags.get("TH", 0) >= PROBE_HEADERS
 
 
@@ -169,8 +172,9 @@ def math_tagging(
         Whether the Math export passes basic structural inspection with a real structure tree.
 
     """
-    report = _inspect(pdf)
-    return (report.error_count == 0) and bool(report.facts.get(FactKeys.PDF_STRUCTURE_TAGS))
+    inspection = _inspect(pdf)
+    report = inspection.report
+    return (report.error_count == 0) and bool(inspection.structure and inspection.structure.tags)
 
 
 def calc_pdfua(
@@ -184,9 +188,10 @@ def calc_pdfua(
         Whether this exact Calc export passes both independent checks.
 
     """
-    report = _inspect(pdf)
+    inspection = _inspect(pdf)
+    report = inspection.report
     return (
-        bool((report.facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}).get("Table"))
+        bool((inspection.structure.tags if inspection.structure is not None else {}).get("Table"))
         and exit_status([report], strict=True) == 0
         and (validate or validate_pdfua)(pdf, executable=validator, timeout=timeout).compliant
     )

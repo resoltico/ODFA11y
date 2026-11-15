@@ -7,11 +7,13 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
+from odfa11y.audit.package import PackageMeasurements
 from odfa11y.families import require_spec, spec_for
 from odfa11y.odf import KINDS, OdfDocument, validate
 from odfa11y.remediate.document_ops import COMMON_KINDS
-from odfa11y.report import RULES, FactKeys
+from odfa11y.report import RULES
 from tests.fixtures.documents import KIND_SPECS, make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
 lazy from odfa11y.report import Report
 
 LAYOUTS = {"package": make_package, "flat": make_flat}
@@ -39,10 +41,10 @@ def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
 ) -> None:
     report = audit_odf(LAYOUTS[layout](tmp_path, name), schema=True)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
-    assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
+    assert measured(measurement(report, PackageMeasurements).layout) == layout
     family = KIND_SPECS[name].family
-    assert report.facts[FactKeys.DOCUMENT_FAMILY] == family
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == family
+    assert measured(measurement(report, PackageMeasurements).family) == family
+    assert measured(measurement(report, PackageMeasurements).family) == family
     assert "ODF009" not in ids(report)
     assert all(finding.rule is RULES[finding.rule_id] for finding in report.findings)
     document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
@@ -89,7 +91,7 @@ def test_a_damaged_mimetype_member_is_reported_and_the_audit_continues(
     report = audit_odf(damaged)
     assert "PKG001" in {f.rule_id for f in report.findings}
     assert "ODF005" not in {f.rule_id for f in report.findings}
-    assert report.facts[FactKeys.DOCUMENT_KIND] == "text"
+    assert measured(measurement(report, PackageMeasurements).kind) == "text"
 
 
 def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path) -> None:

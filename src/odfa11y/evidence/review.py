@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Render typed run facts, gate outcomes and outstanding human review."""
 
+from odfa11y.contracts import record_dict
 from odfa11y.progress import Stage
 from odfa11y.status import StageStatus
 lazy from odfa11y.evidence.redact import Redactor
@@ -74,10 +75,12 @@ def _facts(stages: list[StageResult]) -> list[str]:
     facts = []
     for stage in stages:
         if stage.report:
-            for key in sorted(stage.report.facts, key=lambda item: item.id):
-                value = stage.report.facts[key]
-                if isinstance(value, (str, int, float, bool)):
-                    facts.append(f"- `{stage.name}` {key.id}: {value}")
+            for record in stage.report.facts:
+                values = record_dict(record)
+                producer = values.pop("producer")
+                for name, value in values.items():
+                    if isinstance(value, (str, int, float, bool)):
+                        facts.append(f"- `{stage.name}` {producer}.{name}: {value}")
     return facts
 
 

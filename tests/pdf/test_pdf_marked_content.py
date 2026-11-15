@@ -12,9 +12,10 @@ lazy from pypdf.generic import IndirectObject
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
+from odfa11y.pdf.marked_content import MarkedContentMeasurements
 from odfa11y.pdf.reading.content import scan as content_scan
 from odfa11y.pdf.reading.content import scan_content
-from odfa11y.report import FactKeys
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.pdf import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
 lazy from odfa11y.report import Finding, Report
 
@@ -77,7 +78,7 @@ def set_content(writer: PdfWriter, operators: str) -> None:
 def test_content_that_every_element_and_sequence_agrees_on_has_no_findings(tmp_path: Path) -> None:
     report = audit(tmp_path, tagged_writer(["H1", ("L", [("LI", ["P"])]), "P"]))
     assert not content_findings(report)
-    assert report.facts[FactKeys.PDF_MARKED_CONTENT_ID_COUNT] == 3
+    assert measured(measurement(report, MarkedContentMeasurements).marked_content_id_count) == 3
 
 
 def test_marked_content_no_structure_element_refers_to_is_an_error(tmp_path: Path) -> None:

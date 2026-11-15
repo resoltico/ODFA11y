@@ -8,9 +8,10 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.report import FactKeys
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.measurements import measurement
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -71,7 +72,7 @@ def test_foreign_metadata_never_becomes_document_metadata(tmp_path: Path) -> Non
     tree.write(source, encoding="utf-8", xml_declaration=True)
     report = audit_odf(source)
     assert {"META001", "META002"} <= {finding.rule_id for finding in report.findings}
-    assert (
-        not {FactKeys.DOCUMENT_TITLE, FactKeys.DOCUMENT_DESCRIPTION, FactKeys.DOCUMENT_LANGUAGE}
-        & report.facts.keys()
-    )
+    metadata = measurement(report, DocumentMetadata)
+    assert metadata.title is None
+    assert metadata.description is None
+    assert metadata.language is None

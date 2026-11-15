@@ -11,9 +11,9 @@ from odfa11y import audit
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
+from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.native import export_document
@@ -110,7 +110,7 @@ def _assert_guarded_refusal(
         export_document(source, pdf, native_tools=native_tools)
     style_report = audit(source).reports[0]
     assert style_report.error_count > 0
-    assert FactKeys.TEXT_PARAGRAPH_STYLES not in style_report.facts
+    assert not any(isinstance(record, TextStyleMeasurements) for record in style_report.facts)
     record = execute(
         source,
         reviewed_plan(source, [], Pagination.SAME()),

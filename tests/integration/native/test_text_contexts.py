@@ -10,10 +10,11 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
 from tests.fixtures.answers import metadata_input
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 
@@ -25,7 +26,7 @@ def test_writer_revision_reload_and_rendered_word_boundaries(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     before = OdfDocument.open(FIXTURE)
-    assert audit_odf(FIXTURE).facts[FactKeys.TEXT_HEADING_COUNT] == 1
+    assert measured(measurement(audit_odf(FIXTURE), TextContentMeasurements).heading_count) == 1
     edited = tmp_path / "reviewed.odt"
     apply_answers(FIXTURE, edited, [metadata_input(title="Reviewed context fixture")])
     after = OdfDocument.open(edited)

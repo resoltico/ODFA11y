@@ -2,14 +2,17 @@
 """Check tracked-region identities and current-flow change marks without accepting changes."""
 
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 lazy from lxml import etree
 
 from odfa11y.concepts import eligible_text_node, reading_context_path
+from odfa11y.contracts import Description
 from odfa11y.families.text.contexts import has_revisions
 from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn, select_elements
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.report import Report
 
@@ -17,6 +20,17 @@ XML_ID = xml_names.XML_ID
 KINDS = {qn("text", name) for name in ("insertion", "deletion", "format-change")}
 RANGE_MARK_COUNT = 2
 MARKS = {qn("text", name) for name in ("change", "change-start", "change-end")}
+
+
+@dataclass(frozen=True, slots=True)
+class RevisionMeasurements:
+    """Measurements produced by text-revisions analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-revisions"] = field(default="text-revisions", init=False)
+    revision_relationships: Annotated[
+        dict[str, int] | None,
+        Description("Tracked declarations, authored markers and unresolved relationships."),
+    ] = None
 
 
 def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
@@ -61,12 +75,16 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
         report.raise_(
             rules.REVISION001, details={"regions": len(regions), "markers": len(positions)}
         )
-    report.facts[FactKeys.TEXT_REVISION_RELATIONSHIPS] = {
-        "declarations": len(regions),
-        "markers": len(positions),
-        "unresolved": unresolved,
-        "unanchored": unanchored,
-    }
+    report.measure(
+        RevisionMeasurements(
+            revision_relationships={
+                "declarations": len(regions),
+                "markers": len(positions),
+                "unresolved": unresolved,
+                "unanchored": unanchored,
+            }
+        )
+    )
 
 
 def _audit_region_marks(

@@ -2,15 +2,17 @@
 """Check a PDF's logical structure: roles, headings, lists, tables, figures, links, content."""
 
 from collections import Counter
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
 lazy from pypdf import PageObject
 lazy from pypdf.generic import DictionaryObject
 
+from odfa11y.contracts import Description
 from odfa11y.pdf.link_structure import check_link_structure
 from odfa11y.pdf.marked_content import check_marked_content
 from odfa11y.pdf.structure_walk import build_tree, role_map_of
-from odfa11y.report import FactKeys
 from odfa11y.rules import registry as rules
 lazy from odfa11y.pdf.link_structure import LinkAnnotation
 lazy from odfa11y.pdf.structure_walk import StructureNode
@@ -26,12 +28,32 @@ MIN_ROWS_FOR_HEADERS = 2
 HEADING_ROLE_LENGTH = 2
 
 
+@dataclass(frozen=True, slots=True)
+class PdfStructureMeasurements:
+    """Measurements produced by pdf-structure analysis; None denotes unmeasured data."""
+
+    producer: Literal["pdf-structure"] = field(default="pdf-structure", init=False)
+    structure_tags: Annotated[
+        dict[str, int] | None, Description("Reachable structure roles and their counts.")
+    ] = None
+    role_map: Annotated[
+        dict[str, str] | None, Description("PDF custom-to-standard structure role mapping.")
+    ] = None
+
+
+@dataclass(frozen=True, slots=True)
+class StructureAnalysis:
+    described_graphics: int
+    tags: dict[str, int]
+    link_annotations: int
+
+
 def audit_structure(
     root: DictionaryObject,
     report: Report,
     annotations: list[LinkAnnotation],
     pages: Iterable[PageObject],
-) -> int:
+) -> StructureAnalysis:
     """Record structure tags and report structure, link and marked-content defects.
 
     Content is inspected even when the structure tree is absent.
@@ -45,10 +67,10 @@ def audit_structure(
     top = build_tree(root)
     nodes = [node for node in top.walk() if node is not top]
     counts = Counter(node.tag for node in nodes)
-    report.facts[FactKeys.PDF_STRUCTURE_TAGS] = dict(sorted(counts.items()))
+    report.measure(PdfStructureMeasurements(structure_tags=dict(sorted(counts.items()))))
     role_map = role_map_of(root)
     if role_map:
-        report.facts[FactKeys.PDF_ROLE_MAP] = dict(sorted(role_map.items()))
+        report.measure(PdfStructureMeasurements(role_map=dict(sorted(role_map.items()))))
     check_link_structure(annotations, nodes, report)
     graphic_count = check_marked_content(pages, nodes, report)
     _check_roles(nodes, report)
@@ -56,7 +78,7 @@ def audit_structure(
     _check_headings(nodes, report)
     _check_lists(nodes, report)
     _check_tables(nodes, report)
-    return graphic_count
+    return StructureAnalysis(graphic_count, dict(counts), len(annotations))
 
 
 def _check_roles(nodes: list[StructureNode], report: Report) -> None:

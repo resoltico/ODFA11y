@@ -2,11 +2,15 @@
 """Audit a text document's structure: headings, graphics, tables, links, spacers, notes."""
 
 from collections import Counter
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 lazy from lxml import etree
 
 from odfa11y.concepts import document_links, link_decision, link_has_description, link_location
 from odfa11y.concepts.kinds import LINK_DESCRIPTION
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import context_location, text_nodes
@@ -24,14 +28,24 @@ from odfa11y.families.text.visibility import audit_visibility
 from odfa11y.odf import Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.styles import styles_of
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.families.text.styles.usage import StyleUsage
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
 
-def audit_text(document: OdfDocument, report: Report) -> None:
+@dataclass(frozen=True, slots=True)
+class TextStyleMeasurements:
+    """Measurements produced by text-styles analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-styles"] = field(default="text-styles", init=False)
+    paragraph_styles: Annotated[
+        list[StyleUsage] | None, Description("Paragraph style usage and effective spacing.")
+    ] = None
+
+
+def audit_text(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Report the accessibility findings that belong to text documents."""
     content = document.tree(Part.CONTENT)
     audit_visibility(document, report)
@@ -114,7 +128,7 @@ def _audit_blinking(document: OdfDocument, report: Report) -> None:
 
 def _audit_style_summary(document: OdfDocument, report: Report) -> None:
     rows, problems = _style_rows(document)
-    report.facts[FactKeys.TEXT_PARAGRAPH_STYLES] = rows
+    report.measure(TextStyleMeasurements(paragraph_styles=rows))
     if problems:
         report.raise_(
             rules.STYLE001, location=Location(Part.STYLES.value), details={"styles": problems}

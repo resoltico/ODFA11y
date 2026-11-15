@@ -2,16 +2,30 @@
 """Identify authored layout conditions whose reading order needs native human review."""
 
 from collections import Counter
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
 lazy from lxml import etree
 
+from odfa11y.contracts import Description
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.odf import Part, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import FactKeys, Location
+from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
+
+
+@dataclass(frozen=True, slots=True)
+class ReadingOrderMeasurements:
+    """Measurements produced by text-reading-order analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-reading-order"] = field(default="text-reading-order", init=False)
+    reading_order_counts: Annotated[
+        dict[str, int] | None,
+        Description("Declared layout conditions needing native reading-order review."),
+    ] = None
 
 
 def audit_reading_order(document: OdfDocument, report: Report) -> None:
@@ -39,7 +53,7 @@ def audit_reading_order(document: OdfDocument, report: Report) -> None:
                     "scope": "Declared layout; native use and reading order require review.",
                 },
             )
-    report.facts[FactKeys.TEXT_READING_ORDER_COUNTS] = dict(counts)
+    report.measure(ReadingOrderMeasurements(reading_order_counts=dict(counts)))
 
 
 def _multiple(columns: etree._Element) -> bool:

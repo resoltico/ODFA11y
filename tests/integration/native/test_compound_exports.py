@@ -15,8 +15,8 @@ from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
+from odfa11y.pdf.structure_checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.report import FactKeys
 from tests.fixtures.answers import (
     apply_in_memory,
     header_answer,
@@ -24,6 +24,7 @@ from tests.fixtures.answers import (
     metadata_input,
 )
 from tests.fixtures.documents import Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.spreadsheets import picture, reviewed_sheet_names, row, sheet, text_cell
 from tests.fixtures.table_formats import NUMERIC_STYLES
@@ -110,7 +111,7 @@ def test_writer_nested_headers_graphic_and_named_link(
         output, tmp_path / "writer.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
-    assert report.facts[FactKeys.PDF_STRUCTURE_TAGS].get("TH", 0) == 0
+    assert measured(measurement(report, PdfStructureMeasurements).structure_tags).get("TH", 0) == 0
     assert "PDF015" in {f.rule_id for f in report.findings}
     assert not {"PDF000", "PDF007", "PDF010", "PDF019", "PDF023"} & {
         f.rule_id for f in report.findings

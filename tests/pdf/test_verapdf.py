@@ -9,8 +9,10 @@ import pytest
 
 from odfa11y.errors import ToolFailure, ToolUnavailable
 from odfa11y.pdf import add_verapdf_findings, find_verapdf, validate_pdfua
-from odfa11y.report import FactKeys, Report
+from odfa11y.pdf.validate import ValidationMeasurements
+from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
+from tests.fixtures.measurements import measured, measurement
 
 REPORT = """<?xml version="1.0" encoding="utf-8"?>
 <report>
@@ -105,7 +107,7 @@ def test_failed_rules_keep_their_standard_identity_and_sample_contexts(tmp_path:
     assert finding.rule_id == "VERA001"
     assert "clause 7.1 test 10" in finding.message
     assert finding.details["failed_checks"] == 4
-    assert report.facts[FactKeys.VERAPDF_IDENTITY]["compliant"] is False
+    assert measured(measurement(report, ValidationMeasurements).identity).compliant is False
 
 
 def test_a_report_is_the_outcome_whatever_the_exit_status(tmp_path: Path) -> None:
