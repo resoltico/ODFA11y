@@ -173,7 +173,7 @@ def reviewed_title_plan(source: Path) -> Plan:
     assert any(f.rule_id == "META001" for f in report.findings)
     question = next(d for d in report.decisions if d.kind.id == "document.metadata")
     # Enable only the reviewed table printed by the real plan renderer.
-    preceding, marker, following = template.partition('# [decisions."document.metadata"]')
+    preceding, marker, following = template.partition('[decisions."document.metadata"]')
     assert marker
     reviewed = (
         preceding

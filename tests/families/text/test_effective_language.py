@@ -106,12 +106,13 @@ def test_stale_fingerprint_refuses_every_target_before_mutation(tmp_path: Path) 
     assert not output.exists()
 
 
-def test_audit_offers_target_decisions_without_guessing_language(tmp_path: Path) -> None:
+def test_audit_omits_language_questions_when_inherited_language_is_established(
+    tmp_path: Path,
+) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=STYLES))
     report = audit_odf(source)
     questions = [question for question in report.decisions if question.kind.id == "language.target"]
-    assert len(questions) == 2
-    assert questions[1].current == {"western": "fr-FR", "asian": "ja", "complex": "ar"}
+    assert questions == []
 
 
 def test_table_language_edit_and_second_channel_preserve_grid_and_words(tmp_path: Path) -> None:

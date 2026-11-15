@@ -61,4 +61,4 @@ def _prepare_captured(source: Path, captured: Path) -> tuple[Report, str | None]
     document = OdfDocument.open(captured)
     document.require(Use.PLAN)
     header = Plan.for_source(captured).header
-    return report, render_plan(header, report.decisions)
+    return report, render_plan(header, report.decisions, findings=report.findings)

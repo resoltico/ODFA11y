@@ -5,10 +5,12 @@ lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.decisions import OpenDecision
 from odfa11y.decisions.answers import DocumentMetadataAnswer
+from odfa11y.decisions.decision import QuestionContext
 from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument
-from odfa11y.plans import load_plan
+from odfa11y.plans import PlanHeader, SourceBinding, load_plan, registered_kinds, render_plan
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.remediate.compile import compile_operations
 from tests.fixtures.paths import REPOSITORY
@@ -190,3 +192,21 @@ def test_unanswered_blocks_are_inert_but_typoes_and_partial_answers_are_rejected
                     + answer,
                 )
             )
+
+
+def test_question_context_redacts_before_shortening_and_escaping() -> None:
+
+    question = OpenDecision(
+        registered_kinds()["text.linkify_addresses"],
+        None,
+        {},
+        context=QuestionContext(
+            "paragraph", "/home/" + "private-person" * 10 + "/chart.png\n\u202e"
+        ),
+    )
+    template = render_plan(PlanHeader(1, SourceBinding("0" * 64), "test"), [question])
+    assert "private-person" not in template
+    assert "<path>/chart.png" in template
+    assert "\u202e" not in template
+    assert r"\u202e" in template
+    assert r"\n" in template

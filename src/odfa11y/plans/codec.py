@@ -11,13 +11,17 @@ lazy from collections.abc import Iterable, Mapping
 from odfa11y.contracts import decode, fields_of, record_dict, schema_for
 from odfa11y.decisions import DecisionScope
 from odfa11y.errors import PlanError
+from odfa11y.evidence.redact import Redactor
 from odfa11y.plans.contracts import PlanFile, decision_contract, file_contract, from_file
 from odfa11y.plans.model import PLAN_SCHEMA_VERSION, Plan, PlanHeader
+from odfa11y.rules.registry import RULES
 from odfa11y.targets import (
     require_target,
 )
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import DecisionKind, OpenDecision
+lazy from odfa11y.decisions.decision import QuestionContext
+lazy from odfa11y.report import Finding
 
 
 def parse_plan(path: str | Path, kinds: Mapping[str, DecisionKind]) -> Plan:
@@ -68,13 +72,15 @@ def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]
     return from_file(record, kinds)
 
 
-def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
+def render_plan(
+    header: PlanHeader, decisions: Iterable[OpenDecision], *, findings: Iterable[Finding] = ()
+) -> str:
     """Print the binding header and disabled, reviewable answers with shared field help.
 
     Returns
     -------
     str
-        TOML with active binding metadata and commented decision tables.
+        TOML with active binding metadata and inert question blocks.
 
     """
     lines = [
@@ -85,15 +91,23 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
         f"source.sha256 = {json.dumps(header.source.sha256)}",
         "",
     ]
+    findings = tuple(findings)
+    redactor = Redactor(())
     for decision in decisions:
         kind = decision.kind
         key = "decisions." + json.dumps(kind.id)
         if decision.target is not None:
             key += "." + json.dumps(decision.target.path)
-        lines += [f"[{key}]", f"# Rules: {', '.join(decision.rule_ids)}"]
+        lines.extend(_finding_comments(decision, findings, redactor))
+        if decision.context is not None:
+            lines.append(_context_comment(decision.context, redactor))
+        lines += [f"[{key}]"]
         if decision.current:
             lines.append(
-                "# Current: " + json.dumps(record_dict(dict(decision.current)), ensure_ascii=False)
+                "# Current: "
+                + json.dumps(
+                    redactor.record(record_dict(dict(decision.current))), ensure_ascii=True
+                )
             )
         if decision.target is not None:
             lines.append(f"fingerprint = {json.dumps(require_target(decision.target).fingerprint)}")
@@ -106,6 +120,52 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
             )
         lines.append("")
     return "\n".join(lines)
+
+
+def _finding_comments(
+    decision: OpenDecision, findings: tuple[Finding, ...], redactor: Redactor
+) -> list[str]:
+    lines: list[str] = []
+    for rule_id in decision.rule_ids:
+        related = [
+            finding
+            for finding in findings
+            if finding.rule.id == rule_id
+            and (
+                decision.target is None
+                or (finding.location is not None and finding.location.path == decision.target.path)
+            )
+        ]
+        if related:
+            for finding in related:
+                lines.append(
+                    f"# {rule_id} {finding.severity.value}: "
+                    + json.dumps(redactor.text(finding.message), ensure_ascii=True)
+                )
+                if finding.details:
+                    lines.append(
+                        "# Detail: "
+                        + json.dumps(redactor.record(dict(finding.details)), ensure_ascii=True)
+                    )
+        else:
+            rule = RULES[rule_id]
+            lines.append(f"# {rule_id} {rule.severity.value}: {rule.title}")
+    return lines
+
+
+def _context_comment(context: QuestionContext, redactor: Redactor) -> str:
+    parts = [context.element_kind]
+    for value in (context.name, context.excerpt):
+        if value:
+            parts.append(json.dumps(redactor.text(value)[:60], ensure_ascii=True))
+    for label, value in (
+        ("page", context.page),
+        ("sheet", context.sheet),
+        ("slide", context.slide),
+    ):
+        if value:
+            parts.append(label + " " + json.dumps(redactor.text(value)[:60], ensure_ascii=True))
+    return "# " + ", ".join(parts)
 
 
 def _placeholder(field: dataclasses.Field[object], value_type: object) -> object:

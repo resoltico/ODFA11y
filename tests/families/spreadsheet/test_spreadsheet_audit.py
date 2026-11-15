@@ -218,9 +218,9 @@ def test_the_template_lists_each_decision_with_its_fingerprint(tmp_path: Path) -
     path = make_spreadsheet(tmp_path, "package", body)
     template = prepare_plan(path)[1]
     assert template is not None
-    assert '# [decisions."sheet.name"."content/sheet[1]"]' in template
+    assert '[decisions."sheet.name"."content/sheet[1]"]' in template
     assert 'decisions."graphic.alternative"' in template
-    assert "# fingerprint = " in template
+    assert "fingerprint = " in template
     plan_path = tmp_path / "review.plan.toml"
     plan_path.write_text(template)
     assert load_plan(plan_path).decisions == ()

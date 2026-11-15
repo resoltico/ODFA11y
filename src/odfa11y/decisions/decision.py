@@ -57,6 +57,18 @@ class DecisionKind:
 
 
 @dataclass(frozen=True, slots=True)
+class QuestionContext:
+    """The source element and nearby authored content needed to review a question."""
+
+    element_kind: str
+    excerpt: str | None = None
+    name: str | None = None
+    page: str | None = None
+    sheet: str | None = None
+    slide: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class OpenDecision:
     """A reviewed identity and current values on which an audit requests human judgment."""
 
@@ -64,6 +76,7 @@ class OpenDecision:
     target: Target | None
     current: Mapping[str, object]
     rule_ids: tuple[str, ...] = ()
+    context: QuestionContext | None = None
 
     def __post_init__(self) -> None:
         """Enforce one target grammar and mandatory targeted fingerprints."""

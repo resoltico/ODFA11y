@@ -141,7 +141,7 @@ depends_on = ["odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa1
 [[modules]]
 path = "odfa11y.plans"
 # Temporary until WP6: target layer model; upward edges odfa11y.families.
-depends_on = ["odfa11y.capture", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.report", "odfa11y.targets"]
+depends_on = ["odfa11y.evidence.redact", "odfa11y.rules", "odfa11y.capture", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.report", "odfa11y.targets"]
 
 [[modules]]
 path = "odfa11y.records"
@@ -286,3 +286,8 @@ cannot_depend_on = ["odfa11y.errors", "odfa11y.exit_codes", "odfa11y.status", "o
 path = "odfa11y.__main__"
 layer = "presentation"
 depends_on = ["odfa11y.cli"]
+
+[[modules]]
+path = "odfa11y.evidence.redact"
+layer = "foundation"
+depends_on = []

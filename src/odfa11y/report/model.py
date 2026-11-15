@@ -8,6 +8,7 @@ lazy from collections.abc import Mapping
 lazy from pathlib import Path
 
 from odfa11y.contracts import JsonProperty, record_dict
+from odfa11y.decisions.decision import QuestionContext
 from odfa11y.errors import PackageError
 from odfa11y.report.facts import FactSet
 from odfa11y.rules.registry import Severity
@@ -107,6 +108,24 @@ class Report:
         decision: OpenDecision | None = None,
     ) -> None:
         """Append a finding for a rule, defaulting the message to the rule title."""
+        if decision is not None and decision.context is None:
+            path = decision.target.path if decision.target else "document"
+            element_kind = path.rsplit("/", 1)[-1].split("[", 1)[0]
+            values = details or {}
+            excerpt = values.get("text")
+            name = next(
+                (values[key] for key in ("frame", "table", "page", "sheet") if values.get(key)),
+                None,
+            )
+            decision = replace(
+                decision,
+                context=QuestionContext(
+                    element_kind,
+                    str(excerpt) if excerpt else None,
+                    str(name) if name else None,
+                    sheet=str(values["sheet"]) if values.get("sheet") else None,
+                ),
+            )
         self.findings.append(
             Finding(
                 _rule=rule,

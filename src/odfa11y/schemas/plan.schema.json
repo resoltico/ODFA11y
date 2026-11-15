@@ -21,6 +21,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -56,6 +130,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -66,6 +141,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -86,6 +235,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -96,6 +246,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -116,6 +340,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -126,6 +351,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -161,6 +460,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -171,6 +471,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -206,6 +580,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -216,6 +591,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -251,6 +700,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -261,6 +711,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -296,6 +820,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -306,6 +831,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -341,6 +940,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -351,6 +951,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -386,6 +1060,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -396,6 +1071,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -431,6 +1180,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -441,6 +1191,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -476,6 +1300,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -486,6 +1311,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -521,6 +1420,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -531,6 +1431,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -551,6 +1525,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -561,6 +1536,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -581,6 +1630,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",
@@ -591,6 +1641,80 @@
               {
                 "additionalProperties": false,
                 "properties": {
+                  "context": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "element_kind": {
+                            "type": "string"
+                          },
+                          "excerpt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sheet": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "slide": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_kind",
+                          "excerpt",
+                          "name",
+                          "page",
+                          "sheet",
+                          "slide"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "current": {
                     "additionalProperties": {},
                     "type": "object"
@@ -611,6 +1735,7 @@
                   }
                 },
                 "required": [
+                  "context",
                   "current",
                   "kind_id",
                   "rule_ids",

@@ -25,7 +25,7 @@ def test_template_api_prepares_loadable_configuration_for_source_layout(
     report, template = prepare_plan(source)
     assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
     assert template is not None
-    assert set(tomllib.loads(template)) == {"plan"}
+    assert set(tomllib.loads(template)) == {"plan", "decisions"}
     assert plan_blockers(report) is None
 
 
@@ -50,7 +50,7 @@ def test_fixable_errors_leave_template_planning_available(tmp_path: Path) -> Non
     assert report.error_count > 0
     assert plan_blockers(report) is None
     assert template is not None
-    assert '# [decisions."document.metadata"]' in template
+    assert '[decisions."document.metadata"]' in template
     assert "META001" in template
 
 
@@ -75,7 +75,7 @@ def test_generic_adapter_retains_common_metadata_decisions(
     report, template = prepare_plan(source)
     assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "generic"
     assert template is not None
-    assert '# [decisions."document.metadata"]' in template
+    assert '[decisions."document.metadata"]' in template
     assert "META001" in template
 
 
@@ -103,5 +103,5 @@ def test_template_api_without_decisions_still_returns_commented_template(
     report, template = prepare_plan(source)
     assert not report.decisions
     assert template is not None
-    assert "# [decisions." not in template
+    assert "[decisions." not in template
     assert set(tomllib.loads(template)) == {"plan"}

@@ -10,6 +10,7 @@ from typing import Literal, Protocol, cast
 
 from odfa11y.contracts import fields_of, mapping_contract
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope
+from odfa11y.decisions.decision import QuestionContext
 from odfa11y.errors import PlanError
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
 from odfa11y.plans.model import Plan, PlanHeader, UnansweredDecision
@@ -74,7 +75,11 @@ def decision_contract(kinds: Mapping[str, DecisionKind], *, open_decision: bool)
             "target": Target if kind.scope is DecisionScope.TARGET else type(None),
         }
         if open_decision:
-            fields |= {"current": Mapping[str, object], "rule_ids": tuple[str, ...]}
+            fields |= {
+                "current": Mapping[str, object],
+                "rule_ids": tuple[str, ...],
+                "context": QuestionContext | None,
+            }
         else:
             fields["answer"] = kind.answer_type
         variants.append(mapping_contract(kind.answer_type.__name__ + "Decision", fields))
