@@ -79,7 +79,7 @@ def _compare_text(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> No
         min(len(before.text), len(after.text)),
     )
     start = max(position - EXCERPT_CONTEXT, 0)
-    report.add(
+    report.raise_(
         rules.FID003,
         details={
             "position": position,
@@ -97,14 +97,14 @@ def _compare_links(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> N
         "candidate": sum(after.links.values()),
     }
     if missing:
-        report.add(rules.FID004, details={"missing": sorted(missing.elements())})
+        report.raise_(rules.FID004, details={"missing": sorted(missing.elements())})
     if added:
-        report.add(rules.FID006, details={"added": sorted(added.elements())})
+        report.raise_(rules.FID006, details={"added": sorted(added.elements())})
 
 
 def _compare_pages(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> bool:
     if len(before.pages) != len(after.pages):
-        report.add(
+        report.raise_(
             rules.FID001, details={"source": len(before.pages), "candidate": len(after.pages)}
         )
         return False
@@ -114,7 +114,7 @@ def _compare_pages(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> b
         if (a.width, a.height) != (b.width, b.height)
     ]
     if resized:
-        report.add(rules.FID002, details={"pages": resized})
+        report.raise_(rules.FID002, details={"pages": resized})
         return False
     return True
 
@@ -135,7 +135,7 @@ def _compare_raster(
         if page.width * page.height * scale * scale > MAX_RENDER_PIXELS
     ]
     if oversized:
-        report.add(rules.FID007, details={"pages": oversized, "pixel_limit": MAX_RENDER_PIXELS})
+        report.raise_(rules.FID007, details={"pages": oversized, "pixel_limit": MAX_RENDER_PIXELS})
         return
     try:
         ratios = (render or render_pages)(paths, snapshot, policy, report, diff_dir)
@@ -184,5 +184,5 @@ def render_pages(
                     path = diff_dir / f"page-{index + 1:03d}-diff.png"
                     mask.save(path)
                     details["diff_image"] = path.name
-                report.add(rules.FID005, details=details)
+                report.raise_(rules.FID005, details=details)
     return ratios

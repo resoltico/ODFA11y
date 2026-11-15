@@ -17,7 +17,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     frames = select_elements(document.tree(Part.CONTENT), "//office:body/office:image/draw:frame")
     report.facts[FactKeys.IMAGE_GRAPHIC_COUNT] = len(frames)
     if len(frames) != 1:
-        report.add(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
+        report.raise_(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
         return
     frame = frames[0]
     name = frame.get(xml_names.DRAW_NAME)
@@ -28,7 +28,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     )
     images = select_elements(frame, "./draw:image")
     if not images:
-        report.add(rules.IMAGE001, "Image frame has no image payload.", location=location)
+        report.raise_(rules.IMAGE001, "Image frame has no image payload.", location=location)
     description = (frame.findtext("svg:title", namespaces=NS) or "") + (
         frame.findtext("svg:desc", namespaces=NS) or ""
     )
@@ -36,21 +36,23 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     identity = GraphicIdentity(document, frames)
     decorative = audit_graphic_role(document, frame, report)
     if not description.strip() and not decorative:
-        report.add(
-            rules.GRAPHIC003, location=Location(identity.target(frame)), details={"frame": name}
+        report.raise_(
+            rules.GRAPHIC003,
+            location=Location(identity.target(frame)),
+            details={"frame": name},
+            decision=identity.open_decision(frame, rules.GRAPHIC003.id),
         )
-        report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
     for image in images:
         problem, review = inspect_payload(document, image)
         if problem:
-            report.add(rules.IMAGE004, problem, location=location)
+            report.raise_(rules.IMAGE004, problem, location=location)
         if review:
-            report.add(rules.IMAGE005, location=location)
+            report.raise_(rules.IMAGE005, location=location)
         href = image.get(xml_names.XLINK_HREF)
         embedded = image.find("office:binary-data", NS)
         local = local_resource_path(href) if href else None
         if embedded is None and (local is None or not document.storage.has(local)):
-            report.add(
+            report.raise_(
                 rules.IMAGE003,
                 "Image resource is external, unavailable or not embedded; it was not fetched.",
                 location=location,

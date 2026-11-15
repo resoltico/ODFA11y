@@ -59,11 +59,11 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
     _audit_links(all_sheets, report)
     for index, link in enumerate(document_links(document), 1):
         if not link_has_description(link):
-            report.add(
+            report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
+                decision=link_decision(document, link, index, rules.LINK003.id),
             )
-            report.add_decision(link_decision(document, link, index, rules.LINK003.id))
     _audit_trailing_empty_sheets(all_sheets, report)
     _audit_hidden(content, all_sheets, report)
 
@@ -81,35 +81,31 @@ def _audit_names(document: OdfDocument, all_sheets: list[etree._Element], report
     names = Counter(sheet_name(sheet) for sheet in all_sheets)
     for index, sheet in enumerate(all_sheets, start=1):
         name = sheet_name(sheet)
-        rule = None
-        if not name.strip():
-            rule = rules.SHEET001
-            report.add(
-                rules.SHEET001,
-                "Sheet has no name, so a reader cannot tell it from the others.",
-                location=Location.indexed(Part.CONTENT, "sheet", index),
+        rule = (
+            rules.SHEET001
+            if not name.strip()
+            else (rules.SHEET002 if DEFAULT_SHEET_NAME.fullmatch(name.strip()) else None)
+        )
+        if rule is None:
+            continue
+        decision = (
+            OpenDecision(
+                SHEET_NAME,
+                Target(
+                    Location.indexed(Part.CONTENT, "sheet", index).path,
+                    Fingerprint(sheet_fingerprint(document, sheet)),
+                ),
+                {"name": name},
             )
-        elif DEFAULT_SHEET_NAME.fullmatch(name.strip()):
-            rule = rules.SHEET002
-            report.add(
-                rules.SHEET002,
-                "Sheet keeps its default name, which says nothing about its content.",
-                location=Location.indexed(Part.CONTENT, "sheet", index),
-                details={"sheet": name},
-            )
-
-        if rule is not None and names[name] == 1:
-            report.add_decision(
-                OpenDecision(
-                    SHEET_NAME,
-                    Target(
-                        (Location.indexed(Part.CONTENT, "sheet", index)).path,
-                        Fingerprint(sheet_fingerprint(document, sheet)),
-                    ),
-                    {"name": name},
-                    (rule.id,),
-                )
-            )
+            if names[name] == 1
+            else None
+        )
+        report.raise_(
+            rule,
+            location=Location.indexed(Part.CONTENT, "sheet", index),
+            details={"sheet": name},
+            decision=decision,
+        )
 
 
 def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None:
@@ -117,7 +113,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
         if not is_data_sheet(sheet):
             continue
         if not select_elements(sheet, ".//table:table-header-rows"):
-            report.add(
+            report.raise_(
                 rules.TABLE004,
                 "Sheet looks like a table of data but marks no header rows to repeat.",
                 location=_location(index, sheet),
@@ -125,7 +121,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
             )
         merged = select_elements(sheet, MERGED_CELLS)
         if merged:
-            report.add(
+            report.raise_(
                 rules.TABLE005,
                 "Data sheet merges cells, which breaks row and column navigation.",
                 location=_location(index, sheet),
@@ -158,7 +154,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         declared_name = frame.get(xml_names.DRAW_NAME)
         image = frame.find("draw:image", NS)
         href = image.get(xml_names.XLINK_HREF) if image is not None else None
-        report.add(
+        report.raise_(
             rules.GRAPHIC003,
             "Picture, chart or object has neither accessible title nor description.",
             location=Location(identity.target(frame)),
@@ -166,9 +162,8 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
                 "frame": declared_name,
                 "href": href,
             },
+            decision=identity.open_decision(frame, rules.GRAPHIC003.id),
         )
-
-        report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
 
 
 def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
@@ -176,7 +171,7 @@ def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
         for link in select_elements(sheet, ".//text:a"):
             text = cell_text(link)
             if RAW_URL.fullmatch(text) and not link.get(xml_names.OFFICE_TITLE, "").strip():
-                report.add(
+                report.raise_(
                     rules.LINK002,
                     "Hyperlink text is a raw address instead of a description of its target.",
                     location=_location(index, sheet),
@@ -189,7 +184,7 @@ def _audit_trailing_empty_sheets(all_sheets: list[etree._Element], report: Repor
     kept = max((index for index, blank in enumerate(empty) if not blank), default=0)
     for index, sheet in enumerate(all_sheets):
         if index > kept and empty[index]:
-            report.add(
+            report.raise_(
                 rules.SHEET007,
                 "Sheet is empty and follows the last sheet with content.",
                 location=_location(index + 1, sheet),
@@ -211,7 +206,7 @@ def _audit_hidden(
     rows = len(select_elements(content, HIDDEN_ROWS))
     columns = len(select_elements(content, HIDDEN_COLUMNS))
     if sheet_names or rows or columns:
-        report.add(
+        report.raise_(
             rules.HIDDEN001,
             "Hidden sheets, rows or columns hold content that not every reader is told about.",
             location=Location(Part.CONTENT.value),

@@ -34,16 +34,14 @@ def _report() -> Report:
             FactKeys.FIDELITY_RASTER_CHANGED_RATIOS: [0.0, 1.0],
         }),
     )
-    report.add(
+    report.raise_(
         rules.LINK001,
         "Needs review",
         location=Location("content/paragraph[2]"),
         details={"count": 2},
-    )
-    report.add_decision(
-        OpenDecision(
+        decision=OpenDecision(
             registered_kinds()["text.linkify_addresses"], None, {"enabled": False}, ("LINK001",)
-        )
+        ),
     )
     return report
 
@@ -90,7 +88,7 @@ def test_unsupported_format_is_rejected() -> None:
 
 def test_message_defaults_to_the_rule_title() -> None:
     report = Report(kind=ReportKind.ODF, subject="x")
-    report.add(rules.META001)
+    report.raise_(rules.META001)
     assert report.findings[0].message == rules.META001.title
 
 
@@ -109,14 +107,14 @@ def test_exit_status_follows_highest_severity(
 ) -> None:
     report = Report(kind=ReportKind.ODF, subject="x")
     rule = next(r for r in RULES.values() if r.severity is severity)
-    report.add(rule)
+    report.raise_(rule)
     assert exit_status([report], strict=strict) == expected
 
 
 def test_exit_status_takes_the_worst_report() -> None:
     clean, warned, failed = (Report(kind=ReportKind.ODF, subject=str(i)) for i in range(3))
-    warned.add(rules.LINK001)
-    failed.add(rules.META001)
+    warned.raise_(rules.LINK001)
+    failed.raise_(rules.META001)
     assert exit_status([clean, warned], strict=True) == 1
     assert exit_status([clean, warned, failed], strict=True) == 2
     assert exit_status([], strict=True) == 0
@@ -147,7 +145,7 @@ def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_tit
 
 def test_finding_references_one_rule_without_serializing_its_implementation() -> None:
     report = Report(kind=ReportKind.ODF, subject="source.odt")
-    report.add(rules.HEADING004, "A source-specific observation")
+    report.raise_(rules.HEADING004, "A source-specific observation")
     [finding] = report.findings
     assert finding.rule is rules.HEADING004
     findings = report.as_dict()["findings"]
@@ -159,3 +157,16 @@ def test_finding_references_one_rule_without_serializing_its_implementation() ->
     assert payload["category"] == "semantics"
     assert payload["message"] == "A source-specific observation"
     assert "rule" not in payload
+
+
+def test_questions_are_derived_from_raised_findings_and_their_actual_rules() -> None:
+    report = Report(ReportKind.ODF, "sample.odt")
+    kind = registered_kinds()["document.metadata"]
+    question = OpenDecision(kind, None, {}, (rules.LINK001.id,))
+    assert report.decisions == ()
+    report.raise_(rules.META001, decision=question)
+    report.raise_(rules.META002, decision=question)
+    assert len(report.decisions) == 1
+    assert report.decisions[0].rule_ids == (rules.META001.id, rules.META002.id)
+    report.findings.clear()
+    assert report.decisions == ()

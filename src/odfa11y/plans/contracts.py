@@ -12,7 +12,7 @@ from odfa11y.contracts import fields_of, mapping_contract
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope
 from odfa11y.errors import PlanError
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
-from odfa11y.plans.model import Plan, PlanHeader
+from odfa11y.plans.model import Plan, PlanHeader, UnansweredDecision
 from odfa11y.targets import Fingerprint, Target, TargetPath
 
 
@@ -30,6 +30,18 @@ class _TargetBinding(Protocol):
     def fingerprint(self) -> Fingerprint: ...
 
 
+@dataclass(frozen=True, slots=True)
+class UnansweredDocument:
+    """A header-only document policy block."""
+
+
+@dataclass(frozen=True, slots=True)
+class UnansweredTarget:
+    """An advisory target fingerprint without an active answer."""
+
+    fingerprint: str | None = None
+
+
 def target_answer(kind: DecisionKind) -> type[object]:
     return make_dataclass(
         kind.answer_type.__name__ + "Target",
@@ -43,9 +55,12 @@ def target_answer(kind: DecisionKind) -> type[object]:
 
 def file_contract(kinds: Mapping[str, DecisionKind]) -> object:
     tables = {
-        kind.id: kind.answer_type
+        kind.id: reduce(or_, (kind.answer_type, UnansweredDocument))
         if kind.scope is DecisionScope.DOCUMENT
-        else dict.__class_getitem__((TargetPath, target_answer(kind)))
+        else dict.__class_getitem__((
+            TargetPath,
+            reduce(or_, (target_answer(kind), UnansweredTarget)),
+        ))
         for kind in kinds.values()
     }
     return GenericAlias(PlanFile, mapping_contract("PlanDecisions", tables, total=False))
@@ -81,18 +96,31 @@ def to_file(plan: Plan) -> PlanFile[dict[str, object]]:
         entry = target_answer(decision.kind)(**values, fingerprint=decision.target.fingerprint)
         group = cast(dict[str, object], tables.setdefault(decision.kind.id, {}))
         group[decision.target.path] = entry
+    for question in plan.unanswered:
+        if question.path is None:
+            tables[question.kind_id] = UnansweredDocument()
+        else:
+            group = cast(dict[str, object], tables.setdefault(question.kind_id, {}))
+            group[question.path] = UnansweredTarget(question.fingerprint)
     return PlanFile(plan.header, tables, plan.fidelity)
 
 
 def from_file(record: PlanFile[Mapping[str, object]], kinds: Mapping[str, DecisionKind]) -> Plan:
     decisions = []
+    unanswered = []
     problems = []
     for kind_id, payload in record.decisions.items():
         kind = kinds[kind_id]
         if kind.scope is DecisionScope.DOCUMENT:
+            if isinstance(payload, UnansweredDocument):
+                unanswered.append(UnansweredDecision(kind_id, None))
+                continue
             decisions.append(Decision._decoded(kind, None, payload))
             continue
         for path, entry in cast(Mapping[TargetPath, object], payload).items():
+            if isinstance(entry, UnansweredTarget):
+                unanswered.append(UnansweredDecision(kind_id, path, entry.fingerprint))
+                continue
             fields = {
                 field.name: getattr(entry, field.name) for field in fields_of(kind.answer_type)
             }
@@ -105,4 +133,4 @@ def from_file(record: PlanFile[Mapping[str, object]], kinds: Mapping[str, Decisi
     if problems:
         message = "Plan targets could not be bound"
         raise PlanError(message, problems=tuple(problems))
-    return Plan._decoded(record.plan, tuple(decisions), record.fidelity)
+    return Plan._decoded(record.plan, tuple(decisions), record.fidelity, tuple(unanswered))

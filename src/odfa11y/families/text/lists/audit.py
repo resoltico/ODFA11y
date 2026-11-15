@@ -59,13 +59,13 @@ def audit_lists(document: OdfDocument, report: Report) -> None:
         if identity := node.get(XML_ID):
             by_id[identity].append(node)
             if ids[identity] > 1:
-                report.add(
+                report.raise_(
                     rules.LIST001, "List XML identity is duplicated.", location=locations[node]
                 )
         _membership(node, locations[node], report)
     edges = _continuations(available, by_id, ids, locations, report)
     for node in _cycles(edges):
-        report.add(
+        report.raise_(
             rules.LIST002,
             "List continuation participates in a counter cycle.",
             location=locations[node],
@@ -76,7 +76,7 @@ def audit_lists(document: OdfDocument, report: Report) -> None:
             visible_words(node)
         ):
             simulated += 1
-            report.add(
+            report.raise_(
                 rules.LIST004,
                 location=Location.indexed(reading_context_path(node), "paragraph", index),
                 details={
@@ -99,14 +99,14 @@ def _membership(node: etree._Element, location: Location, report: Report) -> Non
     invalid = any(child.tag not in {ITEM, HEADER} for child in children)
     headers = [child for child in children if child.tag == HEADER]
     if invalid or len(headers) > 1 or (headers and children[0] is not headers[0]):
-        report.add(rules.LIST001, location=location)
+        report.raise_(rules.LIST001, location=location)
     parent = node.getparent()
     if parent is not None and parent.tag == LIST:
-        report.add(
+        report.raise_(
             rules.LIST001, "A nested list must belong to a list item or header.", location=location
         )
     if node.get(xml_names.TEXT_CONTINUE_NUMBERING) not in {None, "true", "false", "1", "0"}:
-        report.add(
+        report.raise_(
             rules.LIST001,
             "List continuation has an invalid boolean declaration.",
             location=location,
@@ -128,7 +128,7 @@ def _continuations(
         if reference:
             targets = by_id.get(reference, [])
             if len(targets) != 1 or ids[reference] != 1:
-                report.add(
+                report.raise_(
                     rules.LIST002,
                     "List continuation target is missing or ambiguous.",
                     location=locations[node],
@@ -139,14 +139,14 @@ def _continuations(
                 if _domain(targets[0]) != _domain(node) or list_level(targets[0]) != list_level(
                     node
                 ):
-                    report.add(
+                    report.raise_(
                         rules.LIST003,
                         "List continuation crosses a reading or counter domain.",
                         location=locations[node],
                     )
         elif node.get(xml_names.TEXT_CONTINUE_NUMBERING) in {"true", "1"}:
             if key not in preceding or key[-1] is None:
-                report.add(rules.LIST003, location=locations[node])
+                report.raise_(rules.LIST003, location=locations[node])
             else:
                 edges[node] = preceding[key]
         preceding[key] = node

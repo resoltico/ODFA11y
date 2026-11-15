@@ -12,6 +12,8 @@ lazy from odfa11y.concepts.edits import Outcome
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.records import SchemaCheck
 lazy from odfa11y.remediate.violations import ViolationKind
+lazy from odfa11y.report import Finding, Report
+lazy from odfa11y.targets import TargetPath
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +24,16 @@ class Violation:
     message: str
     operation: str | None = None
     target: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionPrediction:
+    """Findings resolved by an answer and related findings remaining in the candidate."""
+
+    kind_id: str
+    target: TargetPath | None
+    resolved: tuple[Finding, ...]
+    remaining: tuple[Finding, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +50,9 @@ class RemediationResult:
     rebind: bool = False
     dry_run: bool = False
     operations: tuple[JsonObject, ...] = field(default_factory=tuple)
+    predictions: tuple[DecisionPrediction, ...] = ()
+    candidate: Report | None = None
+    unanswered: tuple[str, ...] = ()
 
     @JsonProperty
     def changed(self) -> bool:

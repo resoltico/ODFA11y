@@ -4,6 +4,8 @@
 import zipfile
 from typing import cast
 
+from odfa11y.decisions import OpenDecision
+from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import XmlParseError
 from odfa11y.odf import (
     Family,
@@ -60,16 +62,16 @@ def _audit_flat(document: OdfDocument, report: Report) -> bool:
     try:
         root = document.tree(Part.CONTENT).getroot()
     except XmlParseError as exc:
-        report.add(rules.XML001, str(exc), location=storage_location(document, Part.CONTENT))
+        report.raise_(rules.XML001, str(exc), location=storage_location(document, Part.CONTENT))
         return False
     if root.tag != xml_names.OFFICE_DOCUMENT:
-        report.add(
+        report.raise_(
             rules.ODF010,
             f"The root element is {root.tag!r}; a flat document's root is office:document.",
         )
         return False
     if document.detection.media_type is None:
-        report.add(rules.PKG001, "The document has no office:mimetype attribute.")
+        report.raise_(rules.PKG001, "The document has no office:mimetype attribute.")
     return True
 
 
@@ -78,14 +80,14 @@ def _audit_package(document: OdfDocument, report: Report) -> bool:
     names = list(package.member_names())
     duplicates = document.protection.ambiguous_members
     if duplicates:
-        report.add(
+        report.raise_(
             rules.PKG006,
             "Duplicate ZIP member names prevent complete inspection.",
             details={"duplicates": list(duplicates)},
         )
     unsafe = document.protection.unsafe_members
     if unsafe:
-        report.add(
+        report.raise_(
             rules.PKG007,
             "Unsafe ZIP member names prevent complete inspection.",
             details={"names": list(unsafe)},
@@ -97,7 +99,7 @@ def _audit_package(document: OdfDocument, report: Report) -> bool:
     for part in (Part.MANIFEST, Part.CONTENT):
         if not document.has(part):
             name = package.member_for(part)
-            report.add(
+            report.raise_(
                 rules.PKG005,
                 f"Required package member is missing: {name}",
                 location=Location(part.value, name),
@@ -106,7 +108,7 @@ def _audit_package(document: OdfDocument, report: Report) -> bool:
     for part in (Part.STYLES, Part.META):
         if not document.has(part):
             name = package.member_for(part)
-            report.add(
+            report.raise_(
                 rules.PKG002,
                 f"Optional package member is missing: {name}",
                 location=Location(part.value, name),
@@ -116,7 +118,7 @@ def _audit_package(document: OdfDocument, report: Report) -> bool:
 
 def _audit_mimetype(package: PackageStorage, names: list[str], report: Report) -> None:
     if MIMETYPE not in package.members:
-        report.add(
+        report.raise_(
             rules.PKG001,
             "Package has no mimetype member; tools cannot recognise its type without it.",
         )
@@ -124,15 +126,15 @@ def _audit_mimetype(package: PackageStorage, names: list[str], report: Report) -
     info = package.members[MIMETYPE].info
     raw = package.read(MIMETYPE)
     if not raw.isascii() or raw != raw.strip():
-        report.add(
+        report.raise_(
             rules.PKG001,
             "mimetype is not exactly an ASCII media type (stray whitespace or non-ASCII bytes).",
             location=MIMETYPE_LOCATION,
         )
     if not names or names[0] != MIMETYPE:
-        report.add(rules.PKG003, location=MIMETYPE_LOCATION)
+        report.raise_(rules.PKG003, location=MIMETYPE_LOCATION)
     if info.compress_type != zipfile.ZIP_STORED:
-        report.add(
+        report.raise_(
             rules.PKG004,
             "mimetype is compressed; ODF requires it to be stored uncompressed.",
             location=MIMETYPE_LOCATION,
@@ -153,7 +155,7 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
     report.facts[FactKeys.PACKAGE_LAYOUT] = document.layout
     report.facts[FactKeys.DOCUMENT_MEDIA_TYPE] = detection.media_type
     if kind is None:
-        report.add(
+        report.raise_(
             rules.ODF005,
             f"The media type {detection.media_type!r} is not an OpenDocument document type.",
             details={"media_type": detection.media_type, "declared_by": detection.declared_by},
@@ -166,14 +168,14 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
         and detection.media_type is not None
         and detection.manifest_media_type != detection.media_type
     ):
-        report.add(
+        report.raise_(
             rules.ODF004,
             f"The manifest declares {detection.manifest_media_type!r}; the document declares "
             f"{detection.media_type!r}.",
             location=storage_location(document, Part.MANIFEST),
         )
     if kind.body_element is not None and detection.body_element != kind.body_element:
-        report.add(
+        report.raise_(
             rules.ODF006,
             f"The body holds {detection.body_element!r}; a {kind.name} document holds "
             f"{kind.body_element!r}.",
@@ -182,13 +184,13 @@ def audit_kind(document: OdfDocument, report: Report) -> bool:
     expected = _extensions(kind.extension, flat=document.layout == "flat")
     flat_variant = document.layout == "flat" and detection.extension.startswith(".fo")
     if detection.extension not in expected and not flat_variant:
-        report.add(
+        report.raise_(
             rules.ODF007,
             f"The file extension {detection.extension!r} does not match a {kind.name} document "
             f"({', '.join(sorted(expected))}).",
         )
     if kind.deprecated:
-        report.add(rules.ODF008, f"The {kind.media_type} media type is deprecated.")
+        report.raise_(rules.ODF008, f"The {kind.media_type} media type is deprecated.")
     _audit_content_root(document, kind.family, report)
     return True
 
@@ -201,7 +203,7 @@ def _audit_content_root(document: OdfDocument, family: Family, report: Report) -
     except XmlParseError:
         return  # the XML audit reports it
     if root.tag != xml_names.OFFICE_DOCUMENT_CONTENT:
-        report.add(
+        report.raise_(
             rules.ODF011,
             f"The content root is {root.tag!r}; it must be office:document-content.",
             location=storage_location(document, Part.CONTENT),
@@ -227,10 +229,11 @@ def audit_versions(document: OdfDocument, report: Report) -> None:
         if is_office_element(root):
             declared[name] = root.get(xml_names.OFFICE_VERSION)
     if version is None or len(set(declared.values())) > 1:
-        report.add(
+        report.raise_(
             rules.ODF001,
             "Package members declare different or missing ODF versions.",
             details={"versions": declared},
+            decision=OpenDecision(COMMON_KINDS[0], None, {}),
         )
     if version is not None:
         report.facts[FactKeys.DOCUMENT_ODF_VERSION] = version
@@ -242,24 +245,26 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
     manifest_root = document.tree(Part.MANIFEST).getroot()
     manifest_version = manifest_root.get(xml_names.MANIFEST_VERSION)
     if manifest_version is not None and manifest_version != version:
-        report.add(
+        report.raise_(
             rules.ODF003,
             f"Manifest declares ODF version {manifest_version!r}; content declares {version!r}.",
             location=storage_location(document, Part.MANIFEST),
+            decision=OpenDecision(COMMON_KINDS[0], None, {}),
         )
     root_entries = select_elements(manifest_root, "./manifest:file-entry[@manifest:full-path='/']")
     if not root_entries:
-        report.add(rules.ODF002, location=storage_location(document, Part.MANIFEST))
+        report.raise_(rules.ODF002, location=storage_location(document, Part.MANIFEST))
         return
     entry_version = root_entries[0].get(xml_names.MANIFEST_VERSION)
     if entry_version is not None and entry_version != version:
-        report.add(
+        report.raise_(
             rules.ODF003,
             (
                 f"Manifest root file-entry declares version {entry_version!r}; "
                 f"content declares {version!r}."
             ),
             location=storage_location(document, Part.MANIFEST),
+            decision=OpenDecision(COMMON_KINDS[0], None, {}),
         )
 
 
@@ -273,13 +278,13 @@ def audit_schema(document: OdfDocument, report: Report) -> None:
             if result.version
             else "The document declares no ODF version, so no schema applies."
         )
-        report.add(rules.SCHEMA002, reason)
+        report.raise_(rules.SCHEMA002, reason)
         return
     report.facts[FactKeys.SCHEMA_VIOLATION_COUNT] = result.count
     report.facts[FactKeys.SCHEMA_UNLOCATED_VIOLATION_COUNT] = result.unlocated
     for member, messages in result.messages().items():
         location = storage_location(document, _part_of(document, member))
-        report.add(
+        report.raise_(
             rules.SCHEMA001,
             f"The {location.path} does not validate against the ODF {result.version} schema.",
             location=location,

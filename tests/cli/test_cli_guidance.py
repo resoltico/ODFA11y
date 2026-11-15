@@ -12,9 +12,10 @@ from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
+from odfa11y.decisions import OpenDecision
+from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import OutputOccupied, PlanError, Remedy, RemedyAction, ToolUnavailable
 from odfa11y.plans import PlanHeader, SourceBinding, render_plan
-from odfa11y.plans.registry import document_decisions
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
@@ -85,8 +86,7 @@ def test_command_typo_suggests_without_executing(capsys: pytest.CaptureFixture[s
 def test_next_command_handles_shell_names_and_leading_dash() -> None:
     source = Path("-a document; $(touch unwanted).odt")
     report = Report(kind=ReportKind.ODF, subject=source.name, _sources=(source,))
-    report.add(rules.META001)
-    document_decisions(report)
+    report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
     hint = audit_next_step(argparse.Namespace(format="text"), [report])
     assert hint is not None
     command = hint.splitlines()[0].removeprefix("Next: ")
@@ -97,17 +97,15 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
 @pytest.mark.parametrize(("kind", "source"), [("pdf", "a.pdf"), ("odf", "a\n.odt")])
 def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str) -> None:
     report = Report(kind=ReportKind(kind), subject=source, _sources=(Path(source),))
-    report.add(rules.META001)
-    document_decisions(report)
+    report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
     assert audit_next_step(argparse.Namespace(format="json"), [report]) is None
 
 
 def test_unreadable_document_does_not_offer_template() -> None:
     report = Report(kind=ReportKind.ODF, subject="bad.odt", _sources=(Path("bad.odt"),))
-    report.add(rules.META001)
-    document_decisions(report)
-    report.add(rules.PKG000)
+    report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
+    report.raise_(rules.PKG000)
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
 
 
@@ -116,7 +114,7 @@ def test_template_header_escapes_untrusted_subject_without_active_toml(tmp_path:
     report = audit_odf(source)
     report.subject = "doc\n[document]\ntitle='Injected'\x1b[2J\u202e.odt"
     template = render_plan(PlanHeader(1, SourceBinding("0" * 64), "0.8.0"), report.decisions)
-    assert set(tomllib.loads(template)) == {"plan"}
+    assert set(tomllib.loads(template)) == {"plan", "decisions"}
     assert "\x1b" not in template
     assert "\u202e" not in template
     assert "Review each answer" in template

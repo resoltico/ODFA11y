@@ -38,7 +38,7 @@ def audit_pdfua(pdf_path: str | Path) -> Report:
     try:
         _inspect(pdf_path, report)
     except (OSError, PyPdfError, ValueError, KeyError, RecursionError, ToolFailure) as exc:
-        report.add(rules.PDF000, f"Cannot inspect PDF: {exc}")
+        report.raise_(rules.PDF000, f"Cannot inspect PDF: {exc}")
     return report
 
 
@@ -60,22 +60,22 @@ def _audit_metadata(reader: PdfReader, report: Report) -> DictionaryObject:
     if title:
         report.facts[FactKeys.PDF_TITLE] = title
     else:
-        report.add(rules.PDF001, "PDF document title metadata is missing.")
+        report.raise_(rules.PDF001, "PDF document title metadata is missing.")
     catalog = reader.root_object
     language = catalog.get("/Lang")
     if isinstance(language, str) and language.strip():
         report.facts[FactKeys.PDF_LANGUAGE] = language
     else:
-        report.add(rules.PDF002, "PDF catalog /Lang is missing.")
+        report.raise_(rules.PDF002, "PDF catalog /Lang is missing.")
     marked = pdf_dictionary(catalog.get("/MarkInfo")).get("/Marked")
     if not isinstance(marked, BooleanObject) or not marked.value:
-        report.add(rules.PDF003, "PDF is not marked as a tagged document.")
+        report.raise_(rules.PDF003, "PDF is not marked as a tagged document.")
     structure = pdf_dictionary(catalog.get("/StructTreeRoot"))
     if not structure:
-        report.add(rules.PDF004, "PDF has no /StructTreeRoot.")
+        report.raise_(rules.PDF004, "PDF has no /StructTreeRoot.")
     display_title = pdf_dictionary(catalog.get("/ViewerPreferences")).get("/DisplayDocTitle")
     if not isinstance(display_title, BooleanObject) or not display_title.value:
-        report.add(rules.PDF005, "PDF viewer preferences do not display the title.")
+        report.raise_(rules.PDF005, "PDF viewer preferences do not display the title.")
     _audit_xmp(catalog, report)
     return structure
 
@@ -101,17 +101,17 @@ def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
     if part and part.strip() == "1":
         report.facts[FactKeys.PDF_UA_PART] = 1
     else:
-        report.add(rules.PDF006, "PDF XMP metadata does not declare PDF/UA-1.")
+        report.raise_(rules.PDF006, "PDF XMP metadata does not declare PDF/UA-1.")
 
 
 def _audit_content(reader: PdfReader, report: Report, graphics: int) -> None:
     if not reader.pages:
-        report.add(rules.PDF009, "PDF contains no pages.")
+        report.raise_(rules.PDF009, "PDF contains no pages.")
         return
     text_chars = sum(len(page.extract_text() or "") for page in reader.pages)
     report.facts[FactKeys.PDF_TEXT_CHARACTER_COUNT] = text_chars
     report.facts[FactKeys.PDF_DESCRIBED_GRAPHIC_COUNT] = graphics
     if not text_chars and not graphics:
-        report.add(
+        report.raise_(
             rules.PDF010, "No extractable text or inspected described graphical content was found."
         )

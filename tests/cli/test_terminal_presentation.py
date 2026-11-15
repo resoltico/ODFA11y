@@ -22,7 +22,7 @@ def test_text_report_prioritizes_findings_and_wraps_without_breaking_tokens() ->
         facts=FactSet({FactKeys.DOCUMENT_TITLE: "Metadata"}),
     )
     token = "https://example.test/" + "a" * 90
-    report.add(
+    report.raise_(
         rules.LINK001,
         "A long explanation " * 12,
         location=Location("content/paragraph[1]"),
@@ -40,7 +40,7 @@ def test_controls_are_escaped_in_all_text_fields_and_retained_in_json() -> None:
     report = Report(
         kind=ReportKind.ODF, subject="doc\n.odt", facts=FactSet({FactKeys.DOCUMENT_TITLE: "v\x85"})
     )
-    report.add(
+    report.raise_(
         rules.META001,
         "m\x1b",
         location=Location.named("content", "paragraph", "p\u202e"),

@@ -229,7 +229,7 @@ depends_on = ["odfa11y.capture", "odfa11y.errors", "odfa11y.families", "odfa11y.
 [[modules]]
 path = "odfa11y.remediate"
 layer = "workflows"
-depends_on = ["odfa11y.capture", "odfa11y.concepts", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.records", "odfa11y.remediate.violations", "odfa11y.status"]
+depends_on = ["odfa11y.audit", "odfa11y.report", "odfa11y.capture", "odfa11y.concepts", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.records", "odfa11y.remediate.violations", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.run"

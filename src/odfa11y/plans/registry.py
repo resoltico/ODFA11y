@@ -6,15 +6,12 @@ lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 from odfa11y.contracts.types import format_validators
-from odfa11y.decisions import OpenDecision
 from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import PlanError
 from odfa11y.families import REGISTRY
 from odfa11y.plans.codec import parse_plan
-from odfa11y.report import RULES, FactKeys
 lazy from odfa11y.decisions import DecisionKind
 lazy from odfa11y.plans.model import Plan
-lazy from odfa11y.report import Report
 
 
 def registered_kinds() -> dict[str, DecisionKind]:
@@ -71,24 +68,3 @@ def load_plan(path: str | Path) -> Plan:
 
     """
     return parse_plan(path, registered_kinds())
-
-
-def document_decisions(report: Report) -> None:
-    """Attach common document questions using registered rules and typed facts."""
-    for kind in COMMON_KINDS:
-        rules = tuple(
-            finding.rule_id
-            for finding in report.findings
-            if kind.id in RULES[finding.rule_id].decision_kinds
-        )
-        if rules:
-            current = (
-                {
-                    "title": report.facts.get(FactKeys.DOCUMENT_TITLE),
-                    "description": report.facts.get(FactKeys.DOCUMENT_DESCRIPTION),
-                    "language": report.facts.get(FactKeys.DOCUMENT_LANGUAGE),
-                }
-                if kind.id == "document.metadata"
-                else {"version": report.facts.get(FactKeys.DOCUMENT_ODF_VERSION)}
-            )
-            report.add_decision(OpenDecision(kind, None, current, rules))

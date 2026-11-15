@@ -15,7 +15,6 @@ from odfa11y.errors import PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Part, Use
 from odfa11y.odf.export_context import native_export_limitations
-from odfa11y.plans.registry import document_decisions
 from odfa11y.report import FactKeys, Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
@@ -49,12 +48,20 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
     try:
         document = OdfDocument.open(source)
     except (PackageError, OSError) as exc:
-        report.add(rules.PKG000, _describe(exc, source))
+        report.raise_(rules.PKG000, _describe(exc, source))
         return report
 
+    return audit_document(document, subject=str(source), source=source, schema=schema)
+
+
+def audit_document(
+    document: OdfDocument, *, subject: str, source: Path | None = None, schema: bool = False
+) -> Report:
+    """Audit an existing document model, including an unpublished edited candidate."""
+    report = Report(kind=ReportKind.ODF, subject=subject, _sources=(source,) if source else ())
     protection = document.protection
     if protection.signatures:
-        report.add(
+        report.raise_(
             rules.PKG008,
             "Declared signatures are unverified: structure, references, cryptography and trust "
             "were not validated.",
@@ -64,9 +71,9 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
         document.require(Use.AUDIT)
     except PackageError:
         if protection.malformed_manifest:
-            report.add(rules.XML001, protection.malformed_manifest)
+            report.raise_(rules.XML001, protection.malformed_manifest)
         elif protection.encrypted:
-            report.add(rules.PKG009)
+            report.raise_(rules.PKG009)
         else:
             audit_structure(document, report)
         return report
@@ -82,7 +89,6 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
     _audit_export_context(document, report)
     if schema:
         audit_schema(document, report)
-    document_decisions(report)
     return report
 
 
@@ -97,7 +103,7 @@ def _parseable(document: OdfDocument, report: Report) -> bool:
         try:
             document.tree(part)
         except PackageError as exc:
-            report.add(rules.XML001, str(exc), location=storage_location(document, part))
+            report.raise_(rules.XML001, str(exc), location=storage_location(document, part))
             ok = ok and part is Part.SETTINGS
     return ok
 
@@ -120,6 +126,6 @@ def _audit_export_context(document: OdfDocument, report: Report) -> None:
     limits = native_export_limitations(document)
     report.facts[FactKeys.NATIVE_LIMITATIONS] = limits
     if limits["rendering_dependencies"]:
-        report.add(rules.NATIVE001, details={"count": limits["rendering_dependencies"]})
+        report.raise_(rules.NATIVE001, details={"count": limits["rendering_dependencies"]})
     if limits["location_fields"]:
-        report.add(rules.NATIVE002, details={"count": limits["location_fields"]})
+        report.raise_(rules.NATIVE002, details={"count": limits["location_fields"]})

@@ -128,7 +128,7 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = Report(kind=ReportKind.ODF, subject="source.odt")
-    source.add(rules.LINK001)
+    source.raise_(rules.LINK001)
     data = RunRecord(
         document=DocumentIdentity("doc.odt"),
         operations=(),

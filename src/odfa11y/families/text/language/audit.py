@@ -25,7 +25,7 @@ def audit_languages(document: OdfDocument, report: Report) -> None:
             languages = effective_languages(document, node)
             fingerprint = language_fingerprint(document, node)
         except DocumentRefusal as error:
-            report.add(
+            report.raise_(
                 rules.LANG005,
                 str(error),
                 location=location,
@@ -36,13 +36,14 @@ def audit_languages(document: OdfDocument, report: Report) -> None:
         current = dict(zip(CHANNELS, languages, strict=True))
         rows.append({"target": target, **current})
         if all(language is None for language in languages):
-            report.add(rules.LANG004, location=location)
-        report.add_decision(
-            OpenDecision(
-                TARGET_LANGUAGE,
-                Target((location).path, Fingerprint(fingerprint)),
-                current,
-                (rules.LANG004.id,),
+            report.raise_(
+                rules.LANG004,
+                location=location,
+                decision=OpenDecision(
+                    TARGET_LANGUAGE,
+                    Target((location).path, Fingerprint(fingerprint)),
+                    current,
+                    (rules.LANG004.id,),
+                ),
             )
-        )
     report.facts[FactKeys.TEXT_EFFECTIVE_LANGUAGES] = rows

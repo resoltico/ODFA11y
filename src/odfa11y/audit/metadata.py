@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit document title and language metadata."""
 
+from odfa11y.decisions import OpenDecision
+from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part
 from odfa11y.report import FactKeys, Location
@@ -15,10 +17,11 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
     meta = document.tree(Part.META) if document.has(Part.META) else None
     title = meta.findtext("office:meta/dc:title", namespaces=NS) if meta is not None else None
     if not title or not title.strip():
-        report.add(
+        report.raise_(
             rules.META001,
             "Document title metadata is missing.",
             location=Location("meta/title"),
+            decision=OpenDecision(COMMON_KINDS[1], None, {}),
         )
     else:
         report.facts[FactKeys.DOCUMENT_TITLE] = title.strip()
@@ -45,21 +48,23 @@ def _audit_language(
         default_declared = None
     default_language = _declared_language(default_declared, "default_style", problems)
     if problems:
-        report.add(rules.META004, location=Location("meta/language"), details=problems)
+        report.raise_(rules.META004, location=Location("meta/language"), details=problems)
     if not language and not default_language:
         if not problems:
-            report.add(
+            report.raise_(
                 rules.META002,
                 "Document language is not declared in metadata or the default style.",
                 location=Location("meta/language"),
+                decision=OpenDecision(COMMON_KINDS[1], None, {}),
             )
         return
     report.facts[FactKeys.DOCUMENT_LANGUAGE] = language or default_language
     if language and default_language and language.lower() != default_language.lower():
-        report.add(
+        report.raise_(
             rules.META003,
             location=Location("meta/language"),
             details={"metadata": declared, "default_style": default_declared},
+            decision=OpenDecision(COMMON_KINDS[1], None, {}),
         )
 
 

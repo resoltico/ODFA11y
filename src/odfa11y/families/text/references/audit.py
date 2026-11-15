@@ -104,11 +104,11 @@ def _audit_ranges(index: _Index, report: Report) -> None:
         for owner in owners:
             paired = index.ends.get(key, [])
             if not key[1] or len(owners) != 1 or not _valid_range(owner, paired, index):
-                report.add(rules.REFERENCE003, location=index.locations[owner])
+                report.raise_(rules.REFERENCE003, location=index.locations[owner])
     for key, markers in index.ends.items():
         if key not in index.targets:
             for marker in markers:
-                report.add(rules.REFERENCE003, location=index.locations[marker])
+                report.raise_(rules.REFERENCE003, location=index.locations[marker])
 
 
 def _valid_range(owner: etree._Element, ends: list[etree._Element], index: _Index) -> bool:
@@ -136,7 +136,7 @@ def _audit_reference(
     kind, name = reference
     owners = index.targets.get(reference, set())
     if reference in index.excluded:
-        report.add(
+        report.raise_(
             rules.REFERENCE004,
             "A matching destination lies outside established current reading flow.",
             location=index.locations[node],
@@ -149,7 +149,7 @@ def _audit_reference(
             if owners
             else (rules.REFERENCE004 if kind == "link" and "|" in name else rules.REFERENCE001)
         )
-        report.add(
+        report.raise_(
             rule,
             location=index.locations[node],
             details={
@@ -163,7 +163,7 @@ def _audit_reference(
     elif kind == "note":
         owner = next(iter(owners))
         if node.get(xml_names.TEXT_NOTE_CLASS) not in {None, owner.get(xml_names.TEXT_NOTE_CLASS)}:
-            report.add(
+            report.raise_(
                 rules.NOTE002,
                 "Note reference class differs from its destination.",
                 location=index.locations[node],
@@ -175,7 +175,7 @@ def _note(node: etree._Element, location: Location, report: Report) -> None:
     bodies = list(node.iterchildren(xml_names.TEXT_NOTE_BODY))
     complete = len(citations) == 1 and len(bodies) == 1
     if not node.get(xml_names.TEXT_ID) or not complete or not visible_words(bodies[0]):
-        report.add(rules.NOTE002, location=location)
+        report.raise_(rules.NOTE002, location=location)
 
 
 def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
@@ -187,14 +187,14 @@ def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
     for note in notes:
         identity = note.get(xml_names.TEXT_ID)
         if identity and identities[identity] > 1:
-            report.add(
+            report.raise_(
                 rules.NOTE002,
                 "Note identity is duplicated.",
                 location=Location.named(reading_context_path(note), "note", identity),
             )
         cls = note.get(xml_names.TEXT_NOTE_CLASS) or "unknown"
         classes[cls] = classes.get(cls, 0) + 1
-    report.add(
+    report.raise_(
         rules.NOTE001,
         (
             "Footnotes/endnotes are present; verify their reading order "

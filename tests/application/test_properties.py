@@ -146,7 +146,7 @@ def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_a_config_er
 def test_report_counts_partition_findings(rule_ids: list[str]) -> None:
     report = Report(kind=ReportKind.ODF, subject="synthetic")
     for rule_id in rule_ids:
-        report.add(RULES[rule_id])
+        report.raise_(RULES[rule_id])
     assert report.error_count + report.warning_count + report.info_count == len(rule_ids)
     assert json.loads(json.dumps(report.as_dict()))["summary"]["errors"] == report.error_count
 

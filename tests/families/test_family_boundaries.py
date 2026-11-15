@@ -216,7 +216,7 @@ def test_a_new_family_needs_only_a_registry_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def audit(_document: OdfDocument, report: Report) -> None:
-        report.add(rules.ODF009, "Presentation adapter ran.", location=Location("document"))
+        report.raise_(rules.ODF009, "Presentation adapter ran.", location=Location("document"))
 
     class CustomPresentation(SourceOnlyPresentation):
         name = "presentation"

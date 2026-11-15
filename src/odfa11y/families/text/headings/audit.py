@@ -57,14 +57,12 @@ def audit_headings(
             (rules.HEADING002.id,),
         )
         if not 1 <= level <= MAX_HEADING_LEVEL:
-            report.add(
+            report.raise_(
                 rules.HEADING001,
                 "Heading has no valid text:outline-level.",
                 location=location,
                 details=excerpt,
-            )
-            report.add_decision(
-                OpenDecision(
+                decision=OpenDecision(
                     HEADING_LEVEL,
                     Target(
                         (location).path,
@@ -72,30 +70,28 @@ def audit_headings(
                     ),
                     decision.current,
                     (rules.HEADING001.id,),
-                )
+                ),
             )
             continue
         if previous_level is None and level > 1:
-            report.add(
+            report.raise_(
                 rules.HEADING002,
                 f"Heading hierarchy starts at level {level}; expected level 1.",
                 location=location,
                 details=excerpt,
+                decision=decision,
             )
         elif previous_level is not None and level > previous_level + 1:
-            report.add(
+            report.raise_(
                 rules.HEADING002,
                 f"Heading hierarchy skips from level {previous_level} to {level}.",
                 location=location,
                 details=excerpt,
+                decision=decision,
             )
-        if (previous_level is None and level > 1) or (
-            previous_level is not None and level > previous_level + 1
-        ):
-            report.add_decision(decision)
         previous_level = level
         if _looks_manually_numbered_heading(text):
-            report.add(
+            report.raise_(
                 rules.HEADING003,
                 (
                     "Heading appears to use manually typed numbering; integrated "
@@ -105,7 +101,7 @@ def audit_headings(
                 details={"text": text},
             )
     if not headings:
-        report.add(
+        report.raise_(
             rules.HEADING004,
             "No structural headings were found. This may be legitimate for a very short document.",
             location=Location(Part.CONTENT.value),
@@ -137,7 +133,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(xml_names.XLINK_HREF) if image is not None else None
         if not ((title and title.strip()) or (desc and desc.strip())):
-            report.add(
+            report.raise_(
                 rules.GRAPHIC003,
                 "Graphic object has neither accessible title nor description.",
                 location=Location(identity.target(frame)),
@@ -145,9 +141,8 @@ def audit_images(document: OdfDocument, report: Report) -> None:
                     "frame": declared_name,
                     "href": href,
                 },
+                decision=identity.open_decision(frame, rules.GRAPHIC003.id),
             )
-
-            report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
 
 
 def _looks_manually_numbered_heading(text: str) -> bool:

@@ -56,8 +56,8 @@ def test_fixable_errors_leave_template_planning_available(tmp_path: Path) -> Non
 
 def test_blocker_projection_preserves_original_full_report() -> None:
     report = Report(kind=ReportKind.ODF, subject="source.odt")
-    report.add(rules.META001)
-    report.add(rules.PKG000)
+    report.raise_(rules.META001)
+    report.raise_(rules.PKG000)
     before = report.as_dict()
     blockers = plan_blockers(report)
     assert blockers is not None

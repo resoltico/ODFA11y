@@ -62,7 +62,7 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
     root = expression(document)
     location = Location(f"{Part.CONTENT}/formula")
     if root is None:
-        report.add(
+        report.raise_(
             rules.MATH001,
             "Formula content must be a native MathML root; flat office wrappers are unsupported.",
             location=location,
@@ -71,16 +71,17 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
     nodes = [node for node in root.iter() if isinstance(node.tag, str)]
     report.facts[FactKeys.FORMULA_ELEMENT_COUNT] = len(nodes)
     if not any(_meaningful(node) for node in nodes):
-        report.add(rules.MATH001, "The mathematical expression is empty.", location=location)
+        report.raise_(rules.MATH001, "The mathematical expression is empty.", location=location)
     if not (root.get("alttext") or "").strip():
-        report.add(rules.MATH002, location=location)
-        report.add_decision(
-            OpenDecision(
+        report.raise_(
+            rules.MATH002,
+            location=location,
+            decision=OpenDecision(
                 FORMULA_ALTERNATIVE, None, {"alternative": root.get("alttext")}, (rules.MATH002.id,)
-            )
+            ),
         )
     if any(
         node.get("href") or node.get("src") or node.get("altimg") or node.get(xml_names.XLINK_HREF)
         for node in nodes
     ):
-        report.add(rules.MATH003, location=location)
+        report.raise_(rules.MATH003, location=location)

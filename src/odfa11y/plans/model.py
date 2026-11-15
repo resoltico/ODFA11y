@@ -11,6 +11,7 @@ lazy from collections.abc import Iterable
 from odfa11y.contracts import Description, Length, Pattern, record_dict, validate
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
+from odfa11y.targets import TargetPath
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.plans.contracts import to_file
@@ -39,12 +40,22 @@ class PlanHeader:
 
 
 @dataclass(frozen=True, slots=True)
+class UnansweredDecision:
+    """An inert plan block whose answer has not been supplied."""
+
+    kind_id: str
+    path: TargetPath | None
+    fingerprint: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Plan:
     """A bound set of answers, with no legacy configuration or operation-list form."""
 
     header: PlanHeader
     decisions: tuple[Decision, ...] = ()
     fidelity: FidelityPolicy = field(default_factory=Pagination.SAME)
+    unanswered: tuple[UnansweredDecision, ...] = ()
 
     def __post_init__(self) -> None:
         """Reject conflicting duplicate answers before execution.
@@ -67,7 +78,11 @@ class Plan:
 
     @classmethod
     def _decoded(
-        cls, header: PlanHeader, decisions: tuple[Decision, ...], fidelity: FidelityPolicy
+        cls,
+        header: PlanHeader,
+        decisions: tuple[Decision, ...],
+        fidelity: FidelityPolicy,
+        unanswered: tuple[UnansweredDecision, ...] = (),
     ) -> Plan:
         keys = [
             (decision.kind.id, decision.target.path if decision.target else None)
@@ -80,6 +95,7 @@ class Plan:
         object.__setattr__(result, "header", header)
         object.__setattr__(result, "decisions", decisions)
         object.__setattr__(result, "fidelity", fidelity)
+        object.__setattr__(result, "unanswered", unanswered)
         return result
 
     @classmethod

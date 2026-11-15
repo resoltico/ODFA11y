@@ -88,7 +88,7 @@ def check_marked_content(
         if count > 1
     ]
     if duplicated:
-        report.add(
+        report.raise_(
             rules.PDF022, details={"count": len(duplicated), "mcids": duplicated[:MAX_LISTED]}
         )
     return described_graphics(nodes, painted)
@@ -101,13 +101,13 @@ def _report(
     dangling: list[dict[str, int | None]],
 ) -> None:
     if unreferenced:
-        report.add(rules.PDF020, details={"pages": unreferenced[:MAX_LISTED]})
+        report.raise_(rules.PDF020, details={"pages": unreferenced[:MAX_LISTED]})
     if dangling:
-        report.add(
+        report.raise_(
             rules.PDF021, details={"count": len(dangling), "references": dangling[:MAX_LISTED]}
         )
     if untagged:
-        report.add(rules.PDF023, details={"pages": untagged[:MAX_LISTED]})
+        report.raise_(rules.PDF023, details={"pages": untagged[:MAX_LISTED]})
 
 
 def _dangling(

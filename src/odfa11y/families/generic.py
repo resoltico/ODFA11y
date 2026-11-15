@@ -27,7 +27,7 @@ REVIEW_ITEMS = (
 def _audit(document: OdfDocument, report: Report) -> None:
     kind = document.kind
     label = kind.name if kind is not None else "unrecognised"
-    report.add(
+    report.raise_(
         rules.ODF009,
         f"No semantic audit exists for {label} documents; only package, version, metadata and "
         "schema checks ran.",

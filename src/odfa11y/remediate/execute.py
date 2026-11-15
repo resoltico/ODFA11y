@@ -6,16 +6,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 lazy from collections.abc import Sequence
 
+from odfa11y.audit.engine import audit_document
 from odfa11y.capture import capture_source
 from odfa11y.concepts import opaque_payloads
 from odfa11y.concepts.edits import Outcome, Status
+from odfa11y.decisions import Decision
 from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Use, regressions, validate
 from odfa11y.records import SchemaCheck
 from odfa11y.remediate.compile import compile_operations
-from odfa11y.remediate.result import RemediationResult, Violation
+from odfa11y.remediate.result import DecisionPrediction, RemediationResult, Violation
 from odfa11y.remediate.violations import ViolationKind
+from odfa11y.report import Finding, Report
 from odfa11y.status import StageStatus
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.concepts.preservation import PreservationSnapshot
@@ -50,7 +53,9 @@ def remediate(
         document = _document(captured, destination)
         plan.verify_source(captured, rebind=rebind)
         operations = compile_operations(document, plan)
-        return _execute(document, source, destination, operations, dry_run=dry_run, rebind=rebind)
+        return _execute(
+            document, source, destination, operations, dry_run=dry_run, rebind=rebind, plan=plan
+        )
 
 
 def _document(source: Path, destination: Path) -> OdfDocument:
@@ -79,13 +84,21 @@ def _execute(
     *,
     dry_run: bool,
     rebind: bool = False,
+    plan: Plan | None = None,
 ) -> RemediationResult:
     adapter = adapter_for(document.kind)
     before = adapter.snapshot(document)
     opaque_before = opaque_payloads(document)
     schema_before = validate(document)
+    audit_before = audit_document(document, subject=source.name)
     state = _run_operations(document, adapter, operations)
     schema = _postconditions(document, adapter, before, opaque_before, schema_before, state=state)
+    candidate = audit_document(document, subject=source.name)
+    predictions = (
+        tuple(_predict(decision, audit_before, candidate) for decision in plan.decisions)
+        if plan is not None
+        else ()
+    )
     published = not dry_run and not state.violations
     if published:
         document.save(destination)
@@ -99,6 +112,33 @@ def _execute(
         rebind=rebind,
         dry_run=dry_run,
         operations=tuple(operation.as_dict() for operation in operations),
+        predictions=predictions,
+        candidate=candidate,
+        unanswered=tuple(
+            question.kind_id + (" @ " + question.path if question.path else "")
+            for question in plan.unanswered
+        )
+        if plan
+        else (),
+    )
+
+
+def _predict(decision: Decision, before: Report, after: Report) -> DecisionPrediction:
+    def related(finding: Finding) -> bool:
+        if decision.kind.id not in finding.rule.decision_kinds:
+            return False
+        return decision.target is None or (
+            finding.location is not None and finding.location.path == decision.target.path
+        )
+
+    previous = tuple(finding for finding in before.findings if related(finding))
+    remaining = tuple(finding for finding in after.findings if related(finding))
+    keys = {(finding.rule.id, finding.location) for finding in remaining}
+    resolved = tuple(
+        finding for finding in previous if (finding.rule.id, finding.location) not in keys
+    )
+    return DecisionPrediction(
+        decision.kind.id, decision.target.path if decision.target else None, resolved, remaining
     )
 
 

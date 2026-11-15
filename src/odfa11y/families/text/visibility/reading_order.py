@@ -30,7 +30,7 @@ def audit_reading_order(document: OdfDocument, report: Report) -> None:
     counts["note"] = len(text_nodes(content, xml_names.TEXT_NOTE))
     for kind in ("multi-column", "floating-frame", "section"):
         if counts[kind]:
-            report.add(
+            report.raise_(
                 rules.ORDER001,
                 location=Location(Part.CONTENT.value),
                 details={

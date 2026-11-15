@@ -46,7 +46,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
     tree = document.tree(Part.CONTENT)
     databases = select_elements(tree, "//office:body/office:database")
     if len(databases) != 1:
-        report.add(rules.BASE001, location=Location("content/database"))
+        report.raise_(rules.BASE001, location=Location("content/database"))
         return
     resources = select_elements(
         databases[0],
@@ -54,7 +54,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
     )
     report.facts[FactKeys.DATABASE_CONNECTION_DECLARATION_COUNT] = len(resources)
     if not resources:
-        report.add(
+        report.raise_(
             rules.BASE001,
             "Database declares no connection resource.",
             location=Location("content/database"),
@@ -67,7 +67,7 @@ def audit_database(document: OdfDocument, report: Report) -> None:
     _connections(resources, names, report)
     logins = select_elements(databases[0], ".//db:login")
     if any(node.get(xml_names.DB_USER_NAME) for node in logins):
-        report.add(rules.BASE003, "Database stores a login identity; its value is not reported.")
+        report.raise_(rules.BASE003, "Database stores a login identity; its value is not reported.")
     _sensitive_settings(document, report)
     _objects(document, report)
     _executable_content(document, databases[0], report)
@@ -77,11 +77,11 @@ def _connections(resources: list[etree._Element], names: tuple[str, ...], report
     for resource in resources:
         connection = resource.get(xml_names.XLINK_HREF, "")
         if not connection.startswith("sdbc:embedded:"):
-            report.add(rules.BASE002, "Database connection is external; it was not opened.")
+            report.raise_(rules.BASE002, "Database connection is external; it was not opened.")
         elif not any(name.startswith("database/") and not name.endswith("/") for name in names):
-            report.add(rules.BASE001, "Embedded database connection has no embedded storage.")
+            report.raise_(rules.BASE001, "Embedded database connection has no embedded storage.")
         if CREDENTIALS.search(connection):
-            report.add(
+            report.raise_(
                 rules.BASE003,
                 "Connection declares credentials; values are not reported.",
             )
@@ -106,7 +106,7 @@ def _sensitive_settings(document: OdfDocument, report: Report) -> None:
                 and identity in AUTHENTICATION_SETTINGS
                 and any("".join(value.itertext()).strip() for value in values)
             ):
-                report.add(
+                report.raise_(
                     rules.BASE003,
                     "Database stores authentication settings; values are not reported.",
                 )
@@ -117,21 +117,19 @@ def _objects(document: OdfDocument, report: Report) -> None:
     declarations = targets(document)
     for path, matches in declarations.items():
         if len(matches) != 1:
-            report.add(
+            report.raise_(
                 rules.BASE004, "Database object target is ambiguous.", location=Location(path)
             )
         elif not (matches[0].get(description_attribute(matches[0])) or "").strip():
-            report.add(
+            report.raise_(
                 rules.BASE004,
                 location=Location(path),
-            )
-            report.add_decision(
-                OpenDecision(
+                decision=OpenDecision(
                     DATABASE_DESCRIPTION,
                     Target((Location(path)).path, Fingerprint(fingerprint(matches[0]))),
                     {"text": matches[0].get(description_attribute(matches[0]))},
                     (rules.BASE004.id,),
-                )
+                ),
             )
 
 
@@ -139,7 +137,7 @@ def _executable_content(document: OdfDocument, database: etree._Element, report:
     queries = select_elements(database, ".//db:query")
     report.facts[FactKeys.DATABASE_QUERY_DECLARATION_COUNT] = len(queries)
     if queries:
-        report.add(rules.BASE006, details={"query_count": len(queries)})
+        report.raise_(rules.BASE006, details={"query_count": len(queries)})
     scripts = select_elements(document.tree(Part.CONTENT), "//office:scripts/*")
     names = (
         tuple(document.storage.member_names())
@@ -147,10 +145,10 @@ def _executable_content(document: OdfDocument, database: etree._Element, report:
         else ()
     )
     if scripts or any(name.startswith(("Basic/", "Scripts/")) for name in names):
-        report.add(rules.BASE005)
+        report.raise_(rules.BASE005)
     components = select_elements(database, ".//db:component")
     if components:
-        report.add(
+        report.raise_(
             rules.BASE006,
             "Forms and reports require native review; their payloads remain opaque.",
             details={"component_count": len(components)},

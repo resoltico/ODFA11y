@@ -40,7 +40,7 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
             "cached_condition": node.get(xml_names.TEXT_CURRENT_VALUE),
         })
         if not _coherent(node):
-            report.add(
+            report.raise_(
                 rules.HIDDEN002,
                 location=location,
                 details={
@@ -50,7 +50,7 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
                 },
             )
     if rows:
-        report.add(rules.HIDDEN001, details={"contexts": len(rows)})
+        report.raise_(rules.HIDDEN001, details={"contexts": len(rows)})
     report.facts[FactKeys.TEXT_VISIBILITY_CONTEXTS] = rows
     audit_reading_order(document, report)
 

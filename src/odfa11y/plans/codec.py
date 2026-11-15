@@ -90,15 +90,13 @@ def render_plan(header: PlanHeader, decisions: Iterable[OpenDecision]) -> str:
         key = "decisions." + json.dumps(kind.id)
         if decision.target is not None:
             key += "." + json.dumps(decision.target.path)
-        lines += [f"# [{key}]", f"# Rules: {', '.join(decision.rule_ids)}"]
+        lines += [f"[{key}]", f"# Rules: {', '.join(decision.rule_ids)}"]
         if decision.current:
             lines.append(
                 "# Current: " + json.dumps(record_dict(dict(decision.current)), ensure_ascii=False)
             )
         if decision.target is not None:
-            lines.append(
-                f"# fingerprint = {json.dumps(require_target(decision.target).fingerprint)}"
-            )
+            lines.append(f"fingerprint = {json.dumps(require_target(decision.target).fingerprint)}")
         hints = get_type_hints(kind.answer_type, include_extras=True)
         for field in fields_of(kind.answer_type):
             help_text = schema_for(hints[field.name], input=True).get("description", field.name)
@@ -119,7 +117,7 @@ def _placeholder(field: dataclasses.Field[object], value_type: object) -> object
     if field.default is not dataclasses.MISSING and field.default is not None:
         return field.default
     # Optional strings and booleans get explicit placeholders, never inferred meaning.
-    return False if "bool" in str(value_type) else [] if "tuple" in str(value_type) else ""
+    return True if "bool" in str(value_type) else [] if "tuple" in str(value_type) else ""
 
 
 def answer_schema(answer_type: type[object]) -> JsonObject:

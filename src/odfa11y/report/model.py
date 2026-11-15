@@ -45,6 +45,7 @@ class Finding:
     message: str
     location: Location | None = None
     details: Mapping[str, object] = field(default_factory=dict)
+    _decision: OpenDecision | None = field(default=None, repr=False)
 
     @JsonProperty
     def rule_id(self) -> str:
@@ -94,23 +95,22 @@ class Report:
     subject: str
     findings: list[Finding] = field(default_factory=list)
     facts: FactSet = field(default_factory=FactSet)
-    _decisions: dict[tuple[str, TargetPath | None], OpenDecision] = field(
-        default_factory=dict, init=False, repr=False
-    )
     _sources: tuple[Path, ...] = field(default=())
 
-    def add(
+    def raise_(
         self,
         rule: Rule,
         message: str | None = None,
         *,
         location: Location | None = None,
         details: Mapping[str, object] | None = None,
+        decision: OpenDecision | None = None,
     ) -> None:
         """Append a finding for a rule, defaulting the message to the rule title."""
         self.findings.append(
             Finding(
                 _rule=rule,
+                _decision=decision,
                 message=message or rule.title,
                 location=location,
                 details=record_dict(details) if details else {},
@@ -120,27 +120,21 @@ class Report:
     @JsonProperty
     def decisions(self) -> tuple[OpenDecision, ...]:
         """The distinct reviewed questions this audit leaves open."""
-        return tuple(self._decisions.values())
-
-    def add_decision(self, decision: OpenDecision) -> None:
-        """Collect one target once and retain every motivating rule.
-
-        Raises
-        ------
-        PackageError
-            An audit observes inconsistent identities for the same logical target.
-
-        """
-        key = (decision.kind.id, decision.target.path if decision.target else None)
-        previous = self._decisions.get(key)
-        if previous is not None:
-            if previous.target != decision.target:
-                msg = "Document identity changed while collecting reviewed decisions"
-                raise PackageError(msg)
-            decision = replace(
-                previous, rule_ids=tuple(dict.fromkeys((*previous.rule_ids, *decision.rule_ids)))
+        decisions: dict[tuple[str, TargetPath | None], OpenDecision] = {}
+        for finding in self.findings:
+            decision = finding._decision
+            if decision is None:
+                continue
+            key = (decision.kind.id, decision.target.path if decision.target else None)
+            previous = decisions.get(key)
+            if previous is not None and previous.target != decision.target:
+                message = "Document identity changed while collecting reviewed decisions"
+                raise PackageError(message)
+            rules = previous.rule_ids if previous is not None else ()
+            decisions[key] = replace(
+                previous or decision, rule_ids=tuple(dict.fromkeys((*rules, finding.rule.id)))
             )
-        self._decisions[key] = decision
+        return tuple(decisions.values())
 
     @property
     def error_count(self) -> int:

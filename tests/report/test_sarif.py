@@ -58,9 +58,9 @@ def test_official_schema_identity_and_negative_control() -> None:
 def test_registered_rule_levels_and_logical_locations(tmp_path: Path) -> None:
     source = _source(tmp_path, "sample.odt")
     report = Report(kind=ReportKind.ODF, subject="ignored display", _sources=(source,))
-    report.add(rules.META001, location=Location("meta/title", "meta.xml"))
-    report.add(rules.TABLE003, location=Location.named("content", "table", "north/south"))
-    report.add(rules.HEADING004)
+    report.raise_(rules.META001, location=Location("meta/title", "meta.xml"))
+    report.raise_(rules.TABLE003, location=Location.named("content", "table", "north/south"))
+    report.raise_(rules.HEADING004)
     run = _render([report], tmp_path)["runs"][0]
     descriptors = run["tool"]["driver"]["rules"]
     assert [entry["id"] for entry in descriptors] == ["HEADING004", "META001", "TABLE003"]
@@ -83,7 +83,7 @@ def test_artifact_uris_distinguish_duplicate_names_and_escape_reserved_character
     report = Report(
         kind=ReportKind.FIDELITY, subject="nonsense label: not a filename", _sources=(first, second)
     )
-    report.add(rules.FID003)
+    report.raise_(rules.FID003)
     run = _render([report], tmp_path)["runs"][0]
     assert run["artifacts"] == [
         {"location": {"uri": "a%20folder/report%20%231.odt"}},
@@ -99,7 +99,7 @@ def test_multiple_reports_share_artifact_identity(tmp_path: Path) -> None:
     source = _source(tmp_path, "sample.pdf")
     reports = [Report(kind=ReportKind.PDF, subject="x", _sources=(source,)) for _ in range(2)]
     for report in reports:
-        report.add(rules.PDF001)
+        report.raise_(rules.PDF001)
     run = _render(reports, tmp_path)["runs"][0]
     assert len(run["artifacts"]) == 1
     assert len(run["results"]) == 2
@@ -133,7 +133,7 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
         _sources=(source,),
         facts=FactSet({FactKeys.DOCUMENT_DESCRIPTION: connection}),
     )
-    report.add(rules.META001, f"{connection} at {source}", details={"connection": connection})
+    report.raise_(rules.META001, f"{connection} at {source}", details={"connection": connection})
     rendered = render_reports([report], output_format="sarif", source_root=tmp_path)
     assert connection not in rendered
     assert "super-secret" not in rendered
@@ -153,7 +153,7 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
 def test_unsafe_logical_labels_are_rejected(tmp_path: Path, label: str) -> None:
     report = Report(kind=ReportKind.ODF, subject="x", _sources=(_source(tmp_path, "x.odt"),))
     with pytest.raises((PlanError, InvalidOption)):  # noqa: PT012  Either path construction or SARIF privacy validation rejects the label.
-        report.add(rules.GRAPHIC003, location=Location(label))
+        report.raise_(rules.GRAPHIC003, location=Location(label))
         _render([report], tmp_path)
 
 
@@ -206,7 +206,7 @@ def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Pat
     link = tmp_path / "alias.odt"
     link.symlink_to(source)
     report = Report(kind=ReportKind.FIDELITY, subject="x", _sources=(source, link))
-    report.add(rules.FID003)
+    report.raise_(rules.FID003)
     run = _render([report], tmp_path)["runs"][0]
     assert len(run["artifacts"]) == 1
     assert all(

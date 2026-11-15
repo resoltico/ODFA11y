@@ -107,7 +107,7 @@ def check_link_structure(
     report.facts[FactKeys.PDF_LINK_STRUCTURE_ELEMENT_COUNT] = len(link_nodes)
     unmatched = [a for a in annotations if a.xref is None or a.xref not in mapped]
     if unmatched:
-        report.add(
+        report.raise_(
             rules.PDF016,
             details={
                 "count": len(unmatched),
@@ -118,7 +118,7 @@ def check_link_structure(
         n for n in link_nodes if not any(r.object_xref in known for r in n.object_references)
     ]
     if orphans:
-        report.add(
+        report.raise_(
             rules.PDF017,
             details={
                 "count": len(orphans),
@@ -131,7 +131,7 @@ def check_link_structure(
         if a.xref in mapped and any(p not in {None, a.page_xref} for p in mapped[a.xref])
     ]
     if conflicts:
-        report.add(
+        report.raise_(
             rules.PDF018,
             details={
                 "count": len(conflicts),
@@ -140,7 +140,7 @@ def check_link_structure(
         )
     undescribed = [a for a in annotations if not a.has_description and a.xref not in alternates]
     if undescribed:
-        report.add(
+        report.raise_(
             rules.PDF019,
             details={
                 "count": len(undescribed),

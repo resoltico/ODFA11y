@@ -21,19 +21,19 @@ def audit_chart(document: OdfDocument, report: Report) -> None:
     report.facts[FactKeys.CHART_COUNT] = len(charts)
     location = Location(f"{Part.CONTENT}/chart")
     if len(charts) != 1:
-        report.add(rules.CHART001, location=location)
+        report.raise_(rules.CHART001, location=location)
         return
     chart = charts[0]
     if not report.facts.get(FactKeys.DOCUMENT_TITLE) and not any(
         visible_words(node) for node in select_elements(chart, "./chart:title")
     ):
-        report.add(rules.CHART002, location=location)
+        report.raise_(rules.CHART002, location=location)
     if not report.facts.get(FactKeys.DOCUMENT_DESCRIPTION):
-        report.add(rules.CHART003, location=Location("meta/description"))
+        report.raise_(rules.CHART003, location=Location("meta/description"))
     series = select_elements(chart, "./chart:plot-area/chart:series")
     report.facts[FactKeys.CHART_SERIES_COUNT] = len(series)
     if not series:
-        report.add(rules.CHART001, "The chart declares no data series.", location=location)
+        report.raise_(rules.CHART001, "The chart declares no data series.", location=location)
     _ranges(chart, report)
     _series_consistency(chart, report)
     labels = select_elements(
@@ -42,13 +42,13 @@ def audit_chart(document: OdfDocument, report: Report) -> None:
         "| .//chart:title/text:p",
     )
     if not any(visible_words(label) for label in labels):
-        report.add(
+        report.raise_(
             rules.CHART006,
             "Chart has no readable cached category or series labels.",
             location=location,
         )
     if chart.get(xml_names.XLINK_HREF) not in {None, ".", "./"}:
-        report.add(
+        report.raise_(
             rules.CHART005,
             "Chart refers to an external data provider; it was not fetched.",
             location=location,
@@ -73,16 +73,16 @@ def _ranges(chart: etree._Element, report: Report) -> None:
             try:
                 shape = range_shape(chart, address)
             except DocumentRefusal as exc:
-                report.add(rules.CHART004, str(exc), location=location)
+                report.raise_(rules.CHART004, str(exc), location=location)
                 continue
             if shape is None:
-                report.add(
+                report.raise_(
                     rules.CHART005,
                     "Chart data range cannot be resolved against its local cache.",
                     location=location,
                 )
             elif min(shape) > 1:
-                report.add(
+                report.raise_(
                     rules.CHART006,
                     "A multidimensional series range needs ordering/label review.",
                     location=location,
@@ -107,7 +107,7 @@ def _series_consistency(chart: etree._Element, report: Report) -> None:
                 and min(category.shape) == min(values.shape) == 1
                 and max(category.shape) != max(values.shape)
             ):
-                report.add(
+                report.raise_(
                     rules.CHART006,
                     "Cached categories and series values have different logical lengths.",
                     location=location,
@@ -118,10 +118,10 @@ def _series_consistency(chart: etree._Element, report: Report) -> None:
                     if _nonnumeric(cell):
                         nonnumeric = True
             except DocumentRefusal as exc:
-                report.add(rules.CHART004, str(exc), location=location)
+                report.raise_(rules.CHART004, str(exc), location=location)
                 continue
             if nonnumeric:
-                report.add(
+                report.raise_(
                     rules.CHART006,
                     "Series includes nonblank cells without a numeric or temporal value type.",
                     location=location,

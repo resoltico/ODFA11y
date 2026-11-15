@@ -30,7 +30,7 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
         identity = region.get(XML_ID) or region.get(xml_names.TEXT_ID) or ""
         declarations[identity].append(region)
         if not _valid_region(region, identity):
-            report.add(
+            report.raise_(
                 rules.REVISION002,
                 "Tracked-region identities are missing or contradictory.",
                 location=Location.indexed(reading_context_path(region), "revision", index),
@@ -46,19 +46,21 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
         marks = markers.get(identity, [])
         location = Location.named(reading_context_path(owners[0]), "revision", identity)
         if not marks:
-            report.add(rules.REVISION003, location=location)
+            report.raise_(rules.REVISION003, location=location)
             unanchored += 1
         else:
             unresolved += _audit_region_marks(owners, marks, positions, location, report)
             if any(not eligible_text_node(mark) for mark in marks):
-                report.add(
+                report.raise_(
                     rules.REVISION003,
                     "Change anchor is inside an unestablished visibility context.",
                     location=location,
                 )
                 unanchored += 1
     if has_revisions(tree):
-        report.add(rules.REVISION001, details={"regions": len(regions), "markers": len(positions)})
+        report.raise_(
+            rules.REVISION001, details={"regions": len(regions), "markers": len(positions)}
+        )
     report.facts[FactKeys.TEXT_REVISION_RELATIONSHIPS] = {
         "declarations": len(regions),
         "markers": len(positions),
@@ -75,7 +77,7 @@ def _audit_region_marks(
     report: Report,
 ) -> int:
     if len(owners) != 1 or not _valid_marks(owners[0], marks, positions):
-        report.add(rules.REVISION002, location=location)
+        report.raise_(rules.REVISION002, location=location)
         return 1
     return 0
 
@@ -88,7 +90,7 @@ def _audit_missing_declarations(
     unresolved = 0
     for identity, nodes in markers.items():
         if len(declarations.get(identity, [])) != 1:
-            report.add(
+            report.raise_(
                 rules.REVISION002,
                 "Change mark has no unique tracked-region declaration.",
                 location=Location.named(reading_context_path(nodes[0]), "revision", identity),

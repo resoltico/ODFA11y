@@ -45,7 +45,7 @@ def audit_document(document: OdfDocument, report: Report, profile: PageProfile) 
     )
     report.facts[FactKeys.PAGE_COUNT] = len(available)
     if not available:
-        report.add(rules.PAGE001, location=Location(Part.CONTENT))
+        report.raise_(rules.PAGE001, location=Location(Part.CONTENT))
     for index, page in enumerate(available, 1):
         _audit_page(document, page, index, names, identities, report=report)
     _graphics(document, report, profile)
@@ -67,50 +67,47 @@ def _audit_page(
     fingerprint = page_fingerprint(page, document)
     details = {"page": name}
     if not name or names[name] != 1:
-        report.add(rules.PAGE001, location=location)
+        report.raise_(rules.PAGE001, location=location)
     if not (page.findtext("svg:title", namespaces=NS) or "").strip():
-        report.add(rules.PAGE002, location=location, details=details)
-        if not name or names[name] == 1:
-            report.add_decision(
-                OpenDecision(
-                    PAGE_METADATA,
-                    Target((location).path, Fingerprint(fingerprint)),
-                    {
-                        "title": page.findtext("svg:title", namespaces=NS),
-                        "description": page.findtext("svg:desc", namespaces=NS),
-                    },
-                    (rules.PAGE002.id,),
-                )
+        decision = (
+            OpenDecision(
+                PAGE_METADATA,
+                Target(location.path, Fingerprint(fingerprint)),
+                {
+                    "title": page.findtext("svg:title", namespaces=NS),
+                    "description": page.findtext("svg:desc", namespaces=NS),
+                },
             )
+            if not name or names[name] == 1
+            else None
+        )
+        report.raise_(rules.PAGE002, location=location, details=details, decision=decision)
     order = page.get(xml_names.DRAW_NAV_ORDER)
     shapes = page_shapes(page)
-    details["shape_identities"] = [
-        shape.get(XML_ID) or shape.get(xml_names.DRAW_ID) for shape in shapes
-    ]
-    if order is not None:
-        problem = navigation_problem(page, tuple(order.split()), identities)
-        if problem:
-            report.add(rules.PAGE003, problem, location=location, details=details)
-    elif len(shapes) > 1:
-        report.add(rules.PAGE004, location=location, details=details)
-    if (order is not None and navigation_problem(page, tuple(order.split()), identities)) or (
-        order is None and len(shapes) > 1
-    ):
-        supplied_ids = details["shape_identities"]
-        if (not name or names[name] == 1) and all(
-            identity and identities[identity] == 1 for identity in supplied_ids
-        ):
-            report.add_decision(
-                OpenDecision(
-                    PAGE_NAVIGATION,
-                    Target((location).path, Fingerprint(fingerprint)),
-                    {
-                        "navigation": tuple(order.split()) if order else None,
-                        "available_identities": supplied_ids,
-                    },
-                    ((rules.PAGE003.id if order is not None else rules.PAGE004.id),),
-                )
-            )
+    supplied_ids = [shape.get(XML_ID) or shape.get(xml_names.DRAW_ID) for shape in shapes]
+    details["shape_identities"] = supplied_ids
+    problem = (
+        navigation_problem(page, tuple(order.split()), identities) if order is not None else None
+    )
+    rule = (
+        rules.PAGE003 if problem else rules.PAGE004 if order is None and len(shapes) > 1 else None
+    )
+    if rule is None:
+        return
+    decision = (
+        OpenDecision(
+            PAGE_NAVIGATION,
+            Target(location.path, Fingerprint(fingerprint)),
+            {
+                "navigation": tuple(order.split()) if order else None,
+                "available_identities": supplied_ids,
+            },
+        )
+        if (not name or names[name] == 1)
+        and all(identity and identities[identity] == 1 for identity in supplied_ids)
+        else None
+    )
+    report.raise_(rule, problem, location=location, details=details, decision=decision)
 
 
 def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> None:
@@ -137,15 +134,14 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
         if not payload and visible_words(shape):
             continue
         rule = rules.GRAPHIC003 if payload else rules.GRAPHIC005
-        report.add(
+        report.raise_(
             rule,
             location=Location(identity.target(shape)),
             details={
                 "shape": name,
             },
+            decision=identity.open_decision(shape, rule.id),
         )
-
-        report.add_decision(identity.open_decision(shape, rule.id))
 
 
 def _links(document: OdfDocument, report: Report) -> None:
@@ -153,11 +149,11 @@ def _links(document: OdfDocument, report: Report) -> None:
     report.facts[FactKeys.PAGE_LINK_COUNT] = len(links)
     for index, link in enumerate(links, 1):
         if not link_has_description(link):
-            report.add(
+            report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
+                decision=link_decision(document, link, index, rules.LINK003.id),
             )
-            report.add_decision(link_decision(document, link, index, rules.LINK003.id))
 
 
 def _review_content(document: OdfDocument, report: Report, profile: PageProfile) -> None:
@@ -166,13 +162,13 @@ def _review_content(document: OdfDocument, report: Report, profile: PageProfile)
         "//office:body//presentation:notes | //office:body//office:annotation",
     )
     if any(visible_words(note) for note in notes):
-        report.add(
+        report.raise_(
             rules.NOTE001,
             details={"content_count": sum(bool(visible_words(note)) for note in notes)},
         )
     hidden = profile.hidden_content(document)
     if hidden:
-        report.add(rules.HIDDEN001, details=hidden)
+        report.raise_(rules.HIDDEN001, details=hidden)
 
 
 def _skipped_shape(shape: etree._Element, profile: PageProfile) -> bool:

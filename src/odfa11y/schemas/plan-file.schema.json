@@ -8,24 +8,45 @@
       "properties": {
         "database.description": {
           "additionalProperties": {
-            "additionalProperties": false,
-            "properties": {
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "text": {
+                    "description": "Explain the declared object without changing SQL or bindings.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text",
+                  "fingerprint"
+                ],
+                "type": "object"
               },
-              "text": {
-                "description": "Explain the declared object without changing SQL or bindings.",
-                "format": "odfa11y-xml-text",
-                "pattern": "\\S",
-                "type": "string"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "text",
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -34,228 +55,279 @@
           "type": "object"
         },
         "document.metadata": {
-          "additionalProperties": false,
           "anyOf": [
             {
-              "properties": {
-                "title": {
-                  "not": {
-                    "type": "null"
-                  }
+              "additionalProperties": false,
+              "anyOf": [
+                {
+                  "properties": {
+                    "title": {
+                      "not": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "required": [
+                    "title"
+                  ]
+                },
+                {
+                  "properties": {
+                    "description": {
+                      "not": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "required": [
+                    "description"
+                  ]
+                },
+                {
+                  "properties": {
+                    "language": {
+                      "not": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "required": [
+                    "language"
+                  ]
                 }
-              },
-              "required": [
-                "title"
-              ]
-            },
-            {
+              ],
               "properties": {
                 "description": {
-                  "not": {
-                    "type": "null"
-                  }
+                  "anyOf": [
+                    {
+                      "format": "odfa11y-xml-text",
+                      "pattern": "\\S",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Document description and context."
+                },
+                "language": {
+                  "anyOf": [
+                    {
+                      "format": "odfa11y-language-tag",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Intended default language, preserving explicit local overrides."
+                },
+                "title": {
+                  "anyOf": [
+                    {
+                      "format": "odfa11y-xml-text",
+                      "pattern": "\\S",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Document title identifying its purpose."
                 }
               },
-              "required": [
-                "description"
-              ]
+              "required": [],
+              "type": "object"
             },
             {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
+            }
+          ]
+        },
+        "document.odf_version": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
               "properties": {
-                "language": {
-                  "not": {
-                    "type": "null"
-                  }
+                "version": {
+                  "description": "ODF version whose result must satisfy schema guards.",
+                  "enum": [
+                    "1.3",
+                    "1.4"
+                  ],
+                  "type": "string"
                 }
               },
               "required": [
-                "language"
-              ]
-            }
-          ],
-          "properties": {
-            "description": {
-              "anyOf": [
-                {
-                  "format": "odfa11y-xml-text",
-                  "pattern": "\\S",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
+                "version"
               ],
-              "description": "Document description and context."
+              "type": "object"
             },
-            "language": {
-              "anyOf": [
-                {
-                  "format": "odfa11y-language-tag",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Intended default language, preserving explicit local overrides."
-            },
-            "title": {
-              "anyOf": [
-                {
-                  "format": "odfa11y-xml-text",
-                  "pattern": "\\S",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Document title identifying its purpose."
+            {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
             }
-          },
-          "required": [],
-          "type": "object"
-        },
-        "document.odf_version": {
-          "additionalProperties": false,
-          "properties": {
-            "version": {
-              "description": "ODF version whose result must satisfy schema guards.",
-              "enum": [
-                "1.3",
-                "1.4"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "version"
-          ],
-          "type": "object"
+          ]
         },
         "formula.alternative": {
-          "additionalProperties": false,
-          "properties": {
-            "alternative": {
-              "description": "Write the formula's spoken meaning in its intended language.",
-              "format": "odfa11y-xml-text",
-              "pattern": "\\S",
-              "type": "string"
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "alternative": {
+                  "description": "Write the formula's spoken meaning in its intended language.",
+                  "format": "odfa11y-xml-text",
+                  "pattern": "\\S",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "alternative"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
             }
-          },
-          "required": [
-            "alternative"
-          ],
-          "type": "object"
+          ]
         },
         "graphic.alternative": {
           "additionalProperties": {
-            "additionalProperties": false,
             "anyOf": [
               {
-                "properties": {
-                  "title": {
-                    "not": {
-                      "type": "null"
-                    }
+                "additionalProperties": false,
+                "anyOf": [
+                  {
+                    "properties": {
+                      "title": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "description": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "description"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "decorative": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "decorative"
+                    ]
                   }
-                },
-                "required": [
-                  "title"
-                ]
-              },
-              {
-                "properties": {
-                  "description": {
-                    "not": {
-                      "type": "null"
+                ],
+                "if": {
+                  "properties": {
+                    "decorative": {
+                      "const": true
                     }
-                  }
+                  },
+                  "required": [
+                    "decorative"
+                  ]
                 },
-                "required": [
-                  "description"
-                ]
-              },
-              {
                 "properties": {
                   "decorative": {
-                    "not": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Explicit decorative role, subject to source safety guards."
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-xml-text",
+                        "pattern": "\\S",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Explain the graphic's meaning."
+                  },
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-xml-text",
+                        "pattern": "\\S",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Accessible title."
+                  }
+                },
+                "required": [
+                  "fingerprint"
+                ],
+                "then": {
+                  "properties": {
+                    "description": {
+                      "type": "null"
+                    },
+                    "title": {
                       "type": "null"
                     }
                   }
                 },
-                "required": [
-                  "decorative"
-                ]
-              }
-            ],
-            "if": {
-              "properties": {
-                "decorative": {
-                  "const": true
-                }
+                "type": "object"
               },
-              "required": [
-                "decorative"
-              ]
-            },
-            "properties": {
-              "decorative": {
-                "anyOf": [
-                  {
-                    "type": "boolean"
-                  },
-                  {
-                    "type": "null"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
-                ],
-                "description": "Explicit decorative role, subject to source safety guards."
-              },
-              "description": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-xml-text",
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Explain the graphic's meaning."
-              },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "title": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-xml-text",
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Accessible title."
-              }
-            },
-            "required": [
-              "fingerprint"
-            ],
-            "then": {
-              "properties": {
-                "description": {
-                  "type": "null"
                 },
-                "title": {
-                  "type": "null"
-                }
+                "required": [],
+                "type": "object"
               }
-            },
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -265,24 +337,45 @@
         },
         "heading.level": {
           "additionalProperties": {
-            "additionalProperties": false,
-            "properties": {
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "level": {
+                    "description": "Intended outline level.",
+                    "maximum": 10,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "level",
+                  "fingerprint"
+                ],
+                "type": "object"
               },
-              "level": {
-                "description": "Intended outline level.",
-                "maximum": 10,
-                "minimum": 1,
-                "type": "integer"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "level",
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -292,91 +385,112 @@
         },
         "language.target": {
           "additionalProperties": {
-            "additionalProperties": false,
             "anyOf": [
               {
-                "properties": {
-                  "western": {
-                    "not": {
-                      "type": "null"
-                    }
+                "additionalProperties": false,
+                "anyOf": [
+                  {
+                    "properties": {
+                      "western": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "western"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "asian": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "asian"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "complex": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "complex"
+                    ]
                   }
-                },
-                "required": [
-                  "western"
-                ]
-              },
-              {
+                ],
                 "properties": {
                   "asian": {
-                    "not": {
-                      "type": "null"
-                    }
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-language-tag",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Language for the target Asian-script channel."
+                  },
+                  "complex": {
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-language-tag",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Language for the target complex-script channel."
+                  },
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "western": {
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-language-tag",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Language for the target western-script channel."
                   }
                 },
                 "required": [
-                  "asian"
-                ]
+                  "fingerprint"
+                ],
+                "type": "object"
               },
               {
+                "additionalProperties": false,
                 "properties": {
-                  "complex": {
-                    "not": {
-                      "type": "null"
-                    }
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
-                "required": [
-                  "complex"
-                ]
+                "required": [],
+                "type": "object"
               }
-            ],
-            "properties": {
-              "asian": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-language-tag",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Language for the target Asian-script channel."
-              },
-              "complex": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-language-tag",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Language for the target complex-script channel."
-              },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "western": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-language-tag",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "description": "Language for the target western-script channel."
-              }
-            },
-            "required": [
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -386,24 +500,45 @@
         },
         "link.description": {
           "additionalProperties": {
-            "additionalProperties": false,
-            "properties": {
-              "description": {
-                "description": "Explain the link's purpose in its reading context.",
-                "format": "odfa11y-xml-text",
-                "pattern": "\\S",
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "description": "Explain the link's purpose in its reading context.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "description",
+                  "fingerprint"
+                ],
+                "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "description",
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -413,69 +548,90 @@
         },
         "page.metadata": {
           "additionalProperties": {
-            "additionalProperties": false,
             "anyOf": [
               {
-                "properties": {
-                  "title": {
-                    "not": {
-                      "type": "null"
-                    }
+                "additionalProperties": false,
+                "anyOf": [
+                  {
+                    "properties": {
+                      "title": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "description": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "description"
+                    ]
                   }
-                },
-                "required": [
-                  "title"
-                ]
-              },
-              {
+                ],
                 "properties": {
                   "description": {
-                    "not": {
-                      "type": "null"
-                    }
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-xml-text",
+                        "pattern": "\\S",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Page purpose and context."
+                  },
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "format": "odfa11y-xml-text",
+                        "pattern": "\\S",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Accessible page title."
                   }
                 },
                 "required": [
-                  "description"
-                ]
-              }
-            ],
-            "properties": {
-              "description": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-xml-text",
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+                  "fingerprint"
                 ],
-                "description": "Page purpose and context."
+                "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "title": {
-                "anyOf": [
-                  {
-                    "format": "odfa11y-xml-text",
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
-                ],
-                "description": "Accessible page title."
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -485,27 +641,48 @@
         },
         "page.navigation": {
           "additionalProperties": {
-            "additionalProperties": false,
-            "properties": {
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "navigation": {
-                "description": "Complete reading order of the page's existing shape identities.",
-                "items": {
-                  "format": "odfa11y-xml-text",
-                  "pattern": "\\S",
-                  "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "navigation": {
+                    "description": "Complete reading order of the page's existing shape identities.",
+                    "items": {
+                      "format": "odfa11y-xml-text",
+                      "pattern": "\\S",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
                 },
-                "type": "array"
+                "required": [
+                  "navigation",
+                  "fingerprint"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "navigation",
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -515,23 +692,44 @@
         },
         "sheet.name": {
           "additionalProperties": {
-            "additionalProperties": false,
-            "properties": {
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name identifying what the sheet contains.",
+                    "format": "odfa11y-sheet-name",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "fingerprint"
+                ],
+                "type": "object"
               },
-              "name": {
-                "description": "Name identifying what the sheet contains.",
-                "format": "odfa11y-sheet-name",
-                "type": "string"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "name",
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -541,67 +739,88 @@
         },
         "table.headers": {
           "additionalProperties": {
-            "additionalProperties": false,
             "anyOf": [
               {
-                "properties": {
-                  "rows": {
-                    "not": {
-                      "type": "null"
-                    }
+                "additionalProperties": false,
+                "anyOf": [
+                  {
+                    "properties": {
+                      "rows": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "rows"
+                    ]
+                  },
+                  {
+                    "properties": {
+                      "columns": {
+                        "not": {
+                          "type": "null"
+                        }
+                      }
+                    },
+                    "required": [
+                      "columns"
+                    ]
                   }
-                },
-                "required": [
-                  "rows"
-                ]
-              },
-              {
+                ],
                 "properties": {
                   "columns": {
-                    "not": {
-                      "type": "null"
-                    }
+                    "anyOf": [
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Number of leading logical header columns."
+                  },
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "rows": {
+                    "anyOf": [
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Number of leading logical header rows."
                   }
                 },
                 "required": [
-                  "columns"
-                ]
-              }
-            ],
-            "properties": {
-              "columns": {
-                "anyOf": [
-                  {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
-                  }
+                  "fingerprint"
                 ],
-                "description": "Number of leading logical header columns."
+                "type": "object"
               },
-              "fingerprint": {
-                "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
-                "type": "string"
-              },
-              "rows": {
-                "anyOf": [
-                  {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
-                ],
-                "description": "Number of leading logical header rows."
+                },
+                "required": [],
+                "type": "object"
               }
-            },
-            "required": [
-              "fingerprint"
-            ],
-            "type": "object"
+            ]
           },
           "propertyNames": {
             "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
@@ -610,62 +829,92 @@
           "type": "object"
         },
         "text.linkify_addresses": {
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "description": "Enable only after reviewing all affected content.",
-              "type": "boolean"
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Enable only after reviewing all affected content.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
             }
-          },
-          "required": [
-            "enabled"
-          ],
-          "type": "object"
+          ]
         },
         "text.remove_spacers": {
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "description": "Enable only after reviewing all affected content.",
-              "type": "boolean"
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Enable only after reviewing all affected content.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
             }
-          },
-          "required": [
-            "enabled"
-          ],
-          "type": "object"
+          ]
         },
         "text.spacing": {
-          "additionalProperties": false,
-          "properties": {
-            "exact_reference": {
-              "description": "Match the entire reference paragraph.",
-              "type": "boolean"
-            },
-            "include_headings": {
-              "description": "Also apply to headings using the selected styles.",
-              "type": "boolean"
-            },
-            "reference_text": {
-              "description": "Authored text identifying the reference paragraph.",
-              "pattern": "\\S",
-              "type": "string"
-            },
-            "target_styles": {
-              "description": "Existing paragraph styles selected for spacing normalization.",
-              "items": {
-                "pattern": "\\S",
-                "type": "string"
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "exact_reference": {
+                  "description": "Match the entire reference paragraph.",
+                  "type": "boolean"
+                },
+                "include_headings": {
+                  "description": "Also apply to headings using the selected styles.",
+                  "type": "boolean"
+                },
+                "reference_text": {
+                  "description": "Authored text identifying the reference paragraph.",
+                  "pattern": "\\S",
+                  "type": "string"
+                },
+                "target_styles": {
+                  "description": "Existing paragraph styles selected for spacing normalization.",
+                  "items": {
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
               },
-              "minItems": 1,
-              "type": "array"
+              "required": [
+                "reference_text",
+                "target_styles"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
             }
-          },
-          "required": [
-            "reference_text",
-            "target_styles"
-          ],
-          "type": "object"
+          ]
         }
       },
       "required": [],

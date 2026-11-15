@@ -116,7 +116,6 @@ enabled = false
         '[decisions."table.headers"]\n"content/table[1]" = true',
         '[decisions."table.headers"]\n"content/table[1]" = 0',
         '[decisions."table.headers"."content/table[1]"]\nrows = 1\nextra = 1',
-        '[decisions."table.headers"."content/table[1]"]\nfingerprint = "0123456789abcdef"',
         '[decisions]\n"text.spacing" = 1',
         '[decisions."missing.kind"]',
         '[decisions."graphic.alternative"."content/frame[1]"]\ndescription = 7',
@@ -158,3 +157,36 @@ def test_plan_rejects_malformed_language_syntax(tmp_path: Path, tag: str) -> Non
     path = write(tmp_path, HEADER + f'[decisions."document.metadata"]\nlanguage = "{tag}"\n')
     with pytest.raises(PlanError, match="Invalid language"):
         load_plan(path)
+
+
+def test_unanswered_blocks_are_inert_but_typoes_and_partial_answers_are_rejected(
+    tmp_path: Path,
+) -> None:
+    plan = load_plan(
+        write(
+            tmp_path,
+            HEADER
+            + '\n[decisions."document.metadata"]\n'
+            + '[decisions."graphic.alternative"."content/frame[1]"]\nfingerprint = "stale"\n',
+        )
+    )
+    assert plan.decisions == ()
+    assert [(block.kind_id, block.fingerprint) for block in plan.unanswered] == [
+        ("document.metadata", None),
+        ("graphic.alternative", "stale"),
+    ]
+    assert plan.as_dict()["decisions"] == {
+        "document.metadata": {},
+        "graphic.alternative": {"content/frame[1]": {"fingerprint": "stale"}},
+    }
+    for answer in ('description = ""', 'description = "Accessible"', 'descripton = "Typo"'):
+        with pytest.raises(PlanError):
+            load_plan(
+                write(
+                    tmp_path,
+                    HEADER
+                    + '\n[decisions."graphic.alternative"."content/frame[1]"]\n'
+                    + 'fingerprint = "stale"\n'
+                    + answer,
+                )
+            )

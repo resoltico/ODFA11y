@@ -259,12 +259,12 @@ def audit_graphic_role(document: OdfDocument, shape: etree._Element, report: Rep
         reading_context_path(shape), "frame", shape.get(xml_names.DRAW_NAME, "")
     )
     if problem:
-        report.add(rules.GRAPHIC001, problem, location=location)
+        report.raise_(rules.GRAPHIC001, problem, location=location)
         return False
     if role.decorative and any(
         (shape.findtext(tag, namespaces=NS) or "").strip() for tag in ("svg:title", "svg:desc")
     ):
-        report.add(rules.GRAPHIC002, location=location)
+        report.raise_(rules.GRAPHIC002, location=location)
     return role.decorative
 
 

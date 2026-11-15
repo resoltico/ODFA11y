@@ -61,7 +61,7 @@ def test_partial_input_reports_survive_later_failure_and_sarif_is_fail_closed(
 
     def inspect(source: Path, **_options: object) -> Iterator[api.Report]:
         report = api.Report(kind=ReportKind.PDF, subject=source.name, _sources=(source,))
-        report.add(rules.PDF005)
+        report.raise_(rules.PDF005)
         yield report
         raise failure
 

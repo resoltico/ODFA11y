@@ -43,18 +43,14 @@ def audit_text(document: OdfDocument, report: Report) -> None:
     _audit_links(content, report)
     for index, link in enumerate(document_links(document), 1):
         if not link_has_description(link):
-            report.add(
+            report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
+                decision=link_decision(document, link, index, rules.LINK003.id),
             )
-            report.add_decision(link_decision(document, link, index, rules.LINK003.id))
     _audit_empty_spacers(document, report)
     _audit_blinking(document, report)
     _audit_style_summary(document, report)
-
-    for kind, rule in [(LINKIFY_ADDRESSES, rules.LINK001), (REMOVE_SPACERS, rules.LAYOUT001)]:
-        if any(finding.rule_id == rule.id for finding in report.findings):
-            report.add_decision(OpenDecision(kind, None, {"enabled": False}, (rule.id,)))
 
 
 def _audit_links(tree: etree._ElementTree, report: Report) -> None:
@@ -66,11 +62,12 @@ def _audit_links(tree: etree._ElementTree, report: Report) -> None:
         for owner, attr in prose_slots(block):
             for match in URI_RE.finditer(getattr(owner, attr)):
                 token, _suffix = split_trailing_punctuation(match.group(0))
-                report.add(
+                report.raise_(
                     rules.LINK001,
                     "Visible URL/email address is not represented by a hyperlink element.",
                     location=context_location(block, kind, counts[kind]),
                     details={"text": token},
+                    decision=OpenDecision(LINKIFY_ADDRESSES, None, {"enabled": False}),
                 )
 
 
@@ -86,12 +83,13 @@ def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
             continue  # the style summary reports these unresolved current-flow styles
         styles.append(name)
     if styles:
-        report.add(
+        report.raise_(
             rules.LAYOUT001,
             (
                 "Empty body paragraphs were found. If they are only visual "
                 "spacers, prefer paragraph spacing instead."
             ),
+            decision=OpenDecision(REMOVE_SPACERS, None, {"enabled": False}),
             location=Location(Part.CONTENT.value),
             details={
                 "count": len(styles),
@@ -106,7 +104,7 @@ def _audit_blinking(document: OdfDocument, report: Report) -> None:
         select_elements(tree, "//*[@style:text-blinking='true']")
         for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
     ):
-        report.add(
+        report.raise_(
             rules.STYLE002,
             "Blinking text styling is present.",
             location=Location(Part.STYLES.value),
@@ -117,7 +115,7 @@ def _audit_style_summary(document: OdfDocument, report: Report) -> None:
     rows, problems = _style_rows(document)
     report.facts[FactKeys.TEXT_PARAGRAPH_STYLES] = rows
     if problems:
-        report.add(
+        report.raise_(
             rules.STYLE001, location=Location(Part.STYLES.value), details={"styles": problems}
         )
 

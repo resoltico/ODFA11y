@@ -64,7 +64,7 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
             msg = "Unreadable input"
             raise ToolFailure(msg)
         report = Report(kind=ReportKind.ODF, subject="source")
-        report.add(rules.META001)
+        report.raise_(rules.META001)
         yield report
 
     monkeypatch.setattr("odfa11y.application.audit_document", audit)

@@ -31,7 +31,7 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
         try:
             classification = classify(table)
         except DocumentRefusal as error:
-            report.add(
+            report.raise_(
                 rules.TABLE002,
                 str(error),
                 location=location,
@@ -52,7 +52,7 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
             "header_columns": classification.header_columns,
         })
         if classification.kind in {TableKind.LAYOUT_CANDIDATE, TableKind.AMBIGUOUS}:
-            report.add(
+            report.raise_(
                 rules.TABLE001,
                 classification.reason,
                 location=location,
@@ -62,17 +62,15 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
                 },
             )
         elif not (classification.header_rows or classification.header_columns):
-            report.add(
+            report.raise_(
                 rules.TABLE003,
                 location=location,
                 details={"table": name, "rows": classification.grid.rows},
-            )
-            report.add_decision(
-                OpenDecision(
+                decision=OpenDecision(
                     TABLE_HEADERS,
                     Target((location).path, Fingerprint(table_fingerprint(table, document))),
                     {"rows": 0, "columns": 0},
                     (rules.TABLE003.id,),
-                )
+                ),
             )
     report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS] = rows

@@ -49,7 +49,7 @@ def prepare_plan(source: str | Path) -> tuple[Report, str | None]:
             return _prepare_captured(source, captured)
     except (OSError, PackageError) as exc:
         report = Report(kind=ReportKind.ODF, subject=str(source), _sources=(source,))
-        report.add(rules.PKG000, f"Cannot capture source for planning: {exc}")
+        report.raise_(rules.PKG000, f"Cannot capture source for planning: {exc}")
         return report, None
 
 
