@@ -40,7 +40,7 @@ def _report() -> Report:
         location=Location("content/paragraph[2]"),
         details={"count": 2},
         decision=OpenDecision(
-            registered_kinds()["text.linkify_addresses"], None, {"enabled": False}, ("LINK001",)
+            registered_kinds()["text.linkify_addresses"], None, {"enabled": False}
         ),
     )
     return report
@@ -166,11 +166,20 @@ def test_finding_references_one_rule_without_serializing_its_implementation() ->
 def test_questions_are_derived_from_raised_findings_and_their_actual_rules() -> None:
     report = Report(ReportKind.ODF, "sample.odt")
     kind = registered_kinds()["document.metadata"]
-    question = OpenDecision(kind, None, {}, (rules.LINK001.id,))
+    question = OpenDecision(kind, None, {})
     assert report.decisions == ()
     report.raise_(rules.META001, decision=question)
     report.raise_(rules.META002, decision=question)
     assert len(report.decisions) == 1
     assert report.decisions[0].rule_ids == (rules.META001.id, rules.META002.id)
     report.findings.clear()
+    assert report.decisions == ()
+
+
+def test_a_finding_cannot_raise_a_question_that_does_not_address_its_rule() -> None:
+    report = Report(ReportKind.ODF, "sample.odt")
+    question = OpenDecision(registered_kinds()["document.metadata"], None, {})
+    with pytest.raises(ValueError, match="does not address"):
+        report.raise_(rules.LINK001, decision=question)
+    assert report.findings == []
     assert report.decisions == ()

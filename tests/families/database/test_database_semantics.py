@@ -9,19 +9,23 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PlanError
-from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate import SetMetadata
-from odfa11y.remediate.compile import compile_operations
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import (
+    FaultEdit,
+    apply_in_memory,
+    database_answer,
+    database_inputs,
+    metadata_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header, reviewed_plan
 
@@ -55,11 +59,11 @@ def test_real_embedded_base_validates_and_creates_optional_metadata_without_stor
     assert validate(source).count == 0
     assert not source.has(Part.META)
     destination = tmp_path / "described.odb"
-    execute_operations(
+    apply_answers(
         SOURCE,
         destination,
         [
-            SetMetadata(
+            metadata_input(
                 title="Fruit counts",
                 description="Invented local fruit counts",
                 language="en-US",
@@ -75,7 +79,7 @@ def test_real_embedded_base_validates_and_creates_optional_metadata_without_stor
     assert source.storage.read("settings.xml") == result.storage.read("settings.xml")
     assert audit_odf(destination).error_count == 0
     twice = tmp_path / "twice.odb"
-    assert not execute_operations(destination, twice, [SetMetadata(title="Fruit counts")]).changed
+    assert not apply_answers(destination, twice, [metadata_input(title="Fruit counts")]).changed
     assert destination.read_bytes() == twice.read_bytes()
 
 
@@ -86,12 +90,12 @@ def test_query_description_is_explicit_and_preserves_sql_and_bindings(tmp_path: 
     target = "content/query[name=Fruit%20totals]"
     node = available[target][0]
     output = tmp_path / "described-query.odb"
-    execute_operations(
+    apply_answers(
         source,
         output,
         [
-            SetObjectDescriptions({
-                target: DatabaseDescription("Fruit names and counts", fingerprint(node)),
+            database_inputs({
+                target: database_answer("Fruit names and counts", fingerprint(node)),
             })
         ],
     )
@@ -104,19 +108,19 @@ def test_query_description_is_explicit_and_preserves_sql_and_bindings(tmp_path: 
 def test_duplicate_and_stale_object_targets_reject_without_any_edits(tmp_path: Path) -> None:
     document = OdfDocument.open(_query_source(tmp_path, duplicate=True))
     target = "content/query[name=Fruit%20totals]"
-    result = SetObjectDescriptions({target: DatabaseDescription("Chosen meaning")}).apply(document)
-    assert result[0].status is Status.FAILED
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(document, database_inputs({target: database_answer("Chosen meaning")}))
     assert not document.dirty
     document = OdfDocument.open(_query_source(tmp_path))
-    result = SetObjectDescriptions({target: DatabaseDescription("Chosen meaning", "stale")}).apply(
-        document
-    )
-    assert result[0].status is Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(
+            document, database_inputs({target: database_answer("Chosen meaning", "0" * 16)})
+        )
     assert not document.dirty
 
 
 @dataclass(frozen=True, slots=True)
-class ChangeQuery(Operation):
+class ChangeQuery(FaultEdit):
     """A negative control that changes behavior rather than describing it."""
 
     name: ClassVar[str] = "change_query"
@@ -132,7 +136,7 @@ class ChangeQuery(Operation):
 def test_sql_changes_are_rejected_before_output_publication(tmp_path: Path) -> None:
     source = _query_source(tmp_path)
     output = tmp_path / "bad.odb"
-    assert_refused(execute_operations(source, output, [ChangeQuery()]), match="content changed")
+    assert_refused(apply_answers(source, output, [ChangeQuery()]), match="content changed")
     assert not output.exists()
 
 
@@ -158,11 +162,11 @@ def test_database_configuration_is_strict(tmp_path: Path) -> None:
             'fingerprint = "0123456789abcdef"\n'
         )
     )
-    assert compile_operations(OdfDocument.open(SOURCE), load_plan(plan)) == (
-        SetObjectDescriptions({
-            "content/query[name=Fruit]": DatabaseDescription("Fruit counts", "0123456789abcdef")
-        }),
-    )
+    (decision,) = load_plan(plan).decisions
+    assert decision.kind.id == "database.description"
+    assert decision.answer.text == "Fruit counts"
+    assert decision.target is not None
+    assert decision.target.fingerprint == "0123456789abcdef"
     plan.write_text(
         plan_header(SOURCE)
         + '[decisions."database.description"."content/query[1]"]\n'
@@ -173,7 +177,7 @@ def test_database_configuration_is_strict(tmp_path: Path) -> None:
 
 
 def test_base_source_assurance_and_pdf_boundary_are_explicit(tmp_path: Path) -> None:
-    operations = [SetMetadata(title="Fruit counts", language="en-US")]
+    operations = [metadata_input(title="Fruit counts", language="en-US")]
     inspected = execute(
         SOURCE,
         reviewed_plan(SOURCE, operations, Pagination.SAME()),

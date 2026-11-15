@@ -7,20 +7,19 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.concepts import (
-    GraphicAlternative,
-    GraphicIdentity,
-    graphic_identity,
-    graphics_fingerprint,
-)
-from odfa11y.concepts.edits import Status
-from odfa11y.families.text import SetGraphicAlternatives
+from odfa11y.concepts import GraphicIdentity, graphic_identity, graphics_fingerprint
+from odfa11y.errors import PlanError
 from odfa11y.families.text.headings.audit import audit_images
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.odf.resources import local_resource_path
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.targets import require_target
+from tests.fixtures.answers import (
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+)
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -96,10 +95,10 @@ def test_payload_drift_is_detected_before_any_graphic_edit(
     document.storage.write_member(member, b"changed resource")
     assert graphics_fingerprint(document, [frame]) != reviewed
     checkpoint = document.checkpoint()
-    result = SetGraphicAlternatives({
-        "Logo": GraphicAlternative("Title", fingerprint=reviewed)
-    }).apply(document)
-    assert result[0].status is Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(
+            document, graphic_inputs({"Logo": graphic_answer("Title", fingerprint=reviewed)})
+        )
     assert not document.changed_since(checkpoint)
     assert frame.find(qn("svg", "title")) is None
 
@@ -170,7 +169,7 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     assert len(report.findings) == count
     assert len(hash_calls) == count
     assert read_calls == ["styles.xml", "Pictures/logo.svg"]
-    assert len(group_hashes) == (1 if duplicate_names else count)
+    assert len(group_hashes) == count
     if duplicate_names:
         assert (
             len({
@@ -178,16 +177,16 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
                 for question in report.decisions
                 if question.kind.id == "graphic.alternative"
             })
-            == 1
+            == count
         )
 
 
 def test_indexed_groups_are_immutable_and_fresh_contexts_observe_mutations(tmp_path: Path) -> None:
     document, frame = _graphic(tmp_path)
     context = GraphicIdentity(document, [frame])
-    group = context.matching("Logo")
+    group = context.matching(context.target(frame))
     assert isinstance(group, tuple)
-    assert context.matching("Logo") is group
+    assert context.matching(context.target(frame)) is group
     before = context.fingerprint(group)
     frame.set(qn("svg", "width"), "2cm")
     assert graphics_fingerprint(document, [frame]) != before
@@ -234,7 +233,7 @@ def test_logical_row_positions_are_indexed_once_and_ignore_header_wrappers(
 
     monkeypatch.setattr(graphic_identity, "declarations", observe)
     identity = GraphicIdentity(document, frames)
-    identity.fingerprint(identity.matching("Logo"))
+    identity.fingerprint(identity.matching(identity.target(frame)))
     assert calls == ["rows"]
     rows[0].set(qn("table", "number-rows-repeated"), "4")
     assert graphics_fingerprint(document, [frame]) != reviewed

@@ -8,14 +8,16 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.concepts import GraphicAlternative
 from odfa11y.evidence import check_bundle
 from odfa11y.evidence.redact import ABSOLUTE_PATH
-from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
+from tests.fixtures.answers import (
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+)
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 
@@ -78,7 +80,7 @@ def run(directory: Path, options: RunSettings, source: Path | None = None) -> Pa
     source = source or make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
     execute(
-        source, reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()), out, options
+        source, reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()), out, options
     )
     return out
 
@@ -136,6 +138,6 @@ def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     source = make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
-    plan = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
+    plan = [graphic_inputs({"Missing": graphic_answer("x")})]
     execute(source, reviewed_plan(source, plan, Pagination.SAME()), out, RunSettings())
     assert_path_free(out, tmp_path)

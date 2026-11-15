@@ -4,12 +4,17 @@
 import tomllib
 from pathlib import Path
 
+import pytest
+
+import odfa11y as api
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
+from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.odf import names as xml_names
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.plans.model import UnansweredDecision
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate import remediate
 from tests.fixtures.writer import make_minimal_odt
@@ -71,12 +76,19 @@ def test_optional_language_overrides_are_available_only_when_requested(tmp_path:
     assert any(block.kind_id == "language.target" for block in plan.unanswered)
 
 
-def test_stale_unanswered_block_warns_without_changing_or_failing_a_dry_run(tmp_path: Path) -> None:
+@pytest.mark.parametrize("target_state", ["fingerprint", "missing"])
+def test_stale_unanswered_block_warns_without_changing_or_failing_a_dry_run(
+    tmp_path: Path, target_state: str
+) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
     _, template = prepare_plan(source)
     assert template is not None
     values = tomllib.loads(template)
     values["decisions"]["graphic.alternative"]["content/frame[name=Logo]"]["fingerprint"] = "stale"
+    if target_state == "missing":
+        values["decisions"]["graphic.alternative"] = {
+            "content/frame[name=Absent]": {"fingerprint": "0" * 16}
+        }
     plan = parse_tables(values, registered_kinds())
     before = source.read_bytes()
     destination = tmp_path / "out.odt"
@@ -84,8 +96,83 @@ def test_stale_unanswered_block_warns_without_changing_or_failing_a_dry_run(tmp_
     (block,) = result.unanswered
     assert block.stale
     assert block.reason
-    assert "fingerprint" in block.reason
+    assert ("fingerprint" if target_state == "fingerprint" else "exactly one") in block.reason
     assert result.outcomes == ()
     assert result.exit_status == 0
     assert not destination.exists()
     assert source.read_bytes() == before
+
+
+def test_loading_reports_invalid_answers_and_every_independent_source_binding(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
+    original = source.read_bytes()
+    document = OdfDocument.open(source)
+    header = Plan.for_source(source).header
+    (question,) = [
+        question
+        for question in audit_odf(source).decisions
+        if question.kind.id == "graphic.alternative"
+    ]
+    assert question.target is not None
+    actual = question.target.fingerprint
+    wrong = ("0" if actual[0] != "0" else "1") + actual[1:]
+    digest = header.source.sha256
+    wrong_digest = ("0" if digest[0] != "0" else "1") + digest[1:]
+    plan_file = tmp_path / "invalid.toml"
+    plan_file.write_text(
+        '[plan]\nschema_version = 1\ngenerator = "test"\nsource.sha256 = "' + wrong_digest + '"\n'
+        '[decisions."graphic.alternative"."content/frame[name=Logo]"]\n'
+        'title = " "\nfingerprint = "' + wrong + '"\n'
+        '[decisions."graphic.alternative"."content/frame[name=Absent]"]\n'
+        'description = 7\nfingerprint = "' + wrong + '"\n'
+        '[decisions."document.metadata"]\ntitel = "typo"\nlanguage = 7\n'
+        '[decisions."unknown.kind"]\n'
+    )
+    destination = tmp_path / "output.odt"
+    with pytest.raises(PlanError) as raised:
+        api.remediate(source, destination, plan_file)
+    text = str(raised.value)
+    for expected in (
+        "title",
+        "non-blank",
+        "description",
+        "titel",
+        "language",
+        "unknown.kind",
+        "fingerprint mismatch",
+        "exactly one",
+        "digest mismatch",
+    ):
+        assert expected in text
+    assert source.read_bytes() == original
+    assert not destination.exists()
+    assert document.dirty == frozenset()
+
+
+def test_answer_fields_select_the_answered_contract_when_fingerprint_is_missing(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    values = {
+        "plan": Plan.for_source(source).as_dict()["plan"],
+        "decisions": {"graphic.alternative": {"content/frame[1]": {"title": " "}}},
+    }
+    with pytest.raises(PlanError) as raised:
+        parse_tables(values, registered_kinds())
+    assert any(
+        "fingerprint" in problem and "required" in problem for problem in raised.value.problems
+    )
+    assert any("title" in problem and "non-blank" in problem for problem in raised.value.problems)
+
+
+def test_an_answer_and_unanswered_block_cannot_silently_overwrite_each_other(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    kind = registered_kinds()["document.metadata"]
+    answer = Decision(kind, None, decode_answer(kind.answer_type, {"title": "Reviewed"}, kind.id))
+    header = Plan.for_source(source).header
+    with pytest.raises(PlanError, match="same decision kind"):
+        Plan(header, (answer,), unanswered=(UnansweredDecision(kind, None),))

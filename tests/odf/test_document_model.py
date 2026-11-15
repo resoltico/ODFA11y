@@ -2,20 +2,21 @@
 """Live XML changes, cache generations and access policy do not rely on edit declarations."""
 
 import tomllib
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Outcome, Status
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PackageError
 from odfa11y.odf import KINDS, NS, OdfDocument, PackageStorage, Part, Use, qn
 from odfa11y.odf.encryption import PackageProtection
-from odfa11y.remediate import SetMetadata
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import fault_input, metadata_input
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.writer import make_minimal_odt
+lazy from odfa11y.decisions import Decision
 
 CORPUS = TESTS
 CORPUS_DOCUMENTS = tuple(
@@ -37,30 +38,34 @@ CORPUS_DOCUMENTS += tuple(
 
 
 def _tree_metadata_edit(
-    operation: SetMetadata, document: OdfDocument, status: Status
+    operation: Decision, document: OdfDocument, status: Status
 ) -> tuple[Outcome, ...]:
     meta = document.tree(Part.META).find("office:meta", NS)
     assert meta is not None
     title = meta.find(qn("dc", "title"))
     if title is None:
         title = etree.SubElement(meta, qn("dc", "title"))
-    title.text = operation.title
-    return (Outcome(operation.name, status, "Title"),)
+    title.text = operation.answer.title
+    return (Outcome(operation.kind.id, status, "Title"),)
 
 
 def test_undeclared_tree_mutation_is_published_and_other_members_keep_their_bytes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        SetMetadata,
-        "apply",
-        lambda operation, document: _tree_metadata_edit(operation, document, Status.APPLIED),
-    )
     source = make_minimal_odt(tmp_path / "source.odt")
     original = source.read_bytes()
     destination = tmp_path / "result.odt"
-    result = execute_operations(source, destination, [SetMetadata(title="Reviewed title")])
+    result = apply_answers(
+        source,
+        destination,
+        [
+            fault_input(
+                metadata_input(title="Reviewed title"),
+                lambda document, decision: _tree_metadata_edit(decision, document, Status.APPLIED),
+            )
+        ],
+    )
     assert result.changed
     before, after = PackageStorage(source), PackageStorage(destination)
     for member in before.member_names():
@@ -80,15 +85,21 @@ def test_mutation_misreported_as_unchanged_refuses_publication(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        SetMetadata,
-        "apply",
-        lambda operation, document: _tree_metadata_edit(operation, document, Status.UNCHANGED),
-    )
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "result.odt"
     assert_refused(
-        execute_operations(source, destination, [SetMetadata(title="Reviewed title")]),
+        apply_answers(
+            source,
+            destination,
+            [
+                fault_input(
+                    metadata_input(title="Reviewed title"),
+                    lambda document, decision: _tree_metadata_edit(
+                        decision, document, Status.UNCHANGED
+                    ),
+                )
+            ],
+        ),
         match="reported no change but changed",
     )
     assert not destination.exists()

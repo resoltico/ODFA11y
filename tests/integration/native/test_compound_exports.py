@@ -9,7 +9,6 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import table_fingerprint
-from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
@@ -17,10 +16,15 @@ from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
+from tests.fixtures.answers import (
+    apply_in_memory,
+    header_answer,
+    header_inputs,
+    metadata_input,
+)
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.spreadsheets import picture, reviewed_sheet_names, row, sheet, text_cell
 from tests.fixtures.table_formats import NUMERIC_STYLES
 from tests.integration.native.test_spreadsheet_integration import (
@@ -91,16 +95,16 @@ def test_writer_nested_headers_graphic_and_named_link(
     tables = select_elements(before.tree(Part.CONTENT), "//table:table")
     assert len(tables) == 2
     decisions = {
-        str(table.get(qn("table", "name"))): TableHeaders(
+        str(table.get(qn("table", "name"))): header_answer(
             columns=1, fingerprint=table_fingerprint(table)
         )
         for table in tables
     }
-    plan = [MarkTableHeaders(decisions), SetMetadata(title="Compound Writer", language="en-GB")]
+    plan = [header_inputs(decisions), metadata_input(title="Compound Writer", language="en-GB")]
     output = tmp_path / "edited.odt"
-    execute_operations(source, output, plan)
+    apply_answers(source, output, plan)
     assert validate(OdfDocument.open(output)).count == validate(before).count
-    assert not execute_operations(output, tmp_path / "again.odt", plan).changed
+    assert not apply_answers(output, tmp_path / "again.odt", plan).changed
     assert not {"TABLE003", "TABLE002"} & {f.rule_id for f in audit_odf(output).findings}
     pdf = export_pdfua(
         output, tmp_path / "writer.pdf", ExportSettings("writer_pdf_Export", soffice)
@@ -119,7 +123,7 @@ def test_writer_nested_headers_graphic_and_named_link(
     paragraph = select_elements(table, ".//text:p")[0]
     paragraph.text = "Changed protected label"
     snapshot = etree.tostring(before.tree(Part.CONTENT))
-    assert MarkTableHeaders(decisions).apply(before)[0].status.value == "failed"
+    assert apply_in_memory(before, header_inputs(decisions))[0].status.value == "failed"
     assert etree.tostring(before.tree(Part.CONTENT)) == snapshot
 
 
@@ -151,8 +155,8 @@ def test_calc_formula_graphic_and_printed_header(
     ]
     assert formulas
     output = tmp_path / "edited.ods"
-    plan = [SetMetadata(title="Compound Calc", language="en-GB")]
-    execute_operations(source, output, plan)
+    plan = [metadata_input(title="Compound Calc", language="en-GB")]
+    apply_answers(source, output, plan)
     after = OdfDocument.open(output)
     assert validate(after).count == validate(before).count
     _resources_preserved(source, output)
@@ -160,7 +164,7 @@ def test_calc_formula_graphic_and_printed_header(
         cell.get(qn("table", "formula"))
         for cell in select_elements(after.tree(Part.CONTENT), "//table:table-cell[@table:formula]")
     ] == formulas
-    assert not execute_operations(output, tmp_path / "again.ods", plan).changed
+    assert not apply_answers(output, tmp_path / "again.ods", plan).changed
     pdf = export_pdfua(output, tmp_path / "calc.pdf", ExportSettings("calc_pdf_Export", soffice))
     report = audit_pdfua(pdf)
     assert {f.rule_id for f in report.findings} == {"PDF008", "PDF015"}
@@ -168,7 +172,7 @@ def test_calc_formula_graphic_and_printed_header(
     assert "Fruit" in read_snapshot(pdf).text
     _assert_fidelity(source, pdf, "calc_pdf_Export", soffice)
     assert_refused(
-        execute_operations(
+        apply_answers(
             source, tmp_path / "rejected.ods", [reviewed_sheet_names(source, {"Data": "Other"})]
         ),
         match="may refer to it by name",

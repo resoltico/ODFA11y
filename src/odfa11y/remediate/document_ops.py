@@ -3,6 +3,8 @@
 
 from odfa11y.decisions import DecisionKind, DecisionScope, OpenDecision
 from odfa11y.decisions.answers import DocumentMetadataAnswer, OdfVersionAnswer
+from odfa11y.remediate.metadata import edit_metadata
+from odfa11y.remediate.version import edit_version
 from odfa11y.report import FactKeys
 from odfa11y.rules import registry as rules
 lazy from odfa11y.report import Report
@@ -17,6 +19,7 @@ COMMON_KINDS = (
             rules.ODF001,
             rules.ODF003,
         ),
+        edit=edit_version,
     ),
     DecisionKind(
         "document.metadata",
@@ -29,6 +32,7 @@ COMMON_KINDS = (
             rules.CHART002,
             rules.CHART003,
         ),
+        edit=edit_metadata,
     ),
 )
 

@@ -1,26 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
 """Review targets compose within established current contexts across both ODF layouts."""
 
-lazy from collections.abc import Callable
+from collections.abc import Callable
 lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf, prepare_plan
-from odfa11y.concepts import GraphicAlternative, LinkDescription, link_fingerprint, link_location
-from odfa11y.concepts.edits import Status
-from odfa11y.families.text import (
-    LinkifyAddresses,
-    MarkTableHeaders,
-    SetGraphicAlternatives,
-    SetLinkDescriptions,
-    TableHeaders,
-)
+from odfa11y.concepts import link_fingerprint, link_location
+from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.plans import Plan, parse_tables
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.targets import require_target
+from tests.fixtures.answers import (
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    link_answer,
+    link_inputs,
+)
 from tests.fixtures.documents import Variant, make_flat, make_package
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import question_for
 
 FRAME = (
@@ -73,19 +77,19 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     assert isinstance(graphic_fingerprint, str)
     assert isinstance(table_fingerprint, str)
     operations = [
-        SetGraphicAlternatives({
-            note_graphic.location.path: GraphicAlternative(
+        graphic_inputs({
+            note_graphic.location.path: graphic_answer(
                 description="The note's illustration",
                 fingerprint=graphic_fingerprint,
             )
         }),
-        MarkTableHeaders({
-            note_table.location.path: TableHeaders(rows=1, fingerprint=table_fingerprint)
+        header_inputs({
+            note_table.location.path: header_answer(rows=1, fingerprint=table_fingerprint)
         }),
     ]
     output = tmp_path / ("output" + source.suffix)
-    assert execute_operations(source, output, operations).changed
-    assert not execute_operations(output, tmp_path / ("again" + source.suffix), operations).changed
+    assert apply_answers(source, output, operations).changed
+    assert not apply_answers(output, tmp_path / ("again" + source.suffix), operations).changed
     tree = OdfDocument.open(output).tree(Part.CONTENT)
     main_frame, note_frame = select_elements(tree, "//draw:frame")
     assert main_frame.find(qn("svg", "desc")) is None
@@ -105,16 +109,16 @@ def test_legal_id_link_plan_composes_with_address_linkification(tmp_path: Path) 
     document = OdfDocument.open(source)
     link = select_elements(document.tree(Part.CONTENT), "//draw:a")[0]
     plan = [
-        LinkifyAddresses(),
-        SetLinkDescriptions({
-            link_location(link, 1).path: LinkDescription(
+        address_input(),
+        link_inputs({
+            link_location(link, 1).path: link_answer(
                 "Read the guide", link_fingerprint(document, link)
             )
         }),
     ]
     output = tmp_path / "output.fodt"
-    assert execute_operations(source, output, plan).changed
-    assert not execute_operations(output, tmp_path / "again.fodt", plan).changed
+    assert apply_answers(source, output, plan).changed
+    assert not apply_answers(output, tmp_path / "again.fodt", plan).changed
     report = audit_odf(output)
     assert not any(f.rule_id == "LINK001" for f in report.findings)
     edited = select_elements(OdfDocument.open(output).tree(Part.CONTENT), "//draw:a")[0]
@@ -159,12 +163,16 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
     finding = next(f for f in report.findings if f.rule_id == "TABLE003")
     assert finding.location is not None
     document = OdfDocument.open(source)
-    operation = MarkTableHeaders({finding.location.path: TableHeaders(rows=1)})
-    assert operation.apply(document)[0].status is Status.FAILED
+    values = {
+        "plan": Plan.for_source(source).as_dict()["plan"],
+        "decisions": {"table.headers": {finding.location.path: {"rows": 1}}},
+    }
+    with pytest.raises(PlanError, match="fingerprint"):
+        parse_tables(values, registered_kinds())
     assert not document.dirty
     reviewed_fingerprint = require_target(question_for(report, finding).target).fingerprint
     assert isinstance(reviewed_fingerprint, str)
-    reviewed = MarkTableHeaders({
-        finding.location.path: TableHeaders(rows=1, fingerprint=reviewed_fingerprint)
+    reviewed = header_inputs({
+        finding.location.path: header_answer(rows=1, fingerprint=reviewed_fingerprint)
     })
-    assert execute_operations(source, tmp_path / "reviewed.fodt", [reviewed]).changed
+    assert apply_answers(source, tmp_path / "reviewed.fodt", [reviewed]).changed

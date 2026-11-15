@@ -7,25 +7,26 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.concepts import GraphicAlternative
 from odfa11y.evidence import check_bundle
-from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
 from odfa11y.pdf import validate_pdfua
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
+from tests.fixtures.answers import (
+    Authored,
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+)
 from tests.fixtures.corpus import CORPUS
 from tests.fixtures.plans import reviewed_plan
-lazy from odfa11y.concepts.edits import Operation
 
 # Each plan resolves the document's findings that would otherwise fail the audit gate.
-PIPELINE_RUNS: dict[str, list[Operation]] = {
-    "links.odt": [LinkifyAddresses()],
-    "images-undescribed.fodt": [
-        SetGraphicAlternatives({"Image1": GraphicAlternative("Red square")})
-    ],
+PIPELINE_RUNS: dict[str, list[Authored]] = {
+    "links.odt": [address_input()],
+    "images-undescribed.fodt": [graphic_inputs({"Image1": graphic_answer("Red square")})],
     "header-footer.fodt": [],
 }
 
@@ -35,7 +36,7 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
     name: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
-    plan = [SetMetadata(title="Corpus document", language="en-US"), *PIPELINE_RUNS[name]]
+    plan = [metadata_input(title="Corpus document", language="en-US"), *PIPELINE_RUNS[name]]
     record = execute(
         CORPUS / name,
         reviewed_plan(CORPUS / name, plan, Pagination.SAME()),

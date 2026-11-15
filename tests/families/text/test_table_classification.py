@@ -6,12 +6,12 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.families.text.tables.classification import TableKind, classify
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.report import FactKeys
+from tests.fixtures.answers import header_answer, header_inputs
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
 CELL = "<table:table-cell><text:p>Label</text:p></table:table-cell>"
@@ -61,7 +61,7 @@ def test_untyped_visual_labels_do_not_establish_data_intent(tmp_path: Path, colu
     assert not any(question.kind.id == "table.headers" for question in report.decisions)
     output = tmp_path / "refused.fodt"
     assert_refused(
-        execute_operations(source, output, [MarkTableHeaders({"Layout": TableHeaders(rows=1)})]),
+        apply_answers(source, output, [header_inputs({"Layout": header_answer(rows=1)})]),
         match="ambiguous.*Writer",
     )
     assert not output.exists()
@@ -122,7 +122,7 @@ def test_ambiguous_historical_writer_table_refuses_header_inference(tmp_path: Pa
     source = TESTS / "corpus/table-no-header-row.odt"
     output = tmp_path / "refused.odt"
     assert_refused(
-        execute_operations(source, output, [MarkTableHeaders({"Table1": TableHeaders(rows=1)})]),
+        apply_answers(source, output, [header_inputs({"Table1": header_answer(rows=1)})]),
         match="ambiguous.*Writer",
     )
     assert not output.exists()

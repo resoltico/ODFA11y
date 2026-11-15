@@ -81,7 +81,6 @@ class RunRecord:
     """The ordered stage results of a run and the facts that identify it."""
 
     document: DocumentIdentity
-    operations: tuple[JsonObject, ...]
     fidelity_policy: FidelityPolicy
     profile: Profile
     stages: list[StageResult] = field(default_factory=list)
@@ -126,7 +125,6 @@ class RunRecord:
             "plan": Plan(self.plan, self.decisions, self.fidelity_policy).as_dict()
             if self.plan
             else None,
-            "operations": list(self.operations),
             "fidelity_policy": self.fidelity_policy.as_dict(),
             "profile": self.profile.as_dict(),
         }

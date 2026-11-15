@@ -1,18 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native implicit Writer placement cannot be replaced by an unproven graphic style."""
 
-lazy from collections.abc import Callable
+from collections.abc import Callable
 lazy from pathlib import Path
 
-from odfa11y.concepts import GraphicAlternative, graphics_fingerprint
-from odfa11y.concepts.edits import Status
-from odfa11y.families.text import SetGraphicAlternatives
+from odfa11y.concepts import graphics_fingerprint
+from odfa11y.decisions.edit import Status
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
+from tests.fixtures.answers import graphic_answer, graphic_inputs
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
+lazy from tests.fixtures.answers import apply_in_memory
 
 
 def test_unstyled_native_role_refusal_preserves_original_placement_and_publication(
@@ -27,13 +28,13 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
             frame.remove(node)
     source = document.save(tmp_path / "unstyled.fodt")
     assert validate(document).count == 0
-    operation = SetGraphicAlternatives({
-        "Asset": GraphicAlternative(
+    operation = graphic_inputs({
+        "Asset": graphic_answer(
             decorative=True, fingerprint=graphics_fingerprint(document, [frame])
         )
     })
     before = document.checkpoint()
-    outcome = operation.apply(document)[0]
+    outcome = apply_in_memory(document, operation)[0]
     assert outcome.status == Status.FAILED
     assert "placement and wrapping are unestablished" in outcome.message
     assert not document.changed_since(before)
@@ -41,7 +42,7 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
     destination.write_bytes(b"Existing destination")
     original = source.read_bytes()
     assert_refused(
-        execute_operations(source, destination, [operation]),
+        apply_answers(source, destination, [operation]),
         match="placement and wrapping are unestablished",
     )
     assert source.read_bytes() == original

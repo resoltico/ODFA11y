@@ -6,10 +6,10 @@ from dataclasses import dataclass
 lazy from collections.abc import Callable, Sequence
 
 from odfa11y.concepts.preservation import PreservationSnapshot
-from odfa11y.errors import PlanError
-lazy from odfa11y.concepts.edits import Operation, Outcome
+from odfa11y.decisions import Decision
 lazy from odfa11y.concepts.review import ReviewTopic
-lazy from odfa11y.decisions import Decision, DecisionKind
+lazy from odfa11y.decisions import DecisionKind
+lazy from odfa11y.decisions.edit import Outcome
 lazy from odfa11y.native.probes import CapabilityProbe
 lazy from odfa11y.odf import Family, OdfDocument
 lazy from odfa11y.report import Report
@@ -89,35 +89,13 @@ class FamilyAdapter(ABC):
         del outcomes
         return before == after
 
-    def operations(
-        self, document: OdfDocument, decisions: Sequence[Decision]
-    ) -> tuple[Operation, ...]:
-        """Translate supported human answers into executable changes.
-
-        Returns
-        -------
-        tuple[Operation, ...]
-            No family operations for adapters supporting only common document answers.
-
-        Raises
-        ------
-        PlanError
-            A family answer has no implementation.
-
-        """
-        del document
-        if decisions:
-            msg = f"No decision operation implementation for {self.name}"
-            raise PlanError(msg)
-        return ()
-
     @staticmethod
-    def preflight(document: OdfDocument, operations: Sequence[Operation]) -> None:
+    def preflight(document: OdfDocument, operations: Sequence[Decision]) -> None:
         """Establish additional family constraints before any edit."""
         del document, operations
 
     @staticmethod
-    def protect_edit(document: OdfDocument, operation: Operation) -> Callable[[], bool] | None:
+    def protect_edit(document: OdfDocument, operation: Decision) -> Callable[[], bool] | None:
         """Establish operation-specific protected facts.
 
         Returns

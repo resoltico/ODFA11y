@@ -3,14 +3,15 @@
 
 import json
 from dataclasses import dataclass, replace
-from typing import ClassVar, override
-lazy from collections.abc import Mapping
 
 lazy from lxml import etree
 
 from odfa11y.concepts import protected_xml
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions import Decision
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal
+from odfa11y.families.text.answers import TargetLanguageAnswer
 from odfa11y.families.text.language.effective import (
     BLOCKS,
     INLINE,
@@ -29,21 +30,11 @@ from odfa11y.families.text.language.styles import (
 from odfa11y.families.text.styles.catalogue import adopt_style, catalog_of
 from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.language_tags import normalize_language
-from odfa11y.odf import NS, Family
+from odfa11y.odf import NS
 from odfa11y.odf import names as xml_names
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.families.text.language.styles import Binding
 lazy from odfa11y.odf import OdfDocument
-
-
-@dataclass(frozen=True, slots=True)
-class TargetLanguage:
-    """Explicit channel overrides bound to a reviewed paragraph or inline target."""
-
-    western: str | None = None
-    asian: str | None = None
-    complex: str | None = None
-    fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -55,100 +46,6 @@ class PreparedLanguage:
     binding: Binding
     style: etree._Element
     changed: bool
-
-
-@dataclass(frozen=True, slots=True)
-class SetTargetLanguages(Operation):
-    """Preflight all target styles before applying any selected language override."""
-
-    entries: Mapping[str, TargetLanguage]
-    name: ClassVar[str] = "set_target_languages"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
-
-    def prepare(self, document: OdfDocument) -> tuple[PreparedLanguage, ...]:
-        """Resolve fingerprints, inheritance and style collisions before editing.
-
-        Returns
-        -------
-        tuple[PreparedLanguage, ...]
-            Checked target-specific derivations.
-
-        Raises
-        ------
-        DocumentRefusal
-            Any target, declaration, fingerprint or definition is unresolved.
-
-        """
-        targets = language_targets(document)
-        prepared = []
-        for target, answer in self.entries.items():
-            node = targets.get(target)
-            if node is None or answer.fingerprint != language_fingerprint(document, node):
-                message = "Language target or reviewed fingerprint no longer matches."
-                raise DocumentRefusal(message)
-            prepared.append(_prepare(document, target, node, answer))
-        return tuple(prepared)
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        try:
-            prepared = self.prepare(document)
-        except DocumentRefusal as error:
-            return (Outcome(self.name, Status.FAILED, str(error)),)
-        catalog = catalog_of(document)
-        outcomes = []
-        for item in prepared:
-            if item.changed:
-                family = family_of(item.node)
-                if catalog.style(family, item.binding.name) is None:
-                    adopt_style(catalog, item.style)
-                item.node.set(STYLE_NAME, item.binding.name)
-            outcomes.append(
-                Outcome(
-                    self.name,
-                    Status.APPLIED if item.changed else Status.UNCHANGED,
-                    "Applied reviewed target language."
-                    if item.changed
-                    else "Target language already matches.",
-                    target=item.target,
-                    count=int(item.changed),
-                )
-            )
-        return tuple(outcomes)
-
-
-def _prepare(
-    document: OdfDocument, target: str, node: etree._Element, answer: TargetLanguage
-) -> PreparedLanguage:
-    paragraph_style_name(node)
-    old = binding_of(document, node, target)
-    requested = (answer.western, answer.asian, answer.complex)
-    if not any(value is not None for value in requested):
-        message = "Select at least one target language channel."
-        raise DocumentRefusal(message)
-    effective = effective_languages(document, node)
-    overrides = list(old.overrides)
-    for index, tag in enumerate(requested):
-        if tag is not None:
-            if not isinstance(tag, str):
-                message = "Target language must be a valid language tag."
-                raise DocumentRefusal(message)
-            try:
-                overrides[index] = normalize_language(tag)
-            except ValueError as error:
-                raise DocumentRefusal(str(error)) from error
-    binding = replace(old, overrides=tuple(overrides))
-    style = derive(document, family_of(node), binding)
-    existing = catalog_of(document).style(family_of(node), binding.name)
-    if existing is not None and protected_xml(existing) != protected_xml(style):
-        message = "Generated language style name belongs to a different definition."
-        raise DocumentRefusal(message)
-    _require_effective_override(document, node, binding, style)
-    changed = any(
-        tag is not None and effective[index] != overrides[index]
-        for index, tag in enumerate(requested)
-    )
-    return PreparedLanguage(target, node, binding, style, changed)
 
 
 def _require_effective_override(
@@ -203,3 +100,60 @@ def language_fingerprint(document: OdfDocument, node: etree._Element) -> Fingerp
         ])
     content = protected_xml(normalized_language_tree(document, node))
     return Fingerprint.of(json.dumps([content, styles], sort_keys=True).encode())
+
+
+def _prepare_answer(
+    document: OdfDocument, target: str, node: etree._Element, answer: TargetLanguageAnswer
+) -> PreparedLanguage:
+    paragraph_style_name(node)
+    old = binding_of(document, node, target)
+    requested = (answer.western, answer.asian, answer.complex)
+    effective = effective_languages(document, node)
+    overrides = list(old.overrides)
+    for index, tag in enumerate(requested):
+        if tag is not None:
+            overrides[index] = normalize_language(tag)
+    binding = replace(old, overrides=tuple(overrides))
+    style = derive(document, family_of(node), binding)
+    existing = catalog_of(document).style(family_of(node), binding.name)
+    if existing is not None and protected_xml(existing) != protected_xml(style):
+        message = "Generated language style name belongs to a different definition."
+        raise DocumentRefusal(message)
+    _require_effective_override(document, node, binding, style)
+    changed = any(
+        tag is not None and effective[index] != overrides[index]
+        for index, tag in enumerate(requested)
+    )
+    return PreparedLanguage(target, node, binding, style, changed)
+
+
+def prepare_language(
+    document: OdfDocument, decision: Decision[TargetLanguageAnswer]
+) -> PreparedLanguage:
+    """Establish the target's derivation and collision safeguards before changing any style."""
+    node = resolved_node(document, decision)
+    return _prepare_answer(document, decision.target_path, node, decision.answer)
+
+
+def edit_language(
+    document: OdfDocument, decision: Decision[TargetLanguageAnswer]
+) -> tuple[Outcome, ...]:
+    """Apply explicit language channels without changing authored text or shared styles."""
+    item = prepare_language(document, decision)
+    catalog = catalog_of(document)
+    if item.changed:
+        family = family_of(item.node)
+        if catalog.style(family, item.binding.name) is None:
+            adopt_style(catalog, item.style)
+        item.node.set(STYLE_NAME, item.binding.name)
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if item.changed else Status.UNCHANGED,
+            "Applied reviewed target language."
+            if item.changed
+            else "Target language already matches.",
+            target=item.target,
+            count=int(item.changed),
+        ),
+    )

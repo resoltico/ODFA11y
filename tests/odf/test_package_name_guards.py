@@ -13,13 +13,13 @@ from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.native import export_document
 from odfa11y.run.profiles import profile_named
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.answers import metadata_input
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 from tests.odf.test_package_protection import encrypted_manifest
@@ -100,10 +100,10 @@ def _assert_guarded_refusal(
     assert template is None
     destination = directory / "existing.odt"
     destination.write_bytes(b"existing output")
-    for operations in ([], [SetMetadata()], [SetMetadata(title="Reviewed")]):
+    for operations in ([], [metadata_input(title="Reviewed")]):
         for dry_run in (False, True):
             with pytest.raises(PackageError, match=r"ambiguous|malformed"):
-                execute_operations(source, destination, operations, dry_run=dry_run)
+                apply_answers(source, destination, operations, dry_run=dry_run)
     pdf = directory / "existing.pdf"
     pdf.write_bytes(b"existing PDF")
     with pytest.raises(PackageError, match=r"ambiguous|unsafe"):

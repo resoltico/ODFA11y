@@ -131,7 +131,6 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     source.raise_(rules.LINK001)
     data = RunRecord(
         document=DocumentIdentity("doc.odt"),
-        operations=(),
         fidelity_policy=Pagination.SAME(),
         profile=PROFILES["source"],
     )

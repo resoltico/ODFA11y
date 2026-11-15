@@ -9,8 +9,6 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative
-from odfa11y.families.spreadsheet import SetGraphicAlternatives
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
@@ -18,13 +16,17 @@ from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
 from odfa11y.targets import require_target
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import (
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.spreadsheets import (
     HIDDEN_SHEET_STYLE,
@@ -158,12 +160,10 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     )
     plan = [
         reviewed_sheet_names(source, {"Sheet1": "Fruit prices", "Blank": "Spare"}),
-        SetGraphicAlternatives({
-            "Logo": GraphicAlternative("Logo", "A sample picture", fingerprint)
-        }),
+        graphic_inputs({"Logo": graphic_answer("Logo", "A sample picture", fingerprint)}),
     ]
     output = tmp_path / "remediated.ods"
-    result = execute_operations(source, output, plan)
+    result = apply_answers(source, output, plan)
     assert result.changed
     assert OdfDocument.open(output).tree(Part.SETTINGS).xpath(
         "//config:config-item-map-named[@config:name='ScriptConfiguration']/config:config-item-map-entry/@config:name",
@@ -177,7 +177,7 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     assert "Fruit prices" in after_text
     assert "Fruit prices" not in before_text
     assert "Apples" in after_text
-    assert not execute_operations(output, tmp_path / "again.ods", plan).changed
+    assert not apply_answers(output, tmp_path / "again.ods", plan).changed
 
 
 def test_a_sheet_a_libreoffice_formula_refers_to_is_not_renamed(
@@ -191,7 +191,7 @@ def test_a_sheet_a_libreoffice_formula_refers_to_is_not_renamed(
     )
     output = tmp_path / "remediated.ods"
     assert_refused(
-        execute_operations(source, output, [reviewed_sheet_names(source, {"Data": "Notes"})]),
+        apply_answers(source, output, [reviewed_sheet_names(source, {"Data": "Notes"})]),
         match="may refer to it by name",
     )
     assert not output.exists()
@@ -202,7 +202,7 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     source = author(tmp_path, soffice, *clean_sheets())
-    plan = [SetMetadata(language="en-GB")]
+    plan = [metadata_input(language="en-GB")]
     options = RunSettings(tools=Tools(soffice=soffice))
     record = execute(
         source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options
@@ -255,7 +255,7 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     )
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(language="en-GB")], Pagination.SAME()),
+        reviewed_plan(source, [metadata_input(language="en-GB")], Pagination.SAME()),
         tmp_path / "out",
         options,
     )

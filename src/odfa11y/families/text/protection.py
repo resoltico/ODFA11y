@@ -8,43 +8,36 @@ lazy from collections.abc import Callable
 lazy from lxml import etree
 
 from odfa11y.concepts import (
-    SHAPE_TAGS,
-    GraphicIdentity,
-    document_links,
-    link_location,
     normalized_role_attributes,
     protected_xml,
     repeated,
 )
+from odfa11y.contracts import record_dict
+from odfa11y.decisions.answers import DocumentMetadataAnswer, OdfVersionAnswer
+from odfa11y.decisions.domain import resolved_node
 from odfa11y.errors import XmlParseError
-from odfa11y.families.text.contexts import context_location, text_nodes
-from odfa11y.families.text.graphics import SetGraphicAlternatives, SetLinkDescriptions
-from odfa11y.families.text.headings.edit import SetHeadingLevels, heading_location
-from odfa11y.families.text.language.operations import SetTargetLanguages
+from odfa11y.families.text.contexts import text_nodes
+from odfa11y.families.text.language.operations import prepare_language
 from odfa11y.families.text.language.styles import STYLE_NAME
-from odfa11y.families.text.links.edit import LinkifyAddresses
 from odfa11y.families.text.links.prose import address_wrapper_scope
 from odfa11y.families.text.links.urls import URI_RE, split_trailing_punctuation
 from odfa11y.families.text.spacing.candidates import spacer_candidates
-from odfa11y.families.text.spacing.edit import NormalizeSpacing
-from odfa11y.families.text.spacing.remove import RemoveEmptySpacers
 from odfa11y.families.text.styles.catalogue import (
     NO_STYLE,
     catalog_of,
     derived_style_name,
     is_generated_from,
 )
-from odfa11y.families.text.tables import MarkTableHeaders
 from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
-lazy from odfa11y.concepts.edits import Operation
+lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
 
 
 class ProtectedEdit:
     """Capture immutable protected facts and normalize only this operation's effects."""
 
-    def __init__(self, document: OdfDocument, operation: Operation) -> None:
+    def __init__(self, document: OdfDocument, operation: Decision) -> None:
         self.document = document
         self.operation = operation
         self.creating_metadata = not document.has(Part.META)
@@ -64,13 +57,11 @@ class ProtectedEdit:
     def _establish(self) -> None:
         tree = self.document.tree(Part.CONTENT)
         op = self.operation
-        if type(op) is SetTargetLanguages:
+        if op.kind.id == "language.target":
             self._establish_language(op)
-        elif type(op) is SetHeadingLevels:
-            for index, node in enumerate(text_nodes(tree, xml_names.TEXT_H, main_only=True), 1):
-                if heading_location(node, index).path in op.entries:
-                    self.allowed[node] = {xml_names.TEXT_OUTLINE_LEVEL}
-        elif type(op) is RemoveEmptySpacers:
+        elif op.kind.id == "heading.level":
+            self.allowed[resolved_node(self.document, op)] = {xml_names.TEXT_OUTLINE_LEVEL}
+        elif op.kind.id == "text.remove_spacers" and op.answer.enabled:
             self.spacers = {
                 node
                 for node in spacer_candidates(tree)
@@ -78,62 +69,47 @@ class ProtectedEdit:
                     node.get(xml_names.TEXT_STYLE_NAME)
                 )
             }
-        elif type(op) is MarkTableHeaders:
-            self.tables = {
-                node
-                for index, node in enumerate(text_nodes(tree, xml_names.TABLE_TABLE), 1)
-                if node.get(xml_names.TABLE_NAME) in op.entries
-                or context_location(node, "table", index, node.get(xml_names.TABLE_NAME)).path
-                in op.entries
-            }
-        elif type(op) is NormalizeSpacing:
+        elif op.kind.id == "table.headers":
+            self.tables = {resolved_node(self.document, op)}
+        elif op.kind.id == "text.spacing":
             self._establish_spacing(op)
-        elif type(op) is SetGraphicAlternatives:
+        elif op.kind.id == "graphic.alternative":
             self._alternatives(op)
-        elif type(op) is SetLinkDescriptions:
-            self._links(op)
+        elif op.kind.id == "link.description":
+            self.allowed[resolved_node(self.document, op)] = {xml_names.OFFICE_TITLE}
 
-    def _establish_spacing(self, operation: NormalizeSpacing) -> None:
+    def _establish_spacing(self, operation: Decision) -> None:
         tree = self.document.tree(Part.CONTENT)
-        for base in operation.target_styles:
+        answer = operation.answer
+        for base in answer.target_styles:
             self.spacing[derived_style_name(base)] = base
         tags = (
-            (xml_names.TEXT_P, xml_names.TEXT_H)
-            if operation.include_headings
-            else (xml_names.TEXT_P,)
+            (xml_names.TEXT_P, xml_names.TEXT_H) if answer.include_headings else (xml_names.TEXT_P,)
         )
         self.spacing_targets = {
             node
             for node in text_nodes(tree, *tags, main_only=True)
             if (node.get(xml_names.TEXT_STYLE_NAME) or NO_STYLE)
-            in {*operation.target_styles, *self.spacing}
+            in {*answer.target_styles, *self.spacing}
         }
 
-    def _establish_language(self, operation: SetTargetLanguages) -> None:
-        for item in operation.prepare(self.document):
-            if item.changed:
-                self.language_targets[item.node] = (item.node.get(STYLE_NAME), item.binding.name)
-                self.language_styles[item.binding.name] = protected_xml(item.style)
+    def _establish_language(self, operation: Decision) -> None:
+        item = prepare_language(self.document, operation)
+        if item.changed:
+            self.language_targets[item.node] = (item.node.get(STYLE_NAME), item.binding.name)
+            self.language_styles[item.binding.name] = protected_xml(item.style)
 
-    def _alternatives(self, operation: SetGraphicAlternatives) -> None:
-        frames = text_nodes(self.document.tree(Part.CONTENT), *SHAPE_TAGS)
-        identity = GraphicIdentity(self.document, frames)
-        for selector, entry in operation.entries.items():
-            matches = identity.matching(selector)
-            for field, tag in (
-                (entry.title, xml_names.SVG_TITLE),
-                (entry.description, xml_names.SVG_DESC),
-            ):
-                if field is not None:
-                    for match in matches:
-                        self.descriptions.setdefault(match, set()).add(tag)
-            if entry.decorative is not None:
-                self.roles.update(matches)
-
-    def _links(self, operation: SetLinkDescriptions) -> None:
-        for index, node in enumerate(document_links(self.document), 1):
-            if link_location(node, index).path in operation.entries:
-                self.allowed[node] = {xml_names.OFFICE_TITLE}
+    def _alternatives(self, operation: Decision) -> None:
+        node = resolved_node(self.document, operation)
+        answer = operation.answer
+        for value, tag in (
+            (answer.title, xml_names.SVG_TITLE),
+            (answer.description, xml_names.SVG_DESC),
+        ):
+            if value is not None:
+                self.descriptions.setdefault(node, set()).add(tag)
+        if answer.decorative is not None:
+            self.roles.add(node)
 
     def intact(self) -> bool:
         """Whether all protected facts remain identical after the operation.
@@ -219,7 +195,8 @@ class ProtectedEdit:
         if source in self.tables:
             normalize_headers(target)
         if (
-            type(self.operation) is LinkifyAddresses
+            self.operation.kind.id == "text.linkify_addresses"
+            and self.operation.answer.enabled
             and source.tag == xml_names.TEXT_A
             and source not in self.links
             and address_wrapper_scope(source)
@@ -287,7 +264,7 @@ class ProtectedEdit:
                 target.set(xml_names.TEXT_STYLE_NAME, base)
 
 
-def protect_edit(document: OdfDocument, operation: Operation) -> Callable[[], bool]:
+def protect_edit(document: OdfDocument, operation: Decision) -> Callable[[], bool]:
     """Bind the operation to independent protected XML facts before mutation.
 
     Returns
@@ -319,22 +296,16 @@ LANGUAGE_ATTRIBUTES = frozenset(
 
 
 def normalize_metadata(
-    root: etree._Element, operation: Operation, *, creating_metadata: bool
+    root: etree._Element, operation: Decision, *, creating_metadata: bool
 ) -> None:
     """Normalize supported metadata effects without masking unrelated styles."""
-    if (
-        operation.name == "set_odf_version"
-        and type(operation).__module__ == "odfa11y.remediate.version"
-    ):
+    if isinstance(operation.answer, OdfVersionAnswer):
         _version(root)
-    if (
-        operation.name != "set_metadata"
-        or type(operation).__module__ != "odfa11y.remediate.metadata"
-    ):
+    if not isinstance(operation.answer, DocumentMetadataAnswer):
         return
     if creating_metadata:
         _metadata_entry(root)
-    parameters = operation.as_dict()
+    parameters = record_dict(operation.answer)
     fields = {
         qn("dc", key)
         for key in ("title", "description", "language")

@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import cast
 
 from odfa11y.cli.parser import build_parser
-from odfa11y.concepts.edits import Status
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.contracts import JsonObject
 from odfa11y.decisions import DecisionScope
+from odfa11y.decisions.edit import Status
 from odfa11y.errors import RemedyAction
 from odfa11y.families.text.tables.classification import TableKind
 from odfa11y.glossary import TERMS

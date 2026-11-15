@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.decisions import DecisionScope
-from odfa11y.errors import DocumentRefusal
+from odfa11y.errors import PlanError
 from odfa11y.families.text.domains import HEADINGS
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.odf import names as xml_names
@@ -45,5 +45,5 @@ def test_target_resolution_refuses_a_missing_or_ambiguous_canonical_identity(
     assert parent is not None
     parent.append(deepcopy(heading))
     for path in ("content/heading[id=same]", "content/heading[99]"):
-        with pytest.raises(DocumentRefusal, match="exactly one"):
+        with pytest.raises(PlanError, match="exactly one"):
             HEADINGS.resolve(document, TargetPath(path))

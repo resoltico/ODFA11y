@@ -4,6 +4,7 @@
 import zipfile
 from dataclasses import replace
 from pathlib import Path
+from typing import Never
 
 import pytest
 from lxml import etree
@@ -11,11 +12,12 @@ from lxml import etree
 import odfa11y.odf
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.decisions.edit import Outcome
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.native import export_document
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.answers import fault_input, metadata_input
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -35,16 +37,19 @@ def test_declared_signature_is_unverified_and_all_remediation_refuses(
     assert "PKG008" in {finding.rule_id for finding in report.findings}
     assert "cryptography" in next(f.message for f in report.findings if f.rule_id == "PKG008")
 
-    def forbidden(*_args: object) -> None:
+    def forbidden(*_args: object) -> tuple[Outcome, ...]:
         pytest.fail("operation executed for signed input")
 
-    monkeypatch.setattr(SetMetadata, "apply", forbidden)
     destination = tmp_path / "output.odt"
     destination.write_bytes(b"existing")
-    for operations in ([], [SetMetadata(title="Changed")], [SetMetadata()]):
+    for operations in (
+        [],
+        [metadata_input(title="Changed")],
+        [fault_input(metadata_input(title="Changed"), forbidden)],
+    ):
         for dry_run in (False, True):
             with pytest.raises(PackageError, match="Protected"):
-                execute_operations(source, destination, operations, dry_run=dry_run)
+                apply_answers(source, destination, operations, dry_run=dry_run)
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"existing"
 
@@ -129,21 +134,24 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
         assert all(not member.flag_bits & 1 for member in archive.infolist())
     calls = []
 
-    def forbidden(*_args: object, **_kwargs: object) -> None:
+    def forbidden(*_args: object, **_kwargs: object) -> Never:
         calls.append((_args, _kwargs))
         pytest.fail("guarded operation/native invocation executed for encrypted input")
 
-    monkeypatch.setattr(SetMetadata, "apply", forbidden)
     native_tools = replace(native_tools, export=forbidden)
     report, template = prepare_plan(source)
     assert [finding.rule_id for finding in report.findings] == ["PKG009"]
     assert template is None
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing destination")
-    for operations in ([], [SetMetadata(title="Changed")], [SetMetadata()]):
+    for operations in (
+        [],
+        [metadata_input(title="Changed")],
+        [fault_input(metadata_input(title="Changed"), forbidden)],
+    ):
         for dry_run in (False, True):
             with pytest.raises(PackageError, match="Protected"):
-                execute_operations(source, destination, operations, dry_run=dry_run)
+                apply_answers(source, destination, operations, dry_run=dry_run)
     with pytest.raises(PackageError, match="encrypted"):
         export_document(source, tmp_path / "out.pdf", native_tools=native_tools)
     assert calls == []
@@ -160,7 +168,7 @@ def test_malformed_manifest_is_not_protection_absence(tmp_path: Path) -> None:
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == ["XML001"]
     with pytest.raises(PackageError, match="malformed"):
-        execute_operations(source, tmp_path / "out.odt", [])
+        apply_answers(source, tmp_path / "out.odt", [])
 
 
 def test_unsigned_fixture_remains_supported(tmp_path: Path) -> None:
@@ -169,7 +177,7 @@ def test_unsigned_fixture_remains_supported(tmp_path: Path) -> None:
     assert not facts.signatures
     assert not facts.encrypted
     assert facts.malformed_manifest is None
-    assert execute_operations(source, tmp_path / "out.odt", [SetMetadata(title="Reviewed")]).changed
+    assert apply_answers(source, tmp_path / "out.odt", [metadata_input(title="Reviewed")]).changed
 
 
 def test_well_formed_non_manifest_root_is_not_protection_absence(tmp_path: Path) -> None:
@@ -180,4 +188,4 @@ def test_well_formed_non_manifest_root_is_not_protection_absence(tmp_path: Path)
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == ["XML001"]
     with pytest.raises(PackageError, match="malformed"):
-        execute_operations(source, tmp_path / "out.odt", [])
+        apply_answers(source, tmp_path / "out.odt", [])

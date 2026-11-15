@@ -5,7 +5,7 @@ import shlex
 lazy import argparse
 lazy from collections.abc import Iterable
 
-from odfa11y import OdfA11yError, RemedyAction, plan_blockers, terminal_text
+from odfa11y import OdfA11yError, Remedy, RemedyAction, plan_blockers, terminal_text
 lazy from odfa11y import Report
 
 
@@ -20,14 +20,20 @@ def error_hint(args: argparse.Namespace, exc: Exception) -> str | None:
     """
     if not isinstance(exc, OdfA11yError) or exc.remedy is None:
         return None
-    remedy = exc.remedy
+    return remedy_hint(exc.remedy)
+
+
+def remedy_hint(remedy: Remedy) -> str | None:
+    """Render the producer-owned next action for an error or refused edit."""
     target = terminal_text(remedy.target or "the document")
     detail = terminal_text(remedy.detail or "the declared resource")
     match remedy.action:
         case RemedyAction.REGENERATE_PLAN:
             return "Next: generate a fresh plan for this source and review its answers."
         case RemedyAction.REBIND_PLAN:
-            return "Next: create a newly bound plan and review answers that no longer match."
+            return (
+                "Next: use plan NEW_SOURCE --from OLD_PLAN and review answers that no longer match."
+            )
         case RemedyAction.CHOOSE_OUTPUT:
             return (
                 "Next: choose a new output destination; preserve existing documents and evidence."

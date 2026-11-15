@@ -14,13 +14,7 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
     """Report missing or empty title and language, with the family's default language."""
     meta = document.tree(Part.META) if document.has(Part.META) else None
     title = meta.findtext("office:meta/dc:title", namespaces=NS) if meta is not None else None
-    if not title or not title.strip():
-        report.raise_(
-            rules.META001,
-            "Document title metadata is missing.",
-            location=Location("meta/title"),
-        )
-    else:
+    if title and title.strip():
         report.facts[FactKeys.DOCUMENT_TITLE] = title.strip()
 
     description = (
@@ -31,6 +25,10 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
 
     language = meta.findtext("office:meta/dc:language", namespaces=NS) if meta is not None else None
     _audit_language(document, adapter, report, language)
+    if not title or not title.strip():
+        report.raise_(
+            rules.META001, "Document title metadata is missing.", location=Location("meta/title")
+        )
 
 
 def _audit_language(

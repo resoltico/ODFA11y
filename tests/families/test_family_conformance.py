@@ -110,19 +110,20 @@ def test_preview_and_publication_return_all_outcomes(
         )
     plan = Plan.for_source(source, decisions)
     destination = tmp_path / "out.odt"
+    if failing_target:
+        with pytest.raises(PlanError, match="exactly one"):
+            remediate(source, destination, plan, dry_run=dry_run)
+        assert source.read_bytes() == before
+        assert not destination.exists()
+        return
     result = remediate(source, destination, plan, dry_run=dry_run)
-    assert result.published is (not dry_run and not failing_target)
-    assert result.exit_status == (2 if failing_target else 0)
+    assert result.published is not dry_run
+    assert result.exit_status == 0
     assert destination.exists() is result.published
     assert source.read_bytes() == before
-    assert len(result.outcomes) == (2 if failing_target else 1)
+    assert len(result.outcomes) == 1
     assert result.outcomes[0].status == "applied"
-    if failing_target:
-        assert result.outcomes[1].status == "failed"
-        assert result.violations[0].kind == "failed-outcome"
-        assert result.violations[0].target == "content/frame[name=Missing]"
-    else:
-        assert not result.violations
+    assert not result.violations
     result.as_dict()
 
 

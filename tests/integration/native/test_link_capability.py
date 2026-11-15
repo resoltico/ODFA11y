@@ -9,9 +9,8 @@ import pytest
 
 from odfa11y.application.tools import Tools
 from odfa11y.cli import main
-from odfa11y.concepts import LinkDescription, document_links, link_fingerprint
+from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.evidence import check_bundle
-from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.families.text.probes import LINK_PURPOSE, write_link_probe
 from odfa11y.native.export import ExportSettings, export_pdfua, identify_soffice
 from odfa11y.native.probes import ProbeId
@@ -21,6 +20,7 @@ from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from tests.application.test_link_capability import LINK_BODY, WRITER
+from tests.fixtures.answers import link_answer, link_inputs
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
@@ -68,8 +68,8 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
         reviewed_plan(
             linked,
             [
-                SetLinkDescriptions({
-                    "content/link[1]": LinkDescription(
+                link_inputs({
+                    "content/link[1]": link_answer(
                         LINK_PURPOSE, link_fingerprint(document, document_links(document)[0])
                     )
                 })

@@ -11,10 +11,10 @@ from pypdf import PdfReader
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.answers import metadata_input
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 
 
@@ -33,7 +33,7 @@ def test_writer_revision_visibility_and_reading_order_scope(
     assert facts["declarations"] == facts["markers"] == (1 if case == "negative" else 0)
     edited = tmp_path / "reviewed.odt"
     before = etree.tostring(OdfDocument.open(source).tree(Part.CONTENT))
-    result = execute_operations(source, edited, [SetMetadata(title="Reviewed visibility")])
+    result = apply_answers(source, edited, [metadata_input(title="Reviewed visibility")])
     assert result.published, result.as_dict()
     assert etree.tostring(OdfDocument.open(edited).tree(Part.CONTENT)) == before
     output = tmp_path / "visibility.pdf"

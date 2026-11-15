@@ -20,7 +20,7 @@ from odfa11y import (
 
 from .audit import audit_command, command_gate
 from .batch import batch_command
-from .guidance import error_hint
+from .guidance import error_hint, remedy_hint
 from .parser import build_parser
 from .pipeline import pipeline_command
 from .progress import progress_callback
@@ -116,14 +116,21 @@ def _remediate(args: argparse.Namespace) -> int:
     for outcome in result.outcomes:
         key = f" [{terminal_text(outcome.target)}]" if outcome.target else ""
         print(  # noqa: T201  CLI output is the command interface.
-            f"- {outcome.status.value:9} {terminal_text(outcome.operation)}{key}: "
+            f"- {outcome.status.value:9} {terminal_text(outcome.kind_id)}{key}: "
             f"{terminal_text(outcome.message)}"
         )
     _predictions(result)
+    for outcome in result.outcomes:
+        if (
+            outcome.failure is not None
+            and outcome.failure.remedy is not None
+            and (hint := remedy_hint(outcome.failure.remedy))
+        ):
+            sys.stdout.write(hint + "\n")
     for violation in result.violations:
         print(f"- {violation.kind}: {terminal_text(violation.message)}")  # noqa: T201  CLI output is the command interface.
     if not result.outcomes:
-        print("- No operations were configured. Enable reviewed decisions in your TOML plan.")  # noqa: T201  CLI output is the command interface.
+        print("- No decisions were answered. Supply reviewed answers in your TOML plan.")  # noqa: T201  CLI output is the command interface.
     print(  # noqa: T201  CLI output is the command interface.
         f"Schema: {terminal_text(result.schema.status)}; ODF {result.schema.version}; "
         f"{result.schema.before_count} before, {result.schema.after_count} after, "

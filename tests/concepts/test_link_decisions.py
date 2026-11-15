@@ -1,33 +1,29 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed graphic roles and normative link descriptions protect their source boundary."""
 
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.concepts import (
-    GraphicAlternative,
-    LinkDescription,
-    PageDecision,
-    graphics_fingerprint,
-    page_fingerprint,
-    pages,
-)
-from odfa11y.concepts.edits import Status
+from odfa11y.concepts import graphics_fingerprint, page_fingerprint, pages
 from odfa11y.concepts.links import link_fingerprint, link_location
+from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
-from odfa11y.families import image, spreadsheet, text
-from odfa11y.families import pages as page_family
-from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate.compile import compile_operations
 from tests.concepts.test_graphic_roles_links import _graphic
+from tests.fixtures.answers import (
+    graphic_answer,
+    link_answer,
+    link_inputs,
+    page_answer,
+)
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.graphics import _style
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import plan_header
+lazy from tests.fixtures.answers import apply_in_memory, graphic_inputs, page_inputs
 
 
 @pytest.mark.parametrize("family", ["presentation", "drawing"])
@@ -48,7 +44,6 @@ def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
     target = select_elements(document.tree(Part.CONTENT), "//draw:rect[@draw:name='Decoration']")[0]
     target.set(qn("draw", "style-name"), "Visual")
     document.save(source)
-    adapter = page_family
     page = pages(document)[0]
     link = select_elements(document.tree(Part.CONTENT), "//draw:a")[0]
     shape = select_elements(document.tree(Part.CONTENT), "//draw:rect[@draw:name='Diagram']")[0]
@@ -56,30 +51,30 @@ def test_page_graphic_and_legal_link_metadata_compose_and_reapply(
         document.tree(Part.CONTENT), "//draw:rect[@draw:name='Decoration']"
     )[0]
     operations = [
-        adapter.SetPageSemantics({
-            "Overview": PageDecision(title="Overview", fingerprint=page_fingerprint(page, document))
+        page_inputs({
+            "Overview": page_answer(title="Overview", fingerprint=page_fingerprint(page, document))
         }),
-        adapter.SetGraphicAlternatives({
-            "Diagram": GraphicAlternative(
+        graphic_inputs({
+            "Diagram": graphic_answer(
                 description="A contextual diagram",
                 fingerprint=graphics_fingerprint(document, [shape]),
             ),
-            "Decoration": GraphicAlternative(
+            "Decoration": graphic_answer(
                 decorative=True, fingerprint=graphics_fingerprint(document, [decoration])
             ),
         }),
-        adapter.SetLinkDescriptions({
-            link_location(link, 1).path: LinkDescription(
+        link_inputs({
+            link_location(link, 1).path: link_answer(
                 "Read the guide", link_fingerprint(document, link)
             )
         }),
     ]
     output = tmp_path / ("0123456789abcdef" + source.suffix)
 
-    first = execute_operations(source, output, operations)
+    first = apply_answers(source, output, operations)
     assert first.changed
     assert validate(OdfDocument.open(output)).count == 0
-    repeated = execute_operations(output, tmp_path / "repeated.fodg", operations)
+    repeated = apply_answers(output, tmp_path / "repeated.fodg", operations)
     assert not repeated.changed
 
 
@@ -96,14 +91,14 @@ def test_link_identity_encoding_context_and_repeat_refusal(tmp_path: Path) -> No
         },
     )
     assert link_location(link, 1).path == "content/link[id=caf%C3%A9]"
-    description = LinkDescription("Read the guide", link_fingerprint(document, link))
-    operation = SetLinkDescriptions({link_location(link, 1).path: description})
+    description = link_answer("Read the guide", link_fingerprint(document, link))
+    operation = link_inputs({link_location(link, 1).path: description})
     duplicate = etree.SubElement(
         parent, qn("draw", "rect"), {"{http://www.w3.org/XML/1998/namespace}id": "café"}
     )
-    assert operation.apply(document)[0].status == Status.FAILED
+    assert apply_in_memory(document, operation)[0].status == Status.FAILED
     parent.remove(duplicate)
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
 
 
 @pytest.mark.parametrize("family", ["text", "spreadsheet", "presentation", "drawing"])
@@ -118,19 +113,11 @@ def test_family_link_configuration_requires_review_and_reaches_operations(
         'description = "Read the guide"\nfingerprint = "0123456789abcdef"\n',
         encoding="utf-8",
     )
-    [operation] = compile_operations(OdfDocument.open(source), load_plan(config))
-    assert isinstance(
-        operation,
-        (
-            text.SetLinkDescriptions,
-            spreadsheet.SetLinkDescriptions,
-            page_family.SetLinkDescriptions,
-        ),
-    )
-    assert operation.name == "set_link_descriptions"
-    assert operation.entries["content/link[1]"] == LinkDescription(
-        "Read the guide", "0123456789abcdef"
-    )
+    (operation,) = load_plan(config).decisions
+    assert operation.kind.id == "link.description"
+    assert operation.target is not None
+    assert operation.target.path == "content/link[1]"
+    assert operation.answer.description == "Read the guide"
     for invalid in (
         'description = ""\nfingerprint = "0123456789abcdef"',
         'description = "Read the guide"',
@@ -159,18 +146,9 @@ def test_family_role_configuration_uses_exact_booleans(tmp_path: Path, family: s
         ),
         encoding="utf-8",
     )
-    [operation] = compile_operations(OdfDocument.open(source), load_plan(config))
-    assert isinstance(
-        operation,
-        (
-            text.SetGraphicAlternatives,
-            spreadsheet.SetGraphicAlternatives,
-            page_family.SetGraphicAlternatives,
-            image.SetGraphicAlternatives,
-        ),
-    )
-    assert operation.name == "set_graphic_alternatives"
-    assert operation.entries["content/frame[name=Picture]"].decorative is True
+    (operation,) = load_plan(config).decisions
+    assert operation.kind.id == "graphic.alternative"
+    assert operation.answer.decorative is True
     for invalid in ("1", '"true"', "[true]"):
         config.write_text(
             header
@@ -213,37 +191,33 @@ def test_unstyled_restoration_refuses_and_styled_role_composes_under_decorative_
     )
     link.append(frame)
     reviewed = link_fingerprint(document, link)
-    graphics = text.SetGraphicAlternatives({
-        "Logo": GraphicAlternative(
+    graphics = graphic_inputs({
+        "Logo": graphic_answer(
             decorative=False,
             description="A meaningful logo",
             fingerprint=graphics_fingerprint(document, [frame]),
         )
     })
-    links = text.SetLinkDescriptions({
-        link_location(link, 1).path: LinkDescription("Read the guide", reviewed)
-    })
+    links = link_inputs({link_location(link, 1).path: link_answer("Read the guide", reviewed)})
     checkpoint = document.checkpoint()
-    assert graphics.apply(document)[0].status == Status.FAILED
+    assert apply_in_memory(document, graphics)[0].status == Status.FAILED
     assert not document.changed_since(checkpoint)
     _style(document, "Visual")
     frame.set(qn("draw", "style-name"), "Visual")
     reviewed = link_fingerprint(document, link)
-    graphics = text.SetGraphicAlternatives({
-        "Logo": GraphicAlternative(
+    graphics = graphic_inputs({
+        "Logo": graphic_answer(
             decorative=False,
             description="A meaningful logo",
             fingerprint=graphics_fingerprint(document, [frame]),
         )
     })
-    links = text.SetLinkDescriptions({
-        link_location(link, 1).path: LinkDescription("Read the guide", reviewed)
-    })
-    assert graphics.apply(document)[0].status == Status.APPLIED
+    links = link_inputs({link_location(link, 1).path: link_answer("Read the guide", reviewed)})
+    assert apply_in_memory(document, graphics)[0].status == Status.APPLIED
     assert link_fingerprint(document, link) == reviewed
-    assert links.apply(document)[0].status == Status.APPLIED
-    assert graphics.apply(document)[0].status == Status.UNCHANGED
-    assert links.apply(document)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, links)[0].status == Status.APPLIED
+    assert apply_in_memory(document, graphics)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, links)[0].status == Status.UNCHANGED
     assert validate(document).count == 0
 
 
@@ -254,10 +228,9 @@ def test_graphic_payload_drift_invalidates_link_review(tmp_path: Path) -> None:
     parent.remove(frame)
     link = etree.SubElement(parent, qn("draw", "a"), {qn("xlink", "href"): "https://example.test/"})
     link.append(frame)
-    operation = SetLinkDescriptions({
-        link_location(link, 1).path: LinkDescription(
-            "Read the guide", link_fingerprint(document, link)
-        )
+    operation = link_inputs({
+        link_location(link, 1).path: link_answer("Read the guide", link_fingerprint(document, link))
     })
     document.storage.write_member("Pictures/logo.svg", b"changed payload")
-    assert operation.apply(document)[0].status == Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, operation)

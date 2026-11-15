@@ -12,7 +12,7 @@ from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
 from tests.families.formula.test_formula_semantics import SOURCE, _plan
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
 
 
@@ -22,7 +22,7 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
     described = tmp_path / "described.odf"
-    execute_operations(SOURCE, described, _plan())
+    apply_answers(SOURCE, described, _plan())
     pdf = export_pdfua(
         described, tmp_path / "formula.pdf", ExportSettings("math_pdf_Export", soffice)
     )

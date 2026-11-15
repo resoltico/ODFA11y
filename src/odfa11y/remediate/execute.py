@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Execute reviewed operations and return every outcome and publication guard violation."""
+"""Execute reviewed decisions and return every outcome and publication guard violation."""
 
 import tempfile
 from dataclasses import dataclass, field
@@ -7,16 +7,18 @@ from pathlib import Path
 lazy from collections.abc import Sequence
 
 from odfa11y.audit.engine import audit_document
-from odfa11y.capture import capture_source
+from odfa11y.capture import capture_source, source_digest
 from odfa11y.concepts import opaque_payloads
-from odfa11y.concepts.edits import Outcome, Status
 from odfa11y.decisions import Decision
-from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Use, regressions, validate
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.plans import Plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.records import SchemaCheck
-from odfa11y.remediate.compile import compile_operations
+from odfa11y.remediate.compile import compile_decisions
+from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.remediate.result import (
     DecisionPrediction,
     RemediationResult,
@@ -26,17 +28,15 @@ from odfa11y.remediate.result import (
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import Finding, Report
 from odfa11y.status import StageStatus
-lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.concepts.preservation import PreservationSnapshot
 lazy from odfa11y.families.spec import FamilyAdapter
 lazy from odfa11y.odf import SchemaResult
-lazy from odfa11y.plans import Plan
 
 
 def remediate(
     source: str | Path,
     destination: str | Path,
-    plan: Plan,
+    plan: Plan | str | Path,
     *,
     dry_run: bool = False,
 ) -> RemediationResult:
@@ -56,9 +56,11 @@ def remediate(
         capture_source(source, directory=Path(directory)) as captured,
     ):
         document = _document(captured, destination)
-        plan.verify_source(captured)
-        operations = compile_operations(document, plan)
-        return _execute(document, source, destination, operations, dry_run=dry_run, plan=plan)
+        digest = source_digest(captured)
+        if not isinstance(plan, Plan):
+            plan = load_plan(plan, document=document, source_sha256=digest)
+        decisions = compile_decisions(document, plan, source_sha256=digest)
+        return _execute(document, source, destination, decisions, dry_run=dry_run, plan=plan)
 
 
 def _document(source: Path, destination: Path) -> OdfDocument:
@@ -83,7 +85,7 @@ def _execute(
     document: OdfDocument,
     source: Path,
     destination: Path,
-    operations: Sequence[Operation],
+    decisions: Sequence[Decision],
     *,
     dry_run: bool,
     plan: Plan | None = None,
@@ -94,7 +96,7 @@ def _execute(
     schema_before = validate(document)
     audit_before = audit_document(document, subject=source.name)
     unanswered = _unanswered(document, plan) if plan else ()
-    state = _run_operations(document, adapter, operations)
+    state = _run_decisions(document, adapter, decisions)
     schema = _postconditions(document, adapter, before, opaque_before, schema_before, state=state)
     candidate = audit_document(document, subject=source.name)
     predictions = (
@@ -113,7 +115,7 @@ def _execute(
         published=published,
         violations=tuple(state.violations),
         dry_run=dry_run,
-        operations=tuple(operation.as_dict() for operation in operations),
+        decisions=tuple(decisions),
         predictions=predictions,
         candidate=candidate,
         unanswered=unanswered,
@@ -122,12 +124,12 @@ def _execute(
 
 def _unanswered(document: OdfDocument, plan: Plan) -> tuple[UnansweredReview, ...]:
     reviews = []
-    kinds = registered_kinds()
+    applicable = (*COMMON_KINDS, *adapter_for(document.kind).kinds)
     for question in plan.unanswered:
-        kind = kinds.get(question.kind_id)
+        kind = question.kind
         reason = None
-        if kind is None:
-            reason = "The decision kind is unavailable."
+        if kind not in applicable:
+            reason = "The decision kind is unavailable for this source family."
         elif question.path is not None and kind.domain is not None:
             try:
                 current = kind.domain.binding(document, question.path)
@@ -135,7 +137,7 @@ def _unanswered(document: OdfDocument, plan: Plan) -> tuple[UnansweredReview, ..
                     reason = (
                         "The target fingerprint changed since this unanswered block was generated."
                     )
-            except DocumentRefusal as error:
+            except (PlanError, DocumentRefusal) as error:
                 reason = error.message
         reviews.append(
             UnansweredReview(question.kind_id, question.path, reason is not None, reason)
@@ -162,45 +164,47 @@ def _predict(decision: Decision, before: Report, after: Report) -> DecisionPredi
     )
 
 
-def _run_operations(
-    document: OdfDocument, adapter: FamilyAdapter, operations: Sequence[Operation]
+def _run_decisions(
+    document: OdfDocument, adapter: FamilyAdapter, decisions: Sequence[Decision]
 ) -> _Execution:
     state = _Execution()
     try:
-        _require_matching_family(document, adapter, operations)
-        adapter.preflight(document, operations)
+        adapter.preflight(document, decisions)
     except DocumentRefusal as exc:
         state.violations.append(Violation(ViolationKind.FOREIGN_OPERATION, str(exc)))
         state.outcomes.extend(
-            Outcome(operation.name, Status.FAILED, str(exc)) for operation in operations
+            Outcome(decision.kind.id, Status.FAILED, exc.message, failure=exc.as_record())
+            for decision in decisions
         )
         return state
-    for index, operation in enumerate(operations):
-        _run_operation(document, adapter, operation, state)
+    for index, decision in enumerate(decisions):
+        _run_decision(document, adapter, decision, state)
         if not state.usable:
             state.outcomes.extend(
                 Outcome(
-                    remaining.name, Status.FAILED, "Not run after document-model integrity failure"
+                    remaining.kind.id,
+                    Status.FAILED,
+                    "Not run after document-model integrity failure",
                 )
-                for remaining in operations[index + 1 :]
+                for remaining in decisions[index + 1 :]
             )
             break
     return state
 
 
-def _run_operation(
-    document: OdfDocument, adapter: FamilyAdapter, operation: Operation, state: _Execution
+def _run_decision(
+    document: OdfDocument, adapter: FamilyAdapter, decision: Decision, state: _Execution
 ) -> None:
     before = document.checkpoint()
     protected = None
     try:
-        protected = adapter.protect_edit(document, operation)
-        produced = operation.apply(document)
+        protected = adapter.protect_edit(document, decision)
+        produced = decision.kind.edit(document, decision)
     except DocumentRefusal as exc:
-        produced = (Outcome(operation.name, Status.FAILED, str(exc)),)
+        produced = (Outcome(decision.kind.id, Status.FAILED, exc.message, failure=exc.as_record()),)
     state.outcomes.extend(produced)
     state.violations.extend(
-        Violation(ViolationKind.FAILED_OUTCOME, outcome.message, outcome.operation, outcome.target)
+        Violation(ViolationKind.FAILED_OUTCOME, outcome.message, outcome.kind_id, outcome.target)
         for outcome in produced
         if outcome.status == Status.FAILED
     )
@@ -208,18 +212,18 @@ def _run_operation(
         changed = document.changed_since(before)
     except PackageError as exc:
         state.violations.append(
-            Violation(ViolationKind.PROTECTED_CONTENT, str(exc), operation.name)
+            Violation(ViolationKind.PROTECTED_CONTENT, str(exc), decision.kind.id)
         )
         state.usable = False
         return
-    if problem := _check_edit_accounting(operation, produced, changed):
-        state.violations.append(Violation(ViolationKind.EDIT_ACCOUNTING, problem, operation.name))
+    if problem := _check_edit_accounting(decision, produced, changed):
+        state.violations.append(Violation(ViolationKind.EDIT_ACCOUNTING, problem, decision.kind.id))
     if protected is not None and not protected():
         state.violations.append(
             Violation(
                 ViolationKind.PROTECTED_CONTENT,
                 "Protected document content changed during remediation",
-                operation.name,
+                decision.kind.id,
             )
         )
 
@@ -300,23 +304,6 @@ def _schema_check(
     return check, Violation(ViolationKind.SCHEMA_REGRESSION, reason + ": " + messages)
 
 
-def _require_matching_family(
-    document: OdfDocument, adapter: FamilyAdapter, operations: Sequence[Operation]
-) -> None:
-    kind = document.kind.name if document.kind is not None else "unrecognised"
-    wrong = sorted({
-        op.name
-        for op in operations
-        if op.families is not None and adapter.family not in op.families
-    })
-    if wrong:
-        msg = (
-            f"The plan configures {', '.join(wrong)}, which do not apply to a {kind} document "
-            f"(handled by the {adapter.name} adapter); nothing was written."
-        )
-        raise DocumentRefusal(msg)
-
-
 def _require_consistent_kind(document: OdfDocument, source: Path) -> None:
     detection = document.detection
     kind = detection.kind
@@ -343,12 +330,12 @@ def _require_distinct(source: Path, destination: Path) -> None:
 
 
 def _check_edit_accounting(
-    operation: Operation, outcomes: Sequence[Outcome], changed: frozenset[str]
+    decision: Decision, outcomes: Sequence[Outcome], changed: frozenset[str]
 ) -> str | None:
     applied = any(o.status is Status.APPLIED for o in outcomes)
     if applied != bool(changed) and not any(o.status is Status.FAILED for o in outcomes):
         return (
-            f"Internal error: operation {operation.name!r} reported "
+            f"Internal error: decision {decision.kind.id!r} reported "
             f"{'a change' if applied else 'no change'} but changed {len(changed)} XML member(s)."
         )
 

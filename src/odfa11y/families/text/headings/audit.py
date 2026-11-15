@@ -14,9 +14,9 @@ from odfa11y.concepts import (
 )
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.decisions import OpenDecision
+from odfa11y.families.text.answers import MAX_HEADING_LEVEL
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.headings.edit import (
-    MAX_HEADING_LEVEL,
     heading_fingerprint,
     heading_location,
 )
@@ -55,7 +55,6 @@ def audit_headings(
             HEADING_LEVEL,
             Target((location).path, Fingerprint(heading_fingerprint(heading, document))),
             {"level": raw},
-            (rules.HEADING002.id,),
         )
         if not 1 <= level <= MAX_HEADING_LEVEL:
             report.raise_(
@@ -70,7 +69,6 @@ def audit_headings(
                         Fingerprint(require_target(decision.target).fingerprint),
                     ),
                     decision.current,
-                    (rules.HEADING001.id,),
                 ),
             )
             continue
@@ -142,7 +140,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
                     "frame": declared_name,
                     "href": href,
                 },
-                decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE, rules.GRAPHIC003.id),
+                decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE),
             )
 
 

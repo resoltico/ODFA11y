@@ -6,20 +6,20 @@ lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 from odfa11y.application.tools import Tools
-from odfa11y.concepts import GraphicAlternative
 from odfa11y.evidence import check_bundle
-from odfa11y.families.text import (
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    SetGraphicAlternatives,
-    TableHeaders,
-)
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.answers import (
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+)
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 from tests.run.test_pipeline import _document_with_spacers, statuses
@@ -35,9 +35,9 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
         features={"with_data_table": True, "with_image_without_alt": True},
     )
     operations = [
-        SetMetadata(title="Evidence run", language="en-GB"),
-        MarkTableHeaders({"Data": TableHeaders(1)}),
-        SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "A sample logo")}),
+        metadata_input(title="Evidence run", language="en-GB"),
+        header_inputs({"Data": header_answer(1)}),
+        graphic_inputs({"Logo": graphic_answer("Logo", "A sample logo")}),
     ]
     options = RunSettings(
         tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
@@ -79,7 +79,7 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
     options = RunSettings(tools=Tools(soffice=soffice))
     failed = execute(
         source,
-        reviewed_plan(source, [RemoveEmptySpacers()], Pagination.SAME()),
+        reviewed_plan(source, [spacer_input()], Pagination.SAME()),
         tmp_path / "strict",
         options,
     )
@@ -89,7 +89,7 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
     allowed = Pagination.MAY_CHANGE
     passed = execute(
         source,
-        reviewed_plan(source, [RemoveEmptySpacers()], allowed),
+        reviewed_plan(source, [spacer_input()], allowed),
         tmp_path / "relaxed",
         options,
     )
@@ -105,7 +105,7 @@ def test_repeated_runs_have_equal_logical_results_and_identical_documents(
     runs = [
         execute(
             source,
-            reviewed_plan(source, [SetMetadata(title="Same")], Pagination.SAME()),
+            reviewed_plan(source, [metadata_input(title="Same")], Pagination.SAME()),
             tmp_path / f"r{i}",
             options,
         )

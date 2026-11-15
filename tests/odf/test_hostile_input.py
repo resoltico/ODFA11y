@@ -12,23 +12,25 @@ import pytest
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Status
-from odfa11y.errors import PackageError, ToolFailure
-from odfa11y.families.text import (
-    LinkifyAddresses,
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    TableHeaders,
-)
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PackageError, PlanError, ToolFailure
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.pdf.fidelity import compare as compare_module
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.status import StageStatus
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import (
+    address_input,
+    apply_in_memory,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+    version_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
@@ -65,7 +67,7 @@ def test_malformed_optional_members_do_not_abort_the_audit_or_remediation(tmp_pa
     package.save(broken)
     report = audit_odf(broken, schema=True)
     assert "XML001" in {f.rule_id for f in report.findings}
-    result = execute_operations(broken, tmp_path / "out.odt", [SetMetadata(title="Still works")])
+    result = apply_answers(broken, tmp_path / "out.odt", [metadata_input(title="Still works")])
     assert result.changed
 
 
@@ -106,7 +108,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
         "qa@example.test",
     ]
     document = OdfDocument.open(source)
-    (outcome,) = LinkifyAddresses().apply(document)
+    (outcome,) = apply_in_memory(document, address_input())
     assert (outcome.status, outcome.count) == (Status.APPLIED, 2)
     content = document.tree(Part.CONTENT)
     assert not select_elements(
@@ -118,7 +120,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
         "qa@example.test",
     ]
     assert audit_odf(source).findings  # the original is untouched
-    assert LinkifyAddresses().apply(document)[0].status is Status.UNCHANGED
+    assert apply_in_memory(document, address_input())[0].status is Status.UNCHANGED
 
 
 @pytest.mark.parametrize(
@@ -139,7 +141,7 @@ def test_paragraphs_with_markers_or_fields_are_never_removed_as_spacers(
     body = b'<text:p text:style-name="Body">' + marker + b"</text:p>"
     document = OdfDocument.open(with_body(tmp_path, body))
     paragraph = select_elements(document.tree(Part.CONTENT), "//text:p")[0]
-    RemoveEmptySpacers().apply(document)
+    apply_in_memory(document, spacer_input())
     assert paragraph in document.tree(Part.CONTENT).iter()
 
 
@@ -149,7 +151,7 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
     )
     source = with_body(tmp_path, listed)
     finding = next(f for f in audit_odf(source).findings if f.rule_id == "LAYOUT001")
-    (outcome,) = RemoveEmptySpacers().apply(OdfDocument.open(source))
+    (outcome,) = apply_in_memory(OdfDocument.open(source), spacer_input())
     assert finding.details["count"] == outcome.count == 1  # the list item's paragraph is neither
 
 
@@ -159,7 +161,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     valid = make_minimal_odt(
         tmp_path / "v12.odt", version="1.2", features={"with_data_table": True}
     )
-    result = execute_operations(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
+    result = apply_answers(valid, tmp_path / "out.odt", [version_input("1.4")])
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.version == "1.4"
     package = PackageStorage(valid)
@@ -169,7 +171,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     invalid = tmp_path / "invalid.odt"
     package.save(invalid)
     assert_refused(
-        execute_operations(invalid, tmp_path / "never.odt", [SetOdfVersion("1.4")]),
+        apply_answers(invalid, tmp_path / "never.odt", [version_input("1.4")]),
         match="must validate",
     )
     assert not (tmp_path / "never.odt").exists()
@@ -186,9 +188,11 @@ def test_duplicate_table_names_are_ambiguous_and_fail(tmp_path: Path) -> None:
     package.write_member("content.xml", content[:end] + content[start:end] + content[end:])
     twin = tmp_path / "twin.odt"
     package.save(twin)
-    (outcome,) = MarkTableHeaders({"Data": TableHeaders(1)}).apply(OdfDocument.open(twin))
-    assert outcome.status is Status.FAILED
-    assert "must resolve to exactly one table" in outcome.message
+    document = OdfDocument.open(twin)
+    checkpoint = document.checkpoint()
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(document, header_inputs({"Data": header_answer(1)}))
+    assert not document.changed_since(checkpoint)
 
 
 @POSIX_ONLY
@@ -235,7 +239,7 @@ def test_published_outputs_honour_the_umask_instead_of_being_owner_only(tmp_path
             RunSettings(tools=Tools(soffice="missing")),
         )
         remediated = tmp_path / "remediated.odt"
-        execute_operations(source, remediated, [SetMetadata(title="Modes")])
+        apply_answers(source, remediated, [metadata_input(title="Modes")])
     finally:
         os.umask(previous)
     assert record.failed_stage == "export-source"

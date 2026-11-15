@@ -3,7 +3,6 @@
 
 from odfa11y.concepts.graphic_identity import (
     GraphicIdentity,
-    graphic_keys,
     graphic_selector,
     graphics_fingerprint,
 )
@@ -13,11 +12,9 @@ from odfa11y.concepts.graphic_styles import (
     normalized_graphic_tree,
     normalized_role_attributes,
 )
-from odfa11y.concepts.graphics import GraphicAlternative, GraphicEditor, set_description
+from odfa11y.concepts.graphics import set_description
 from odfa11y.concepts.language import CHANNEL_ATTRIBUTES, set_style_language, style_language
 from odfa11y.concepts.links import (
-    LinkDescription,
-    LinkEditor,
     document_links,
     link_decision,
     link_fingerprint,
@@ -27,8 +24,6 @@ from odfa11y.concepts.links import (
 from odfa11y.concepts.locations import page_location, sheet_location
 from odfa11y.concepts.pages import (
     SHAPE_TAGS,
-    PageDecision,
-    PageEditor,
     navigation_problem,
     page_fingerprint,
     page_shapes,
@@ -54,13 +49,7 @@ __all__ = [
     "AXES",
     "CHANNEL_ATTRIBUTES",
     "SHAPE_TAGS",
-    "GraphicAlternative",
-    "GraphicEditor",
     "GraphicIdentity",
-    "LinkDescription",
-    "LinkEditor",
-    "PageDecision",
-    "PageEditor",
     "audit_graphic_role",
     "axis_count",
     "cell_at",
@@ -68,7 +57,6 @@ __all__ = [
     "document_links",
     "effective_graphic_role",
     "eligible_text_node",
-    "graphic_keys",
     "graphic_selector",
     "graphics_fingerprint",
     "header_count",

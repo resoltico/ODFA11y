@@ -5,11 +5,11 @@ from dataclasses import dataclass, field
 from typing import Literal
 lazy from pathlib import Path
 
-from odfa11y.concepts.edits import Status
 from odfa11y.contracts import JsonProperty, record_dict
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.status import ExitStatus
-lazy from odfa11y.concepts.edits import Outcome
 lazy from odfa11y.contracts import JsonObject
+lazy from odfa11y.decisions import Decision
 lazy from odfa11y.records import SchemaCheck
 lazy from odfa11y.remediate.violations import ViolationKind
 lazy from odfa11y.report import Finding, Report
@@ -22,7 +22,7 @@ class Violation:
 
     kind: ViolationKind
     message: str
-    operation: str | None = None
+    kind_id: str | None = None
     target: str | None = None
 
 
@@ -58,7 +58,7 @@ class RemediationResult:
     published: bool = False
     violations: tuple[Violation, ...] = ()
     dry_run: bool = False
-    operations: tuple[JsonObject, ...] = field(default_factory=tuple)
+    decisions: tuple[Decision, ...] = ()
     predictions: tuple[DecisionPrediction, ...] = ()
     candidate: Report | None = None
     unanswered: tuple[UnansweredReview, ...] = ()

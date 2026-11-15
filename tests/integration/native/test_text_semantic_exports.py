@@ -6,19 +6,25 @@ lazy from pathlib import Path
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.families.text import HeadingLevel, MarkTableHeaders, SetHeadingLevels, TableHeaders
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.answers import (
+    RawFields,
+    header_answer,
+    header_inputs,
+    heading_inputs,
+    level_answer,
+    metadata_input,
+)
 from tests.fixtures.corpus import CORPUS
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
@@ -31,8 +37,8 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     verapdf = external_tool("verapdf")
     source = CORPUS / "headings-skipped.odt"
     headings = select_elements(OdfDocument.open(source).tree(Part.CONTENT), "//text:h")
-    decisions: dict[str, HeadingLevel] = {
-        heading_location(heading, index).path: HeadingLevel(index, heading_fingerprint(heading))
+    decisions: dict[str, RawFields] = {
+        heading_location(heading, index).path: level_answer(index, heading_fingerprint(heading))
         for index, heading in enumerate(headings, 1)
     }
     baseline = export_pdfua(
@@ -40,7 +46,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     )
     assert "PDF012" in {f.rule_id for f in audit_pdfua(baseline).findings}
     edited = tmp_path / "headings.odt"
-    execute_operations(source, edited, [SetHeadingLevels(decisions)])
+    apply_answers(source, edited, [heading_inputs(decisions)])
     pdf = export_pdfua(
         edited, tmp_path / "headings.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
@@ -64,7 +70,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     verapdf = external_tool("verapdf")
     source = TESTS / "text_corpus/tables-data-no-headers.odt"
     edited = tmp_path / "columns.odt"
-    execute_operations(source, edited, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
+    apply_answers(source, edited, [header_inputs({"Data": header_answer(columns=1)})])
     assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
     assert "TABLE003" not in {f.rule_id for f in audit_odf(edited).findings}
     pdf = export_pdfua(
@@ -77,13 +83,13 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     assert validate_pdfua(pdf, executable=verapdf).compliant
     clean = make_minimal_odt(tmp_path / "clean.odt", features={"with_data_table": True})
     clean_columns = tmp_path / "clean-columns.odt"
-    execute_operations(clean, clean_columns, [MarkTableHeaders({"Data": TableHeaders(columns=1)})])
+    apply_answers(clean, clean_columns, [header_inputs({"Data": header_answer(columns=1)})])
     assert validate(OdfDocument.open(clean_columns)).count == 0
     record = execute(
         clean_columns,
         reviewed_plan(
             clean_columns,
-            [SetMetadata(title="Header column boundary", language="en-US")],
+            [metadata_input(title="Header column boundary", language="en-US")],
             Pagination.SAME(),
         ),
         tmp_path / "evidence",

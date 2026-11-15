@@ -1,17 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed database-object description answers and operation translation."""
 
-lazy from collections.abc import Sequence
-
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import DatabaseDescriptionAnswer
-from odfa11y.families.database.descriptions import DatabaseDescription, SetObjectDescriptions
+from odfa11y.families.database.descriptions import edit_description
 from odfa11y.families.database.domain import OBJECTS
 from odfa11y.rules import registry as rules
-from odfa11y.targets import require_target
-lazy from odfa11y.concepts.edits import Operation
-lazy from odfa11y.decisions import Decision
-lazy from odfa11y.odf import OdfDocument
 
 DATABASE_DESCRIPTION = DecisionKind(
     "database.description",
@@ -19,26 +13,6 @@ DATABASE_DESCRIPTION = DecisionKind(
     DatabaseDescriptionAnswer,
     domain=OBJECTS,
     resolves=(rules.BASE004,),
+    edit=edit_description,
 )
 DECISION_KINDS = (DATABASE_DESCRIPTION,)
-
-
-def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Operation, ...]:
-    """Compile descriptions while preserving queries, values and bindings.
-
-    Returns
-    -------
-    tuple[Operation, ...]
-        Per-target description operations.
-
-    """
-    del document
-    return tuple(
-        SetObjectDescriptions({
-            decision.target_path: DatabaseDescription(
-                decision.answer_as(DatabaseDescriptionAnswer).text,
-                require_target(decision.target).fingerprint,
-            )
-        })
-        for decision in decisions
-    )

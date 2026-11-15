@@ -166,7 +166,6 @@ def _failure(
 ) -> RunRecord:
     record = RunRecord(
         document=DocumentIdentity(item.id),
-        operations=(),
         fidelity_policy=Pagination.SAME(),
         profile=options.profile,
     )

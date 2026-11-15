@@ -22,15 +22,15 @@ from odfa11y.rules import registry as rules
 
 PARSED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.MANIFEST)
 # Findings that end an audit early: what follows (and any plan made from it) would be guesswork.
-BLOCKING_RULE_IDS = frozenset({
-    rules.PKG000.id,
-    rules.PKG005.id,
-    rules.PKG006.id,
-    rules.PKG007.id,
-    rules.PKG009.id,
-    rules.XML001.id,
-    rules.ODF005.id,
-    rules.ODF010.id,
+BLOCKING_RULES = frozenset({
+    rules.PKG000,
+    rules.PKG005,
+    rules.PKG006,
+    rules.PKG007,
+    rules.PKG009,
+    rules.XML001,
+    rules.ODF005,
+    rules.ODF010,
 })
 
 

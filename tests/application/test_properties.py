@@ -11,26 +11,28 @@ from hypothesis import example, given
 from hypothesis import strategies as st
 from lxml import etree
 
-from odfa11y.concepts import GraphicAlternative
-from odfa11y.concepts.edits import Status
+from odfa11y.decisions.edit import Status
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families.text import (
     URI_RE,
-    LinkifyAddresses,
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    SetGraphicAlternatives,
-    TableHeaders,
     linkify_plain_addresses,
     split_trailing_punctuation,
     text_is_preserved,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import RULES, Report
 from odfa11y.report.model import ReportKind
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.answers import (
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+)
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.writer import TEXT_MEDIA_TYPE, make_minimal_odt
 lazy from tests.fixtures.writer import Features
 
@@ -172,26 +174,27 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
     features: Features, choices: dict[str, bool]
 ) -> None:
     operations = []
-    if choices["title"]:
-        operations.append(SetMetadata(title="Generated title"))
-    if choices["language"]:
-        operations.append(SetMetadata(language="de-AT"))
-    if choices["alt"] and features.get("with_image_without_alt"):
+    if choices["title"] or choices["language"]:
         operations.append(
-            SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "Description")})
+            metadata_input(
+                title="Generated title" if choices["title"] else None,
+                language="de-AT" if choices["language"] else None,
+            )
         )
+    if choices["alt"] and features.get("with_image_without_alt"):
+        operations.append(graphic_inputs({"Logo": graphic_answer("Logo", "Description")}))
     if choices["headers"] and features.get("with_data_table"):
-        operations.append(MarkTableHeaders({"Data": TableHeaders(1)}))
+        operations.append(header_inputs({"Data": header_answer(1)}))
     if choices["linkify"]:
-        operations.append(LinkifyAddresses())
+        operations.append(address_input())
     if choices["spacers"]:
-        operations.append(RemoveEmptySpacers())
+        operations.append(spacer_input())
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         source = make_minimal_odt(root / "source.odt", features=features)
-        first = execute_operations(source, root / "first.odt", operations)
+        first = apply_answers(source, root / "first.odt", operations)
         assert validate(OdfDocument.open(root / "first.odt")).violations == {}
-        second = execute_operations(root / "first.odt", root / "second.odt", operations)
+        second = apply_answers(root / "first.odt", root / "second.odt", operations)
         assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
         first_package = PackageStorage(root / "first.odt")
         second_package = PackageStorage(root / "second.odt")

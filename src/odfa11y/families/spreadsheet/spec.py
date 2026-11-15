@@ -5,14 +5,14 @@ lazy from collections.abc import Sequence
 
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
+from odfa11y.decisions.edit import Outcome
 from odfa11y.families.spec import FamilyAdapter, ReviewItem
 from odfa11y.families.spreadsheet.audit import audit_spreadsheet
-from odfa11y.families.spreadsheet.kinds import DECISION_KINDS, operations
+from odfa11y.families.spreadsheet.kinds import DECISION_KINDS
 from odfa11y.families.spreadsheet.language import default_language, set_default_language
 from odfa11y.families.spreadsheet.probes import PROBES
 from odfa11y.families.spreadsheet.snapshot import sheet_snapshot, sheets_preserved
 from odfa11y.odf import Family
-lazy from odfa11y.concepts.edits import Outcome
 lazy from odfa11y.odf import OdfDocument
 
 REVIEW_ITEMS = (
@@ -55,7 +55,6 @@ class SpreadsheetAdapter(FamilyAdapter):
     set_default_language = staticmethod(set_default_language)
     kinds = DECISION_KINDS
     probes = PROBES
-    operations = staticmethod(operations)
     review_items = REVIEW_ITEMS
     pdf_filter = "calc_pdf_Export"
 

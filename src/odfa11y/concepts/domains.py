@@ -7,7 +7,8 @@ from lxml import etree
 
 from odfa11y.concepts.graphic_identity import SHAPE_TAGS, GraphicIdentity
 from odfa11y.concepts.links import document_links, link_fingerprint, link_location
-from odfa11y.concepts.pages import page_fingerprint, page_location, pages
+from odfa11y.concepts.locations import page_location
+from odfa11y.concepts.pages import page_fingerprint, pages
 from odfa11y.concepts.text import eligible_text_node
 from odfa11y.decisions.domain import TargetDomain
 from odfa11y.odf import Family, OdfDocument, Part, select_elements

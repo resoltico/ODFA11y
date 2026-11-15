@@ -8,21 +8,28 @@ import pytest
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import GraphicAlternativeAnswer
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PlanError
-from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
-from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
+from odfa11y.families.spreadsheet.answers import SheetNameAnswer
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
+from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate import SetMetadata
-from odfa11y.remediate.compile import compile_operations
+from odfa11y.remediate.compile import compile_decisions
 from odfa11y.report import FactKeys
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.status import StageStatus
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import (
+    FaultEdit,
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.spreadsheets import (
     LAYOUTS,
@@ -51,7 +58,7 @@ def ids(path: Path) -> set[str]:
     return {finding.rule_id for finding in audit_odf(path).findings}
 
 
-class EditCell(Operation):
+class EditCell(FaultEdit):
     """A test operation that, unlike every shipped one, changes what a sheet shows."""
 
     name: ClassVar[str] = "edit_cell"
@@ -76,14 +83,26 @@ def test_the_configuration_reads_the_spreadsheet_table_in_canonical_order(tmp_pa
             'name = "Budget"\nfingerprint = "fedcba9876543210"\n',
         )
     )
-    first, second = compile_operations(OdfDocument.open(source), plan)
-    assert isinstance(first, SetSheetNames)
-    assert first.name == "set_sheet_names"
-    assert first.entries["content/sheet[1]"].name == "Budget"
-    assert first.entries["content/sheet[1]"].fingerprint == "fedcba9876543210"
-    assert second == SetGraphicAlternatives({
-        "content/sheet[1]/frame[name=Logo]": GraphicAlternative("Logo", None, "0123456789abcdef")
-    })
+    document = OdfDocument.open(source)
+    plan = Plan(
+        plan.header,
+        tuple(
+            Decision(
+                item.kind,
+                item.kind.domain.binding(document, item.target.path)
+                if item.target is not None and item.kind.domain is not None
+                else None,
+                item.answer,
+            )
+            for item in plan.decisions
+        ),
+        plan.fidelity,
+    )
+    first, second = compile_decisions(document, plan)
+    assert first.kind.id == "sheet.name"
+    assert first.answer == SheetNameAnswer("Budget")
+    assert second.kind.id == "graphic.alternative"
+    assert second.answer == GraphicAlternativeAnswer(title="Logo")
 
 
 @pytest.mark.parametrize(
@@ -119,16 +138,16 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     plan = [
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
-        SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "The company logo")}),
+        graphic_inputs({"Logo": graphic_answer("Logo", "The company logo")}),
     ]
     assert {"SHEET002", "GRAPHIC003"} <= ids(source)
     output = tmp_path / f"out{source.suffix}"
-    result = execute_operations(source, output, plan)
+    result = apply_answers(source, output, plan)
     assert result.changed
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.new_count == 0
     assert not {"SHEET002", "GRAPHIC003"} & ids(output)
-    again = execute_operations(output, tmp_path / f"again{source.suffix}", plan)
+    again = apply_answers(output, tmp_path / f"again{source.suffix}", plan)
     assert not again.changed
     assert {o.status for o in again.outcomes} == {Status.UNCHANGED}
 
@@ -137,13 +156,13 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
 def test_the_language_reaches_the_default_cell_style(tmp_path: Path, layout: str) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / f"out{source.suffix}"
-    execute_operations(source, output, [SetMetadata(language="fr-FR")])
+    apply_answers(source, output, [metadata_input(language="fr-FR")])
     report = audit_odf(output, schema=True)
     assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in {f.rule_id for f in report.findings}
     assert "SCHEMA001" not in {f.rule_id for f in report.findings}
-    again = execute_operations(
-        output, tmp_path / f"again{source.suffix}", [SetMetadata(language="fr-FR")]
+    again = apply_answers(
+        output, tmp_path / f"again{source.suffix}", [metadata_input(language="fr-FR")]
     )
     assert not again.changed
 
@@ -156,7 +175,7 @@ def test_a_rename_that_would_break_a_reference_stops_the_run_and_writes_nothing(
     source = make_spreadsheet(tmp_path, layout, *SHEETS, caller)
     output = tmp_path / f"out{source.suffix}"
     assert_refused(
-        execute_operations(source, output, [reviewed_sheet_names(source, {"Notes": "Memo"})]),
+        apply_answers(source, output, [reviewed_sheet_names(source, {"Notes": "Memo"})]),
         match="may refer to it by name",
     )
     assert not output.exists()
@@ -168,9 +187,9 @@ def test_an_operation_that_changes_what_a_sheet_shows_is_refused(
 ) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / f"out{source.suffix}"
-    assert_refused(execute_operations(source, output, [EditCell()]), match="content changed")
+    assert_refused(apply_answers(source, output, [EditCell()]), match="content changed")
     assert_refused(
-        execute_operations(
+        apply_answers(
             source, output, [reviewed_sheet_names(source, {"Sheet1": "Budget"}), EditCell()]
         ),
         match="content changed",
@@ -182,27 +201,22 @@ def test_an_operation_that_changes_what_a_sheet_shows_is_refused(
 def test_a_text_plan_is_refused_for_a_spreadsheet(tmp_path: Path, layout: str) -> None:
     source = make_spreadsheet(tmp_path, layout, *SHEETS)
     output = tmp_path / "out"
-    assert_refused(
-        execute_operations(
-            source, output, [TextGraphicAlternatives({"Logo": GraphicAlternative("x")})]
-        ),
-        match="do not apply to a spreadsheet document",
-    )
+    before = source.read_bytes()
+    with pytest.raises(PlanError, match="does not apply"):
+        apply_answers(source, output, [address_input()])
     assert not output.exists()
+    assert source.read_bytes() == before
 
 
 @by_layout
 def test_a_spreadsheet_plan_is_refused_for_a_text_document(tmp_path: Path, layout: str) -> None:
     source = LAYOUTS[layout](tmp_path, "text")
     output = tmp_path / "out"
-    for operation in (
-        reviewed_sheet_names(source, {"Sheet1": "Budget"}),
-        SetGraphicAlternatives({"Logo": GraphicAlternative("x")}),
-    ):
-        assert_refused(
-            execute_operations(source, output, [operation]), match="do not apply to a text document"
-        )
+    before = source.read_bytes()
+    with pytest.raises(PlanError, match="does not apply"):
+        apply_answers(source, output, [reviewed_sheet_names(source, {"Sheet1": "Budget"})])
     assert not output.exists()
+    assert source.read_bytes() == before
 
 
 def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_libreoffice(
@@ -212,7 +226,7 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
     options = RunSettings(tools=Tools(soffice=str(tmp_path / "no-such-soffice")))
     plan = [
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
-        SetGraphicAlternatives({"Logo": GraphicAlternative("Logo")}),
+        graphic_inputs({"Logo": graphic_answer("Logo")}),
     ]
     record = execute(
         source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options

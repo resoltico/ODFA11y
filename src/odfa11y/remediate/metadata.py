@@ -1,90 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Set document title, description and language."""
 
-from dataclasses import dataclass
-from typing import ClassVar, override
-
 from lxml import etree
 
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import DocumentMetadataAnswer
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import DocumentRefusal
 from odfa11y.families import adapter_for
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part, ensure_metadata_part
 from odfa11y.odf import names as xml_names
 lazy from odfa11y.odf import OdfDocument
-
-
-@dataclass(frozen=True, slots=True)
-class SetMetadata(Operation):
-    """Set title, description and language; ``None`` leaves a field untouched.
-
-    The language is written to the document metadata and, where the document's family keeps
-    a default language in its styles, to that style as well.
-    """
-
-    title: str | None = None
-    description: str | None = None
-    language: str | None = None
-    name: ClassVar[str] = "set_metadata"
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        outcomes = []
-        for key, value in (
-            ("title", self.title),
-            ("description", self.description),
-            ("language", self.language),
-        ):
-            if value is not None and not isinstance(value, str):
-                return (
-                    Outcome(
-                        self.name, Status.FAILED, f"Document {key} must be a string.", target=key
-                    ),
-                )
-        blank = [
-            key
-            for key, value in (("title", self.title), ("description", self.description))
-            if value is not None and not value.strip()
-        ]
-        if blank:
-            message = f"Document {' and '.join(blank)} must not be blank."
-            return (Outcome(self.name, Status.FAILED, message, target=blank[0]),)
-        try:
-            language = normalize_language(self.language) if self.language is not None else None
-            if language is not None:
-                # Establish the family's unique target before changing any metadata.
-                adapter_for(document.kind).default_language(document)
-        except ValueError as exc:
-            return (Outcome(self.name, Status.FAILED, str(exc), target="language"),)
-        for key, tag, value in (
-            ("title", xml_names.DC_TITLE, self.title),
-            ("description", xml_names.DC_DESCRIPTION, self.description),
-        ):
-            if value is not None:
-                outcomes.append(self._text(document, key, tag, value.strip()))
-        if language is not None:
-            outcomes.append(self._language(document, language))
-        return tuple(outcomes)
-
-    def _text(self, document: OdfDocument, key: str, tag: str, value: str) -> Outcome:
-        node = _meta_node(document, tag)
-        if node is not None and (node.text or "") == value:
-            return Outcome(self.name, Status.UNCHANGED, f"Document {key} already set.", target=key)
-        _ensure_meta_node(document, tag).text = value
-        return Outcome(self.name, Status.APPLIED, f"Set document {key}.", target=key, count=1)
-
-    def _language(self, document: OdfDocument, tag: str) -> Outcome:
-        adapter = adapter_for(document.kind)
-        node = _meta_node(document, xml_names.DC_LANGUAGE)
-        meta_changed = node is None or (node.text or "") != tag
-        if meta_changed:
-            _ensure_meta_node(document, xml_names.DC_LANGUAGE).text = tag
-        style_changed = adapter.set_default_language(document, tag)
-        if not (meta_changed or style_changed):
-            return Outcome(self.name, Status.UNCHANGED, "Language already set.", target="language")
-        return Outcome(
-            self.name, Status.APPLIED, f"Set language to {tag}.", target="language", count=1
-        )
 
 
 def _meta_node(document: OdfDocument, tag: str) -> etree._Element | None:
@@ -110,3 +37,54 @@ def _prefixed(clark: str) -> str:
     namespace, local = clark[1:].split("}")
     prefix = next(prefix for prefix, uri in NS.items() if uri == namespace)
     return f"{prefix}:{local}"
+
+
+def edit_metadata(
+    document: OdfDocument, decision: Decision[DocumentMetadataAnswer]
+) -> tuple[Outcome, ...]:
+    """Set supplied document metadata and the family's established default language."""
+    answer = decision.answer
+    adapter = adapter_for(document.kind)
+    language = normalize_language(answer.language) if answer.language is not None else None
+    if language is not None:
+        try:
+            adapter.default_language(document)
+        except ValueError as error:
+            raise DocumentRefusal(str(error)) from error
+    outcomes = []
+    for key, tag, value in (
+        ("title", xml_names.DC_TITLE, answer.title),
+        ("description", xml_names.DC_DESCRIPTION, answer.description),
+    ):
+        if value is None:
+            continue
+        clean_value = value.strip()
+        node = _meta_node(document, tag)
+        changed = node is None or (node.text or "") != clean_value
+        if changed:
+            _ensure_meta_node(document, tag).text = clean_value
+        outcomes.append(
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                f"Set document {key}." if changed else f"Document {key} already set.",
+                target=key,
+                count=int(changed),
+            )
+        )
+    if language is not None:
+        node = _meta_node(document, xml_names.DC_LANGUAGE)
+        changed = node is None or (node.text or "") != language
+        if changed:
+            _ensure_meta_node(document, xml_names.DC_LANGUAGE).text = language
+        changed = adapter.set_default_language(document, language) or changed
+        outcomes.append(
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                f"Set language to {language}." if changed else "Language already set.",
+                target="language",
+                count=int(changed),
+            )
+        )
+    return tuple(outcomes)

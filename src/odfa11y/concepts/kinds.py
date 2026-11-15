@@ -2,6 +2,9 @@
 """Cross-family decision kinds with one shared answer contract."""
 
 from odfa11y.concepts.domains import GRAPHICS, LINKS, PAGES
+from odfa11y.concepts.graphics import edit_graphic
+from odfa11y.concepts.links import edit_link
+from odfa11y.concepts.pages import edit_page_metadata, edit_page_navigation
 from odfa11y.decisions.answers import (
     GraphicAlternativeAnswer,
     LinkDescriptionAnswer,
@@ -16,6 +19,7 @@ GRAPHIC_ALTERNATIVE = DecisionKind(
     DecisionScope.TARGET,
     GraphicAlternativeAnswer,
     domain=GRAPHICS,
+    edit=edit_graphic,
     resolves=(
         rules.GRAPHIC003,
         rules.GRAPHIC005,
@@ -26,6 +30,7 @@ LINK_DESCRIPTION = DecisionKind(
     DecisionScope.TARGET,
     LinkDescriptionAnswer,
     domain=LINKS,
+    edit=edit_link,
     resolves=(rules.LINK003,),
 )
 PAGE_METADATA = DecisionKind(
@@ -33,6 +38,7 @@ PAGE_METADATA = DecisionKind(
     DecisionScope.TARGET,
     PageMetadataAnswer,
     domain=PAGES,
+    edit=edit_page_metadata,
     resolves=(rules.PAGE002,),
 )
 PAGE_NAVIGATION = DecisionKind(
@@ -40,6 +46,7 @@ PAGE_NAVIGATION = DecisionKind(
     DecisionScope.TARGET,
     PageNavigationAnswer,
     domain=PAGES,
+    edit=edit_page_navigation,
     resolves=(
         rules.PAGE003,
         rules.PAGE004,

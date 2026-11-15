@@ -97,7 +97,6 @@ class _Run:
 
     def remediate(self) -> StageResult:
         result = remediate(self.captured or self.source, self.remediated, self.plan)
-        self.record.operations = result.operations
         return StageResult(
             Stage.REMEDIATE,
             StageStatus.PASSED if result.published else StageStatus.FAILED,
@@ -255,7 +254,6 @@ def execute(
     require_free_directory(target)
     record = RunRecord(
         document=DocumentIdentity(source.name),
-        operations=(),
         fidelity_policy=plan.fidelity,
         plan=plan.header,
         decisions=plan.decisions,

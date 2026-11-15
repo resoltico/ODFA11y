@@ -11,6 +11,7 @@ from odfa11y.families import REGISTRY
 from odfa11y.plans.codec import parse_plan
 from odfa11y.remediate.document_ops import COMMON_KINDS
 lazy from odfa11y.decisions import DecisionKind
+lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.plans.model import Plan
 
 
@@ -58,7 +59,9 @@ def registered_formats() -> dict[str, Callable[[object], bool]]:
     )
 
 
-def load_plan(path: str | Path) -> Plan:
+def load_plan(
+    path: str | Path, *, document: OdfDocument | None = None, source_sha256: str | None = None
+) -> Plan:
     """Read a plan using all explicitly registered family contracts.
 
     Returns
@@ -67,4 +70,4 @@ def load_plan(path: str | Path) -> Plan:
         The strict source-bound plan.
 
     """
-    return parse_plan(path, registered_kinds())
+    return parse_plan(path, registered_kinds(), document=document, source_sha256=source_sha256)

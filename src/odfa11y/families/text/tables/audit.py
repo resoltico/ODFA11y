@@ -70,7 +70,6 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
                     TABLE_HEADERS,
                     Target((location).path, Fingerprint(table_fingerprint(table, document))),
                     {"rows": 0, "columns": 0},
-                    (rules.TABLE003.id,),
                 ),
             )
     report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS] = rows

@@ -43,7 +43,6 @@ def audit_languages(document: OdfDocument, report: Report) -> None:
                     TARGET_LANGUAGE,
                     Target((location).path, Fingerprint(fingerprint)),
                     current,
-                    (rules.LANG004.id,),
                 ),
             )
     report.facts[FactKeys.TEXT_EFFECTIVE_LANGUAGES] = rows

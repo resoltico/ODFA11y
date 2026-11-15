@@ -1,33 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Wrap visible addresses in hyperlinks without changing their text."""
 
-from dataclasses import dataclass
-from typing import ClassVar, override
-
 from lxml import etree
 
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import SwitchAnswer
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.links.prose import prose_slots
 from odfa11y.families.text.links.urls import URI_RE, split_trailing_punctuation
-from odfa11y.odf import Family, Part
+from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
 lazy from odfa11y.odf import OdfDocument
-
-
-@dataclass(frozen=True, slots=True)
-class LinkifyAddresses(Operation):
-    """Turn visible URLs and email addresses into hyperlinks that keep their text."""
-
-    name: ClassVar[str] = "linkify_addresses"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        count = linkify_plain_addresses(document.tree(Part.CONTENT))
-        if not count:
-            return (Outcome(self.name, Status.UNCHANGED, "No plain addresses remain."),)
-        return (Outcome(self.name, Status.APPLIED, f"Created {count} hyperlink(s).", count=count),)
 
 
 def linkify_plain_addresses(tree: etree._ElementTree) -> int:
@@ -83,3 +67,18 @@ def _linkify_slot(owner: etree._Element, attr: str) -> int:
         insert_at += 1
         inserted.append(link)
     return len(inserted)
+
+
+def edit_addresses(document: OdfDocument, decision: Decision[SwitchAnswer]) -> tuple[Outcome, ...]:
+    """Apply the explicitly enabled document policy."""
+    if not decision.answer.enabled:
+        return (Outcome(decision.kind.id, Status.UNCHANGED, "The reviewed policy is disabled."),)
+    count = linkify_plain_addresses(document.tree(Part.CONTENT))
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if count else Status.UNCHANGED,
+            f"Changed {count} source element(s).",
+            count=count,
+        ),
+    )

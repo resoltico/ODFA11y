@@ -2,15 +2,16 @@
 """Registered human decisions, reviewed targets and their typed answers."""
 
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import cast
-lazy from collections.abc import Mapping
+lazy from collections.abc import Callable, Mapping
 
 from odfa11y.contracts import JsonProperty, validate
+from odfa11y.decisions.edit import Outcome
 from odfa11y.errors import PlanError
 from odfa11y.targets import Target
 lazy from odfa11y.decisions.domain import TargetDomain
+lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.rules.registry import Rule
 
 
@@ -36,6 +37,7 @@ class DecisionKind[A]:
     id: str
     scope: DecisionScope
     _answer_type: type[A]
+    edit: Callable[[OdfDocument, Decision[A]], tuple[Outcome, ...]]
     domain: TargetDomain | None = None
     resolves: tuple[Rule, ...] = ()
 
@@ -48,6 +50,9 @@ class DecisionKind[A]:
             The registered answer is not a dataclass.
 
         """
+        if (self.scope is DecisionScope.TARGET) != (self.domain is not None):
+            message = f"Decision {self.id!r} scope must agree with its target domain"
+            raise PlanError(message)
         if not dataclasses.is_dataclass(self.answer_type):
             msg = f"Decision {self.id!r} needs an answer dataclass"
             raise PlanError(msg)
@@ -76,12 +81,20 @@ class OpenDecision:
     _kind: DecisionKind
     target: Target | None
     current: Mapping[str, object]
-    rule_ids: tuple[str, ...] = ()
     context: QuestionContext | None = None
+    _rules: tuple[Rule, ...] = field(default=(), kw_only=True, repr=False)
 
     def __post_init__(self) -> None:
         """Enforce one target grammar and mandatory targeted fingerprints."""
         _identity(self.kind, self.target)
+
+    @property
+    def rules(self) -> tuple[Rule, ...]:
+        return self._rules
+
+    @JsonProperty
+    def rule_ids(self) -> tuple[str, ...]:
+        return tuple(rule.id for rule in self._rules)
 
     @property
     def kind(self) -> DecisionKind:
@@ -93,12 +106,12 @@ class OpenDecision:
 
 
 @dataclass(frozen=True, slots=True)
-class Decision:
+class Decision[A]:
     """An answered open decision, ready for family-specific operation translation."""
 
-    _kind: DecisionKind
+    _kind: DecisionKind[A]
     target: Target | None
-    answer: object
+    answer: A
 
     def __post_init__(self) -> None:
         """Validate Python-created decisions with the same contract as parsed plans.
@@ -142,27 +155,8 @@ class Decision:
             raise PlanError(msg)
         return self.target.path
 
-    def answer_as[T](self, expected: type[T]) -> T:
-        """Read an answer through its family's declared type.
-
-        Returns
-        -------
-        T
-            The validated answer.
-
-        Raises
-        ------
-        PlanError
-            A family attempts to consume another answer type.
-
-        """
-        if type(self.answer) is not expected:
-            msg = f"{self.kind.id} cannot provide {expected.__name__}"
-            raise PlanError(msg)
-        return cast("T", self.answer)
-
     @property
-    def kind(self) -> DecisionKind:
+    def kind(self) -> DecisionKind[A]:
         return self._kind
 
     @JsonProperty

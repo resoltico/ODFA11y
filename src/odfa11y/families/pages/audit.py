@@ -145,7 +145,7 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
             details={
                 "shape": name,
             },
-            decision=identity.open_decision(shape, GRAPHIC_ALTERNATIVE, rule.id),
+            decision=identity.open_decision(shape, GRAPHIC_ALTERNATIVE),
         )
 
 
@@ -157,7 +157,7 @@ def _links(document: OdfDocument, report: Report) -> None:
             report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
-                decision=link_decision(document, link, index, LINK_DESCRIPTION, rules.LINK003.id),
+                decision=link_decision(document, link, index, LINK_DESCRIPTION),
             )
 
 

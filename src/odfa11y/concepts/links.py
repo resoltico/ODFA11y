@@ -3,18 +3,19 @@
 
 import json
 from collections import Counter
-from dataclasses import dataclass
 from urllib.parse import quote
-lazy from collections.abc import Mapping
 
 lazy from lxml import etree
 
-from odfa11y.concepts.edits import Outcome, Status
 from odfa11y.concepts.graphic_identity import SHAPE_TAGS, GraphicIdentity
 from odfa11y.concepts.graphic_styles import normalized_graphic_tree
 from odfa11y.concepts.text import eligible_text_node, reading_context_path, visible_words
 from odfa11y.concepts.xml import protected_xml
-from odfa11y.decisions import DecisionKind, OpenDecision
+from odfa11y.decisions import Decision, DecisionKind, OpenDecision
+from odfa11y.decisions.answers import LinkDescriptionAnswer
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
@@ -23,14 +24,6 @@ lazy from odfa11y.odf import OdfDocument
 
 XML_ID = xml_names.XML_ID
 LINK_TAGS = (xml_names.TEXT_A, xml_names.DRAW_A)
-
-
-@dataclass(frozen=True, slots=True)
-class LinkDescription:
-    """A supplied nonblank office:title bound to a reviewed source link."""
-
-    description: str
-    fingerprint: str
 
 
 def document_links(document: OdfDocument) -> list[etree._Element]:
@@ -115,88 +108,8 @@ def link_has_description(link: etree._Element) -> bool:
     )
 
 
-@dataclass(frozen=True, slots=True)
-class LinkEditor:
-    """Preflight every exact target before setting office:title."""
-
-    entries: Mapping[str, LinkDescription]
-    name: str
-
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        """Apply the complete description operation, or refuse without mutation.
-
-        Returns
-        -------
-        tuple[Outcome, ...]
-            Per-target outcomes; any refusal prevents all edits.
-
-        """
-        counts = Counter(
-            node.get(XML_ID)
-            for node in document.tree(Part.CONTENT).getroot().iter()
-            if node.get(XML_ID)
-        )
-        available: dict[str, list[etree._Element]] = {}
-        for index, link in enumerate(document_links(document), 1):
-            target = link_location(link, index).path
-            available.setdefault(target, []).extend(
-                [link] * min(2, counts.get(link.get(XML_ID), 1))
-            )
-        decisions = []
-        failures = []
-        for target, entry in self.entries.items():
-            links = available.get(target, [])
-            problem = _link_problem(document, links, entry)
-            if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, target=target))
-            else:
-                decisions.append((target, links[0], entry))
-        if failures:
-            return tuple(failures)
-        outcomes = []
-        for target, link, entry in decisions:
-            changed = link.get(xml_names.OFFICE_TITLE) != entry.description
-            if changed:
-                link.set(xml_names.OFFICE_TITLE, entry.description)
-            outcomes.append(
-                Outcome(
-                    self.name,
-                    Status.APPLIED if changed else Status.UNCHANGED,
-                    "Applied source link description."
-                    if changed
-                    else "Source link description already matches.",
-                    target=target,
-                    count=int(changed),
-                )
-            )
-        return tuple(outcomes)
-
-
-def _link_problem(
-    document: OdfDocument, links: list[etree._Element], entry: LinkDescription
-) -> str | None:
-    problem = None
-    if not isinstance(entry.description, str) or not entry.description.strip():
-        problem = "A supplied link description must be a nonblank string."
-    elif not isinstance(entry.fingerprint, str) or not entry.fingerprint:
-        problem = "A link description requires a reviewed fingerprint."
-    elif len(links) != 1:
-        problem = "The exact logical link target must resolve to one source link."
-    elif any(
-        ancestor.get(qn("table", attr), "1") != "1"
-        for ancestor in links[0].iterancestors()
-        for attr in ("number-rows-repeated", "number-columns-repeated")
-    ):
-        problem = "Repeated link targets do not establish a unique logical link identity."
-    elif problem := GraphicIdentity(document, ()).style_problem(links[0]):
-        return problem
-    elif link_fingerprint(document, links[0]) != entry.fingerprint:
-        problem = "The source link changed since this decision was reviewed."
-    return problem
-
-
 def link_decision(
-    document: OdfDocument, link: etree._Element, index: int, kind: DecisionKind, rule_id: str
+    document: OdfDocument, link: etree._Element, index: int, kind: DecisionKind
 ) -> OpenDecision:
     """Describe one reviewed link without hiding its identity in diagnostic details.
 
@@ -213,5 +126,40 @@ def link_decision(
             Fingerprint(link_fingerprint(document, link)),
         ),
         {"description": link.get(xml_names.OFFICE_TITLE), "href": link.get(xml_names.XLINK_HREF)},
-        (rule_id,),
+    )
+
+
+def edit_link(
+    document: OdfDocument, decision: Decision[LinkDescriptionAnswer]
+) -> tuple[Outcome, ...]:
+    """Set a reviewed link description without changing its label or destination."""
+    link = resolved_node(document, decision)
+    identities = Counter(
+        node.get(XML_ID) for node in document.tree(Part.CONTENT).iter() if node.get(XML_ID)
+    )
+    if link.get(XML_ID) and identities[link.get(XML_ID)] != 1:
+        message = "The exact logical link target must resolve to one source link."
+        raise DocumentRefusal(message)
+    if any(
+        ancestor.get(qn("table", attr), "1") != "1"
+        for ancestor in link.iterancestors()
+        for attr in ("number-rows-repeated", "number-columns-repeated")
+    ):
+        message = "Repeated link targets do not establish a unique logical link identity."
+        raise DocumentRefusal(message)
+    if problem := GraphicIdentity(document, ()).style_problem(link):
+        raise DocumentRefusal(problem)
+    changed = link.get(xml_names.OFFICE_TITLE) != decision.answer.description
+    if changed:
+        link.set(xml_names.OFFICE_TITLE, decision.answer.description)
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            "Applied source link description."
+            if changed
+            else "Source link description already matches.",
+            target=decision.target_path,
+            count=int(changed),
+        ),
     )

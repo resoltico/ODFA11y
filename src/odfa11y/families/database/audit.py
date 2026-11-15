@@ -128,7 +128,6 @@ def _objects(document: OdfDocument, report: Report) -> None:
                     DATABASE_DESCRIPTION,
                     Target((Location(path)).path, Fingerprint(fingerprint(matches[0]))),
                     {"text": matches[0].get(description_attribute(matches[0]))},
-                    (rules.BASE004.id,),
                 ),
             )
 

@@ -8,16 +8,22 @@ lazy from pathlib import Path
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative, LinkDescription, graphics_fingerprint
-from odfa11y.concepts.edits import Status
+from odfa11y.concepts import graphics_fingerprint
 from odfa11y.concepts.links import document_links, link_fingerprint, link_location
-from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions
+from odfa11y.decisions.edit import Status
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.report import FactKeys
+from tests.fixtures.answers import (
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+    link_answer,
+    link_inputs,
+)
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
 
 
@@ -75,16 +81,16 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     control_pdf = export_pdfua(control, tmp_path / "missing-role.pdf", settings)
     assert "PDF007" in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
     assert not validate_pdfua(control_pdf, executable=verapdf).compliant
-    operation = SetGraphicAlternatives({
-        "Decoration": GraphicAlternative(
+    operation = graphic_inputs({
+        "Decoration": graphic_answer(
             decorative=True, fingerprint=graphics_fingerprint(document, [decoration])
         )
     })
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     edited = document.save(tmp_path / "decorative-role.fodt")
     assert validate(document).count == 0
     assert "GRAPHIC003" not in {finding.rule_id for finding in audit_odf(edited).findings}
-    assert operation.apply(document)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     pdf = export_pdfua(edited, tmp_path / "decorative-role.pdf", settings)
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
@@ -119,16 +125,14 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     control_pdf = export_pdfua(missing, tmp_path / "missing-title.pdf", settings)
     assert "PDF019" in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
     assert not validate_pdfua(control_pdf, executable=verapdf).compliant
-    operation = SetLinkDescriptions({
-        link_location(link, 1).path: LinkDescription(
-            "Read the guide", link_fingerprint(document, link)
-        )
+    operation = link_inputs({
+        link_location(link, 1).path: link_answer("Read the guide", link_fingerprint(document, link))
     })
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     described = document.save(tmp_path / "link-title.fodt")
     assert validate(document).count == 0
     assert link.get(qn("office", "name")) is None
-    assert operation.apply(document)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     pdf = export_pdfua(described, tmp_path / "link-title.pdf", settings)
     report = audit_pdfua(pdf)
     validator = validate_pdfua(pdf, executable=verapdf)
@@ -174,13 +178,13 @@ def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
     assert {"GRAPHIC001", "GRAPHIC003"} <= {
         finding.rule_id for finding in audit_odf(source).findings
     }
-    operation = SetGraphicAlternatives({
-        "Group": GraphicAlternative(
+    operation = graphic_inputs({
+        "Group": graphic_answer(
             decorative=False, fingerprint=graphics_fingerprint(document, [group])
         )
     })
     before = document.checkpoint()
-    assert operation.apply(document)[0].status == Status.FAILED
+    assert apply_in_memory(document, operation)[0].status == Status.FAILED
     assert not document.changed_since(before)
     pdf = export_pdfua(
         source, tmp_path / "nested-group.pdf", ExportSettings("writer_pdf_Export", soffice)

@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Renaming sheets: explicit, fail-closed, collision-safe, and never at the cost of a reference."""
 
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 
-from odfa11y.concepts.edits import Status
-from odfa11y.families.spreadsheet import SetSheetNames, invalid_name_reason
-from odfa11y.families.spreadsheet.names import SheetNameChange
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import DocumentRefusal, PlanError
+from odfa11y.families.spreadsheet import invalid_name_reason
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from tests.fixtures.answers import RawDecisions
 from tests.fixtures.spreadsheets import (
     LAYOUTS,
     make_spreadsheet,
@@ -17,6 +18,7 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
+lazy from tests.fixtures.answers import apply_in_memory
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 PLAIN = (sheet("Sheet1", row(text_cell("a"))), sheet("Notes", row(text_cell("b"))))
@@ -31,8 +33,8 @@ def sheet_names(document: OdfDocument) -> list[str | None]:
     return [table.get(qn("table", "name")) for table in tables]
 
 
-def statuses(operation: SetSheetNames, document: OdfDocument) -> tuple[Status, ...]:
-    return tuple(outcome.status for outcome in operation.apply(document))
+def statuses(operation: RawDecisions, document: OdfDocument) -> tuple[Status, ...]:
+    return tuple(outcome.status for outcome in apply_in_memory(document, operation))
 
 
 def referencing(reference: str) -> str:
@@ -66,11 +68,10 @@ def test_an_unknown_sheet_fails_the_whole_operation_before_any_edit(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN)
-    outcomes = reviewed_sheet_names(document, {"Sheet1": "Budget", "Missing": "Other"}).apply(
-        document
-    )
-    assert [(o.status, o.target) for o in outcomes] == [(Status.FAILED, "content/sheet[4]")]
-    assert "must resolve to exactly one sheet" in outcomes[0].message
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(
+            document, reviewed_sheet_names(document, {"Sheet1": "Budget", "Missing": "Other"})
+        )
     assert not document.dirty
     assert sheet_names(document) == ["Sheet1", "Notes"]
 
@@ -81,7 +82,7 @@ def test_a_new_name_that_collides_with_another_sheet_is_refused_whatever_its_cas
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN)
     for new in ("Notes", "notes"):
-        outcomes = reviewed_sheet_names(document, {"Sheet1": new}).apply(document)
+        outcomes = apply_in_memory(document, reviewed_sheet_names(document, {"Sheet1": new}))
         assert outcomes[0].status is Status.FAILED
         assert "already named" in outcomes[0].message
     assert not document.dirty
@@ -102,9 +103,8 @@ def test_a_rename_that_only_changes_case_is_allowed(tmp_path: Path, layout: str)
 def test_names_a_spreadsheet_application_rejects_are_refused(tmp_path: Path, new: str) -> None:
     assert invalid_name_reason(new)
     document = open_sheets(tmp_path, "package", *PLAIN)
-    [outcome] = reviewed_sheet_names(document, {"Sheet1": new}).apply(document)
-    assert outcome.status is Status.FAILED
-    assert "not a usable sheet name" in outcome.message
+    with pytest.raises(PlanError, match=r"sheet\.name\.name"):
+        apply_in_memory(document, reviewed_sheet_names(document, {"Sheet1": new}))
     assert not document.dirty
 
 
@@ -126,15 +126,14 @@ def test_swaps_chains_and_shared_targets_are_refused(
     tmp_path: Path, entries: dict[str, str]
 ) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
-    outcomes = reviewed_sheet_names(document, entries).apply(document)
-    assert outcomes
-    assert {o.status for o in outcomes} == {Status.FAILED}
+    with pytest.raises(DocumentRefusal, match=r"renamed by this plan|More than one"):
+        apply_in_memory(document, reviewed_sheet_names(document, entries))
     assert not document.dirty
 
 
 def test_two_sheets_with_one_name_cannot_be_addressed(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Notes"))
-    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
+    [outcome] = apply_in_memory(document, reviewed_sheet_names(document, {"Notes": "Memo"}))
     assert outcome.status is Status.FAILED
     assert "must be unique" in outcome.message
 
@@ -154,7 +153,7 @@ def test_a_sheet_a_formula_refers_to_by_name_is_not_renamed(
     tmp_path: Path, layout: str, reference: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *PLAIN, referencing(reference))
-    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
+    [outcome] = apply_in_memory(document, reviewed_sheet_names(document, {"Notes": "Memo"}))
     assert outcome.status is Status.FAILED
     assert "may refer to it by name" in outcome.message
     assert not document.dirty
@@ -166,7 +165,7 @@ def test_a_quoted_reference_to_a_sheet_with_a_space_or_apostrophe_is_found(tmp_p
     formula = referencing("of:=['My Data'.A1]+['It''s'.A1]")
     for old in ("My Data", "It's"):
         document = open_sheets(tmp_path, "package", *spaced, formula)
-        [outcome] = reviewed_sheet_names(document, {old: "Renamed"}).apply(document)
+        [outcome] = apply_in_memory(document, reviewed_sheet_names(document, {old: "Renamed"}))
         assert outcome.status is Status.FAILED, old
 
 
@@ -178,7 +177,7 @@ def test_references_outside_formulas_block_the_rename_too(tmp_path: Path, attrib
     document = open_sheets(
         tmp_path, "package", *PLAIN, sheet("Calc", row(text_cell("x", attribute)))
     )
-    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
+    [outcome] = apply_in_memory(document, reviewed_sheet_names(document, {"Notes": "Memo"}))
     assert outcome.status is Status.FAILED
 
 
@@ -186,7 +185,7 @@ def test_references_outside_formulas_block_the_rename_too(tmp_path: Path, attrib
 def test_a_link_to_a_sheet_blocks_its_rename(tmp_path: Path, target: str) -> None:
     link = f'<text:a xlink:href="{target}" xlink:type="simple">Notes</text:a>'
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Calc", row(text_cell(link))))
-    [outcome] = reviewed_sheet_names(document, {"Notes": "Memo"}).apply(document)
+    [outcome] = apply_in_memory(document, reviewed_sheet_names(document, {"Notes": "Memo"}))
     assert outcome.status is Status.FAILED
 
 
@@ -209,7 +208,7 @@ def test_a_document_with_embedded_charts_refuses_every_rename(tmp_path: Path) ->
         '<draw:object xlink:href="./Object 1" xlink:type="simple"/></draw:frame></table:table-cell>'
     )
     document = open_sheets(tmp_path, "package", *PLAIN, sheet("Charts", row(chart)))
-    [outcome] = reviewed_sheet_names(document, {"Sheet1": "Budget"}).apply(document)
+    [outcome] = apply_in_memory(document, reviewed_sheet_names(document, {"Sheet1": "Budget"}))
     assert outcome.status is Status.FAILED
     assert "embeds charts" in outcome.message
     assert not document.dirty
@@ -217,16 +216,9 @@ def test_a_document_with_embedded_charts_refuses_every_rename(tmp_path: Path) ->
 
 def test_a_failed_rename_is_reported_with_every_other_failure(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", *PLAIN)
-    outcomes = reviewed_sheet_names(document, {"Gone": "A", "Sheet1": "b/c"}).apply(document)
-    assert {o.target for o in outcomes} == {"content/sheet[3]", "content/sheet[1]"}
-    assert {o.status for o in outcomes} == {Status.FAILED}
-
-
-def test_the_operation_describes_itself_with_its_entries() -> None:
-    assert SetSheetNames({"content/sheet[1]": SheetNameChange("Budget", "a" * 16)}).as_dict() == {
-        "operation": "set_sheet_names",
-        "entries": {"content/sheet[1]": {"name": "Budget", "fingerprint": "a" * 16}},
-    }
+    with pytest.raises(PlanError, match=r"sheet\.name\.name"):
+        apply_in_memory(document, reviewed_sheet_names(document, {"Gone": "A", "Sheet1": "b/c"}))
+    assert not document.dirty
 
 
 @by_layout
@@ -249,7 +241,9 @@ def test_embedded_scripts_block_a_rename(tmp_path: Path) -> None:
 
 def test_duplicate_targets_are_not_treated_as_a_completed_rename(tmp_path: Path) -> None:
     document = open_sheets(tmp_path, "package", sheet("Memo"), sheet("Memo"))
-    assert statuses(reviewed_sheet_names(document, {"Notes": "Memo"}), document) == (Status.FAILED,)
+    with pytest.raises(PlanError, match="exactly one"):
+        statuses(reviewed_sheet_names(document, {"Notes": "Memo"}), document)
+    assert not document.dirty
 
 
 @pytest.mark.parametrize("map_name", ["Tables", "ScriptConfiguration"])

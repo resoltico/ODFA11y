@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Alt text on spreadsheet frames, and the snapshot that guards what a sheet shows."""
 
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative
-from odfa11y.concepts.edits import Status
-from odfa11y.families.spreadsheet import SetGraphicAlternatives, sheet_snapshot, sheets_preserved
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PlanError
+from odfa11y.families.spreadsheet import sheet_snapshot, sheets_preserved
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.targets import require_target
+from odfa11y.targets import TargetPath, require_target
+from tests.fixtures.answers import (
+    Authored,
+    graphic_answer,
+    graphic_inputs,
+)
 from tests.fixtures.plans import question_for
 from tests.fixtures.spreadsheets import (
     LAYOUTS,
@@ -22,7 +27,7 @@ from tests.fixtures.spreadsheets import (
     sheet,
     text_cell,
 )
-lazy from odfa11y.concepts.edits import Operation
+lazy from tests.fixtures.answers import apply_in_memory
 
 by_layout = pytest.mark.parametrize("layout", LAYOUTS)
 SHEETS = (
@@ -40,8 +45,8 @@ def frame_text(document: OdfDocument, name: str) -> list[tuple[str, str | None]]
     return [(etree.QName(child).localname, child.text) for child in frame]
 
 
-def statuses(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
-    return tuple(outcome.status for outcome in operation.apply(document))
+def statuses(operation: Authored, document: OdfDocument) -> tuple[Status, ...]:
+    return tuple(outcome.status for outcome in apply_in_memory(document, operation))
 
 
 @by_layout
@@ -50,7 +55,7 @@ def test_alt_text_is_applied_once_then_unchanged_and_stays_schema_valid(
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     before = validate(document)
-    operation = SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "The company logo")})
+    operation = graphic_inputs({"Logo": graphic_answer("Logo", "The company logo")})
     assert statuses(operation, document) == (Status.APPLIED,)
     assert frame_text(document, "Logo") == [
         ("image", None),
@@ -67,14 +72,18 @@ def test_a_frame_is_addressed_by_its_name_its_image_path_or_its_file_name(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    operation = SetGraphicAlternatives({
-        "Logo": GraphicAlternative("by name"),
-        "Pictures/seal.png": GraphicAlternative("by path"),
-        "badge.png": GraphicAlternative("by file"),
+    operation = graphic_inputs({
+        "content/sheet[1]/frame[name=Logo]": graphic_answer("Logo title"),
+        "content/sheet[1]/frame[name=Seal]": graphic_answer("Seal title"),
+        "content/sheet[2]/frame[name=Badge]": graphic_answer("Badge title"),
     })
     assert statuses(operation, document) == (Status.APPLIED,) * 3
-    assert frame_text(document, "Seal")[1] == ("title", "by path")
-    assert frame_text(document, "Badge")[1] == ("title", "by file")
+    for selector in ("Logo", "Pictures/seal.png", "badge.png"):
+        with pytest.raises(PlanError, match="target"):
+            TargetPath(selector)
+    assert frame_text(document, "Logo")[1] == ("title", "Logo title")
+    assert frame_text(document, "Seal")[1] == ("title", "Seal title")
+    assert frame_text(document, "Badge")[1] == ("title", "Badge title")
 
 
 @by_layout
@@ -82,10 +91,8 @@ def test_changed_text_is_applied_and_an_unset_field_is_left_alone(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    SetGraphicAlternatives({"Logo": GraphicAlternative("Old", "Described")}).apply(document)
-    assert statuses(SetGraphicAlternatives({"Logo": GraphicAlternative("New")}), document) == (
-        Status.APPLIED,
-    )
+    apply_in_memory(document, graphic_inputs({"Logo": graphic_answer("Old", "Described")}))
+    assert statuses(graphic_inputs({"Logo": graphic_answer("New")}), document) == (Status.APPLIED,)
     assert frame_text(document, "Logo")[1:] == [("title", "New"), ("desc", "Described")]
 
 
@@ -94,12 +101,12 @@ def test_a_selector_that_matches_nothing_fails_everything_before_any_edit(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    operation = SetGraphicAlternatives({
-        "Logo": GraphicAlternative("Fine"),
-        "Nowhere": GraphicAlternative("x"),
+    operation = graphic_inputs({
+        "Logo": graphic_answer("Fine"),
+        "Nowhere": graphic_answer("x"),
     })
-    outcomes = operation.apply(document)
-    assert [(o.status, o.target) for o in outcomes] == [(Status.FAILED, "Nowhere")]
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(document, operation)
     assert not document.dirty
     assert frame_text(document, "Logo") == [("image", None)]
 
@@ -110,11 +117,10 @@ def test_a_fingerprint_binds_the_entry_to_the_frame_that_was_reviewed(
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     fingerprint = _audited_fingerprint(tmp_path, layout, "Logo")
-    right = SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", fingerprint=fingerprint)})
-    wrong = SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", fingerprint="0" * 12)})
-    [outcome] = wrong.apply(document)
-    assert outcome.status is Status.FAILED
-    assert "no longer the object" in outcome.message
+    right = graphic_inputs({"Logo": graphic_answer("Logo", fingerprint=fingerprint)})
+    wrong = graphic_inputs({"Logo": graphic_answer("Logo", fingerprint="0" * 16)})
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, wrong)
     assert not document.dirty
     assert statuses(right, document) == (Status.APPLIED,)
     assert statuses(right, document) == (Status.UNCHANGED,)
@@ -134,17 +140,19 @@ def test_a_fingerprint_survives_a_sheet_rename_in_the_same_plan(tmp_path: Path) 
     assert statuses(reviewed_sheet_names(document, {"Other": "Badges"}), document) == (
         Status.APPLIED,
     )
-    entry = GraphicAlternative("Badge", fingerprint=fingerprint)
-    assert statuses(SetGraphicAlternatives({"Badge": entry}), document) == (Status.APPLIED,)
+    entry = graphic_answer("Badge", fingerprint=fingerprint)
+    assert statuses(graphic_inputs({"Badge": entry}), document) == (Status.APPLIED,)
 
 
 def test_the_same_name_on_a_moved_sheet_is_not_the_reviewed_frame(tmp_path: Path) -> None:
     fingerprint = _audited_fingerprint(tmp_path, "package", "Badge")
     moved = open_sheets(tmp_path, "flat", SHEETS[1], SHEETS[0])
-    [outcome] = SetGraphicAlternatives({
-        "Badge": GraphicAlternative("x", fingerprint=fingerprint)
-    }).apply(moved)
-    assert outcome.status is Status.FAILED
+    checkpoint = moved.checkpoint()
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(
+            moved, graphic_inputs({"Badge": graphic_answer("x", fingerprint=fingerprint)})
+        )
+    assert not moved.changed_since(checkpoint)
 
 
 @by_layout
@@ -152,29 +160,18 @@ def test_two_selectors_setting_different_text_on_one_frame_both_fail(
     tmp_path: Path, layout: str
 ) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    conflicting = SetGraphicAlternatives({
-        "Logo": GraphicAlternative("One"),
-        "logo.png": GraphicAlternative("Two"),
+    conflicting = graphic_inputs({
+        "Logo": graphic_answer("One"),
+        "content/sheet[1]/frame[name=Logo]": graphic_answer("Two"),
     })
-    outcomes = conflicting.apply(document)
-    assert {o.target for o in outcomes} == {"Logo", "logo.png"}
-    assert {o.status for o in outcomes} == {Status.FAILED}
-    agreeing = SetGraphicAlternatives({
-        "Logo": GraphicAlternative("Same"),
-        "logo.png": GraphicAlternative("Same", "Extra"),
+    with pytest.raises(PlanError, match="same decision kind"):
+        apply_in_memory(document, conflicting)
+    assert not document.dirty
+    combined = graphic_inputs({
+        "content/sheet[1]/frame[name=Logo]": graphic_answer("Same", "Extra")
     })
-    assert statuses(agreeing, document) == (Status.APPLIED, Status.APPLIED)
+    assert statuses(combined, document) == (Status.APPLIED,)
     assert frame_text(document, "Logo")[1:] == [("title", "Same"), ("desc", "Extra")]
-
-
-def test_the_operation_describes_itself_with_its_entries() -> None:
-    operation = SetGraphicAlternatives({"Logo": GraphicAlternative("T", None, "abc")})
-    assert operation.as_dict() == {
-        "operation": "set_graphic_alternatives",
-        "entries": {
-            "Logo": {"title": "T", "description": None, "fingerprint": "abc", "decorative": None}
-        },
-    }
 
 
 @by_layout
@@ -201,7 +198,7 @@ def test_the_snapshot_binds_sheet_data_and_repeated_cell_positions(
 def test_alt_text_never_changes_the_snapshot(tmp_path: Path, layout: str) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
     before = sheet_snapshot(document)
-    SetGraphicAlternatives({"Logo": GraphicAlternative("Title", "Description")}).apply(document)
+    apply_in_memory(document, graphic_inputs({"Logo": graphic_answer("Title", "Description")}))
     assert sheet_snapshot(document) == before
 
 

@@ -81,7 +81,6 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
                 FORMULA_ALTERNATIVE,
                 Target(TargetPath("content/formula"), fingerprint(root)),
                 {"alternative": root.get("alttext")},
-                (rules.MATH002.id,),
             ),
         )
     if any(

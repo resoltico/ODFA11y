@@ -4,7 +4,7 @@
 from odfa11y.concepts import page_snapshot, set_style_language, style_language
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.families.pages.audit import audit_document
-from odfa11y.families.pages.kinds import DECISION_KINDS, operations
+from odfa11y.families.pages.kinds import DECISION_KINDS
 from odfa11y.families.pages.profiles import DRAWING_PROFILE, PRESENTATION_PROFILE
 from odfa11y.families.spec import FamilyAdapter
 lazy from odfa11y.families.pages.profiles import PageProfile
@@ -24,7 +24,6 @@ class PagesAdapter(FamilyAdapter):
     """Apply one page contract with explicit native-family differences."""
 
     kinds = DECISION_KINDS
-    operations = staticmethod(operations)
     default_language = staticmethod(_language)
     set_default_language = staticmethod(_set_language)
 

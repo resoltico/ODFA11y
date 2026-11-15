@@ -2,15 +2,15 @@
 """Describe declared database objects without opening connections or changing bindings."""
 
 import re
-from dataclasses import dataclass
-from typing import ClassVar, override
-lazy from collections.abc import Mapping
 
 lazy from lxml import etree
 
 from odfa11y.concepts import protected_xml
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.odf import Family, Part, qn, select_elements
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import DatabaseDescriptionAnswer
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint
@@ -132,63 +132,24 @@ def _ordinal(
     return positions[parent][node]
 
 
-@dataclass(frozen=True, slots=True)
-class DatabaseDescription:
-    """One supplied description and its optional reviewed object identity."""
-
-    text: str
-    fingerprint: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class SetObjectDescriptions(Operation):
-    """Preflight descriptions for all declared objects before editing any field."""
-
-    entries: Mapping[str, DatabaseDescription]
-    name: ClassVar[str] = "set_object_descriptions"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.DATABASE})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        available = targets(document)
-        decisions = []
-        failures = []
-        for target, value in self.entries.items():
-            matches = available.get(target, [])
-            problem = _problem(target, matches, value)
-            if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, target=target))
-            else:
-                decisions.append((target, matches[0], value.text.strip()))
-        if failures:
-            return tuple(failures)
-        outcomes = []
-        for target, node, text in decisions:
-            attribute = description_attribute(node)
-            changed = node.get(attribute) != text
-            if changed:
-                node.set(attribute, text)
-            outcomes.append(
-                Outcome(
-                    self.name,
-                    Status.APPLIED if changed else Status.UNCHANGED,
-                    "Set supplied database object description."
-                    if changed
-                    else "Database object description already matches.",
-                    target=target,
-                    count=int(changed),
-                )
-            )
-        return tuple(outcomes)
-
-
-def _problem(target: str, matches: list[etree._Element], value: DatabaseDescription) -> str | None:
-    if len(matches) != 1:
-        return "A database object target must resolve to exactly one declaration."
-    if not isinstance(value.text, str) or not value.text.strip():
-        return "A database description must be a nonblank string."
-    if ORDINAL.search(target) and value.fingerprint is None:
-        return "An ordinal database target requires its reviewed fingerprint."
-    if value.fingerprint is not None and value.fingerprint != fingerprint(matches[0]):
-        return "The database object changed since the plan was reviewed."
-    return None
+def edit_description(
+    document: OdfDocument, decision: Decision[DatabaseDescriptionAnswer]
+) -> tuple[Outcome, ...]:
+    """Set a supplied description while preserving connections, SQL and object content."""
+    node = resolved_node(document, decision)
+    attribute = description_attribute(node)
+    value = decision.answer.text.strip()
+    changed = node.get(attribute) != value
+    if changed:
+        node.set(attribute, value)
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            "Applied database object description."
+            if changed
+            else "Database object description already matches.",
+            target=decision.target_path,
+            count=int(changed),
+        ),
+    )

@@ -41,7 +41,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
             rules.GRAPHIC003,
             location=Location(identity.target(frame)),
             details={"frame": name},
-            decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE, rules.GRAPHIC003.id),
+            decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE),
         )
     for image in images:
         problem, review = inspect_payload(document, image)

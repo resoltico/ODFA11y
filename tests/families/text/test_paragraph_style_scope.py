@@ -9,14 +9,18 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Status
-from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers
+from odfa11y.decisions.edit import Status
 from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.report import FactKeys
 from odfa11y.status import StageStatus
+from tests.fixtures.answers import (
+    apply_in_memory,
+    spacer_input,
+    spacing_input,
+)
 from tests.fixtures.documents import Variant, make_package
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -55,11 +59,11 @@ def test_foreign_style_cannot_shadow_a_real_page_break(tmp_path: Path) -> None:
     shadow_props.set(qn("fo", "break-before"), "auto")
     container.append(shadow)
     before = etree.tostring(foreign)
-    assert RemoveEmptySpacers().apply(document)[0].status is Status.UNCHANGED
+    assert apply_in_memory(document, spacer_input())[0].status is Status.UNCHANGED
     assert paragraph.getparent() is body
     assert etree.tostring(foreign) == before
     source = document.save(tmp_path / "source.odt")
-    result = execute_operations(source, tmp_path / "out.odt", [RemoveEmptySpacers()])
+    result = apply_answers(source, tmp_path / "out.odt", [spacer_input()])
     assert not result.changed
     assert select_elements(
         OdfDocument.open(tmp_path / "out.odt").tree(Part.CONTENT),
@@ -82,7 +86,7 @@ def test_automatic_parent_uses_common_scope_even_when_names_match(tmp_path: Path
     properties = catalog_of(document).effective_paragraph_properties("Shared")
     assert properties[qn("fo", "break-before")] == "page"
     assert properties[qn("fo", "margin-top")] == "1cm"
-    assert RemoveEmptySpacers().apply(document)[0].status is not Status.FAILED
+    assert apply_in_memory(document, spacer_input())[0].status is not Status.FAILED
     assert paragraph.getparent() is not None
     assert len(catalog_of(document).styles("paragraph")) == 5
 
@@ -110,13 +114,13 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
     unknown = _empty(document, "Unresolved")
     _unresolved_style(document, problem)
     before = etree.tostring(document.tree(Part.CONTENT))
-    outcome = RemoveEmptySpacers().apply(document)[0]
+    outcome = apply_in_memory(document, spacer_input())[0]
     assert outcome.status is Status.FAILED
     assert unknown.getparent() is not None
     assert etree.tostring(document.tree(Part.CONTENT)) == before
     source = document.save(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
-    assert_refused(execute_operations(source, destination, [RemoveEmptySpacers()]))
+    assert_refused(apply_answers(source, destination, [spacer_input()]))
     assert not destination.exists()
     report = audit_odf(source)
     assert "STYLE001" in {finding.rule_id for finding in report.findings}
@@ -135,7 +139,7 @@ def test_spacing_refuses_conditional_target_before_creating_a_style(tmp_path: Pa
     paragraph = _empty(document, "BodyTight")
     paragraph.text = "Target paragraph"
     before = etree.tostring(document.tree(Part.CONTENT))
-    outcome = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(document)[0]
+    outcome = apply_in_memory(document, spacing_input("Body paragraph.", ("BodyTight",)))[0]
     assert outcome.status is Status.FAILED
     assert etree.tostring(document.tree(Part.CONTENT)) == before
 
@@ -198,7 +202,7 @@ def test_inherited_page_number_reset_protects_empty_paragraphs(
     paragraph = _empty(document, name)
     assert validate(document).count == 0
     source = document.save(tmp_path / "source.odt")
-    result = execute_operations(source, tmp_path / "out.odt", [RemoveEmptySpacers()])
+    result = apply_answers(source, tmp_path / "out.odt", [spacer_input()])
     reloaded = OdfDocument.open(tmp_path / "out.odt")
     targets = select_elements(
         reloaded.tree(Part.CONTENT), f"//office:text/text:p[@text:style-name='{name}']"
@@ -235,12 +239,10 @@ def test_optional_styles_absence_is_distinct_from_an_unrecognized_styles_root(
         document.save(source)
     output = tmp_path / "out.odt"
     if missing:
-        result = execute_operations(source, output, [RemoveEmptySpacers()])
+        result = apply_answers(source, output, [spacer_input()])
         assert result.changed
         assert not OdfDocument.open(output).has(Part.STYLES)
     else:
-        assert_refused(
-            execute_operations(source, output, [RemoveEmptySpacers()]), match="unsupported root"
-        )
+        assert_refused(apply_answers(source, output, [spacer_input()]), match="unsupported root")
         assert not output.exists()
         assert "STYLE001" in {finding.rule_id for finding in audit_odf(source).findings}

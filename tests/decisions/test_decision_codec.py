@@ -17,6 +17,7 @@ from odfa11y.contracts import (
 )
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
 from odfa11y.errors import PlanError
+from odfa11y.families.text.domains import HEADINGS
 from odfa11y.plans import Plan, parse_tables, plan_schema, render_plan
 from odfa11y.plans.fidelity import SamePagination
 from odfa11y.report import Location
@@ -39,8 +40,15 @@ class Metadata:
     __contract__: ClassVar[Annotated[object, RequireAny(("title", "description"))]]
 
 
-HEADING = DecisionKind("heading.level", DecisionScope.TARGET, Level)
-METADATA = DecisionKind("document.metadata", DecisionScope.DOCUMENT, Metadata)
+def _not_executed(document: object, decision: object) -> tuple[()]:
+    message = "Codec fixture kinds must not execute"
+    raise AssertionError(message)
+
+
+HEADING = DecisionKind(
+    "heading.level", DecisionScope.TARGET, Level, edit=_not_executed, domain=HEADINGS
+)
+METADATA = DecisionKind("document.metadata", DecisionScope.DOCUMENT, Metadata, edit=_not_executed)
 KINDS = {kind.id: kind for kind in [HEADING, METADATA]}
 
 
@@ -99,9 +107,8 @@ def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
         HEADING,
         Target(TargetPath((Location("content/heading[1]")).path), Fingerprint("b" * 16)),
         {"level": 3},
-        ("HEADING002",),
     )
-    template = render_plan(plan.header, [open_decision])
+    template = render_plan(plan.header, (), optional=[open_decision])
     assert not parse_tables(tomllib.loads(template), KINDS).decisions
     answered = (
         template
@@ -111,7 +118,7 @@ def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     )
     values = tomllib.loads(answered)
     result = parse_tables(values, KINDS)
-    assert result.decisions[0].answer_as(Level).level == 2
+    assert result.decisions[0].answer.level == 2
     assert result.decisions[0].target == Target(
         TargetPath("content/heading[1]"), Fingerprint("b" * 16)
     )

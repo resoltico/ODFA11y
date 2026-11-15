@@ -4,7 +4,7 @@
 import tempfile
 from pathlib import Path
 
-from odfa11y.audit.engine import BLOCKING_RULE_IDS, audit_odf
+from odfa11y.audit.engine import BLOCKING_RULES, audit_odf
 from odfa11y.audit.questions import available_questions, with_context
 from odfa11y.capture import capture_source
 from odfa11y.decisions import Decision, OpenDecision
@@ -25,7 +25,7 @@ def plan_blockers(report: Report) -> Report | None:
         An independent blocker report, or None when source planning is established.
 
     """
-    findings = [finding for finding in report.findings if finding.rule_id in BLOCKING_RULE_IDS]
+    findings = [finding for finding in report.findings if finding.rule in BLOCKING_RULES]
     return (
         Report(kind=report.kind, subject=report.subject, findings=findings, _sources=report.sources)
         if findings

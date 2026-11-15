@@ -9,34 +9,34 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import Authored, FaultEdit, metadata_input
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
 
 SOURCE = TESTS / "family_corpus/fruit-chart.odc"
 
 
-def _plan() -> list[Operation]:
+def _plan() -> list[Authored]:
     return [
-        SetMetadata(
+        metadata_input(
             title="Fruit counts", description="Three apples and four pears", language="en-US"
         )
     ]
 
 
 @dataclass(frozen=True, slots=True)
-class ChangeChartData(Operation):
+class ChangeChartData(FaultEdit):
     """Negative control changes a numerical value without changing its display string."""
 
     name: ClassVar[str] = "change_chart_data"
@@ -53,8 +53,8 @@ def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path)
     assert validate(before).count == 0
     assert {"CHART002", "CHART003"} <= {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odc", tmp_path / "twice.odc"
-    assert execute_operations(SOURCE, once, _plan()).changed
-    assert not execute_operations(once, twice, _plan()).changed
+    assert apply_answers(SOURCE, once, _plan()).changed
+    assert not apply_answers(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
     assert adapter_for(before.kind).snapshot(before) == adapter_for(after.kind).snapshot(after)
     assert before.storage.read("content.xml") == after.storage.read("content.xml")
@@ -65,9 +65,7 @@ def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path)
 
 def test_chart_numeric_change_is_rejected_before_publication(tmp_path: Path) -> None:
     destination = tmp_path / "wrong.odc"
-    assert_refused(
-        execute_operations(SOURCE, destination, [ChangeChartData()]), match="content changed"
-    )
+    assert_refused(apply_answers(SOURCE, destination, [ChangeChartData()]), match="content changed")
     assert not destination.exists()
 
 

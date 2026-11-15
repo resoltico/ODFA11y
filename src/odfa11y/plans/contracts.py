@@ -118,13 +118,13 @@ def from_file(record: PlanFile[Mapping[str, object]], kinds: Mapping[str, Decisi
         kind = kinds[kind_id]
         if kind.scope is DecisionScope.DOCUMENT:
             if isinstance(payload, UnansweredDocument):
-                unanswered.append(UnansweredDecision(kind_id, None))
+                unanswered.append(UnansweredDecision(kind, None))
                 continue
             decisions.append(Decision._decoded(kind, None, payload))
             continue
         for path, entry in cast(Mapping[TargetPath, object], payload).items():
             if isinstance(entry, UnansweredTarget):
-                unanswered.append(UnansweredDecision(kind_id, path, entry.fingerprint))
+                unanswered.append(UnansweredDecision(kind, path, entry.fingerprint))
                 continue
             fields = {
                 field.name: getattr(entry, field.name) for field in fields_of(kind.answer_type)

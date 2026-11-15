@@ -1,74 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Reviewed, explicit semantic heading levels with stable logical targets."""
 
-from dataclasses import dataclass
-from typing import ClassVar, override
 from urllib.parse import quote
-lazy from collections.abc import Mapping
 
 lazy from lxml import etree
 
 from odfa11y.concepts import normalized_graphic_tree, protected_xml
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.families.text.contexts import text_nodes
-from odfa11y.odf import Family, Part, qn
+from odfa11y.decisions import Decision
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.families.text.answers import HeadingLevelAnswer
+from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
-MAX_HEADING_LEVEL = 10
 XML_ID = xml_names.XML_ID
-
-
-@dataclass(frozen=True, slots=True)
-class HeadingLevel:
-    """One chosen outline level and the reviewed heading fingerprint."""
-
-    level: int
-    fingerprint: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class SetHeadingLevels(Operation):
-    """Resolve all heading decisions before changing any outline-level attribute."""
-
-    entries: Mapping[str, HeadingLevel]
-    name: ClassVar[str] = "set_heading_levels"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        headings = text_nodes(document.tree(Part.CONTENT), xml_names.TEXT_H, main_only=True)
-        targets: dict[str, list[etree._Element]] = {}
-        for index, heading in enumerate(headings, start=1):
-            targets.setdefault(heading_location(heading, index).path, []).append(heading)
-        decisions = []
-        failures = []
-        for target, entry in self.entries.items():
-            matches = targets.get(target, [])
-            problem = _problem(target, entry, matches, document)
-            if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, target=target))
-            else:
-                decisions.append((target, matches[0], entry.level))
-        if failures:
-            return tuple(failures)
-        outcomes = []
-        for target, heading, level in decisions:
-            changed = heading.get(xml_names.TEXT_OUTLINE_LEVEL) != str(level)
-            if changed:
-                heading.set(xml_names.TEXT_OUTLINE_LEVEL, str(level))
-            outcomes.append(
-                Outcome(
-                    self.name,
-                    Status.APPLIED if changed else Status.UNCHANGED,
-                    f"Outline level {level}.",
-                    target=target,
-                    count=int(changed),
-                )
-            )
-        return tuple(outcomes)
 
 
 def heading_location(heading: etree._Element, index: int) -> Location:
@@ -111,17 +59,20 @@ def heading_fingerprint(
     )
 
 
-def _problem(
-    target: str, entry: HeadingLevel, matches: list[etree._Element], document: OdfDocument
-) -> str | None:
-    if len(matches) != 1:
-        return "The heading target must resolve to exactly one heading."
-    if type(entry.level) is not int or not 1 <= entry.level <= MAX_HEADING_LEVEL:
-        return "An outline level must be an integer from 1 to 10."
-    if "[id=" not in target and entry.fingerprint is None:
-        return "An ordinal heading target requires its reviewed fingerprint."
-    if entry.fingerprint is not None and entry.fingerprint != heading_fingerprint(
-        matches[0], document
-    ):
-        return "The heading is no longer the object this plan was reviewed against."
-    return None
+def edit_heading(
+    document: OdfDocument, decision: Decision[HeadingLevelAnswer]
+) -> tuple[Outcome, ...]:
+    """Set the reviewed semantic level of one heading."""
+    heading = resolved_node(document, decision)
+    changed = heading.get(xml_names.TEXT_OUTLINE_LEVEL) != str(decision.answer.level)
+    if changed:
+        heading.set(xml_names.TEXT_OUTLINE_LEVEL, str(decision.answer.level))
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            f"Outline level {decision.answer.level}.",
+            target=decision.target_path,
+            count=int(changed),
+        ),
+    )

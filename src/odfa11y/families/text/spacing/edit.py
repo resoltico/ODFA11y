@@ -3,13 +3,14 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import ClassVar, override
 
 lazy from lxml import etree
 
 from odfa11y.concepts import eligible_text_node, visible_words
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions import Decision
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, XmlParseError
+from odfa11y.families.text.answers import TextSpacingAnswer
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.styles.catalogue import (
     NO_STYLE,
@@ -21,102 +22,10 @@ from odfa11y.families.text.styles.catalogue import (
     set_spacing,
 )
 from odfa11y.families.text.styles.properties import paragraph_style_name
-from odfa11y.odf import Family, Part, qn
+from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
 lazy from odfa11y.families.text.styles.catalogue import StyleCatalog
 lazy from odfa11y.odf import OdfDocument
-
-
-@dataclass(frozen=True, slots=True)
-class NormalizeSpacing(Operation):
-    """Give paragraphs of the target styles the effective spacing of a reference paragraph.
-
-    Spacing is copied onto a derived style named after its base style and a digest of that
-    name (``A11ySpacing_<style>_<digest>``). A style of that name is reused only when it is
-    provably our own earlier output; ODFA11y never overwrites or reinterprets another style.
-    """
-
-    reference_text: str
-    target_styles: tuple[str, ...]
-    exact_reference: bool = False
-    include_headings: bool = False
-    name: ClassVar[str] = "normalize_spacing"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.TEXT})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        try:
-            plan = self._plan(document)
-        except DocumentRefusal as exc:
-            return (self._failed(str(exc)),)
-        if isinstance(plan, tuple):
-            return plan
-        catalog = catalog_of(document)
-        changed = sum(_ensure_style(catalog, base, plan.spacing) for base in plan.needed)
-        for paragraph in plan.direct:
-            paragraph.set(xml_names.TEXT_STYLE_NAME, derived_style_name(_style_key(paragraph)))
-            changed += 1
-        if not changed:
-            return (Outcome(self.name, Status.UNCHANGED, "Spacing already normalized."),)
-        message = f"Normalized spacing to match reference style {plan.reference_style!r}."
-        return (Outcome(self.name, Status.APPLIED, message, count=changed),)
-
-    def _plan(self, document: OdfDocument) -> _Plan | tuple[Outcome, ...]:
-        """Resolve the reference, the spacing and the affected paragraphs before any edit.
-
-        Returns
-        -------
-        _Plan | tuple[Outcome, ...]
-            The plan, or the failed outcome explaining why none can be made.
-
-        """
-        tree = document.tree(Part.CONTENT)
-        reference = self._reference(tree)
-        if reference is None:
-            return (self._failed(f"Reference paragraph not found: {self.reference_text!r}"),)
-        reference_style = paragraph_style_name(reference)
-        spacing = catalog_of(document).spacing_signature(reference_style)
-        if not spacing:
-            return (self._failed(f"Reference style {reference_style!r} has no spacing to copy."),)
-        clones = {derived_style_name(style): style for style in self.target_styles}
-        if len(clones) != len(set(self.target_styles)):
-            return (self._failed("Two target styles map to the same derived style name."),)
-        paragraphs = text_nodes(
-            tree,
-            xml_names.TEXT_P,
-            *([xml_names.TEXT_H] if self.include_headings else []),
-            main_only=True,
-        )
-        direct = [p for p in paragraphs if _style_key(p) in self.target_styles]
-        derived = [p for p in paragraphs if _style_key(p) in clones]
-        for paragraph in [*direct, *derived]:
-            paragraph_style_name(paragraph)
-        if not direct and not derived:
-            return (self._failed("No paragraph uses a target style."),)
-        needed = sorted({_style_key(p) for p in direct} | {clones[_style_key(p)] for p in derived})
-        plan = _Plan(reference_style, spacing, direct, needed)
-        catalog = catalog_of(document)
-        for base in needed:
-            catalog.effective_paragraph_properties(None if base == NO_STYLE else base)
-        conflicts = [
-            message for base in needed if (message := _conflict(catalog, base)) is not None
-        ]
-        conflicts += _excluded_consumers(document, plan, set(direct) | set(derived))
-        return tuple(self._failed(message) for message in conflicts) if conflicts else plan
-
-    def _failed(self, message: str) -> Outcome:
-        return Outcome(self.name, Status.FAILED, message)
-
-    def _reference(self, tree: etree._ElementTree) -> etree._Element | None:
-        for node in text_nodes(tree, xml_names.TEXT_P, xml_names.TEXT_H, main_only=True):
-            current = visible_words(node)
-            if (
-                (self.reference_text == current)
-                if self.exact_reference
-                else (self.reference_text in current)
-            ):
-                return node
-        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,3 +150,102 @@ def _proven_references(document: OdfDocument, used: set[str | None]) -> dict[str
         ):
             proven[name] = base
     return proven
+
+
+@dataclass(frozen=True, slots=True)
+class _SpacingEdit:
+    """Give paragraphs of the target styles the effective spacing of a reference paragraph.
+
+    Spacing is copied onto a derived style named after its base style and a digest of that
+    name (``A11ySpacing_<style>_<digest>``). A style of that name is reused only when it is
+    provably our own earlier output; ODFA11y never overwrites or reinterprets another style.
+    """
+
+    decision: Decision[TextSpacingAnswer]
+
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+        try:
+            plan = self._plan(document)
+        except DocumentRefusal as exc:
+            return (self._failed(str(exc)),)
+        if isinstance(plan, tuple):
+            return plan
+        catalog = catalog_of(document)
+        changed = sum(_ensure_style(catalog, base, plan.spacing) for base in plan.needed)
+        for paragraph in plan.direct:
+            paragraph.set(xml_names.TEXT_STYLE_NAME, derived_style_name(_style_key(paragraph)))
+            changed += 1
+        if not changed:
+            return (
+                Outcome(self.decision.kind.id, Status.UNCHANGED, "Spacing already normalized."),
+            )
+        message = f"Normalized spacing to match reference style {plan.reference_style!r}."
+        return (Outcome(self.decision.kind.id, Status.APPLIED, message, count=changed),)
+
+    def _plan(self, document: OdfDocument) -> _Plan | tuple[Outcome, ...]:
+        """Resolve the reference, the spacing and the affected paragraphs before any edit.
+
+        Returns
+        -------
+        _Plan | tuple[Outcome, ...]
+            The plan, or the failed outcome explaining why none can be made.
+
+        """
+        tree = document.tree(Part.CONTENT)
+        reference = self._reference(tree)
+        if reference is None:
+            return (
+                self._failed(
+                    f"Reference paragraph not found: {self.decision.answer.reference_text!r}"
+                ),
+            )
+        reference_style = paragraph_style_name(reference)
+        spacing = catalog_of(document).spacing_signature(reference_style)
+        if not spacing:
+            return (self._failed(f"Reference style {reference_style!r} has no spacing to copy."),)
+        clones = {derived_style_name(style): style for style in self.decision.answer.target_styles}
+        if len(clones) != len(set(self.decision.answer.target_styles)):
+            return (self._failed("Two target styles map to the same derived style name."),)
+        paragraphs = text_nodes(
+            tree,
+            xml_names.TEXT_P,
+            *([xml_names.TEXT_H] if self.decision.answer.include_headings else []),
+            main_only=True,
+        )
+        direct = [p for p in paragraphs if _style_key(p) in self.decision.answer.target_styles]
+        derived = [p for p in paragraphs if _style_key(p) in clones]
+        for paragraph in [*direct, *derived]:
+            paragraph_style_name(paragraph)
+        if not direct and not derived:
+            return (self._failed("No paragraph uses a target style."),)
+        needed = sorted({_style_key(p) for p in direct} | {clones[_style_key(p)] for p in derived})
+        plan = _Plan(reference_style, spacing, direct, needed)
+        catalog = catalog_of(document)
+        for base in needed:
+            catalog.effective_paragraph_properties(None if base == NO_STYLE else base)
+        conflicts = [
+            message for base in needed if (message := _conflict(catalog, base)) is not None
+        ]
+        conflicts += _excluded_consumers(document, plan, set(direct) | set(derived))
+        return tuple(self._failed(message) for message in conflicts) if conflicts else plan
+
+    def _failed(self, message: str) -> Outcome:
+        return Outcome(self.decision.kind.id, Status.FAILED, message)
+
+    def _reference(self, tree: etree._ElementTree) -> etree._Element | None:
+        for node in text_nodes(tree, xml_names.TEXT_P, xml_names.TEXT_H, main_only=True):
+            current = visible_words(node)
+            if (
+                (self.decision.answer.reference_text == current)
+                if self.decision.answer.exact_reference
+                else (self.decision.answer.reference_text in current)
+            ):
+                return node
+        return None
+
+
+def edit_spacing(
+    document: OdfDocument, decision: Decision[TextSpacingAnswer]
+) -> tuple[Outcome, ...]:
+    """Normalize only the reviewed paragraph styles using established derived-style guards."""
+    return _SpacingEdit(decision).apply(document)

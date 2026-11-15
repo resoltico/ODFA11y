@@ -3,20 +3,18 @@
 
 lazy from collections.abc import Sequence
 
-from odfa11y.concepts.edits import Status
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.families.spec import FamilyAdapter, ReviewItem
 from odfa11y.families.text.audit import audit_text
 from odfa11y.families.text.flow import text_is_preserved, visible_text_snapshot
-from odfa11y.families.text.kinds import DECISION_KINDS, operations
+from odfa11y.families.text.kinds import DECISION_KINDS, REMOVE_SPACERS
 from odfa11y.families.text.language import default_language, set_default_language
 from odfa11y.families.text.preflight import preflight_text
 from odfa11y.families.text.probes import PROBES
 from odfa11y.families.text.protection import protect_edit
-from odfa11y.families.text.spacing.remove import RemoveEmptySpacers
 from odfa11y.odf import Family, Part
-lazy from odfa11y.concepts.edits import Outcome
 lazy from odfa11y.odf import OdfDocument
 
 REVIEW_ITEMS = (
@@ -76,7 +74,6 @@ class TextAdapter(FamilyAdapter):
     set_default_language = staticmethod(set_default_language)
     kinds = DECISION_KINDS
     probes = PROBES
-    operations = staticmethod(operations)
     review_items = REVIEW_ITEMS
     pdf_filter = "writer_pdf_Export"
     preflight = staticmethod(preflight_text)
@@ -109,7 +106,7 @@ class TextAdapter(FamilyAdapter):
         removed = sum(
             outcome.count
             for outcome in outcomes
-            if outcome.operation == RemoveEmptySpacers.name and outcome.status == Status.APPLIED
+            if outcome.kind_id == REMOVE_SPACERS.id and outcome.status == Status.APPLIED
         )
         return text_is_preserved(before.content, after.content, removed_empty_blocks=removed)
 

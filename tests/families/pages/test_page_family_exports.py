@@ -3,34 +3,37 @@
 
 import hashlib
 import tomllib
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative, PageDecision
 from odfa11y.families import pages
 from odfa11y.odf import OdfDocument, validate
-from odfa11y.remediate import SetMetadata
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.answers import (
+    Authored,
+    graphic_answer,
+    metadata_input,
+    page_answer,
+)
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
-lazy from odfa11y.concepts.edits import Operation
+lazy from tests.fixtures.answers import graphic_inputs, page_inputs
 
 CORPUS = TESTS / "family_corpus"
 FAMILIES = {"presentation": (".odp", pages), "drawing": (".odg", pages)}
 
 
-def _plan(family: str) -> list[Operation]:
-    _, api = FAMILIES[family]
+def _plan() -> list[Authored]:
     return [
-        SetMetadata(language="en-US"),
-        api.SetPageSemantics({
-            "Fruit overview": PageDecision(
+        metadata_input(language="en-US"),
+        page_inputs({
+            "Fruit overview": page_answer(
                 "Fruit overview", "Fruit counts and an illustration", ("id2", "id1", "id3")
             )
         }),
-        api.SetGraphicAlternatives({
-            "Fruit illustration": GraphicAlternative(
+        graphic_inputs({
+            "Fruit illustration": graphic_answer(
                 "Fruit illustration", "A red apple and a green pear"
             )
         }),
@@ -59,7 +62,7 @@ def test_native_page_plan_removes_its_findings_and_reapplies_unchanged(
     suffix, _ = FAMILIES[family]
     source = CORPUS / f"fruit-{family}{suffix}"
     once, twice = tmp_path / f"once{suffix}", tmp_path / f"twice{suffix}"
-    assert execute_operations(source, once, _plan(family)).changed
-    assert not execute_operations(once, twice, _plan(family)).changed
+    assert apply_answers(source, once, _plan()).changed
+    assert not apply_answers(once, twice, _plan()).changed
     assert audit_odf(twice, schema=True).findings == []
     assert once.read_bytes() == twice.read_bytes()

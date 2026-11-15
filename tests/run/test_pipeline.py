@@ -7,19 +7,19 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.concepts import GraphicAlternative
 from odfa11y.errors import InvalidOption, OutputOccupied
 from odfa11y.evidence import check_bundle
-from odfa11y.families.text import (
-    SetGraphicAlternatives,
-)
 from odfa11y.odf import PackageStorage
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import PROFILES, profile_named
+from tests.fixtures.answers import (
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+)
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
@@ -57,10 +57,10 @@ def test_remediation_failure_publishes_evidence_without_a_remediated_document(
     tmp_path: Path,
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    operations = [SetGraphicAlternatives({"Missing": GraphicAlternative("x")})]
+    operations = [graphic_inputs({"Missing": graphic_answer("x")})]
     record = execute(source, reviewed_plan(source, operations, Pagination.SAME()), tmp_path / "out")
     assert statuses(record)["remediate"] == "failed"
-    assert record.exit_status == 2
+    assert record.exit_status == 4
     assert not (tmp_path / "out" / "remediated.odt").exists()
     stages = {
         x["name"]: x for x in json.loads((tmp_path / "out" / "run.json").read_text())["stages"]
@@ -86,7 +86,7 @@ def test_a_missing_libreoffice_fails_the_export_stage_and_keeps_earlier_evidence
     options = RunSettings(tools=Tools(soffice=str(tmp_path / "no-such-soffice")))
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()),
+        reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()),
         tmp_path / "out",
         options,
     )
@@ -152,7 +152,7 @@ def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path
     options = RunSettings(profile=profile_named("source"))
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()),
+        reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()),
         tmp_path / "o",
         options,
     )

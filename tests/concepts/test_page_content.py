@@ -9,20 +9,18 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import (
-    SHAPE_TAGS,
-    GraphicAlternative,
-    GraphicEditor,
-    PageDecision,
-    PageEditor,
-    page_fingerprint,
-    page_shapes,
-    page_snapshot,
-    pages,
-)
-from odfa11y.concepts.edits import Status
+from odfa11y.concepts import page_fingerprint, page_shapes, page_snapshot, pages
+from odfa11y.decisions.edit import Status
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from tests.fixtures.answers import (
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+    page_answer,
+    page_inputs,
+)
 from tests.fixtures.documents import Variant, make_flat, make_package
+from tests.fixtures.operations import apply_answers
 
 SHAPES = (
     '<draw:frame draw:name="Title" xml:id="title" draw:id="title">'
@@ -49,23 +47,16 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
     page = pages(doc)[0]
     fingerprint = page_fingerprint(page, doc)
     before = page_snapshot(doc)
-    editor = PageEditor(
-        {
-            "Overview": PageDecision(
-                "Fruit overview", "Invented fruit counts", ("title", "counts"), fingerprint
-            )
-        },
-        "set_pages",
-    )
-    assert editor.apply(doc)[0].status is Status.APPLIED
-    assert editor.apply(doc)[0].status is Status.UNCHANGED
-    graphics = GraphicEditor(
-        {"Counts": GraphicAlternative("Counts", "Three apples and four pears")},
-        "set_graphics",
-        SHAPE_TAGS,
-    )
-    assert graphics.apply(doc)[0].status is Status.APPLIED
-    assert graphics.apply(doc)[0].status is Status.UNCHANGED
+    editor = page_inputs({
+        "Overview": page_answer(
+            "Fruit overview", "Invented fruit counts", ("title", "counts"), fingerprint
+        )
+    })
+    assert apply_in_memory(doc, editor)[0].status is Status.APPLIED
+    assert apply_in_memory(doc, editor)[0].status is Status.UNCHANGED
+    graphics = graphic_inputs({"Counts": graphic_answer("Counts", "Three apples and four pears")})
+    assert apply_in_memory(doc, graphics)[0].status is Status.APPLIED
+    assert apply_in_memory(doc, graphics)[0].status is Status.UNCHANGED
     assert page_snapshot(doc) == before
     assert page_fingerprint(page, doc) == fingerprint
     assert validate(doc).count == 0
@@ -79,13 +70,15 @@ def test_partial_duplicate_unknown_or_malformed_navigation_is_rejected(
     tmp_path: Path, order: tuple[str, ...]
 ) -> None:
     doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=_body("drawing"))))
-    original = etree.tostring(doc.tree(Part.CONTENT))
-    editor = PageEditor(
-        {"Overview": PageDecision(title="Must not be written", navigation=order)}, "set_pages"
-    )
-    assert editor.apply(doc)[0].status is Status.FAILED
-    assert etree.tostring(doc.tree(Part.CONTENT)) == original
-    assert not doc.dirty
+    source = doc.save(tmp_path / "reviewed.odg")
+    before = source.read_bytes()
+    destination = tmp_path / "refused.odg"
+    editor = page_inputs({"Overview": page_answer(title="Must not be written", navigation=order)})
+    result = apply_answers(source, destination, [editor])
+    assert not result.published
+    assert any(outcome.status is Status.FAILED for outcome in result.outcomes)
+    assert source.read_bytes() == before
+    assert not destination.exists()
 
 
 def test_a_duplicate_identity_on_another_page_is_rejected(tmp_path: Path) -> None:
@@ -96,9 +89,9 @@ def test_a_duplicate_identity_on_another_page_is_rejected(tmp_path: Path) -> Non
     parent = page.getparent()
     assert parent is not None
     parent.append(second)
-    editor = PageEditor({"Overview": PageDecision(navigation=("counts", "title"))}, "set_pages")
+    editor = page_inputs({"Overview": page_answer(navigation=("counts", "title"))})
     checkpoint = doc.checkpoint()
-    assert editor.apply(doc)[0].status is Status.FAILED
+    assert apply_in_memory(doc, editor)[0].status is Status.FAILED
     assert not doc.changed_since(checkpoint)
 
 
@@ -110,8 +103,8 @@ def test_hyperlink_wrapping_does_not_hide_a_top_level_shape(tmp_path: Path) -> N
     )
     doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=body)))
     assert len(page_shapes(pages(doc)[0])) == 2
-    incomplete = PageEditor({"Overview": PageDecision(navigation=("title",))}, "set_pages")
-    assert incomplete.apply(doc)[0].status is Status.FAILED
+    incomplete = page_inputs({"Overview": page_answer(navigation=("title",))})
+    assert apply_in_memory(doc, incomplete)[0].status is Status.FAILED
 
 
 @pytest.mark.parametrize("attribute", [("svg", "x"), ("xlink", "href"), ("draw", "name")])

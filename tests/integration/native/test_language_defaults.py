@@ -1,18 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Native integration cases for language defaults."""
 
-lazy from collections.abc import Callable
+from collections.abc import Callable
 lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
 from odfa11y.concepts import style_language
-from odfa11y.concepts.edits import Status
+from odfa11y.decisions.edit import Status
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn
-from odfa11y.remediate import SetMetadata
+from tests.fixtures.answers import metadata_input
 from tests.fixtures.writer import make_minimal_odt
+lazy from tests.fixtures.answers import apply_in_memory
 
 
 @pytest.mark.parametrize(
@@ -34,7 +35,7 @@ def test_native_reload_measures_three_defaults_and_preserves_named_override(
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     document = OdfDocument.open(make_minimal_odt(tmp_path / "original.odt"))
-    SetMetadata(language="en-GB").apply(document)
+    apply_in_memory(document, metadata_input(language="en-GB"))
     container = document.tree(Part.STYLES).find("office:styles", NS)
     assert container is not None
     named = etree.SubElement(container, qn("style", "style"))
@@ -46,7 +47,7 @@ def test_native_reload_measures_three_defaults_and_preserves_named_override(
     paragraph = document.tree(Part.CONTENT).find(".//text:p", NS)
     assert paragraph is not None
     paragraph.set(qn("text", "style-name"), "AuthoredLanguage")
-    assert SetMetadata(language=tag).apply(document)[0].status is Status.APPLIED
+    assert apply_in_memory(document, metadata_input(language=tag))[0].status is Status.APPLIED
     source_props = document.tree(Part.STYLES).find(
         "office:styles/style:default-style/style:text-properties", NS
     )

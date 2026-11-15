@@ -8,11 +8,20 @@ from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
 from odfa11y.capture import source_digest
-from odfa11y.contracts import Description, JsonObject, Length, Pattern, record_dict, validate
+from odfa11y.contracts import (
+    Description,
+    JsonObject,
+    JsonProperty,
+    Length,
+    Pattern,
+    record_dict,
+    validate,
+)
+from odfa11y.decisions import DecisionScope
 from odfa11y.errors import PlanError, Remedy, RemedyAction
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
 from odfa11y.targets import TargetPath
-lazy from odfa11y.decisions import Decision
+lazy from odfa11y.decisions import Decision, DecisionKind
 lazy from odfa11y.plans.contracts import to_file
 
 SOURCE_SHA256_PATTERN = r"^[0-9a-f]{64}(?![\s\S])"
@@ -41,9 +50,22 @@ class PlanHeader:
 class UnansweredDecision:
     """An inert plan block whose answer has not been supplied."""
 
-    kind_id: str
+    _kind: DecisionKind
     path: TargetPath | None
     fingerprint: str | None = None
+
+    def __post_init__(self) -> None:
+        if (self.kind.scope is DecisionScope.TARGET) != (self.path is not None):
+            message = "An unanswered question must agree with its kind's target scope"
+            raise PlanError(message)
+
+    @property
+    def kind(self) -> DecisionKind:
+        return self._kind
+
+    @JsonProperty
+    def kind_id(self) -> str:
+        return self.kind.id
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,13 +88,20 @@ class Plan:
         """
         validate(self.header, label="plan", error=PlanError)
         validate(self.fidelity, label="fidelity", error=PlanError)
+        validate(
+            self.unanswered, tuple[UnansweredDecision, ...], label="unanswered", error=PlanError
+        )
+        self._require_unique_questions()
+
+    def _require_unique_questions(self) -> None:
         keys = [
             (answer.kind.id, answer.target.path if answer.target else None)
             for answer in self.decisions
         ]
+        keys.extend((question.kind.id, question.path) for question in self.unanswered)
         if len(keys) != len(set(keys)):
-            msg = "A plan cannot answer the same decision kind and target twice"
-            raise PlanError(msg)
+            message = "A plan cannot answer or retain the same decision kind and target twice"
+            raise PlanError(message)
 
     @classmethod
     def _decoded(
@@ -82,18 +111,12 @@ class Plan:
         fidelity: FidelityPolicy,
         unanswered: tuple[UnansweredDecision, ...] = (),
     ) -> Plan:
-        keys = [
-            (decision.kind.id, decision.target.path if decision.target else None)
-            for decision in decisions
-        ]
-        if len(keys) != len(set(keys)):
-            message = "A plan cannot answer the same decision kind and target twice"
-            raise PlanError(message)
         result = object.__new__(cls)
         object.__setattr__(result, "header", header)
         object.__setattr__(result, "decisions", decisions)
         object.__setattr__(result, "fidelity", fidelity)
         object.__setattr__(result, "unanswered", unanswered)
+        result._require_unique_questions()
         return result
 
     @classmethod

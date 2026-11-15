@@ -9,12 +9,12 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.families.text import MarkTableHeaders, TableHeaders
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.report import FactKeys
 from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import header_answer, header_inputs
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
 
@@ -33,9 +33,7 @@ def test_writer_table_classification_and_pdf_scope(
         assert not any(question.kind.id == "table.headers" for question in report.decisions)
         refused = tmp_path / "refused.odt"
         assert_refused(
-            execute_operations(
-                source, refused, [MarkTableHeaders({"Intent": TableHeaders(rows=1)})]
-            ),
+            apply_answers(source, refused, [header_inputs({"Intent": header_answer(rows=1)})]),
             match="ambiguous.*Writer",
         )
         assert not refused.exists()
@@ -44,12 +42,12 @@ def test_writer_table_classification_and_pdf_scope(
         question = next(q for q in report.decisions if q.kind.id == "table.headers")
         assert question.target is not None
         edited = tmp_path / "headers.odt"
-        result = execute_operations(
+        result = apply_answers(
             source,
             edited,
             [
-                MarkTableHeaders({
-                    question.target.path: TableHeaders(
+                header_inputs({
+                    question.target.path: header_answer(
                         rows=1, fingerprint=require_target(question.target).fingerprint
                     )
                 })

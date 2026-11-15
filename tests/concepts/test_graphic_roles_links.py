@@ -8,16 +8,24 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative, LinkDescription, graphics_fingerprint
-from odfa11y.concepts.edits import Status
+from odfa11y.concepts import graphics_fingerprint
 from odfa11y.concepts.graphic_styles import (
     GraphicStyles,
     effective_graphic_role,
     normalized_role_attributes,
 )
 from odfa11y.concepts.links import link_fingerprint, link_has_description, link_location
-from odfa11y.families.text import SetGraphicAlternatives, SetLinkDescriptions
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PlanError
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
+from tests.fixtures.answers import (
+    RawDecisions,
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+    link_answer,
+    link_inputs,
+)
 from tests.fixtures.graphics import _style
 from tests.fixtures.writer import make_minimal_odt
 
@@ -31,11 +39,9 @@ def _graphic(tmp_path: Path, version: str = "1.4") -> tuple[OdfDocument, etree._
     return document, select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
 
 
-def _decision(
-    document: OdfDocument, frame: etree._Element, *, decorative: bool
-) -> SetGraphicAlternatives:
-    return SetGraphicAlternatives({
-        frame.get(qn("draw", "name"), ""): GraphicAlternative(
+def _decision(document: OdfDocument, frame: etree._Element, *, decorative: bool) -> RawDecisions:
+    return graphic_inputs({
+        frame.get(qn("draw", "name"), ""): graphic_answer(
             decorative=decorative, fingerprint=graphics_fingerprint(document, [frame])
         )
     })
@@ -55,17 +61,20 @@ def test_isolated_role_preserves_shared_style_and_reapplies(
     parent.append(peer)
     before = graphics_fingerprint(document, [frame])
     operation = _decision(document, frame, decorative=True)
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     assert effective_graphic_role(document, frame).decorative
     assert not effective_graphic_role(document, peer).decorative
     assert normalized_role_attributes(document, frame) == {qn("draw", "style-name"): "Shared"}
     assert graphics_fingerprint(document, [frame]) == before
-    assert operation.apply(document)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     assert len(
         select_elements(document.tree(Part.CONTENT), "//style:style[@style:family='graphic']")
     ) == 1 + int(automatic)
     assert validate(document).count == 0
-    assert _decision(document, frame, decorative=False).apply(document)[0].status == Status.APPLIED
+    assert (
+        apply_in_memory(document, _decision(document, frame, decorative=False))[0].status
+        == Status.APPLIED
+    )
     assert not effective_graphic_role(document, frame).decorative
     assert not effective_graphic_role(document, peer).decorative
     assert validate(document).count == 0
@@ -80,10 +89,10 @@ def test_ordered_class_overlay_and_common_parent_remain_legal(tmp_path: Path) ->
     frame.set(qn("draw", "class-names"), "Overlay")
     assert not effective_graphic_role(document, frame).decorative
     operation = _decision(document, frame, decorative=True)
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     assert frame.get(qn("draw", "class-names"), "").startswith("Overlay ODFA11yRole_")
     assert effective_graphic_role(document, frame).decorative
-    assert operation.apply(document)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     assert validate(document).count == 0
 
 
@@ -106,7 +115,7 @@ def test_unresolved_roles_refuse_without_mutation(tmp_path: Path, problem: str) 
         frame.set(qn("presentation", "style-name"), "Presentation")
     operation = _decision(document, frame, decorative=True)
     checkpoint = document.checkpoint()
-    assert operation.apply(document)[0].status == Status.FAILED
+    assert apply_in_memory(document, operation)[0].status == Status.FAILED
     assert not document.changed_since(checkpoint)
     assert effective_graphic_role(document, frame).problem
 
@@ -127,13 +136,19 @@ def test_decorative_intent_refuses_text_or_interactive_context(tmp_path: Path, k
         assert parent is not None
         parent.remove(frame)
         etree.SubElement(parent, qn("draw", "a")).append(frame)
-    assert _decision(document, frame, decorative=True).apply(document)[0].status == Status.FAILED
+    assert (
+        apply_in_memory(document, _decision(document, frame, decorative=True))[0].status
+        == Status.FAILED
+    )
 
 
 @pytest.mark.parametrize("role", [False, True])
 def test_any_explicit_role_requires_odf14(tmp_path: Path, *, role: bool) -> None:
     document, frame = _graphic(tmp_path, "1.3")
-    assert _decision(document, frame, decorative=role).apply(document)[0].status == Status.FAILED
+    assert (
+        apply_in_memory(document, _decision(document, frame, decorative=role))[0].status
+        == Status.FAILED
+    )
 
 
 def test_authored_style_drift_invalidates_review_and_payload_remains_checked(
@@ -146,8 +161,12 @@ def test_authored_style_drift_invalidates_review_and_payload_remains_checked(
     props = style.find("style:graphic-properties", NS)
     assert props is not None
     props.set(qn("draw", "fill-color"), "#ffffff")
-    assert operation.apply(document)[0].status == Status.FAILED
-    assert _decision(document, frame, decorative=True).apply(document)[0].status == Status.APPLIED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, operation)
+    assert (
+        apply_in_memory(document, _decision(document, frame, decorative=True))[0].status
+        == Status.APPLIED
+    )
     image = frame.find("draw:image", NS)
     assert image is not None
     image.set(qn("xlink", "href"), "https://example.test/missing.svg")
@@ -160,21 +179,20 @@ def test_authored_style_drift_invalidates_review_and_payload_remains_checked(
 def test_blank_alternatives_and_overlapping_roles_preflight_together(tmp_path: Path) -> None:
     document, frame = _graphic(tmp_path)
     reviewed = graphics_fingerprint(document, [frame])
+    with pytest.raises(PlanError, match="title"):
+        apply_in_memory(document, graphic_inputs({"Logo": graphic_answer(title=" ")}))
     for entries in (
-        {"Logo": GraphicAlternative(title=" ")},
         {
-            "Logo": GraphicAlternative(decorative=True, fingerprint=reviewed),
-            "logo.svg": GraphicAlternative(description="A company logo"),
+            "Logo": graphic_answer(decorative=True, fingerprint=reviewed),
+            "content/frame[name=Logo]": graphic_answer(description="A company logo"),
         },
         {
-            "Logo": GraphicAlternative(decorative=True, fingerprint=reviewed),
-            "logo.svg": GraphicAlternative(decorative=False, fingerprint=reviewed),
+            "Logo": graphic_answer(decorative=True, fingerprint=reviewed),
+            "content/frame[name=Logo]": graphic_answer(decorative=False, fingerprint=reviewed),
         },
     ):
-        assert all(
-            outcome.status == Status.FAILED
-            for outcome in SetGraphicAlternatives(entries).apply(document)
-        )
+        with pytest.raises(PlanError, match="same decision kind"):
+            apply_in_memory(document, graphic_inputs(entries))
         assert not document.dirty
 
 
@@ -191,17 +209,18 @@ def test_link_description_preserves_normative_targets_and_reapplies(tmp_path: Pa
     )
     assert not link_has_description(link)
     fingerprint = link_fingerprint(document, link)
-    operation = SetLinkDescriptions({
-        link_location(link, 1).path: LinkDescription("Example documentation", fingerprint)
+    operation = link_inputs({
+        link_location(link, 1).path: link_answer("Example documentation", fingerprint)
     })
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     assert link_has_description(link)
     assert link.get(qn("office", "name")) == "Existing target name"
     assert link.get(qn("xlink", "href")) == "https://example.test/"
     assert link_fingerprint(document, link) == fingerprint
-    assert operation.apply(document)[0].status == Status.UNCHANGED
+    assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     link.set(qn("xlink", "href"), "https://changed.test/")
-    assert operation.apply(document)[0].status == Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, operation)
 
 
 @pytest.mark.parametrize("declared", ["true", "false"])
@@ -217,7 +236,8 @@ def test_group_role_refuses_and_does_not_hide_child_findings(tmp_path: Path, dec
     )
     inner = etree.SubElement(group, qn("draw", "g"))
     inner.append(frame)
-    assert _decision(document, group, decorative=True).apply(document)[0].status == Status.FAILED
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(document, _decision(document, group, decorative=True))
     source = document.save(tmp_path / "group.odt")
     ids = {finding.rule_id for finding in audit_odf(source).findings}
     assert {"GRAPHIC001", "GRAPHIC003"} <= ids
@@ -229,7 +249,10 @@ def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> Non
     frame.set(qn("draw", "style-name"), "Visual")
     title = etree.SubElement(frame, qn("svg", "title"))
     title.text = "Authored title"
-    assert _decision(document, frame, decorative=True).apply(document)[0].status == Status.APPLIED
+    assert (
+        apply_in_memory(document, _decision(document, frame, decorative=True))[0].status
+        == Status.APPLIED
+    )
     source = document.save(tmp_path / "conflict.odt")
     assert {"GRAPHIC002"} <= {finding.rule_id for finding in audit_odf(source).findings}
     assert title.text == "Authored title"
@@ -240,14 +263,15 @@ def test_unproven_generated_style_cannot_normalize_geometry_or_visual_drift(tmp_
     _style(document, "Visual")
     frame.set(qn("draw", "style-name"), "Visual")
     operation = _decision(document, frame, decorative=True)
-    assert operation.apply(document)[0].status == Status.APPLIED
+    assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     name = frame.get(qn("draw", "style-name"), "")
     generated = GraphicStyles(document).style("graphic", name)
     props = generated.find("style:graphic-properties", NS)
     assert props is not None
     props.set(qn("draw", "fill-color"), "#123456")
     assert normalized_role_attributes(document, frame) == {qn("draw", "style-name"): name}
-    assert operation.apply(document)[0].status == Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, operation)
 
 
 def test_equal_style_names_in_distinct_legal_scopes_are_not_a_cycle(tmp_path: Path) -> None:
@@ -262,7 +286,11 @@ def test_equal_style_names_in_distinct_legal_scopes_are_not_a_cycle(tmp_path: Pa
     props = common.find("style:graphic-properties", NS)
     assert props is not None
     props.set(qn("draw", "fill-color"), "#ffffff")
-    assert reviewed.apply(document)[0].status == Status.FAILED
-    assert _decision(document, frame, decorative=False).apply(document)[0].status == Status.APPLIED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, reviewed)
+    assert (
+        apply_in_memory(document, _decision(document, frame, decorative=False))[0].status
+        == Status.APPLIED
+    )
     assert not effective_graphic_role(document, frame).decorative
     assert validate(document).count == 0

@@ -7,14 +7,17 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.families.text import SetTargetLanguages, TargetLanguage
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
 from odfa11y.odf import OdfDocument, Part, select_elements
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
+from tests.fixtures.answers import (
+    language_answer,
+    language_inputs,
+    metadata_input,
+)
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 
 INFO = "<office:change-info><dc:creator>Invented Author</dc:creator></office:change-info>"
 
@@ -121,7 +124,7 @@ def test_revision_title_edit_preserves_history_but_target_language_is_refused(
     document = OdfDocument.open(source)
     before = etree.tostring(select_elements(document.tree(Part.CONTENT), "//office:body")[0])
     output = tmp_path / "metadata.fodt"
-    assert execute_operations(source, output, [SetMetadata(title="Reviewed revisions")]).published
+    assert apply_answers(source, output, [metadata_input(title="Reviewed revisions")]).published
     assert (
         etree.tostring(
             select_elements(OdfDocument.open(output).tree(Part.CONTENT), "//office:body")[0]
@@ -131,12 +134,12 @@ def test_revision_title_edit_preserves_history_but_target_language_is_refused(
     target, node = next(iter(language_targets(document).items()))
     unsafe = tmp_path / "unsafe.fodt"
     assert_refused(
-        execute_operations(
+        apply_answers(
             source,
             unsafe,
             [
-                SetTargetLanguages({
-                    target: TargetLanguage(
+                language_inputs({
+                    target: language_answer(
                         western="en", fingerprint=language_fingerprint(document, node)
                     )
                 })

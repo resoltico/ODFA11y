@@ -307,7 +307,7 @@ def remediate(
         Every operation outcome and the physical publication result.
 
     """
-    return apply_plan(source, destination, _selected_plan(plan), dry_run=dry_run)
+    return apply_plan(source, destination, plan, dry_run=dry_run)
 
 
 @_interruptible

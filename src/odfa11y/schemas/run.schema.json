@@ -1266,12 +1266,6 @@
     "odfa11y": {
       "type": "string"
     },
-    "operations": {
-      "items": {
-        "type": "object"
-      },
-      "type": "array"
-    },
     "outputs": {
       "additionalProperties": {
         "type": "string"
@@ -3557,6 +3551,1017 @@
                   "changed": {
                     "type": "boolean"
                   },
+                  "decisions": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "text": {
+                                  "description": "Explain the declared object without changing SQL or bindings.",
+                                  "format": "odfa11y-xml-text",
+                                  "pattern": "\\S",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "database.description"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "anyOf": [
+                                {
+                                  "properties": {
+                                    "title": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "title"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "description": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "description"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "language": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "language"
+                                  ]
+                                }
+                              ],
+                              "properties": {
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-xml-text",
+                                      "pattern": "\\S",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Document description and context."
+                                },
+                                "language": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-language-tag",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Intended default language, preserving explicit local overrides."
+                                },
+                                "title": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-xml-text",
+                                      "pattern": "\\S",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Document title identifying its purpose."
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "description",
+                                "language"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "document.metadata"
+                              ]
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "version": {
+                                  "description": "ODF version whose result must satisfy schema guards.",
+                                  "enum": [
+                                    "1.3",
+                                    "1.4"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "document.odf_version"
+                              ]
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "alternative": {
+                                  "description": "Write the formula's spoken meaning in its intended language.",
+                                  "format": "odfa11y-xml-text",
+                                  "pattern": "\\S",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "alternative"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "formula.alternative"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "anyOf": [
+                                {
+                                  "properties": {
+                                    "title": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "title"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "description": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "description"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "decorative": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "decorative"
+                                  ]
+                                }
+                              ],
+                              "if": {
+                                "properties": {
+                                  "decorative": {
+                                    "const": true
+                                  }
+                                },
+                                "required": [
+                                  "decorative"
+                                ]
+                              },
+                              "properties": {
+                                "decorative": {
+                                  "anyOf": [
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Explicit decorative role, subject to source safety guards."
+                                },
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-xml-text",
+                                      "pattern": "\\S",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Explain the graphic's meaning."
+                                },
+                                "title": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-xml-text",
+                                      "pattern": "\\S",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Accessible title."
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "description",
+                                "decorative"
+                              ],
+                              "then": {
+                                "properties": {
+                                  "description": {
+                                    "type": "null"
+                                  },
+                                  "title": {
+                                    "type": "null"
+                                  }
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "graphic.alternative"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "level": {
+                                  "description": "Intended outline level.",
+                                  "maximum": 10,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "level"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "heading.level"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "anyOf": [
+                                {
+                                  "properties": {
+                                    "western": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "western"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "asian": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "asian"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "complex": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "complex"
+                                  ]
+                                }
+                              ],
+                              "properties": {
+                                "asian": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-language-tag",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Language for the target Asian-script channel."
+                                },
+                                "complex": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-language-tag",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Language for the target complex-script channel."
+                                },
+                                "western": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-language-tag",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Language for the target western-script channel."
+                                }
+                              },
+                              "required": [
+                                "western",
+                                "asian",
+                                "complex"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "language.target"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "description": {
+                                  "description": "Explain the link's purpose in its reading context.",
+                                  "format": "odfa11y-xml-text",
+                                  "pattern": "\\S",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "description"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "link.description"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "anyOf": [
+                                {
+                                  "properties": {
+                                    "title": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "title"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "description": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "description"
+                                  ]
+                                }
+                              ],
+                              "properties": {
+                                "description": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-xml-text",
+                                      "pattern": "\\S",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Page purpose and context."
+                                },
+                                "title": {
+                                  "anyOf": [
+                                    {
+                                      "format": "odfa11y-xml-text",
+                                      "pattern": "\\S",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Accessible page title."
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "description"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "page.metadata"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "navigation": {
+                                  "description": "Complete reading order of the page's existing shape identities.",
+                                  "items": {
+                                    "format": "odfa11y-xml-text",
+                                    "pattern": "\\S",
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                }
+                              },
+                              "required": [
+                                "navigation"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "page.navigation"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "description": "Name identifying what the sheet contains.",
+                                  "format": "odfa11y-sheet-name",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "sheet.name"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "anyOf": [
+                                {
+                                  "properties": {
+                                    "rows": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "rows"
+                                  ]
+                                },
+                                {
+                                  "properties": {
+                                    "columns": {
+                                      "not": {
+                                        "type": "null"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "columns"
+                                  ]
+                                }
+                              ],
+                              "properties": {
+                                "columns": {
+                                  "anyOf": [
+                                    {
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Number of leading logical header columns."
+                                },
+                                "rows": {
+                                  "anyOf": [
+                                    {
+                                      "minimum": 1,
+                                      "type": "integer"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Number of leading logical header rows."
+                                }
+                              },
+                              "required": [
+                                "rows",
+                                "columns"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "table.headers"
+                              ]
+                            },
+                            "target": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fingerprint": {
+                                  "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                                  "type": "string"
+                                },
+                                "path": {
+                                  "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "fingerprint"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "enabled": {
+                                  "description": "Enable only after reviewing all affected content.",
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "enabled"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "text.linkify_addresses"
+                              ]
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "enabled": {
+                                  "description": "Enable only after reviewing all affected content.",
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "enabled"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "text.remove_spacers"
+                              ]
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "answer": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "exact_reference": {
+                                  "description": "Match the entire reference paragraph.",
+                                  "type": "boolean"
+                                },
+                                "include_headings": {
+                                  "description": "Also apply to headings using the selected styles.",
+                                  "type": "boolean"
+                                },
+                                "reference_text": {
+                                  "description": "Authored text identifying the reference paragraph.",
+                                  "pattern": "\\S",
+                                  "type": "string"
+                                },
+                                "target_styles": {
+                                  "description": "Existing paragraph styles selected for spacing normalization.",
+                                  "items": {
+                                    "pattern": "\\S",
+                                    "type": "string"
+                                  },
+                                  "minItems": 1,
+                                  "type": "array"
+                                }
+                              },
+                              "required": [
+                                "reference_text",
+                                "target_styles",
+                                "exact_reference",
+                                "include_headings"
+                              ],
+                              "type": "object"
+                            },
+                            "kind_id": {
+                              "enum": [
+                                "text.spacing"
+                              ]
+                            },
+                            "target": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "answer",
+                            "kind_id",
+                            "target"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    },
+                    "type": "array"
+                  },
                   "destination_name": {
                     "anyOf": [
                       {
@@ -3579,12 +4584,6 @@
                       4
                     ]
                   },
-                  "operations": {
-                    "items": {
-                      "type": "object"
-                    },
-                    "type": "array"
-                  },
                   "outcomes": {
                     "items": {
                       "additionalProperties": false,
@@ -3592,10 +4591,101 @@
                         "count": {
                           "type": "integer"
                         },
-                        "message": {
+                        "failure": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "details": {
+                                  "type": "string"
+                                },
+                                "exit_status": {
+                                  "enum": [
+                                    2,
+                                    3,
+                                    4
+                                  ]
+                                },
+                                "message": {
+                                  "type": "string"
+                                },
+                                "problems": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "remedy": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "action": {
+                                          "enum": [
+                                            "regenerate-plan",
+                                            "rebind-plan",
+                                            "choose-output",
+                                            "install-tool",
+                                            "edit-in-application",
+                                            "embed-resource"
+                                          ]
+                                        },
+                                        "detail": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "target": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "action",
+                                        "target",
+                                        "detail"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "message",
+                                "exit_status",
+                                "remedy",
+                                "problems",
+                                "details"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "kind_id": {
                           "type": "string"
                         },
-                        "operation": {
+                        "message": {
                           "type": "string"
                         },
                         "status": {
@@ -3617,11 +4707,12 @@
                         }
                       },
                       "required": [
-                        "operation",
+                        "kind_id",
                         "status",
                         "message",
                         "target",
-                        "count"
+                        "count",
+                        "failure"
                       ],
                       "type": "object"
                     },
@@ -3931,10 +5022,7 @@
                             "foreign-operation"
                           ]
                         },
-                        "message": {
-                          "type": "string"
-                        },
-                        "operation": {
+                        "kind_id": {
                           "anyOf": [
                             {
                               "type": "string"
@@ -3943,6 +5031,9 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "message": {
+                          "type": "string"
                         },
                         "target": {
                           "anyOf": [
@@ -3958,7 +5049,7 @@
                       "required": [
                         "kind",
                         "message",
-                        "operation",
+                        "kind_id",
                         "target"
                       ],
                       "type": "object"
@@ -3973,7 +5064,7 @@
                   "published",
                   "violations",
                   "dry_run",
-                  "operations",
+                  "decisions",
                   "predictions",
                   "candidate",
                   "unanswered",
@@ -6282,7 +7373,6 @@
   },
   "required": [
     "document",
-    "operations",
     "fidelity_policy",
     "profile",
     "stages",

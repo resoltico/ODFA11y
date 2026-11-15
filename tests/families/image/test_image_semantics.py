@@ -8,35 +8,40 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import GraphicAlternative, GraphicIdentity
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.concepts import GraphicIdentity
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PlanError
 from odfa11y.families import adapter_for
-from odfa11y.families.image import SetGraphicAlternatives
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate import SetMetadata
-from odfa11y.remediate.compile import compile_operations
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.answers import (
+    Authored,
+    FaultEdit,
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+)
 from tests.fixtures.documents import make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header, reviewed_plan
 
 SOURCE = TESTS / "family_corpus/fruit-image.odi"
 
 
-def _plan() -> list[Operation]:
+def _plan() -> list[Authored]:
     document = OdfDocument.open(SOURCE)
     frame = select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
     identity = GraphicIdentity(document, [frame])
     return [
-        SetMetadata(language="en-US"),
-        SetGraphicAlternatives({
-            "Fruit illustration": GraphicAlternative(
+        metadata_input(language="en-US"),
+        graphic_inputs({
+            "Fruit illustration": graphic_answer(
                 "Fruit", "A red apple and a green pear", identity.fingerprint([frame])
             )
         }),
@@ -50,7 +55,7 @@ def _payload(document: OdfDocument) -> str:
 
 
 @dataclass(frozen=True, slots=True)
-class ChangeImageGeometry(Operation):
+class ChangeImageGeometry(FaultEdit):
     """Negative control changes image geometry rather than its alternative."""
 
     name: ClassVar[str] = "change_image_geometry"
@@ -67,8 +72,8 @@ def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_p
     assert validate(before).count == 0
     assert "GRAPHIC003" in {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odi", tmp_path / "twice.odi"
-    assert execute_operations(SOURCE, once, _plan()).changed
-    assert not execute_operations(once, twice, _plan()).changed
+    assert apply_answers(SOURCE, once, _plan()).changed
+    assert not apply_answers(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
     assert adapter_for(before.kind).snapshot(before) == adapter_for(after.kind).snapshot(after)
     assert before.storage.read(_payload(before)) == after.storage.read(_payload(after))
@@ -80,7 +85,7 @@ def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_p
 def test_image_geometry_change_is_rejected_before_publication(tmp_path: Path) -> None:
     destination = tmp_path / "wrong.odi"
     assert_refused(
-        execute_operations(SOURCE, destination, [ChangeImageGeometry()]), match="content changed"
+        apply_answers(SOURCE, destination, [ChangeImageGeometry()]), match="content changed"
     )
     assert not destination.exists()
 
@@ -91,7 +96,8 @@ def test_changed_actual_image_bytes_make_reviewed_description_stale() -> None:
     document.storage.write_member(
         _payload(document), b'<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>'
     )
-    assert plan.apply(document)[0].status is Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, plan)
     assert not document.dirty
 
 
@@ -149,9 +155,9 @@ def test_image_configuration_is_family_bound_and_strict(tmp_path: Path) -> None:
             'fingerprint = "0123456789abcdef"\n'
         )
     )
-    [operation] = compile_operations(OdfDocument.open(SOURCE), load_plan(plan))
-    assert isinstance(operation, SetGraphicAlternatives)
-    assert operation.entries["content/frame[name=Fruit%20illustration]"].description == "Fruit"
+    [operation] = load_plan(plan).decisions
+    assert operation.kind.id == "graphic.alternative"
+    assert operation.answer.description == "Fruit"
     plan.write_text(
         plan_header(SOURCE)
         + '[decisions."graphic.alternative"."content/frame[1]"]\nalt_text = "Fruit"\n'
@@ -212,10 +218,10 @@ def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
     before = OdfDocument.open(source)
     binary = select_elements(before.tree(Part.CONTENT), "//office:binary-data")[0].text
     assert validate(before).count == 0
-    execute_operations(
+    apply_answers(
         source,
         destination,
-        [SetGraphicAlternatives({"Picture": GraphicAlternative(description="One black pixel")})],
+        [graphic_inputs({"Picture": graphic_answer(description="One black pixel")})],
     )
     after = OdfDocument.open(destination)
     assert select_elements(after.tree(Part.CONTENT), "//office:binary-data")[0].text == binary

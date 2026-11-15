@@ -3,139 +3,21 @@
 
 import re
 from collections import Counter
-from dataclasses import dataclass
-from typing import ClassVar, override
 from urllib.parse import unquote
-lazy from collections.abc import Mapping
 
-lazy from lxml import etree
-
-from odfa11y.concepts.edits import Operation, Outcome, Status
+from odfa11y.decisions import Decision
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import DocumentRefusal
+from odfa11y.families.spreadsheet.answers import SheetNameAnswer
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
-from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
-from odfa11y.odf import Family, PackageStorage, Part, select_elements
+from odfa11y.odf import PackageStorage, Part, select_elements
 from odfa11y.odf import names as xml_names
-from odfa11y.report import Location
 lazy from odfa11y.odf import OdfDocument
 
-FORBIDDEN_CHARACTERS = frozenset("[]*?:/\\")
 DYNAMIC_REFERENCE = re.compile(r"\b(?:INDIRECT|ADDRESS|HYPERLINK)\s*\(", re.IGNORECASE)
 CONFIG = xml_names.CONFIG_NAMESPACE
 EMBEDDED_OBJECTS = "//office:body//draw:object | //office:body//draw:object-ole"
-
-
-@dataclass(frozen=True, slots=True)
-class SheetNameChange:
-    """A reviewed name and preserved identity for one logical sheet target."""
-
-    name: str
-    fingerprint: str
-
-
-@dataclass(frozen=True, slots=True)
-class SetSheetNames(Operation):
-    """Rename stable logical sheet targets without rewriting unestablished references."""
-
-    entries: Mapping[str, SheetNameChange]
-    name: ClassVar[str] = "set_sheet_names"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.SPREADSHEET})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        available = list(sheets(document.tree(Part.CONTENT)))
-        found: dict[str, etree._Element] = {
-            Location.indexed(Part.CONTENT, "sheet", index).path: sheet
-            for index, sheet in enumerate(available, 1)
-        }
-        names = Counter(sheet_name(sheet) for sheet in available)
-        renames = {
-            sheet_name(found[target]): entry.name
-            for target, entry in self.entries.items()
-            if target in found
-        }
-        failures = {}
-        for target, entry in self.entries.items():
-            node = found.get(target)
-            if node is None:
-                failures[target] = "The sheet target must resolve to exactly one sheet."
-            elif entry.fingerprint != sheet_fingerprint(document, node):
-                failures[target] = (
-                    "The sheet is no longer the object this plan was reviewed against."
-                )
-            elif problem := self._plan_problem(
-                sheet_name(node), entry.name, renames
-            ) or _document_problem(document, sheet_name(node), entry.name, names):
-                failures[target] = problem
-        if failures:
-            return tuple(
-                Outcome(self.name, Status.FAILED, message, target=target)
-                for target, message in failures.items()
-            )
-        outcomes = []
-        for target, entry in self.entries.items():
-            node = found[target]
-            old = sheet_name(node)
-            if old == entry.name:
-                outcomes.append(
-                    Outcome(
-                        self.name,
-                        Status.UNCHANGED,
-                        f"Sheet is already named {entry.name!r}.",
-                        target=target,
-                    )
-                )
-            else:
-                node.set(xml_names.TABLE_NAME, entry.name)
-                _rename_settings(document, old, entry.name)
-                outcomes.append(
-                    Outcome(
-                        self.name,
-                        Status.APPLIED,
-                        f"Renamed to {entry.name!r}.",
-                        target=target,
-                        count=1,
-                    )
-                )
-        return tuple(outcomes)
-
-    @staticmethod
-    def _plan_problem(old: str, new: str, renames: Mapping[str, str]) -> str | None:
-        """Find what is wrong with an entry regardless of the document.
-
-        Returns
-        -------
-        str | None
-            The reason, or None when the entry is consistent with the rest of the plan.
-
-        """
-        reason = invalid_name_reason(new)
-        if reason:
-            return f"{new!r} is not a usable sheet name: {reason}."
-        others = {key.casefold() for key in renames if key != old}
-        if new.casefold() in others:
-            return f"{new!r} is also renamed by this plan; chained and swapped renames are refused."
-        if sum(target.casefold() == new.casefold() for target in renames.values()) > 1:
-            return f"More than one sheet is renamed to {new!r}."
-        return None
-
-
-def invalid_name_reason(name: str) -> str | None:
-    """Explain why a name cannot be a sheet name.
-
-    Returns
-    -------
-    str | None
-        The reason, or None for a usable name: not blank, free of square brackets, ``*``,
-        ``?``, ``:``, ``/`` and backslash, and without an apostrophe at either end.
-
-    """
-    if not name.strip():
-        return "it is empty"
-    if FORBIDDEN_CHARACTERS & set(name):
-        return "it contains one of [ ] * ? : / \\"
-    if name.startswith("'") or name.endswith("'"):
-        return "it starts or ends with an apostrophe"
-    return None
 
 
 def _document_problem(document: OdfDocument, old: str, new: str, names: Counter[str]) -> str | None:
@@ -226,3 +108,28 @@ def _rename_settings(document: OdfDocument, old: str, new: str) -> None:
     for item in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item"):
         if item.get(f"{CONFIG}name") == "ActiveTable" and item.text == old:
             item.text = new
+
+
+def edit_sheet_name(
+    document: OdfDocument, decision: Decision[SheetNameAnswer]
+) -> tuple[Outcome, ...]:
+    """Rename one sheet after establishing that references and settings can be preserved."""
+    node = resolved_node(document, decision)
+    old = sheet_name(node)
+    new = decision.answer.name
+    names = Counter(sheet_name(sheet) for sheet in sheets(document.tree(Part.CONTENT)))
+    if problem := _document_problem(document, old, new, names):
+        raise DocumentRefusal(problem)
+    changed = old != new
+    if changed:
+        node.set(xml_names.TABLE_NAME, new)
+        _rename_settings(document, old, new)
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            f"Renamed to {new!r}." if changed else f"Sheet is already named {new!r}.",
+            target=decision.target_path,
+            count=int(changed),
+        ),
+    )

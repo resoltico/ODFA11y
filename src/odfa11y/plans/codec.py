@@ -10,22 +10,30 @@ lazy from collections.abc import Iterable, Mapping
 
 from odfa11y.contracts import decode, fields_of, record_dict, schema_for
 from odfa11y.decisions import DecisionScope
-from odfa11y.errors import PlanError
+from odfa11y.errors import DocumentRefusal, IoFailure, PlanError
 from odfa11y.evidence.redact import Redactor
 from odfa11y.plans.contracts import PlanFile, decision_contract, file_contract, from_file
 from odfa11y.plans.model import PLAN_SCHEMA_VERSION, Plan, PlanHeader
-from odfa11y.rules.registry import RULES
 from odfa11y.targets import (
+    Fingerprint,
+    TargetPath,
     require_target,
 )
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision, DecisionKind, OpenDecision
 lazy from odfa11y.decisions.decision import QuestionContext
+lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.plans.fidelity import FidelityPolicy
 lazy from odfa11y.report import Finding
 
 
-def parse_plan(path: str | Path, kinds: Mapping[str, DecisionKind]) -> Plan:
+def parse_plan(
+    path: str | Path,
+    kinds: Mapping[str, DecisionKind],
+    *,
+    document: OdfDocument | None = None,
+    source_sha256: str | None = None,
+) -> Plan:
     """Read one source-bound TOML plan, with no accepted legacy tables.
 
     Returns
@@ -42,13 +50,21 @@ def parse_plan(path: str | Path, kinds: Mapping[str, DecisionKind]) -> Plan:
     try:
         with Path(path).open("rb") as stream:
             values = tomllib.load(stream)
-    except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
+    except OSError as error:
+        raise IoFailure.from_oserror(error) from error
+    except (UnicodeError, tomllib.TOMLDecodeError) as exc:
         msg = f"Cannot read plan: {exc}"
         raise PlanError(msg) from exc
-    return parse_tables(values, kinds)
+    return parse_tables(values, kinds, document=document, source_sha256=source_sha256)
 
 
-def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]) -> Plan:
+def parse_tables(
+    values: Mapping[str, object],
+    kinds: Mapping[str, DecisionKind],
+    *,
+    document: OdfDocument | None = None,
+    source_sha256: str | None = None,
+) -> Plan:
     """Validate the plan's binding and answer tables against declared kinds.
 
     Returns
@@ -67,10 +83,57 @@ def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]
         message = "This plan uses a retired header; generate a fresh plan with schema_version = 1."
         raise PlanError(message)
     contract = file_contract(kinds)
-    record = cast(
-        PlanFile[Mapping[str, object]], decode(contract, values, label="plan", error=PlanError)
-    )
-    return from_file(record, kinds)
+    try:
+        record = cast(
+            PlanFile[Mapping[str, object]], decode(contract, values, label="plan", error=PlanError)
+        )
+        return from_file(record, kinds)
+    except PlanError as error:
+        problems = list(error.problems or (error.message,))
+        if document is not None:
+            problems.extend(_raw_binding_problems(values, kinds, document))
+        header = values.get("plan")
+        binding = header.get("source") if isinstance(header, Mapping) else None
+        if (
+            source_sha256 is not None
+            and isinstance(binding, Mapping)
+            and isinstance(binding.get("sha256"), str)
+            and binding["sha256"] != source_sha256
+        ):
+            problems.append(
+                "Plan/source digest mismatch; create a newly bound plan with plan --from."
+            )
+        message = "Plan contains invalid answers or source bindings"
+        raise PlanError(message, problems=tuple(dict.fromkeys(problems))) from error
+
+
+def _raw_binding_problems(
+    values: Mapping[str, object], kinds: Mapping[str, DecisionKind], document: OdfDocument
+) -> list[str]:
+    """Inspect only independently well-formed identities after answer decoding failed."""
+    problems = []
+    tables = values.get("decisions")
+    if not isinstance(tables, Mapping):
+        return problems
+    for kind_id, entries in tables.items():
+        kind = kinds.get(kind_id)
+        if kind is None or kind.domain is None or not isinstance(entries, Mapping):
+            continue
+        for path, fields in entries.items():
+            if not isinstance(fields, Mapping) or not (fields.keys() - {"fingerprint"}):
+                continue
+            try:
+                target_path = TargetPath(path)
+                expected = Fingerprint(fields.get("fingerprint"))
+            except PlanError:
+                continue  # The contract decoder already reports malformed identities.
+            try:
+                current = kind.domain.binding(document, target_path)
+                if current.fingerprint != expected:
+                    problems.append(f"{kind.id} @ {path}: fingerprint mismatch")
+            except (PlanError, DocumentRefusal) as error:
+                problems.append(f"{kind.id} @ {path}: {error.message}")
+    return problems
 
 
 def render_plan(
@@ -102,6 +165,9 @@ def render_plan(
     findings = tuple(findings)
     redactor = Redactor(())
     decisions = tuple(decisions)
+    if any(not question.rules for question in decisions):
+        message = "Questions without raised findings belong in the optional overrides section"
+        raise PlanError(message)
     answered = {
         (answer.kind.id, answer.target.path if answer.target else None): answer
         for answer in answers
@@ -180,11 +246,11 @@ def _finding_comments(
     decision: OpenDecision, findings: tuple[Finding, ...], redactor: Redactor
 ) -> list[str]:
     lines: list[str] = []
-    for rule_id in decision.rule_ids:
+    for rule in decision.rules:
         related = [
             finding
             for finding in findings
-            if finding.rule.id == rule_id
+            if finding.rule is rule
             and (
                 decision.target is None
                 or (finding.location is not None and finding.location.path == decision.target.path)
@@ -193,7 +259,7 @@ def _finding_comments(
         if related:
             for finding in related:
                 lines.append(
-                    f"# {rule_id} {finding.severity.value}: "
+                    f"# {rule.id} {finding.severity.value}: "
                     + json.dumps(redactor.text(finding.message), ensure_ascii=True)
                 )
                 if finding.details:
@@ -202,8 +268,7 @@ def _finding_comments(
                         + json.dumps(redactor.record(dict(finding.details)), ensure_ascii=True)
                     )
         else:
-            rule = RULES[rule_id]
-            lines.append(f"# {rule_id} {rule.severity.value}: {rule.title}")
+            lines.append(f"# {rule.id} {rule.severity.value}: {rule.title}")
     return lines
 
 

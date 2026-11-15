@@ -116,7 +116,7 @@ def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
     assert main(arguments) == 0
     output = capsys.readouterr().out
     assert f"Wrote: {destination}" in output
-    assert "applied   set_metadata [title]" in output
+    assert "applied   document.metadata [title]" in output
     assert "Schema: passed; ODF 1.4; 0 before, 0 after, 0 new" in output
     assert destination.is_file()
 
@@ -135,11 +135,11 @@ def test_remediate_json_output_is_structured(
     assert main([*arguments, "--format", "json", "--dry-run"]) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["dry_run"] is True
-    assert data["operations"][0]["operation"] == "set_metadata"
+    assert data["decisions"][0]["kind_id"] == "document.metadata"
     assert data["outcomes"][0]["status"] == "applied"
 
 
-def test_remediation_refusals_return_outcomes_with_exit_2(
+def test_invalid_target_bindings_return_plan_error_with_exit_4(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
@@ -152,8 +152,8 @@ def test_remediation_refusals_return_outcomes_with_exit_2(
         ),
     )
     destination = tmp_path / "out.odt"
-    assert main(["remediate", str(source), str(destination), "--plan", str(bad)]) == 2
-    assert "must resolve to exactly one table" in capsys.readouterr().out
+    assert main(["remediate", str(source), str(destination), "--plan", str(bad)]) == 4
+    assert "must resolve to exactly one source element" in capsys.readouterr().err
     assert not destination.exists()
 
 

@@ -226,14 +226,14 @@ def audit_versions(document: OdfDocument, report: Report) -> None:
             continue  # reported as XML001 by the caller
         if is_office_element(root):
             declared[name] = root.get(xml_names.OFFICE_VERSION)
+    if version is not None:
+        report.facts[FactKeys.DOCUMENT_ODF_VERSION] = version
     if version is None or len(set(declared.values())) > 1:
         report.raise_(
             rules.ODF001,
             "Package members declare different or missing ODF versions.",
             details={"versions": declared},
         )
-    if version is not None:
-        report.facts[FactKeys.DOCUMENT_ODF_VERSION] = version
     if document.has(Part.MANIFEST):
         _audit_manifest(document, version, report)
 

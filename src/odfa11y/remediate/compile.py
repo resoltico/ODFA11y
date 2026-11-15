@@ -1,57 +1,69 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Compile bound decision plans into common and family-owned operations."""
+"""Validate canonical bindings and order registered decisions for direct execution."""
 
-from odfa11y.decisions.answers import DocumentMetadataAnswer, OdfVersionAnswer
-from odfa11y.errors import PlanError
+from odfa11y.decisions import Decision
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.errors import DocumentRefusal, PlanError, Remedy, RemedyAction
 from odfa11y.families import adapter_for
+from odfa11y.families.spreadsheet.kinds import SHEET_NAME
+from odfa11y.families.spreadsheet.sheets import sheet_name
+from odfa11y.odf import OdfDocument
+from odfa11y.plans import Plan
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate.document_ops import COMMON_KINDS
-from odfa11y.remediate.metadata import SetMetadata
-from odfa11y.remediate.version import SetOdfVersion
-lazy from odfa11y.concepts.edits import Operation
-lazy from odfa11y.odf import OdfDocument
-lazy from odfa11y.plans import Plan
 
 
-def compile_operations(document: OdfDocument, plan: Plan) -> tuple[Operation, ...]:
-    """Refuse foreign kinds and compile answers in a stable dependency order.
-
-    Returns
-    -------
-    tuple[Operation, ...]
-        Common operations followed by the selected family's operations.
-
-    Raises
-    ------
-    PlanError
-        A kind is unregistered, belongs to another family or lacks an implementation.
-
-    """
+def compile_decisions(
+    document: OdfDocument, plan: Plan, *, source_sha256: str | None = None
+) -> tuple[Decision, ...]:
+    """Check every answered binding before any edit and sort by registered dependency order."""
     kinds = registered_kinds()
-    adapter = adapter_for(document.kind)
-    applicable = (*COMMON_KINDS, *adapter.kinds)
+    applicable = (*COMMON_KINDS, *adapter_for(document.kind).kinds)
+    positions = {kind.id: index for index, kind in enumerate(applicable)}
+    problems = []
+    if source_sha256 is not None and plan.header.source.sha256 != source_sha256:
+        problems.append("Plan/source digest mismatch; create a newly bound plan with plan --from.")
     for decision in plan.decisions:
         if kinds.get(decision.kind.id) is not decision.kind or decision.kind not in applicable:
-            msg = f"Decision {decision.kind.id!r} does not apply to this document family"
-            raise PlanError(msg)
-    positions = {kind.id: index for index, kind in enumerate((*COMMON_KINDS, *adapter.kinds))}
-    decisions = sorted(
-        plan.decisions,
-        key=lambda decision: (
-            positions[decision.kind.id],
-            decision.target.path if decision.target else "",
-        ),
+            problems.append(f"Decision {decision.kind.id!r} does not apply to this document family")
+            continue
+        if decision.target is not None and decision.kind.domain is not None:
+            try:
+                node = decision.kind.domain.resolve(document, decision.target.path)
+            except PlanError as error:
+                problems.append(f"{decision.kind.id} @ {decision.target.path}: {error.message}")
+                continue
+            if decision.kind.domain.fingerprint(document, node) != decision.target.fingerprint:
+                problems.append(
+                    f"{decision.kind.id} @ {decision.target.path}: fingerprint mismatch"
+                )
+    if problems:
+        message = "Plan answers do not match the source"
+        raise PlanError(message, problems=tuple(problems), remedy=Remedy(RemedyAction.REBIND_PLAN))
+    _sheet_constraints(document, plan.decisions)
+    return tuple(
+        sorted(
+            plan.decisions,
+            key=lambda decision: (
+                positions[decision.kind.id],
+                decision.target.path if decision.target else "",
+            ),
+        )
     )
-    result: list[Operation] = []
-    remaining = []
+
+
+def _sheet_constraints(document: OdfDocument, decisions: tuple[Decision, ...]) -> None:
+    renames = {}
     for decision in decisions:
-        if decision.kind.id == "document.odf_version":
-            result.append(SetOdfVersion(decision.answer_as(OdfVersionAnswer).version))
-        elif decision.kind.id == "document.metadata":
-            answer = decision.answer_as(DocumentMetadataAnswer)
-            result.append(SetMetadata(answer.title, answer.description, answer.language))
-        else:
-            remaining.append(decision)
-    if remaining:
-        result.extend(adapter.operations(document, remaining))
-    return tuple(result)
+        if decision.kind is SHEET_NAME:
+            node = resolved_node(document, decision)
+            renames[sheet_name(node)] = decision.answer.name
+    for old, new in renames.items():
+        if new.casefold() in {name.casefold() for name in renames if name != old}:
+            message = (
+                f"{new!r} is also renamed by this plan; chained and swapped renames are refused."
+            )
+            raise DocumentRefusal(message)
+        if sum(value.casefold() == new.casefold() for value in renames.values()) > 1:
+            message = f"More than one sheet is renamed to {new!r}."
+            raise DocumentRefusal(message)

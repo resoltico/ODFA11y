@@ -5,7 +5,7 @@ from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.families.formula.audit import audit_formula
 from odfa11y.families.formula.expression import language, set_language, snapshot
-from odfa11y.families.formula.kinds import DECISION_KINDS, operations
+from odfa11y.families.formula.kinds import DECISION_KINDS
 from odfa11y.families.formula.probes import PROBES
 from odfa11y.families.spec import FamilyAdapter, ReviewItem
 from odfa11y.odf import Family
@@ -22,7 +22,6 @@ class FormulaAdapter(FamilyAdapter):
     set_default_language = staticmethod(set_language)
     kinds = DECISION_KINDS
     probes = PROBES
-    operations = staticmethod(operations)
     review_items = (
         ReviewItem(
             ReviewTopic.MATHEMATICS,

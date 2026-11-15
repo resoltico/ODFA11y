@@ -9,9 +9,9 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.references import audit_references
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.remediate import SetMetadata
+from tests.fixtures.answers import metadata_input
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 
 
@@ -164,7 +164,7 @@ def test_review_metadata_does_not_repair_or_retarget_references(tmp_path: Path, 
     source = TESTS / "text_corpus" / f"references-{case}.odt"
     output = tmp_path / "reviewed.odt"
     before = etree.tostring(OdfDocument.open(source).tree(Part.CONTENT))
-    execute_operations(source, output, [SetMetadata(title="Reviewed references")])
+    apply_answers(source, output, [metadata_input(title="Reviewed references")])
     assert etree.tostring(OdfDocument.open(output).tree(Part.CONTENT)) == before
     report = audit_odf(output)
     assert not any(

@@ -97,7 +97,23 @@ class _Walker:
                 return result
             failures.append(branch.problems)
         if failures:
-            self.problems.extend(min(failures, key=len))
+            if isinstance(value, Mapping) and all(
+                isinstance(get_origin(choice) or choice, type)
+                and dataclasses.is_dataclass(get_origin(choice) or choice)
+                for choice in choices
+            ):
+                # For tagless record alternatives, keys identify an answered block more
+                # precisely than the number of errors in a header-only alternative.
+                index = min(
+                    range(len(choices)),
+                    key=lambda i: (
+                        len(value.keys() - record_hints(choices[i]).keys()),
+                        len(failures[i]),
+                    ),
+                )
+                self.problems.extend(failures[index])
+            else:
+                self.problems.extend(min(failures, key=len))
         else:
             self.fail(path, "has no accepted type")
         return _INVALID

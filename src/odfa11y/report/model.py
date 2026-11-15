@@ -113,8 +113,17 @@ class Report:
         """Append a finding for a rule, defaulting the message to the rule title."""
         if decision is None and self._question_for is not None:
             decision = self._question_for(rule, self)
+        if decision is not None and rule not in decision.kind.resolves:
+            message = f"Decision {decision.kind.id!r} does not address rule {rule.id}"
+            raise ValueError(message)
         if decision is not None and decision.context is None:
-            path = decision.target.path if decision.target else "document"
+            path = (
+                decision.target.path
+                if decision.target
+                else location.path
+                if location
+                else "document"
+            )
             element_kind = path.rsplit("/", 1)[-1].split("[", 1)[0]
             values = details or {}
             excerpt = values.get("text")
@@ -154,9 +163,9 @@ class Report:
             if previous is not None and previous.target != decision.target:
                 message = "Document identity changed while collecting reviewed decisions"
                 raise PackageError(message)
-            rules = previous.rule_ids if previous is not None else ()
+            rules = previous.rules if previous is not None else ()
             decisions[key] = replace(
-                previous or decision, rule_ids=tuple(dict.fromkeys((*rules, finding.rule.id)))
+                previous or decision, _rules=tuple(dict.fromkeys((*rules, finding.rule)))
             )
         return tuple(decisions.values())
 

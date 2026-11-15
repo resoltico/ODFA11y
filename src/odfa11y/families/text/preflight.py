@@ -3,14 +3,22 @@
 
 lazy from collections.abc import Sequence
 
+from odfa11y.concepts.kinds import LINK_DESCRIPTION
+from odfa11y.decisions.answers import DocumentMetadataAnswer
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import has_revisions
+from odfa11y.families.text.kinds import (
+    LINKIFY_ADDRESSES,
+    REMOVE_SPACERS,
+    TABLE_HEADERS,
+    TARGET_LANGUAGE,
+)
 from odfa11y.odf import Part
-lazy from odfa11y.concepts.edits import Operation
+lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
 
 
-def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> None:
+def preflight_text(document: OdfDocument, operations: Sequence[Decision]) -> None:
     """Reject revision editing and unstable ordinal target combinations.
 
     Raises
@@ -20,25 +28,20 @@ def preflight_text(document: OdfDocument, operations: Sequence[Operation]) -> No
 
     """
     if has_revisions(document.tree(Part.CONTENT)) and any(
-        operation.name != "set_metadata"
-        or type(operation).__module__ != "odfa11y.remediate.metadata"
-        or getattr(operation, "language", None) is not None
-        for operation in operations
+        not isinstance(decision.answer, DocumentMetadataAnswer)
+        or decision.answer.language is not None
+        for decision in operations
     ):
-        msg = "Tracked revisions permit only title/description metadata edits; nothing was written."
-        raise DocumentRefusal(msg)
-    names = {operation.name for operation in operations}
-    if "set_target_languages" in names and names & {
-        "linkify_addresses",
-        "mark_table_headers",
-        "remove_empty_spacers",
-    }:
+        message = (
+            "Tracked revisions permit only title/description metadata edits; nothing was written."
+        )
+        raise DocumentRefusal(message)
+    kinds = {decision.kind for decision in operations}
+    if TARGET_LANGUAGE in kinds and kinds & {LINKIFY_ADDRESSES, TABLE_HEADERS, REMOVE_SPACERS}:
         message = "Ordinal target languages require a separate reviewed structural plan."
         raise DocumentRefusal(message)
-    if names & {"linkify_addresses", "mark_table_headers"}:
-        for operation in operations:
-            if operation.name == "set_link_descriptions" and any(
-                "[id=" not in target for target in getattr(operation, "entries", {})
-            ):
-                msg = "Ordinal link descriptions require a separate reviewed structural plan."
-                raise DocumentRefusal(msg)
+    if kinds & {LINKIFY_ADDRESSES, TABLE_HEADERS}:
+        for decision in operations:
+            if decision.kind is LINK_DESCRIPTION and "[id=" not in decision.target_path:
+                message = "Ordinal link descriptions require a separate reviewed structural plan."
+                raise DocumentRefusal(message)

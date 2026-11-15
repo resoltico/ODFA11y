@@ -8,17 +8,23 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.concepts import GraphicAlternative, protected_xml
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.families.text import SetGraphicAlternatives
+from odfa11y.concepts import protected_xml
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
+from tests.fixtures.answers import (
+    FaultEdit,
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+)
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.writer import make_minimal_odt
 
 
 @dataclass(frozen=True, slots=True)
-class DamagePayload(Operation):
+class DamagePayload(FaultEdit):
     """Deliberately damage a resource without touching visible words."""
 
     member: str | None = None
@@ -36,7 +42,7 @@ class DamagePayload(Operation):
 
 
 @dataclass(frozen=True, slots=True)
-class DamageCellValue(Operation):
+class DamageCellValue(FaultEdit):
     """Deliberately change a numeric value while retaining its displayed words."""
 
     name: ClassVar[str] = "damage_cell_value"
@@ -57,7 +63,7 @@ def test_opaque_package_resource_damage_is_rejected(tmp_path: Path, member: str)
     original = source.read_bytes()
     destination = tmp_path / "out.odt"
     assert_refused(
-        execute_operations(source, destination, [DamagePayload(member)]),
+        apply_answers(source, destination, [DamagePayload(member)]),
         match="Opaque document resources changed",
     )
     assert source.read_bytes() == original
@@ -73,7 +79,7 @@ def test_flat_embedded_binary_damage_is_rejected(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=body))
     destination = tmp_path / "out.fodt"
     assert_refused(
-        execute_operations(source, destination, [DamagePayload()]),
+        apply_answers(source, destination, [DamagePayload()]),
         match="Protected document content changed",
     )
     assert not destination.exists()
@@ -82,9 +88,7 @@ def test_flat_embedded_binary_damage_is_rejected(tmp_path: Path) -> None:
 def test_protected_cell_value_change_is_rejected_even_without_changed_words(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
     destination = tmp_path / "out.odt"
-    assert_refused(
-        execute_operations(source, destination, [DamageCellValue()]), match="content changed"
-    )
+    assert_refused(apply_answers(source, destination, [DamageCellValue()]), match="content changed")
     assert not destination.exists()
 
 
@@ -95,8 +99,9 @@ def test_direct_graphic_api_rejects_nonstring_metadata_before_any_edit(
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
 
     doc = OdfDocument.open(source)
-    operation = SetGraphicAlternatives({"Logo": GraphicAlternative(description=cast("str", value))})
-    assert operation.apply(doc)[0].status is Status.FAILED
+    operation = graphic_inputs({"Logo": graphic_answer(description=cast("str", value))})
+    with pytest.raises(PlanError, match="description"):
+        apply_in_memory(doc, operation)
     assert not doc.dirty
 
 

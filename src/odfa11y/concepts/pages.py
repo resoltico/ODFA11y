@@ -3,21 +3,22 @@
 
 import json
 from collections import Counter
-from dataclasses import dataclass
-lazy from collections.abc import Mapping
 
 from lxml import etree
 
-from odfa11y.concepts.edits import Outcome, Status
 from odfa11y.concepts.graphic_identity import (
     SHAPE_TAGS,
     GraphicIdentity,
     graphic_style_dependencies,
 )
 from odfa11y.concepts.graphic_styles import normalized_graphic_tree
-from odfa11y.concepts.graphics import GraphicAlternative, set_description
-from odfa11y.concepts.locations import page_location
+from odfa11y.concepts.graphics import set_description
 from odfa11y.concepts.xml import protected_xml
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import PageMetadataAnswer, PageNavigationAnswer
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.targets import Fingerprint
@@ -123,93 +124,6 @@ def page_snapshot(document: OdfDocument) -> tuple[str, ...]:
     )
 
 
-@dataclass(frozen=True, slots=True)
-class PageDecision:
-    """Explicit page metadata and a complete order of existing shape identities."""
-
-    title: str | None = None
-    description: str | None = None
-    navigation: tuple[str, ...] | None = None
-    fingerprint: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class PageEditor:
-    """Preflight all selected pages before editing descriptions or navigation."""
-
-    entries: Mapping[str, PageDecision]
-    name: str
-
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        """Apply a complete reviewed page plan or report failures without edits.
-
-        Returns
-        -------
-        tuple[Outcome, ...]
-            Per-target outcomes.
-
-        """
-        available = pages(document)
-        identities = Counter(
-            identity
-            for node in document.tree(Part.CONTENT).iter()
-            if (identity := node.get(XML_ID) or node.get(xml_names.DRAW_ID))
-        )
-        decisions = []
-        failures = []
-        for name, entry in self.entries.items():
-            matches = [
-                page
-                for index, page in enumerate(available, 1)
-                if page.get(xml_names.DRAW_NAME) == name or page_location(page, index).path == name
-            ]
-            problem = _problem(matches, entry, identities, document)
-            if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, target=name))
-            else:
-                decisions.append((name, matches[0], entry))
-        if failures:
-            return tuple(failures)
-        outcomes = []
-        for name, page, entry in decisions:
-            changed = set_description(page, GraphicAlternative(entry.title, entry.description))
-            if entry.navigation is not None:
-                value = " ".join(entry.navigation)
-                if page.get(xml_names.DRAW_NAV_ORDER) != value:
-                    page.set(xml_names.DRAW_NAV_ORDER, value)
-                    changed = True
-            outcomes.append(
-                Outcome(
-                    self.name,
-                    Status.APPLIED if changed else Status.UNCHANGED,
-                    "Applied page decision." if changed else "Page decision already matches.",
-                    target=name,
-                    count=int(changed),
-                )
-            )
-        return tuple(outcomes)
-
-
-def _problem(
-    matches: list[etree._Element], entry: PageDecision, counts: Counter[str], document: OdfDocument
-) -> str | None:
-    if len(matches) != 1:
-        return "The page name must resolve to exactly one page."
-    if any(
-        value is not None and not isinstance(value, str)
-        for value in (entry.title, entry.description, entry.fingerprint)
-    ):
-        return "Page title, description and fingerprint must be strings."
-    page = matches[0]
-    if problem := GraphicIdentity(document, ()).style_problem(page):
-        return problem
-    if entry.fingerprint is not None and entry.fingerprint != page_fingerprint(page, document):
-        return "The page is no longer the object this plan was reviewed against."
-    if entry.navigation is None:
-        return None
-    return navigation_problem(page, entry.navigation, counts)
-
-
 def navigation_problem(
     page: etree._Element, order: tuple[str, ...], counts: Counter[str]
 ) -> str | None:
@@ -233,3 +147,47 @@ def navigation_problem(
     if any(counts[identity] != 1 for identity in order):
         return "Navigation identities must be unique across the content document."
     return None
+
+
+def edit_page_metadata(
+    document: OdfDocument, decision: Decision[PageMetadataAnswer]
+) -> tuple[Outcome, ...]:
+    """Apply reviewed metadata to one native page."""
+    page = resolved_node(document, decision)
+    if problem := GraphicIdentity(document, ()).style_problem(page):
+        raise DocumentRefusal(problem)
+    changed = set_description(page, decision.answer.title, decision.answer.description)
+    return _page_outcome(decision, changed)
+
+
+def edit_page_navigation(
+    document: OdfDocument, decision: Decision[PageNavigationAnswer]
+) -> tuple[Outcome, ...]:
+    """Apply a complete order of existing globally unique shape identities."""
+    page = resolved_node(document, decision)
+    identities = Counter(
+        identity
+        for node in document.tree(Part.CONTENT).iter()
+        if (identity := node.get(XML_ID) or node.get(xml_names.DRAW_ID))
+    )
+    if problem := GraphicIdentity(document, ()).style_problem(page):
+        raise DocumentRefusal(problem)
+    if problem := navigation_problem(page, decision.answer.navigation, identities):
+        raise DocumentRefusal(problem)
+    value = " ".join(decision.answer.navigation)
+    changed = page.get(xml_names.DRAW_NAV_ORDER) != value
+    if changed:
+        page.set(xml_names.DRAW_NAV_ORDER, value)
+    return _page_outcome(decision, changed)
+
+
+def _page_outcome(decision: Decision, changed: bool) -> tuple[Outcome, ...]:
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            "Applied page decision." if changed else "Page decision already matches.",
+            target=decision.target_path,
+            count=int(changed),
+        ),
+    )

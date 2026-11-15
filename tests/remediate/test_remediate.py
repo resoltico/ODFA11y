@@ -8,27 +8,29 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.concepts import GraphicAlternative
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.errors import OutputOccupied
-from odfa11y.families.text import (
-    ADAPTER,
-    LinkifyAddresses,
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    SetGraphicAlternatives,
-    TableHeaders,
-)
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.errors import OutputOccupied, PlanError
+from odfa11y.families.text import ADAPTER
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
-from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.status import StageStatus
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import (
+    FaultEdit,
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+    version_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
 
 
 @dataclass(frozen=True, slots=True)
-class Misbehaving(Operation):
+class Misbehaving(FaultEdit):
     """A test operation whose edits are chosen by the test."""
 
     action: str
@@ -46,7 +48,7 @@ class Misbehaving(Operation):
 
 
 @dataclass(frozen=True, slots=True)
-class Lying(Operation):
+class Lying(FaultEdit):
     """Claims a change without editing anything."""
 
     name: ClassVar[str] = "lying"
@@ -68,13 +70,13 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
         },
     )
     operations = [
-        SetMetadata(title="New title", language="en-GB"),
-        SetGraphicAlternatives({"Logo": GraphicAlternative("Example logo", "Sample")}),
-        MarkTableHeaders({"Data": TableHeaders(1)}),
-        LinkifyAddresses(),
+        metadata_input(title="New title", language="en-GB"),
+        graphic_inputs({"Logo": graphic_answer("Example logo", "Sample")}),
+        header_inputs({"Data": header_answer(1)}),
+        address_input(),
     ]
     destination = tmp_path / "out.odt"
-    result = execute_operations(source, destination, operations)
+    result = apply_answers(source, destination, operations)
     assert_record_schema(result)
     assert result.destination == destination
     assert result.changed
@@ -82,7 +84,7 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     assert result.schema.version == "1.4"
     assert result.schema.new_count == 0
     assert {o.status for o in result.outcomes} == {Status.APPLIED}
-    again = execute_operations(destination, tmp_path / "again.odt", operations)
+    again = apply_answers(destination, tmp_path / "again.odt", operations)
     assert not again.changed
     for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
         assert PackageStorage(destination).read(member) == PackageStorage(
@@ -97,19 +99,23 @@ def test_failed_outcomes_abort_the_run_listing_every_failure_and_write_nothing(
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing")
     operations = [
-        SetGraphicAlternatives({"A": GraphicAlternative("x"), "B": GraphicAlternative("y")}),
-        MarkTableHeaders({"C": TableHeaders(1)}),
+        graphic_inputs({"A": graphic_answer("x"), "B": graphic_answer("y")}),
+        header_inputs({"C": header_answer(1)}),
     ]
-    reason = assert_refused(execute_operations(source, destination, operations))
-    for key in ("[A]", "[B]", "[C]"):
-        assert key in reason
+    original = source.read_bytes()
+    with pytest.raises(PlanError) as raised:
+        apply_answers(source, destination, operations)
+    assert len(raised.value.problems) == 3
+    for key in ("name=A", "name=B", "name=C"):
+        assert key in str(raised.value)
+    assert source.read_bytes() == original
     assert destination.read_bytes() == b"existing"
 
 
 def test_dry_run_reports_outcomes_and_writes_nothing(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
-    result = execute_operations(source, destination, [SetMetadata(title="Dry")], dry_run=True)
+    result = apply_answers(source, destination, [metadata_input(title="Dry")], dry_run=True)
     assert result.dry_run
     assert result.destination is None
     assert result.changed
@@ -120,7 +126,7 @@ def test_destination_must_differ_from_the_source(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     for destination in (source, tmp_path / "." / "source.odt"):
         with pytest.raises(OutputOccupied):
-            execute_operations(source, destination, [])
+            apply_answers(source, destination, [])
 
 
 def test_a_symlink_to_the_source_is_not_a_different_destination(tmp_path: Path) -> None:
@@ -131,14 +137,14 @@ def test_a_symlink_to_the_source_is_not_a_different_destination(tmp_path: Path) 
     except OSError:
         pytest.skip("symbolic links are not available")
     with pytest.raises(OutputOccupied):
-        execute_operations(source, link, [])
+        apply_answers(source, link, [])
 
 
 def test_text_changes_are_rejected_before_publication(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     assert_refused(
-        execute_operations(source, destination, [Misbehaving("change-text")]),
+        apply_answers(source, destination, [Misbehaving("change-text")]),
         match="content changed",
     )
     assert not destination.exists()
@@ -152,7 +158,7 @@ def test_new_schema_violations_are_rejected_before_publication(
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     assert_refused(
-        execute_operations(source, destination, [Misbehaving("break-schema")]),
+        apply_answers(source, destination, [Misbehaving("break-schema")]),
         match="schema violations",
     )
     assert not destination.exists()
@@ -166,7 +172,7 @@ def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path)
     )
     broken = tmp_path / "broken.odt"
     package.save(broken)
-    result = execute_operations(broken, tmp_path / "out.odt", [SetMetadata(title="Still fine")])
+    result = apply_answers(broken, tmp_path / "out.odt", [metadata_input(title="Still fine")])
     assert result.schema.before_count is not None
     assert result.schema.before_count > 0
     assert result.schema.before_count != 0
@@ -183,16 +189,14 @@ def test_a_content_edit_beside_an_old_violation_does_not_count_as_a_regression(
     )
     broken = tmp_path / "broken.odt"
     package.save(broken)
-    result = execute_operations(broken, tmp_path / "out.odt", [RemoveEmptySpacers()])
+    result = apply_answers(broken, tmp_path / "out.odt", [spacer_input()])
     assert result.changed
     assert result.schema.before_count == 1
 
 
 def test_an_operation_that_misreports_its_edits_is_an_internal_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
-    assert_refused(
-        execute_operations(source, tmp_path / "out.odt", [Lying()]), match="Internal error"
-    )
+    assert_refused(apply_answers(source, tmp_path / "out.odt", [Lying()]), match="Internal error")
 
 
 def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: Path) -> None:
@@ -208,7 +212,7 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
     package.save(marked)
 
     destination = tmp_path / "out.odt"
-    execute_operations(marked, destination, [SetMetadata(title="Only metadata changes")])
+    apply_answers(marked, destination, [metadata_input(title="Only metadata changes")])
     before, after = PackageStorage(marked), PackageStorage(destination)
     for member in (
         "content.xml",
@@ -220,10 +224,10 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
         assert after.read(member) == before.read(member)
     assert after.read("meta.xml") != before.read("meta.xml")
 
-    execute_operations(
+    apply_answers(
         marked,
         tmp_path / "out2.odt",
-        [LinkifyAddresses(), SetGraphicAlternatives({"Logo": GraphicAlternative("T")})],
+        [address_input(), graphic_inputs({"Logo": graphic_answer("T")})],
     )
     content_after = PackageStorage(tmp_path / "out2.odt").read("content.xml")
     assert b"keep me" in content_after
@@ -235,7 +239,7 @@ def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: 
 def test_saved_archive_keeps_the_mimetype_invariant(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
-    execute_operations(source, destination, [SetOdfVersion("1.3")])
+    apply_answers(source, destination, [version_input("1.3")])
     with zipfile.ZipFile(destination) as archive:
         first = archive.infolist()[0]
         assert (first.filename, first.compress_type) == ("mimetype", zipfile.ZIP_STORED)

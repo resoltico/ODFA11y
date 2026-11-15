@@ -41,7 +41,6 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
             stages[index] = replace(stages[index], status=StageStatus.FAILED)
     return RunRecord(
         document=DocumentIdentity("doc.odt", "0" * 64),
-        operations=(),
         fidelity_policy=Pagination.SAME(),
         profile=PROFILES["verify"],
         stages=stages,

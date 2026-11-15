@@ -48,7 +48,7 @@ def test_batch_cli_text_and_global_validation_have_documented_statuses(
 ) -> None:
     manifest = manifest_file(tmp_path, [("one", "missing.odt", "missing.toml")])
     args = ["batch", str(manifest), "--output-dir", str(tmp_path / "out"), "--profile", "source"]
-    assert main(args) == 4
+    assert main(args) == 3
     text = capsys.readouterr().out
     assert "Batch: failed" in text
     assert "one: failed" in text

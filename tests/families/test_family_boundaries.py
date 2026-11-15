@@ -2,29 +2,32 @@
 """Kinds are judged by what documents say they are; families never leak into each other."""
 
 import json
-lazy from collections.abc import Callable
+from collections.abc import Callable
 lazy from pathlib import Path
 
 import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.concepts import GraphicAlternative
+from odfa11y.errors import PlanError
 from odfa11y.families import REGISTRY
 from odfa11y.families.generic import GenericAdapter
-from odfa11y.families.text import SetGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys, Location, Severity
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.answers import (
+    metadata_input,
+    version_input,
+)
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
 lazy from odfa11y.report import Report
+lazy from tests.fixtures.answers import address_input
 
 
 def ids(report: Report) -> set[str]:
@@ -100,12 +103,11 @@ def test_a_text_plan_is_refused_for_every_other_family(
 ) -> None:
     source = make(tmp_path, "presentation")
     destination = tmp_path / "out"
-    plan = [SetGraphicAlternatives({"Logo": GraphicAlternative("x")})]
-    assert_refused(
-        execute_operations(source, destination, plan),
-        match="do not apply to a presentation document",
-    )
+    before = source.read_bytes()
+    with pytest.raises(PlanError, match="does not apply"):
+        apply_answers(source, destination, [address_input()])
     assert not destination.exists()
+    assert source.read_bytes() == before
 
 
 @pytest.mark.parametrize("make", [make_package, make_flat])
@@ -114,8 +116,8 @@ def test_common_operations_apply_to_any_family_and_keep_the_body(
 ) -> None:
     source = make(tmp_path, "presentation")
     destination = tmp_path / f"out{source.suffix}"
-    result = execute_operations(
-        source, destination, [SetMetadata(title="New", language="de-DE"), SetOdfVersion("1.3")]
+    result = apply_answers(
+        source, destination, [metadata_input(title="New", language="de-DE"), version_input("1.3")]
     )
     assert result.changed
     after = OdfDocument.open(destination)
@@ -124,8 +126,8 @@ def test_common_operations_apply_to_any_family_and_keep_the_body(
     meta = select_elements(after.tree(Part.META), "//dc:title | //dc:language")
     assert {m.text for m in meta} == {"New", "de-DE"}
     assert after.tree(Part.CONTENT).getroot().get(qn("office", "version")) == "1.3"
-    again = execute_operations(
-        destination, tmp_path / f"again{source.suffix}", [SetMetadata(title="New")]
+    again = apply_answers(
+        destination, tmp_path / f"again{source.suffix}", [metadata_input(title="New")]
     )
     assert not again.changed
 
@@ -133,7 +135,7 @@ def test_common_operations_apply_to_any_family_and_keep_the_body(
 def test_a_flat_document_is_saved_byte_identically_when_untouched(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text")
     destination = tmp_path / "copy.fodt"
-    execute_operations(source, destination, [])
+    apply_answers(source, destination, [])
     assert destination.read_bytes() == source.read_bytes()
 
 
@@ -142,7 +144,7 @@ def test_setting_the_language_on_a_flat_text_document_edits_its_default_style(
 ) -> None:
     source = make_flat(tmp_path, "text")
     destination = tmp_path / "out.fodt"
-    execute_operations(source, destination, [SetMetadata(language="fr-FR")])
+    apply_answers(source, destination, [metadata_input(language="fr-FR")])
     report = audit_odf(destination)
     assert report.facts[FactKeys.DOCUMENT_LANGUAGE] == "fr-FR"
     assert "META003" not in ids(report)
@@ -175,7 +177,7 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     source = make_package(tmp_path, "presentation")
     record = execute(
         source,
-        reviewed_plan(source, [SetMetadata(title="T")], Pagination.SAME()),
+        reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(),
     )

@@ -9,13 +9,21 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.families.text import LinkifyAddresses, NormalizeSpacing, RemoveEmptySpacers
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediate import SetMetadata, SetOdfVersion
 from odfa11y.report import FactKeys
+from tests.fixtures.answers import (
+    FaultEdit,
+    RawDecisions,
+    address_input,
+    materialize,
+    metadata_input,
+    spacer_input,
+    spacing_input,
+    version_input,
+)
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 
 BODY = """<office:text>
 <text:tracked-changes><text:changed-region text:id="revision">
@@ -38,7 +46,7 @@ BODY = """<office:text>
 
 
 @dataclass(frozen=True, slots=True)
-class DamageTextFact(Operation):
+class DamageTextFact(FaultEdit):
     """Change a protected XML fact without changing ordinary words."""
 
     action: str
@@ -100,7 +108,7 @@ def test_same_words_do_not_allow_protected_damage(tmp_path: Path, action: str) -
     destination = tmp_path / "existing.fodt"
     destination.write_bytes(b"keep")
     assert_refused(
-        execute_operations(source, destination, [DamageTextFact(action)]),
+        apply_answers(source, destination, [DamageTextFact(action)]),
         match="Protected document content changed",
     )
     assert source.read_bytes() == original
@@ -110,24 +118,22 @@ def test_same_words_do_not_allow_protected_damage(tmp_path: Path, action: str) -
 @pytest.mark.parametrize(
     "operation",
     [
-        LinkifyAddresses(),
-        NormalizeSpacing("One", ("Body",)),
-        RemoveEmptySpacers(),
-        SetOdfVersion("1.4"),
-        SetMetadata(language="en-GB"),
+        address_input(),
+        spacing_input("One", ("Body",)),
+        spacer_input(),
+        version_input("1.4"),
+        metadata_input(language="en-GB"),
     ],
 )
 def test_revision_edit_refuses_before_first_metadata_edit(
-    tmp_path: Path, operation: Operation
+    tmp_path: Path, operation: RawDecisions
 ) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     original = source.read_bytes()
-    assert_refused(
-        execute_operations(
-            source, tmp_path / "out.fodt", [SetMetadata(title="Allowed alone"), operation]
-        ),
-        match="Tracked revisions",
-    )
+    inputs = [metadata_input(title="Allowed alone"), operation]
+    if operation[0].kind_id == "document.metadata":
+        inputs = [metadata_input(title="Allowed alone", language="en-GB")]
+    assert_refused(apply_answers(source, tmp_path / "out.fodt", inputs), match="Tracked revisions")
     assert source.read_bytes() == original
     assert not (tmp_path / "out.fodt").exists()
 
@@ -140,7 +146,7 @@ def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     plain = [f.details["text"] for f in report.findings if f.rule_id == "LINK001"]
     assert plain == ["https://note.example"]
     destination = tmp_path / "out.fodt"
-    result = execute_operations(source, destination, [SetMetadata(title="Reviewed title")])
+    result = apply_answers(source, destination, [metadata_input(title="Reviewed title")])
     assert result.changed
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(destination).tree(Part.CONTENT)
@@ -153,7 +159,8 @@ def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
 def test_linkification_never_enters_stored_or_hidden_contexts(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     document = OdfDocument.open(source)
-    LinkifyAddresses().apply(document)  # raw editing remains caller-owned
+    (decision,) = materialize(document, address_input())
+    decision.kind.edit(document, decision)
     tree = document.tree(Part.CONTENT)
     assert len(select_elements(tree, "//text:note//text:a")) == 1
     assert not select_elements(
@@ -174,7 +181,7 @@ def test_inline_hidden_content_and_fields_never_enter_address_prose(tmp_path: Pa
         "https://visible.example"
     ]
     destination = tmp_path / "out.fodt"
-    execute_operations(source, destination, [LinkifyAddresses()])
+    apply_answers(source, destination, [address_input()])
     after = OdfDocument.open(destination).tree(Part.CONTENT)
     assert len(select_elements(after, "//text:a")) == 1
     assert not select_elements(
@@ -196,7 +203,7 @@ def test_foreign_authored_payload_is_not_current_flow(tmp_path: Path) -> None:
     assert [f.details["text"] for f in report.findings if f.rule_id == "LINK001"] == [
         "https://current.example"
     ]
-    execute_operations(source, destination, [LinkifyAddresses()])
+    apply_answers(source, destination, [address_input()])
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(destination).tree(Part.CONTENT)
     payload = "{urn:example:authored}payload"

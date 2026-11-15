@@ -10,13 +10,18 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
+from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.answers import (
+    FaultEdit,
+    RawDecisions,
+    database_answer,
+    database_inputs,
+    metadata_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
 CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
@@ -24,7 +29,7 @@ SOURCE = TESTS / "family_corpus/fruit-database.odb"
 
 
 @dataclass(frozen=True, slots=True)
-class ChangeDatabaseSettings(Operation):
+class ChangeDatabaseSettings(FaultEdit):
     """Negative control edits a flat document's protected connection-related setting."""
 
     name: ClassVar[str] = "change_database_settings"
@@ -52,9 +57,9 @@ def _nested_queries(document: OdfDocument) -> None:
     etree.SubElement(columns, qn("db", "column"), {qn("db", "name"): "Count"})
 
 
-def _descriptions(document: OdfDocument) -> SetObjectDescriptions:
-    return SetObjectDescriptions({
-        path: DatabaseDescription("Explicit object meaning", fingerprint(nodes[0]))
+def _descriptions(document: OdfDocument) -> RawDecisions:
+    return database_inputs({
+        path: database_answer("Explicit object meaning", fingerprint(nodes[0]))
         for path, nodes in targets(document).items()
     })
 
@@ -65,10 +70,10 @@ def test_nested_database_descriptions_do_not_invalidate_their_own_review(tmp_pat
     source = document.save(tmp_path / "nested.odb")
     assert validate(OdfDocument.open(source)).count == 0
     plan = _descriptions(OdfDocument.open(source))
-    assert len(plan.entries) == 3
+    assert len(plan) == 3
     first, second = tmp_path / "first.odb", tmp_path / "second.odb"
-    assert execute_operations(source, first, [plan]).changed
-    assert not execute_operations(first, second, [plan]).changed
+    assert apply_answers(source, first, [plan]).changed
+    assert not apply_answers(first, second, [plan]).changed
     assert first.read_bytes() == second.read_bytes()
     assert "BASE004" not in {finding.rule_id for finding in audit_odf(second).findings}
     assert OdfDocument.open(second).storage.read("database/firebird.fbk") == document.storage.read(
@@ -120,8 +125,8 @@ def test_flat_base_metadata_edits_protect_settings_without_freezing_whole_docume
     assert validate(before).count == 0
     destination = tmp_path / "described.fodb"
     plan = _descriptions(before)
-    assert execute_operations(
-        source, destination, [SetMetadata(title="Fruit database", language="en-US"), plan]
+    assert apply_answers(
+        source, destination, [metadata_input(title="Fruit database", language="en-US"), plan]
     ).changed
     after = OdfDocument.open(destination)
     before_settings = select_elements(before.tree(Part.CONTENT), "//office:settings")[0]
@@ -129,10 +134,10 @@ def test_flat_base_metadata_edits_protect_settings_without_freezing_whole_docume
     assert etree.tostring(before_settings, method="c14n", exclusive=True) == etree.tostring(
         after_settings, method="c14n", exclusive=True
     )
-    assert not execute_operations(destination, tmp_path / "again.fodb", [plan]).changed
+    assert not apply_answers(destination, tmp_path / "again.fodb", [plan]).changed
     wrong = tmp_path / "wrong.fodb"
     assert_refused(
-        execute_operations(destination, wrong, [ChangeDatabaseSettings()]), match="content changed"
+        apply_answers(destination, wrong, [ChangeDatabaseSettings()]), match="content changed"
     )
     assert not wrong.exists()
 

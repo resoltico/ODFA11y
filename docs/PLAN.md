@@ -41,11 +41,14 @@ and fingerprint preserve an answered block; changed or unavailable targets retai
 answers as comments with a reason. Review the result before applying it. Fidelity policy
 is preserved. `remediate`, `run` and `batch` require an exact source digest.
 
+Only canonical review paths are accepted. Duplicate graphic names receive separate ordinal
+paths. Graphic groups and image URI selectors are unavailable as review targets.
+
 Question headers and fingerprints are live; answer fields start commented. Blocks without
 answers are inert and listed by remediation. Stale unanswered targets warn without applying
 an edit. `plan --all` includes optional overrides for available targets without findings.
 
-Remediation reports every operation outcome and structured refusal. A refused
+Remediation reports every edit outcome and structured refusal. A refused
 candidate is not published and exits 2. A successful `--dry-run` exits 0 with
 `published=false`; a failing preview exits 2 and retains the refusal evidence.
 

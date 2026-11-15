@@ -1,62 +1,44 @@
 # SPDX-License-Identifier: MPL-2.0
 """Declare a different ODF version on every part of a document."""
 
-from dataclasses import dataclass
-from typing import ClassVar, override
-
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.odf import SUPPORTED_VERSIONS, Part, is_office_element, select_elements
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import OdfVersionAnswer
+from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.odf import Part, is_office_element, select_elements
 from odfa11y.odf import names as xml_names
 lazy from odfa11y.odf import OdfDocument
 
 VERSIONED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.SETTINGS)
 
 
-@dataclass(frozen=True, slots=True)
-class SetOdfVersion(Operation):
-    """Relabel the document as a bundled schema version; validation then checks the result."""
-
-    version: str
-    name: ClassVar[str] = "set_odf_version"
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        if self.version not in SUPPORTED_VERSIONS:
-            return (
-                Outcome(
-                    self.name,
-                    Status.FAILED,
-                    f"ODF {self.version} has no bundled schema; use one of {SUPPORTED_VERSIONS}.",
-                ),
-            )
-        changed = 0
-        for part in VERSIONED_PARTS:
-            if document.has(part):
-                root = document.tree(part).getroot()
-                if is_office_element(root) and root.get(xml_names.OFFICE_VERSION) != self.version:
-                    document.tree(part).getroot().set(xml_names.OFFICE_VERSION, self.version)
-                    changed += 1
-        changed += self._relabel_manifest(document)
-        if not changed:
-            return (Outcome(self.name, Status.UNCHANGED, f"Already declares ODF {self.version}."),)
-        return (
-            Outcome(
-                self.name,
-                Status.APPLIED,
-                f"Declared ODF {self.version} in {changed} place(s).",
-                count=changed,
-            ),
-        )
-
-    def _relabel_manifest(self, document: OdfDocument) -> int:
-        if not document.has(Part.MANIFEST):
-            return 0
-        manifest = document.tree(Part.MANIFEST).getroot()
-        entries = select_elements(manifest, "./manifest:file-entry[@manifest:full-path='/']")
-        targets = [manifest, *entries]
-        stale = [node for node in targets if node.get(xml_names.MANIFEST_VERSION) != self.version]
-        if not stale:
-            return 0
-        for node in stale:
-            node.set(xml_names.MANIFEST_VERSION, self.version)
-        return len(stale)
+def edit_version(
+    document: OdfDocument, decision: Decision[OdfVersionAnswer]
+) -> tuple[Outcome, ...]:
+    """Relabel supported parts before checking the candidate against its selected schema."""
+    version = decision.answer.version
+    changed = 0
+    for part in VERSIONED_PARTS:
+        if document.has(part):
+            root = document.tree(part).getroot()
+            if is_office_element(root) and root.get(xml_names.OFFICE_VERSION) != version:
+                root.set(xml_names.OFFICE_VERSION, version)
+                changed += 1
+    if document.has(Part.MANIFEST):
+        root = document.tree(Part.MANIFEST).getroot()
+        for node in (
+            root,
+            *select_elements(root, "./manifest:file-entry[@manifest:full-path='/']"),
+        ):
+            if node.get(xml_names.MANIFEST_VERSION) != version:
+                node.set(xml_names.MANIFEST_VERSION, version)
+                changed += 1
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            f"Declared ODF {version} in {changed} place(s)."
+            if changed
+            else f"Already declares ODF {version}.",
+            count=changed,
+        ),
+    )

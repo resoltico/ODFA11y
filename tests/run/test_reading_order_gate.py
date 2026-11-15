@@ -5,7 +5,7 @@ lazy from pathlib import Path
 
 from odfa11y import Tools, profile_named, run
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.remediate import SetMetadata
+from tests.fixtures.answers import metadata_input
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.plans import reviewed_plan
 
@@ -18,7 +18,7 @@ def test_production_requires_floating_frame_review_before_native_export(tmp_path
     document.save(source)
     record = run(
         source,
-        reviewed_plan(source, [SetMetadata(language="en-GB")]),
+        reviewed_plan(source, [metadata_input(language="en-GB")]),
         tmp_path / "evidence",
         profile=profile_named("production"),
         tools=Tools(soffice="not-a-real-tool"),

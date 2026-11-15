@@ -14,12 +14,12 @@ from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.answers import metadata_input
 from tests.fixtures.native_resources import PIXELS, author_package, decoded_images, writer_resource
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 
@@ -52,7 +52,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
     output = tmp_path / "evidence"
     result = execute(
         source,
-        reviewed_plan(source, [SetMetadata(language="en-GB")], Pagination.SAME()),
+        reviewed_plan(source, [metadata_input(language="en-GB")], Pagination.SAME()),
         output,
         RunSettings(
             tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
@@ -68,11 +68,11 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         assert compare_pdfs(direct, pdf, Pagination.SAME()).error_count == 0
     published = output / ("remediated" + source.suffix)
     expected = tmp_path / ("expected" + source.suffix)
-    execute_operations(source, expected, [SetMetadata(language="en-GB")])
+    apply_answers(source, expected, [metadata_input(language="en-GB")])
     assert published.read_bytes() == expected.read_bytes()
     assert source.read_bytes() == original
-    assert not execute_operations(
-        published, tmp_path / ("again" + source.suffix), [SetMetadata(language="en-GB")]
+    assert not apply_answers(
+        published, tmp_path / ("again" + source.suffix), [metadata_input(language="en-GB")]
     ).changed
     assert not list(source.resolve().parent.glob(".odfa11y-source-*"))
     assert check_bundle(output) == []

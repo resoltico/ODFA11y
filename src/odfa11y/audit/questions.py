@@ -43,6 +43,8 @@ def available_questions(document: OdfDocument) -> tuple[OpenDecision, ...]:
 
 
 def with_context(question: OpenDecision, available: tuple[OpenDecision, ...]) -> OpenDecision:
+    if question.target is None:
+        return question
     match = next(
         (
             item

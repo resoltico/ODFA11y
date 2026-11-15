@@ -2,7 +2,7 @@
 """Ephemeral selector, position and payload identities for graphic review."""
 
 import json
-from pathlib import Path
+from collections import Counter
 from urllib.parse import quote
 lazy from collections.abc import Sequence
 
@@ -57,26 +57,6 @@ STYLE_CONTENT_TAGS = frozenset({
 })
 
 
-def graphic_keys(frame: etree._Element) -> set[str]:
-    """List selectors by frame name, image URI and image file name.
-
-    Returns
-    -------
-    set[str]
-        Non-empty selector strings.
-
-    """
-    keys = {frame.get(xml_names.DRAW_NAME) or ""}
-    image = frame.find("draw:image", NS)
-    href = image.get(xml_names.XLINK_HREF) if image is not None else None
-    if href:
-        keys |= {href, Path(href).name}
-    if selector := graphic_selector(frame):
-        keys.add(selector)
-    keys.discard("")
-    return keys
-
-
 def graphic_selector(frame: etree._Element) -> str | None:
     """Qualify an authored graphic name or image reference by current text context.
 
@@ -100,14 +80,21 @@ class GraphicIdentity:
         grouped: dict[str, list[etree._Element]] = {}
         self._targets: dict[etree._Element, str] = {}
         positions: dict[str, int] = {}
+        selectors = Counter(graphic_selector(frame) for frame in frames)
         for frame in frames:
+            if frame.tag == xml_names.DRAW_G:
+                continue
             context = reading_context_path(frame)
             if frame.tag != xml_names.DRAW_G:
                 positions[context] = positions.get(context, 0) + 1
-            target = graphic_selector(frame) or f"{context}/frame[{positions.get(context, 1)}]"
+            selector = graphic_selector(frame)
+            target = (
+                selector
+                if selector and selectors[selector] == 1
+                else (f"{context}/frame[{positions.get(context, 1)}]")
+            )
             self._targets[frame] = target
-            for key in graphic_keys(frame) | {target}:
-                grouped.setdefault(key, []).append(frame)
+            grouped.setdefault(target, []).append(frame)
         self._document = document
         self._groups = {key: tuple(group) for key, group in grouped.items()}
         self._registered = {id(group) for group in self._groups.values()}
@@ -131,9 +118,7 @@ class GraphicIdentity:
         """
         return self._targets[frame]
 
-    def open_decision(
-        self, frame: etree._Element, kind: DecisionKind, rule_id: str
-    ) -> OpenDecision:
+    def open_decision(self, frame: etree._Element, kind: DecisionKind) -> OpenDecision:
         """Collect an explicit graphic question using the existing identity snapshot.
 
         Returns
@@ -153,7 +138,6 @@ class GraphicIdentity:
             kind,
             Target((Location(target)).path, Fingerprint(self.fingerprint(group))),
             current,
-            (rule_id,),
         )
 
     def matching(self, selector: str) -> tuple[etree._Element, ...]:

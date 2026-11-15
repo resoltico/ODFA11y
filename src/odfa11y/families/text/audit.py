@@ -47,7 +47,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
             report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
-                decision=link_decision(document, link, index, LINK_DESCRIPTION, rules.LINK003.id),
+                decision=link_decision(document, link, index, LINK_DESCRIPTION),
             )
     _audit_empty_spacers(document, report)
     _audit_blinking(document, report)

@@ -6,10 +6,4 @@ lazy from odfa11y.evidence.bundle import require_free_directory, write_bundle
 lazy from odfa11y.evidence.manifest import check_bundle
 lazy from odfa11y.evidence.review import render_review
 
-__all__ = [
-    "Redactor",
-    "check_bundle",
-    "render_review",
-    "require_free_directory",
-    "write_bundle",
-]
+__all__ = ["Redactor", "check_bundle", "render_review", "require_free_directory", "write_bundle"]

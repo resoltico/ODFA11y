@@ -1,47 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
 """Set a supplied spoken formula alternative without rewriting mathematics."""
 
-from dataclasses import dataclass
-from typing import ClassVar, override
-
-from odfa11y.concepts.edits import Operation, Outcome, Status
-from odfa11y.families.formula.expression import expression, fingerprint
-from odfa11y.odf import Family
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import FormulaAlternativeAnswer
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import Outcome, Status
 lazy from odfa11y.odf import OdfDocument
 
 
-@dataclass(frozen=True, slots=True)
-class SetFormulaAlternative(Operation):
-    """Apply an explicitly written alternative to the one native MathML expression."""
-
-    text: str
-    fingerprint: str | None = None
-    name: ClassVar[str] = "set_formula_alternative"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.FORMULA})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        root = expression(document)
-        if root is None:
-            return (
-                Outcome(self.name, Status.FAILED, "Formula content must be a native MathML root."),
-            )
-        if not isinstance(self.text, str) or not self.text.strip():
-            return (
-                Outcome(
-                    self.name, Status.FAILED, "A formula alternative must be a nonblank string."
-                ),
-            )
-        if self.fingerprint is not None and self.fingerprint != fingerprint(root):
-            return (
-                Outcome(
-                    self.name, Status.FAILED, "The mathematical expression changed since review."
-                ),
-            )
-        value = self.text.strip()
-        if root.get("alttext") == value:
-            return (Outcome(self.name, Status.UNCHANGED, "Formula alternative already matches."),)
+def edit_formula(
+    document: OdfDocument, decision: Decision[FormulaAlternativeAnswer]
+) -> tuple[Outcome, ...]:
+    """Set a supplied spoken alternative while preserving the expression."""
+    root = resolved_node(document, decision)
+    value = decision.answer.alternative.strip()
+    changed = root.get("alttext") != value
+    if changed:
         root.set("alttext", value)
-        return (
-            Outcome(self.name, Status.APPLIED, "Set the supplied formula alternative.", count=1),
-        )
+    return (
+        Outcome(
+            decision.kind.id,
+            Status.APPLIED if changed else Status.UNCHANGED,
+            "Set the supplied formula alternative."
+            if changed
+            else "Formula alternative already matches.",
+            target=decision.target_path,
+            count=int(changed),
+        ),
+    )

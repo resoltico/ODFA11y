@@ -9,7 +9,7 @@ flowchart LR
     API --> Capture[Bound regular-file capture]
     Capture --> ODF[Storage and parsed parts]
     ODF --> Family[Family audit and decisions]
-    Family --> Guard[Operations and preservation]
+    Family --> Guard[Decisions and preservation]
     Guard --> Native[Guarded native export]
     Native --> PDF[PDF audit, validation and fidelity]
     Guard --> Evidence[Atomic evidence]
@@ -60,7 +60,7 @@ contains the reviewed answer. Document choices bind through the source header. O
 codec derives parsing, disabled templates, schemas and reference text.
 
 Each adapter implements audit/snapshot and supplies operation-specific protection,
-whole-plan preflight, answer translation and human review. Operations return every
+whole-plan constraints, kind registrations and human review. Kinds own direct edit callbacks. Edits return every
 `applied`/`unchanged`/`failed` outcome. The engine refuses foreign-family decisions,
 protected/opaque changes, semantic operation failures and newly detected schema violations;
 it publishes a passing whole candidate atomically. See [preservation](ACCESSIBILITY.md#preservation-boundaries).

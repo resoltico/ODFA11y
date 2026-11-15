@@ -9,12 +9,13 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import effective_graphic_role, normalized_role_attributes
-from odfa11y.concepts.edits import Status
 from odfa11y.concepts.graphic_styles import GraphicRoleEditor, GraphicStyles
+from odfa11y.decisions.edit import Status
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from tests.concepts.test_graphic_roles_links import _decision, _graphic
+from tests.fixtures.answers import apply_in_memory
 from tests.fixtures.graphics import _style
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 
 
 @pytest.mark.parametrize("kind", ["styles", "automatic-styles"])
@@ -49,7 +50,7 @@ def test_duplicate_applicable_style_containers_refuse_role_edits(
     assert role.problem
     operation = _decision(document, frame, decorative=True)
     before = document.checkpoint()
-    assert operation.apply(document)[0].status == Status.FAILED
+    assert apply_in_memory(document, operation)[0].status == Status.FAILED
     assert not document.changed_since(before)
 
 
@@ -83,7 +84,7 @@ def test_common_generated_name_is_not_proven_output_and_cannot_shadow_a_peer(
     destination.write_bytes(b"Existing destination")
     operation = _decision(document, frame, decorative=True)
     assert_refused(
-        execute_operations(source, destination, [operation]),
+        apply_answers(source, destination, [operation]),
         match="collides with an authored common style",
     )
     assert source.read_bytes() == original
@@ -117,7 +118,7 @@ def test_duplicate_graphic_properties_are_unresolved_and_cannot_hide_alternative
     assert effective_graphic_role(document, frame).problem
     operation = _decision(document, frame, decorative=False)
     before = document.checkpoint()
-    assert operation.apply(document)[0].status == Status.FAILED
+    assert apply_in_memory(document, operation)[0].status == Status.FAILED
     assert not document.changed_since(before)
     source = document.save(tmp_path / "ambiguous-properties.odt")
     assert {"GRAPHIC001", "GRAPHIC003"} <= {

@@ -10,7 +10,7 @@ from odfa11y.concepts import (
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.families.image.audit import audit_image
-from odfa11y.families.image.kinds import DECISION_KINDS, operations
+from odfa11y.families.image.kinds import DECISION_KINDS
 from odfa11y.families.spec import FamilyAdapter, ReviewItem
 from odfa11y.odf import Family, Part, select_elements
 from odfa11y.odf import names as xml_names
@@ -45,7 +45,6 @@ class ImageAdapter(FamilyAdapter):
     default_language = staticmethod(_language)
     set_default_language = staticmethod(_set_language)
     kinds = DECISION_KINDS
-    operations = staticmethod(operations)
     review_items = (
         ReviewItem(
             ReviewTopic.IMAGE_MEANING,
