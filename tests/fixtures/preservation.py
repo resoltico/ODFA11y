@@ -24,6 +24,8 @@ from odfa11y.decisions import Decision, DecisionKind, DecisionScope, decode_answ
 from odfa11y.errors import OdfA11yError
 from odfa11y.families.database.descriptions import fingerprint as database_fingerprint
 from odfa11y.families.database.descriptions import targets as database_targets
+from odfa11y.families.formula.expression import expression
+from odfa11y.families.formula.expression import fingerprint as formula_fingerprint
 from odfa11y.families.spreadsheet.sheets import sheets
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.families.text.contexts import context_location, text_nodes
@@ -100,7 +102,14 @@ def _database_targets(document: OdfDocument) -> Iterator[Target]:
             yield Target(TargetPath(path), database_fingerprint(nodes[0]))
 
 
+def _formula_targets(document: OdfDocument) -> Iterator[Target]:
+    root = expression(document)
+    if root is not None:
+        yield Target(TargetPath("content/formula"), formula_fingerprint(root))
+
+
 _TARGETS = {
+    "formula.alternative": _formula_targets,
     "graphic.alternative": _graphic_targets,
     "link.description": _link_targets,
     "heading.level": _heading_targets,
@@ -178,7 +187,11 @@ def materialize(source: Path, kind: DecisionKind, answers: list[dict[str, object
     decisions = []
     for entry in answers:
         path = entry["target"]
-        target = available[str(path)] if path is not None else None
+        target = (
+            available[str(path)]
+            if path is not None
+            else (next(iter(available.values())) if kind.id == "formula.alternative" else None)
+        )
         answer = decode_answer(kind.answer_type, cast(dict[str, object], entry["answer"]), kind.id)
         decisions.append(Decision._decoded(kind, target, answer))
     return Plan.for_source(source, decisions)

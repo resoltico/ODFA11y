@@ -109,7 +109,7 @@ depends_on = ["odfa11y.decisions", "odfa11y.errors", "odfa11y.native.export", "o
 [[modules]]
 path = "odfa11y.native.probe_pdf"
 # Temporary until WP9: target layer infrastructure; upward edges odfa11y.pdf, odfa11y.pdf.structure_walk, odfa11y.report.
-depends_on = ["odfa11y.errors", "odfa11y.pdf", "odfa11y.pdf.reading", "odfa11y.pdf.structure_walk", "odfa11y.report"]
+depends_on = ["odfa11y.rules", "odfa11y.errors", "odfa11y.pdf", "odfa11y.pdf.reading", "odfa11y.pdf.structure_walk", "odfa11y.report"]
 
 [[modules]]
 path = "odfa11y.native.probe_sources"
@@ -141,7 +141,7 @@ depends_on = ["odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa1
 [[modules]]
 path = "odfa11y.plans"
 # Temporary until WP6: target layer model; upward edges odfa11y.families.
-depends_on = ["odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.report", "odfa11y.targets"]
+depends_on = ["odfa11y.capture", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.report", "odfa11y.targets"]
 
 [[modules]]
 path = "odfa11y.records"
@@ -254,7 +254,7 @@ depends_on = ["odfa11y.application.native", "odfa11y.contracts", "odfa11y.errors
 [[modules]]
 path = "odfa11y.evidence"
 layer = "runs"
-depends_on = ["odfa11y.errors", "odfa11y.progress", "odfa11y.run.record", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.status"]
+depends_on = ["odfa11y.capture", "odfa11y.errors", "odfa11y.progress", "odfa11y.run.record", "odfa11y.safe_xml", "odfa11y.staging", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.application"

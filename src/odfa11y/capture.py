@@ -2,6 +2,7 @@
 """Capture bounded regular input bytes in a controlled document directory."""
 
 import errno
+import hashlib
 import os
 import stat
 import tempfile
@@ -100,3 +101,15 @@ def capture_source(source: Path, *, directory: Path | None = None) -> Generator[
     finally:
         if captured_path is not None:
             captured_path.unlink(missing_ok=True)
+
+
+def source_digest(source: Path) -> str:
+    """Hash regular source or evidence bytes incrementally."""
+    if not source.is_file():
+        message = "A digest source must be a readable regular file"
+        raise PackageError(message)
+    digest = hashlib.sha256()
+    with source.open("rb") as stream:
+        while chunk := stream.read(COPY_CHUNK_BYTES):
+            digest.update(chunk)
+    return digest.hexdigest()

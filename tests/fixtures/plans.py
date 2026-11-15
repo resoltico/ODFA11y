@@ -22,6 +22,8 @@ from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError
 from odfa11y.families.database.descriptions import fingerprint as database_fingerprint
 from odfa11y.families.database.descriptions import targets as database_targets
+from odfa11y.families.formula.expression import expression
+from odfa11y.families.formula.expression import fingerprint as formula_fingerprint
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.families.text.contexts import context_location, text_nodes
@@ -81,7 +83,13 @@ def reviewed_plan(
             if fields:
                 kind = kinds[kind_id]
                 answers.append(
-                    Decision(kind, None, decode_answer(kind.answer_type, fields, kind_id))
+                    Decision(
+                        kind,
+                        _formula_target(document, values)
+                        if name == "set_formula_alternative"
+                        else None,
+                        decode_answer(kind.answer_type, fields, kind_id),
+                    )
                 )
         elif name in {"linkify_addresses", "remove_empty_spacers"}:
             kind_id = (
@@ -101,6 +109,13 @@ def reviewed_plan(
         tuple(answers),
         fidelity or Pagination.SAME(),
     )
+
+
+def _formula_target(document: OdfDocument | None, values: Mapping[str, object]) -> Target:
+    if document is None or (root := expression(document)) is None:
+        return Target(TargetPath("content/formula"), Fingerprint("0" * 16))
+    digest = values.get("fingerprint") or formula_fingerprint(root)
+    return Target(TargetPath("content/formula"), Fingerprint(str(digest)))
 
 
 def _target_answers(

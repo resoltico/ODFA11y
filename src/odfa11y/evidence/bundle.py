@@ -8,8 +8,9 @@ lazy from collections.abc import Mapping
 
 from lxml import etree
 
+from odfa11y.capture import source_digest
 from odfa11y.errors import OutputOccupied
-from odfa11y.evidence.manifest import sha256_file, write_manifest
+from odfa11y.evidence.manifest import write_manifest
 from odfa11y.evidence.paths import is_reserved_bundle_file, unsafe_reason
 from odfa11y.evidence.review import render_review
 from odfa11y.safe_xml import parse_secure
@@ -76,7 +77,7 @@ def write_bundle(
                 _write_diagnostic(source, destination, redactor)
             else:
                 shutil.copyfile(source, destination)
-        outputs = {name: sha256_file(staging / name) for name in artifacts}
+        outputs = {name: source_digest(staging / name) for name in artifacts}
         safe_record = redactor.record(record.as_dict() | {"outputs": outputs})
         (staging / "run.json").write_text(
             json.dumps(safe_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",

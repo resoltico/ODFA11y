@@ -1,24 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
 """Source-bound plans of answered human decisions and fidelity policy."""
 
-import hashlib
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
 from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
-from odfa11y.contracts import Description, Length, Pattern, record_dict, validate
-from odfa11y.errors import PackageError, PlanError
+from odfa11y.capture import source_digest
+from odfa11y.contracts import Description, JsonObject, Length, Pattern, record_dict, validate
+from odfa11y.errors import PlanError
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
 from odfa11y.targets import TargetPath
-lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.plans.contracts import to_file
 
 SOURCE_SHA256_PATTERN = r"^[0-9a-f]{64}(?![\s\S])"
 PLAN_SCHEMA_VERSION = 1
-HASH_CHUNK_BYTES = 1 << 20
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,27 +151,3 @@ class Plan:
 
         """
         return record_dict(to_file(self))
-
-
-def source_digest(source: Path) -> str:
-    """Hash a regular source incrementally without loading another full file copy.
-
-    Returns
-    -------
-    str
-        SHA-256 of the physical input bytes.
-
-    Raises
-    ------
-    PackageError
-        The selected source is not a regular file.
-
-    """
-    if not source.is_file():
-        msg = "A plan source must be a readable regular file"
-        raise PackageError(msg)
-    digest = hashlib.sha256()
-    with source.open("rb") as stream:
-        while chunk := stream.read(HASH_CHUNK_BYTES):
-            digest.update(chunk)
-    return digest.hexdigest()

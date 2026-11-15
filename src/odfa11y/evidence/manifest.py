@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Hash every file of an evidence bundle and verify the hashes later."""
 
-import hashlib
 import json
 import os
 import re
@@ -9,29 +8,13 @@ import stat
 from pathlib import Path
 from typing import Any
 
+from odfa11y.capture import source_digest
 from odfa11y.errors import OutputOccupied, PackageError
 from odfa11y.evidence.paths import MANIFEST_NAME, unsafe_reason
 
 BUNDLE_VERSION = 1
-CHUNK_BYTES = 1 << 20
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 MAX_SHOWN_NAME = 120
-
-
-def sha256_file(path: Path) -> str:
-    """Hash a file in chunks.
-
-    Returns
-    -------
-    str
-        The hexadecimal SHA-256 digest.
-
-    """
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(CHUNK_BYTES):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def write_manifest(directory: Path) -> None:
@@ -53,7 +36,7 @@ def write_manifest(directory: Path) -> None:
         if reason := unsafe_reason(relative) or _kind_problem(path):
             msg = f"Cannot record {relative!r} in a bundle: {reason}"
             raise OutputOccupied(msg)
-        files[relative] = sha256_file(path)
+        files[relative] = source_digest(path)
     payload = {"bundle_version": BUNDLE_VERSION, "files": files}
     (directory / MANIFEST_NAME).write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -155,7 +138,7 @@ def _file_problem(root: Path, name: str, digest: str) -> str | None:
         if not wanted(mode):
             return f"Unsafe: {_shown(name)} is not a regular file"
     try:
-        matches = sha256_file(current) == digest
+        matches = source_digest(current) == digest
     except OSError as exc:
         return f"Unreadable: {_shown(name)}: {exc.strerror or type(exc).__name__}"
     return None if matches else f"Modified: {_shown(name)}"

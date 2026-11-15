@@ -4,12 +4,13 @@
 lazy from lxml import etree
 
 from odfa11y.decisions import OpenDecision
-from odfa11y.families.formula.expression import expression
+from odfa11y.families.formula.expression import expression, fingerprint
 from odfa11y.families.formula.kinds import FORMULA_ALTERNATIVE
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
+from odfa11y.targets import Target, TargetPath
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -77,7 +78,10 @@ def audit_formula(document: OdfDocument, report: Report) -> None:
             rules.MATH002,
             location=location,
             decision=OpenDecision(
-                FORMULA_ALTERNATIVE, None, {"alternative": root.get("alttext")}, (rules.MATH002.id,)
+                FORMULA_ALTERNATIVE,
+                Target(TargetPath("content/formula"), fingerprint(root)),
+                {"alternative": root.get("alttext")},
+                (rules.MATH002.id,),
             ),
         )
     if any(

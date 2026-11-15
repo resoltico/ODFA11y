@@ -130,7 +130,22 @@
                 "type": "array"
               },
               "target": {
-                "type": "null"
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  },
+                  "path": {
+                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "fingerprint"
+                ],
+                "type": "object"
               }
             },
             "required": [

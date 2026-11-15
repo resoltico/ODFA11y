@@ -79,7 +79,9 @@ Scope: document.
 
 ### `formula.alternative`
 
-Scope: document.
+Scope: target.
+
+Use the audit's canonical target and mandatory fingerprint.
 
 | Field | Required | Value constraints | Help |
 | --- | --- | --- | --- |

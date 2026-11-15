@@ -7,13 +7,14 @@ from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import FormulaAlternativeAnswer
 from odfa11y.families.formula.alternative import SetFormulaAlternative
 from odfa11y.odf import Family
+from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
 
 FORMULA_ALTERNATIVE = DecisionKind(
     "formula.alternative",
-    DecisionScope.DOCUMENT,
+    DecisionScope.TARGET,
     FormulaAlternativeAnswer,
     frozenset({Family.FORMULA}),
     SetFormulaAlternative.name,
@@ -32,6 +33,9 @@ def operations(document: OdfDocument, decisions: Sequence[Decision]) -> tuple[Op
     """
     del document
     return tuple(
-        SetFormulaAlternative(decision.answer_as(FormulaAlternativeAnswer).alternative)
+        SetFormulaAlternative(
+            decision.answer_as(FormulaAlternativeAnswer).alternative,
+            require_target(decision.target).fingerprint,
+        )
         for decision in decisions
     )

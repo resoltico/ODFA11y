@@ -175,29 +175,52 @@
           ]
         },
         "formula.alternative": {
-          "anyOf": [
-            {
-              "additionalProperties": false,
-              "properties": {
-                "alternative": {
-                  "description": "Write the formula's spoken meaning in its intended language.",
-                  "format": "odfa11y-xml-text",
-                  "pattern": "\\S",
-                  "type": "string"
-                }
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "alternative": {
+                    "description": "Write the formula's spoken meaning in its intended language.",
+                    "format": "odfa11y-xml-text",
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  "fingerprint": {
+                    "pattern": "^[0-9a-f]{16}(?![\\s\\S])",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "alternative",
+                  "fingerprint"
+                ],
+                "type": "object"
               },
-              "required": [
-                "alternative"
-              ],
-              "type": "object"
-            },
-            {
-              "additionalProperties": false,
-              "properties": {},
-              "required": [],
-              "type": "object"
-            }
-          ]
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "fingerprint": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [],
+                "type": "object"
+              }
+            ]
+          },
+          "propertyNames": {
+            "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+            "type": "string"
+          },
+          "type": "object"
         },
         "graphic.alternative": {
           "additionalProperties": {

@@ -13,6 +13,7 @@ from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
 from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
 from odfa11y.pdf.validate import PdfValidator
 from odfa11y.report import FactKeys, exit_status
+from odfa11y.rules import registry as rules
 lazy from odfa11y.report import Report
 
 PROBE_IMAGES = 2
@@ -21,7 +22,7 @@ PROBE_HEADERS = 2
 
 def _inspect(pdf: Path) -> Report:
     report = audit_pdfua(pdf)
-    if any(f.rule_id == "PDF000" for f in report.findings):
+    if any(f.rule is rules.PDF000 for f in report.findings):
         msg = "The capability probe PDF cannot be inspected."
         raise ToolFailure(msg)
     return report
@@ -54,7 +55,8 @@ def link_descriptions(
         raise ToolFailure(msg)
     tags = report.facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}
     if not tags.get("Link") or any(
-        f.rule_id in {"PDF003", "PDF004", "PDF016", "PDF017", "PDF018", "PDF019"}
+        f.rule
+        in {rules.PDF003, rules.PDF004, rules.PDF016, rules.PDF017, rules.PDF018, rules.PDF019}
         for f in report.findings
     ):
         return False
@@ -137,7 +139,7 @@ def decorative_role(
         total == PROBE_IMAGES
         and artifacts == 1
         and tags.get("Figure") == 1
-        and not any(f.rule_id == "PDF007" for f in report.findings)
+        and not any(f.rule is rules.PDF007 for f in report.findings)
     )
 
 

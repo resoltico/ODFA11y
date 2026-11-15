@@ -55,7 +55,9 @@ def test_native_formula_validates_and_missing_alternative_requests_an_answer() -
     report = audit_odf(SOURCE, schema=True)
     finding = next(f for f in report.findings if f.rule_id == "MATH002")
     question = next(d for d in report.decisions if d.kind.id == "formula.alternative")
-    assert question.target is None
+    assert question.target is not None
+    assert question.target.path == "content/formula"
+    assert question.target.fingerprint == fingerprint(document.tree(Part.CONTENT).getroot())
     assert finding.location is not None
     assert finding.location.path == "content/formula"
     assert "MATH002" in question.rule_ids
@@ -120,14 +122,27 @@ def test_flat_office_formula_wrapper_is_rejected_as_an_unsupported_representatio
 
 def test_formula_configuration_is_explicit_and_strict(tmp_path: Path) -> None:
     plan = tmp_path / "plan.toml"
+    digest = fingerprint(OdfDocument.open(SOURCE).tree(Part.CONTENT).getroot())
+    table = '[decisions."formula.alternative"."content/formula"]\n'
     plan.write_text(
         plan_header(SOURCE)
-        + '[decisions."formula.alternative"]\nalternative = "a plus b equals c"\n'
+        + table
+        + f'fingerprint = "{digest}"\n'
+        + 'alternative = "a plus b equals c"\n'
     )
     assert compile_operations(OdfDocument.open(SOURCE), load_plan(plan)) == (
-        SetFormulaAlternative("a plus b equals c"),
+        SetFormulaAlternative("a plus b equals c", digest),
     )
-    for answer in ("", 'alternative = ""', 'alternative = "a"\nfingerprint = "reviewed"'):
-        plan.write_text(plan_header(SOURCE) + '[decisions."formula.alternative"]\n' + answer)
+    plan.write_text(plan_header(SOURCE) + table)
+    assert load_plan(plan).decisions == ()
+    for answer in (
+        'alternative = ""',
+        'alternative = "a"\nfingerprint = "reviewed"',
+        'alternative = "a"',
+    ):
+        plan.write_text(plan_header(SOURCE) + table + answer)
         with pytest.raises(PlanError):
             load_plan(plan)
+    plan.write_text(plan_header(SOURCE) + '[decisions."formula.alternative"]\nalternative = "a"')
+    with pytest.raises(PlanError):
+        load_plan(plan)

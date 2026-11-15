@@ -9,9 +9,9 @@ lazy from collections.abc import Callable
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, plan_blockers
-from odfa11y.capture import capture_source
+from odfa11y.capture import capture_source, source_digest
 from odfa11y.errors import PackageError
-from odfa11y.evidence import require_free_directory, sha256_file
+from odfa11y.evidence import require_free_directory
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.native.probes import ProbeCache
 from odfa11y.odf import OdfDocument, Use, declared_version
@@ -56,7 +56,7 @@ class _Run:
 
     def identify_source(self) -> StageResult:
         self.captured = self.lifetime.enter_context(capture_source(self.source))
-        self.record.document.sha256 = sha256_file(self.captured)
+        self.record.document.sha256 = source_digest(self.captured)
         try:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
