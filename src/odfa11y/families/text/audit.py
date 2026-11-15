@@ -6,6 +6,7 @@ from collections import Counter
 lazy from lxml import etree
 
 from odfa11y.concepts import document_links, link_decision, link_has_description, link_location
+from odfa11y.concepts.kinds import LINK_DESCRIPTION
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.contexts import context_location, text_nodes
@@ -46,7 +47,7 @@ def audit_text(document: OdfDocument, report: Report) -> None:
             report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
-                decision=link_decision(document, link, index, rules.LINK003.id),
+                decision=link_decision(document, link, index, LINK_DESCRIPTION, rules.LINK003.id),
             )
     _audit_empty_spacers(document, report)
     _audit_blinking(document, report)

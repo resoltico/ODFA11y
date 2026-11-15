@@ -14,7 +14,7 @@ from odfa11y.families import adapter_for
 from odfa11y.families.formula import SetFormulaAlternative
 from odfa11y.families.formula.expression import fingerprint
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.plans import load_plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate import SetMetadata
 from odfa11y.remediate.compile import compile_operations
 from tests.fixtures.documents import Variant, make_flat

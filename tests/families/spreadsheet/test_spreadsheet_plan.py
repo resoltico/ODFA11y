@@ -14,8 +14,8 @@ from odfa11y.errors import PlanError
 from odfa11y.families.spreadsheet import SetGraphicAlternatives, SetSheetNames
 from odfa11y.families.text import SetGraphicAlternatives as TextGraphicAlternatives
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
-from odfa11y.plans import load_plan
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate import SetMetadata
 from odfa11y.remediate.compile import compile_operations
 from odfa11y.report import FactKeys

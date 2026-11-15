@@ -36,9 +36,14 @@ the header. Targeted decisions additionally require the canonical target path an
 fingerprints or infer answers from filenames. Only registered decision tables and declared
 fields are accepted; invalid types and missing binding metadata are rejected.
 
-`--rebind` explicitly permits a different source digest. It does not bypass target
-fingerprints or preservation checks. Reapplying a reviewed answer to a remediated
-source therefore requires rebind and still checks the target's preserved identity.
+`plan NEW_SOURCE --from OLD_PLAN` creates a newly bound plan. Matching kind, target path
+and fingerprint preserve an answered block; changed or unavailable targets retain their
+answers as comments with a reason. Review the result before applying it. Fidelity policy
+is preserved. `remediate`, `run` and `batch` require an exact source digest.
+
+Question headers and fingerprints are live; answer fields start commented. Blocks without
+answers are inert and listed by remediation. Stale unanswered targets warn without applying
+an edit. `plan --all` includes optional overrides for available targets without findings.
 
 Remediation reports every operation outcome and structured refusal. A refused
 candidate is not published and exits 2. A successful `--dry-run` exits 0 with

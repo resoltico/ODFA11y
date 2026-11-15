@@ -16,8 +16,7 @@ from odfa11y.concepts.graphic_styles import (
 from odfa11y.concepts.tables import AXES, declarations, repeated
 from odfa11y.concepts.text import reading_context_path
 from odfa11y.concepts.xml import protected_xml
-from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE
+from odfa11y.decisions import DecisionKind, OpenDecision
 from odfa11y.odf import NS, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.resources import ResourceIdentity
@@ -132,7 +131,9 @@ class GraphicIdentity:
         """
         return self._targets[frame]
 
-    def open_decision(self, frame: etree._Element, rule_id: str) -> OpenDecision:
+    def open_decision(
+        self, frame: etree._Element, kind: DecisionKind, rule_id: str
+    ) -> OpenDecision:
         """Collect an explicit graphic question using the existing identity snapshot.
 
         Returns
@@ -149,7 +150,7 @@ class GraphicIdentity:
             "count": len(group),
         }
         return OpenDecision(
-            GRAPHIC_ALTERNATIVE,
+            kind,
             Target((Location(target)).path, Fingerprint(self.fingerprint(group))),
             current,
             (rule_id,),

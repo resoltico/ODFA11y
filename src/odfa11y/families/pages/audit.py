@@ -20,8 +20,13 @@ from odfa11y.concepts import (
     pages,
     visible_words,
 )
+from odfa11y.concepts.kinds import (
+    GRAPHIC_ALTERNATIVE,
+    LINK_DESCRIPTION,
+    PAGE_METADATA,
+    PAGE_NAVIGATION,
+)
 from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kind import PAGE_METADATA, PAGE_NAVIGATION
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import FactKeys, Location
@@ -140,7 +145,7 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
             details={
                 "shape": name,
             },
-            decision=identity.open_decision(shape, rule.id),
+            decision=identity.open_decision(shape, GRAPHIC_ALTERNATIVE, rule.id),
         )
 
 
@@ -152,7 +157,7 @@ def _links(document: OdfDocument, report: Report) -> None:
             report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
-                decision=link_decision(document, link, index, rules.LINK003.id),
+                decision=link_decision(document, link, index, LINK_DESCRIPTION, rules.LINK003.id),
             )
 
 

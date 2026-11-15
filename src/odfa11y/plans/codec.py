@@ -19,8 +19,9 @@ from odfa11y.targets import (
     require_target,
 )
 lazy from odfa11y.contracts import JsonObject
-lazy from odfa11y.decisions import DecisionKind, OpenDecision
+lazy from odfa11y.decisions import Decision, DecisionKind, OpenDecision
 lazy from odfa11y.decisions.decision import QuestionContext
+lazy from odfa11y.plans.fidelity import FidelityPolicy
 lazy from odfa11y.report import Finding
 
 
@@ -73,7 +74,14 @@ def parse_tables(values: Mapping[str, object], kinds: Mapping[str, DecisionKind]
 
 
 def render_plan(
-    header: PlanHeader, decisions: Iterable[OpenDecision], *, findings: Iterable[Finding] = ()
+    header: PlanHeader,
+    decisions: Iterable[OpenDecision],
+    *,
+    findings: Iterable[Finding] = (),
+    optional: Iterable[OpenDecision] = (),
+    answers: Iterable[Decision] = (),
+    not_carried: Iterable[tuple[Decision, str]] = (),
+    fidelity: FidelityPolicy | None = None,
 ) -> str:
     """Print the binding header and disabled, reviewable answers with shared field help.
 
@@ -93,7 +101,14 @@ def render_plan(
     ]
     findings = tuple(findings)
     redactor = Redactor(())
-    for decision in decisions:
+    decisions = tuple(decisions)
+    answered = {
+        (answer.kind.id, answer.target.path if answer.target else None): answer
+        for answer in answers
+    }
+    for index, decision in enumerate((*decisions, *optional)):
+        if index == len(decisions):
+            lines += ["# Optional overrides (no finding raised)", ""]
         kind = decision.kind
         key = "decisions." + json.dumps(kind.id)
         if decision.target is not None:
@@ -111,15 +126,54 @@ def render_plan(
             )
         if decision.target is not None:
             lines.append(f"fingerprint = {json.dumps(require_target(decision.target).fingerprint)}")
-        hints = get_type_hints(kind.answer_type, include_extras=True)
-        for field in fields_of(kind.answer_type):
-            help_text = schema_for(hints[field.name], input=True).get("description", field.name)
-            placeholder = _placeholder(field, hints[field.name])
-            lines.append(
-                f"# {field.name} = {json.dumps(placeholder, ensure_ascii=False)}  # {help_text}"
-            )
+        answer = answered.get((kind.id, decision.target.path if decision.target else None))
+        lines.extend(_answer_lines(kind, answer))
         lines.append("")
+    lines.extend(_not_carried_lines(not_carried, redactor))
+    if fidelity is not None:
+        lines += [
+            "[fidelity]",
+            *[key + " = " + json.dumps(value) for key, value in record_dict(fidelity).items()],
+            "",
+        ]
     return "\n".join(lines)
+
+
+def _not_carried_lines(
+    not_carried: Iterable[tuple[Decision, str]], redactor: Redactor
+) -> list[str]:
+    lines: list[str] = []
+    for answer, reason in not_carried:
+        key = "decisions." + json.dumps(answer.kind.id)
+        if answer.target is not None:
+            key += "." + json.dumps(answer.target.path)
+        lines += [
+            "# Not carried: " + json.dumps(redactor.text(reason), ensure_ascii=True),
+            "# [" + key + "]",
+        ]
+        if answer.target is not None:
+            lines.append("# fingerprint = " + json.dumps(answer.target.fingerprint))
+        lines.extend("# " + line for line in _answer_lines(answer.kind, answer))
+        lines.append("")
+    return lines
+
+
+def _answer_lines(kind: DecisionKind, answer: Decision | None) -> list[str]:
+    if answer is not None:
+        return [
+            key + " = " + json.dumps(value, ensure_ascii=True)
+            for key, value in record_dict(answer.answer).items()
+            if value is not None
+        ]
+    lines = []
+    hints = get_type_hints(kind.answer_type, include_extras=True)
+    for field in fields_of(kind.answer_type):
+        help_text = schema_for(hints[field.name], input=True).get("description", field.name)
+        placeholder = _placeholder(field, hints[field.name])
+        lines.append(
+            f"# {field.name} = {json.dumps(placeholder, ensure_ascii=True)}  # {help_text}"
+        )
+    return lines
 
 
 def _finding_comments(
@@ -173,7 +227,7 @@ def _placeholder(field: dataclasses.Field[object], value_type: object) -> object
     if "minimum" in schema:
         return schema["minimum"]
     if value_type is bool:
-        return False
+        return True
     if field.default is not dataclasses.MISSING and field.default is not None:
         return field.default
     # Optional strings and booleans get explicit placeholders, never inferred meaning.

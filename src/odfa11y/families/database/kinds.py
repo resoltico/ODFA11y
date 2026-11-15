@@ -6,7 +6,8 @@ lazy from collections.abc import Sequence
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import DatabaseDescriptionAnswer
 from odfa11y.families.database.descriptions import DatabaseDescription, SetObjectDescriptions
-from odfa11y.odf import Family
+from odfa11y.families.database.domain import OBJECTS
+from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
@@ -16,8 +17,8 @@ DATABASE_DESCRIPTION = DecisionKind(
     "database.description",
     DecisionScope.TARGET,
     DatabaseDescriptionAnswer,
-    frozenset({Family.DATABASE}),
-    SetObjectDescriptions.name,
+    domain=OBJECTS,
+    resolves=(rules.BASE004,),
 )
 DECISION_KINDS = (DATABASE_DESCRIPTION,)
 

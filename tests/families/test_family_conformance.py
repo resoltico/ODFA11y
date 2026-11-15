@@ -12,7 +12,8 @@ from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.odf import NS, OdfDocument, PackageStorage, Part
-from odfa11y.plans import Plan, parse_tables, registered_kinds
+from odfa11y.plans import Plan, parse_tables
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate import remediate
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint, Target, TargetPath, require_target
@@ -53,10 +54,9 @@ def test_family_question_roundtrip_preservation_and_rebinding(tmp_path: Path, fi
     with pytest.raises(PlanError, match="digest mismatch"):
         remediate(destination, second, plan)
     assert not second.exists()
-    reapplied = remediate(destination, second, plan, rebind=True)
+    reapplied = remediate(destination, second, rebound_plan(destination, plan))
     assert reapplied.published
     assert not reapplied.changed
-    assert reapplied.rebind
     assert not reapplied.violations
     # A source binding never authorizes a decision belonging to another family.
     foreign = registered_kinds()["formula.alternative" if fixture == "text" else "heading.level"]
@@ -152,7 +152,7 @@ def test_sheet_and_graphic_questions_compose_and_rebind(tmp_path: Path) -> None:
     result = remediate(source, first, plan)
     assert result.published, result.as_dict()
     assert not {"SHEET002", "GRAPHIC003"} & {f.rule_id for f in audit_odf(first).findings}
-    result = remediate(first, second, plan, rebind=True)
+    result = remediate(first, second, rebound_plan(first, plan))
     assert result.published, result.as_dict()
     assert not result.changed
 
@@ -249,3 +249,10 @@ def test_every_family_audit_preserves_live_trees_and_serializes_against_its_sche
     assert not document.changed_since(before)
     assert source.read_bytes() == before_bytes
     report.as_dict()
+
+
+def rebound_plan(source: Path, previous: Plan) -> Plan:
+    """Exercise the new-plan workflow before applying preserved answers again."""
+    _, template = prepare_plan(source, previous=previous)
+    assert template is not None
+    return parse_tables(tomllib.loads(template), registered_kinds())

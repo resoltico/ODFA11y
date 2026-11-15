@@ -40,5 +40,5 @@ Inspect `AuditRun.reports` and `.failures` separately. `.render` produces report
 `.as_dict` produces the [per-input record](SCHEMAS.md). SARIF rendering refuses partial logs;
 use `preflight_sarif` before expensive work. `Plan.for_source`, `Decision`, registered kinds
 and `decode_answer` support programmatic answers; `load_plan` reads reviewed TOML.
-Explicit rebind enforces fingerprints and preservation. The root package is the supported
+Use `plan(source, from_plan=previous)` to prepare a newly bound plan with matching answers. The root package is the supported
 application surface; low-level model/native calls leave guard policy to their caller.

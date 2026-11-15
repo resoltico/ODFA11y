@@ -53,7 +53,7 @@ class SpreadsheetAdapter(FamilyAdapter):
     audit = staticmethod(audit_spreadsheet)
     default_language = staticmethod(default_language)
     set_default_language = staticmethod(set_default_language)
-    decision_kinds = DECISION_KINDS
+    kinds = DECISION_KINDS
     probes = PROBES
     operations = staticmethod(operations)
     review_items = REVIEW_ITEMS

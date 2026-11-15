@@ -12,6 +12,7 @@ from odfa11y.concepts import (
     eligible_text_node,
     visible_words,
 )
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.headings.edit import (
@@ -141,7 +142,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
                     "frame": declared_name,
                     "href": href,
                 },
-                decision=identity.open_decision(frame, rules.GRAPHIC003.id),
+                decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE, rules.GRAPHIC003.id),
             )
 
 

@@ -15,6 +15,7 @@ from odfa11y.errors import PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Part, Use
 from odfa11y.odf.export_context import native_export_limitations
+from odfa11y.remediate.document_ops import document_question
 from odfa11y.report import FactKeys, Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
@@ -58,7 +59,12 @@ def audit_document(
     document: OdfDocument, *, subject: str, source: Path | None = None, schema: bool = False
 ) -> Report:
     """Audit an existing document model, including an unpublished edited candidate."""
-    report = Report(kind=ReportKind.ODF, subject=subject, _sources=(source,) if source else ())
+    report = Report(
+        kind=ReportKind.ODF,
+        subject=subject,
+        _sources=(source,) if source else (),
+        _question_for=document_question,
+    )
     protection = document.protection
     if protection.signatures:
         report.raise_(

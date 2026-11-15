@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Audit document title and language metadata."""
 
-from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part
 from odfa11y.report import FactKeys, Location
@@ -21,7 +19,6 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
             rules.META001,
             "Document title metadata is missing.",
             location=Location("meta/title"),
-            decision=OpenDecision(COMMON_KINDS[1], None, {}),
         )
     else:
         report.facts[FactKeys.DOCUMENT_TITLE] = title.strip()
@@ -55,7 +52,6 @@ def _audit_language(
                 rules.META002,
                 "Document language is not declared in metadata or the default style.",
                 location=Location("meta/language"),
-                decision=OpenDecision(COMMON_KINDS[1], None, {}),
             )
         return
     report.facts[FactKeys.DOCUMENT_LANGUAGE] = language or default_language
@@ -64,7 +60,6 @@ def _audit_language(
             rules.META003,
             location=Location("meta/language"),
             details={"metadata": declared, "default_style": default_declared},
-            decision=OpenDecision(COMMON_KINDS[1], None, {}),
         )
 
 

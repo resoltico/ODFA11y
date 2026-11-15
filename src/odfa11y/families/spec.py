@@ -29,7 +29,7 @@ class FamilyAdapter(ABC):
     name: str
     family: Family | None
     review_items: tuple[ReviewItem, ...] = ()
-    decision_kinds: tuple[DecisionKind, ...] = ()
+    kinds: tuple[DecisionKind, ...] = ()
     pdf_filter: str | None = None
     probes: tuple[CapabilityProbe, ...] = ()
 

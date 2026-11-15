@@ -10,8 +10,8 @@ from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
 from odfa11y.native.probes import ProbeCache
 from odfa11y.native.process import termination_interrupt
-from odfa11y.plans import load_plan
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.plans.registry import load_plan
 from odfa11y.progress import ProgressEvent, Stage, Step, StepState
 from odfa11y.records import DocumentIdentity
 from odfa11y.run.context import RunSettings
@@ -28,7 +28,6 @@ def run_batch(
     options: RunSettings | None = None,
     *,
     on_progress: ProgressObserver | None = None,
-    rebind: bool = False,
     native_tools: NativeTools | None = None,
 ) -> BatchRecord:
     """Run every item, keeping completed evidence through ordinary failures and interruption.
@@ -57,7 +56,6 @@ def run_batch(
                 output,
                 options,
                 on_progress,
-                rebind=rebind,
                 probe_cache=ProbeCache(),
                 native_tools=native_tools or NativeTools(),
             )
@@ -82,7 +80,6 @@ def _run_items(
     options: RunSettings,
     on_progress: ProgressObserver | None,
     *,
-    rebind: bool,
     probe_cache: ProbeCache,
     native_tools: NativeTools,
 ) -> None:
@@ -96,7 +93,6 @@ def _run_items(
             progress,
             output / item.id,
             options,
-            rebind=rebind,
             probe_cache=probe_cache,
             native_tools=native_tools,
         )
@@ -118,13 +114,12 @@ def _advance_item(
     target: Path,
     options: RunSettings,
     *,
-    rebind: bool,
     probe_cache: ProbeCache,
     native_tools: NativeTools,
 ) -> None:
     try:
         result = _run_item(
-            item, target, options, rebind=rebind, probe_cache=probe_cache, native_tools=native_tools
+            item, target, options, probe_cache=probe_cache, native_tools=native_tools
         )
     except (OdfA11yError, OSError) as exc:
         progress.status = BatchStatus.FAILED
@@ -142,7 +137,6 @@ def _run_item(
     target: Path,
     options: RunSettings,
     *,
-    rebind: bool,
     probe_cache: ProbeCache,
     native_tools: NativeTools,
 ) -> RunRecord:
@@ -156,7 +150,6 @@ def _run_item(
             plan,
             target,
             options,
-            rebind=rebind,
             probe_cache=probe_cache,
             native_tools=native_tools,
         )

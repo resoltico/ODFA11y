@@ -6,10 +6,10 @@ lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 from odfa11y.contracts.types import format_validators
-from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import PlanError
 from odfa11y.families import REGISTRY
 from odfa11y.plans.codec import parse_plan
+from odfa11y.remediate.document_ops import COMMON_KINDS
 lazy from odfa11y.decisions import DecisionKind
 lazy from odfa11y.plans.model import Plan
 
@@ -30,7 +30,7 @@ def registered_kinds() -> dict[str, DecisionKind]:
     """
     result = {kind.id: kind for kind in COMMON_KINDS}
     for adapter in REGISTRY.values():
-        for kind in adapter.decision_kinds:
+        for kind in adapter.kinds:
             if kind.id in result and result[kind.id] != kind:
                 msg = f"Conflicting registrations for decision {kind.id}"
                 raise PlanError(msg)

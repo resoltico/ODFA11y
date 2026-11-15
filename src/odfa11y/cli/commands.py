@@ -92,7 +92,7 @@ def _preflight_sarif(args: argparse.Namespace) -> None:
 
 
 def _plan(args: argparse.Namespace) -> int:
-    result = api.plan(args.source)
+    result = api.plan(args.source, from_plan=args.from_plan, include_all=args.include_all)
     if result.template is None:
         print("No plan: the document cannot be read well enough to plan.", file=sys.stderr)  # noqa: T201  CLI output.
         print(render_reports([result.report]), file=sys.stderr)  # noqa: T201  CLI output.
@@ -102,9 +102,7 @@ def _plan(args: argparse.Namespace) -> int:
 
 
 def _remediate(args: argparse.Namespace) -> int:
-    result = api.remediate(
-        args.source, args.destination, args.plan, dry_run=args.dry_run, rebind=args.rebind
-    )
+    result = api.remediate(args.source, args.destination, args.plan, dry_run=args.dry_run)
     if args.format == "json":
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
         return result.exit_status
@@ -121,6 +119,7 @@ def _remediate(args: argparse.Namespace) -> int:
             f"- {outcome.status.value:9} {terminal_text(outcome.operation)}{key}: "
             f"{terminal_text(outcome.message)}"
         )
+    _predictions(result)
     for violation in result.violations:
         print(f"- {violation.kind}: {terminal_text(violation.message)}")  # noqa: T201  CLI output is the command interface.
     if not result.outcomes:
@@ -131,6 +130,20 @@ def _remediate(args: argparse.Namespace) -> int:
         f"{result.schema.new_count} new"
     )
     return result.exit_status
+
+
+def _predictions(result: api.RemediationResult) -> None:
+    for prediction in result.predictions:
+        resolved = ", ".join(finding.rule.id for finding in prediction.resolved) or "none"
+        remaining = ", ".join(finding.rule.id for finding in prediction.remaining) or "none"
+        sys.stdout.write(
+            f"Prediction {terminal_text(prediction.kind_id)}: "
+            f"resolved {resolved}; remaining {remaining}\n"
+        )
+    for block in result.unanswered:
+        target = " @ " + terminal_text(block.target) if block.target else ""
+        warning = "; warning: " + terminal_text(block.reason) if block.stale else ""
+        sys.stdout.write(f"Unanswered {terminal_text(block.kind_id)}{target}{warning}\n")
 
 
 def _export(args: argparse.Namespace) -> int:

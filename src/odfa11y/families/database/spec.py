@@ -49,7 +49,7 @@ class DatabaseAdapter(FamilyAdapter):
     audit = staticmethod(audit_database)
     default_language = staticmethod(_language)
     set_default_language = staticmethod(_set_language)
-    decision_kinds = DECISION_KINDS
+    kinds = DECISION_KINDS
     operations = staticmethod(operations)
     review_items = (
         ReviewItem(

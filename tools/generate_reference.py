@@ -102,7 +102,9 @@ def rule_reference() -> str:
         "| --- | --- | --- | --- |",
     ]
     for rule in sorted(RULES.values(), key=lambda value: value.id):
-        decisions = ", ".join(f"`{kind}`" for kind in rule.decision_kinds)
+        decisions = ", ".join(
+            f"`{kind.id}`" for kind in registered_kinds().values() if rule in kind.resolves
+        )
         lines.append(
             f"| `{rule.id}` | {rule.severity.value.title()} | {rule.title} | {decisions} |"
         )

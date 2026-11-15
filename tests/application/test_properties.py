@@ -26,7 +26,7 @@ from odfa11y.families.text import (
     text_is_preserved,
 )
 from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
-from odfa11y.plans import load_plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import RULES, Report
 from odfa11y.report.model import ReportKind

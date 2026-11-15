@@ -26,8 +26,9 @@ from odfa11y.contracts import (
     validate,
 )
 from odfa11y.errors import InvalidOption, PlanError
-from odfa11y.plans import parse_tables, registered_kinds
+from odfa11y.plans import parse_tables
 from odfa11y.plans.fidelity import FidelityPolicy
+from odfa11y.plans.registry import registered_kinds
 
 
 @pytest.mark.parametrize(

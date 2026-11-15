@@ -9,7 +9,7 @@ lazy from collections.abc import Iterable
 
 from odfa11y.capture import source_digest
 from odfa11y.contracts import Description, JsonObject, Length, Pattern, record_dict, validate
-from odfa11y.errors import PlanError
+from odfa11y.errors import PlanError, Remedy, RemedyAction
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
 from odfa11y.targets import TargetPath
 lazy from odfa11y.decisions import Decision
@@ -120,21 +120,11 @@ class Plan:
             fidelity or Pagination.SAME(),
         )
 
-    def verify_source(self, source: str | Path, *, rebind: bool = False) -> None:
-        """Refuse applying reviewed decisions to different bytes without explicit rebinding.
-
-        Raises
-        ------
-        PlanError
-            The selected source differs from the reviewed source and rebind is false.
-
-        """
-        if type(rebind) is not bool:
-            msg = "rebind must be an explicit boolean"
-            raise PlanError(msg)
-        if source_digest(Path(source)) != self.header.source.sha256 and not rebind:
-            msg = "Plan/source digest mismatch; review the source and explicitly rebind to proceed."
-            raise PlanError(msg)
+    def verify_source(self, source: str | Path) -> None:
+        """Require exactly the source bytes reviewed by this plan."""
+        if source_digest(Path(source)) != self.header.source.sha256:
+            message = "Plan/source digest mismatch; create a newly bound plan with plan --from."
+            raise PlanError(message, remedy=Remedy(RemedyAction.REBIND_PLAN))
 
     def as_dict(self) -> JsonObject:
         """Project the plan into the same tables used by its TOML file.

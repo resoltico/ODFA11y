@@ -91,7 +91,6 @@ class RunRecord:
     outputs: dict[str, str] = field(default_factory=dict)
     plan: PlanHeader | None = None
     decisions: tuple[Decision, ...] = ()
-    rebind: bool = False
 
     @property
     def strict(self) -> bool:

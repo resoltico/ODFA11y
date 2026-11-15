@@ -4,8 +4,6 @@
 import zipfile
 from typing import cast
 
-from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import XmlParseError
 from odfa11y.odf import (
     Family,
@@ -233,7 +231,6 @@ def audit_versions(document: OdfDocument, report: Report) -> None:
             rules.ODF001,
             "Package members declare different or missing ODF versions.",
             details={"versions": declared},
-            decision=OpenDecision(COMMON_KINDS[0], None, {}),
         )
     if version is not None:
         report.facts[FactKeys.DOCUMENT_ODF_VERSION] = version
@@ -249,7 +246,6 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
             rules.ODF003,
             f"Manifest declares ODF version {manifest_version!r}; content declares {version!r}.",
             location=storage_location(document, Part.MANIFEST),
-            decision=OpenDecision(COMMON_KINDS[0], None, {}),
         )
     root_entries = select_elements(manifest_root, "./manifest:file-entry[@manifest:full-path='/']")
     if not root_entries:
@@ -264,7 +260,6 @@ def _audit_manifest(document: OdfDocument, version: str | None, report: Report) 
                 f"content declares {version!r}."
             ),
             location=storage_location(document, Part.MANIFEST),
-            decision=OpenDecision(COMMON_KINDS[0], None, {}),
         )
 
 

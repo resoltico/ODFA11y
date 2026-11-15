@@ -2373,9 +2373,6 @@
     "published": {
       "type": "boolean"
     },
-    "rebind": {
-      "type": "boolean"
-    },
     "schema": {
       "additionalProperties": false,
       "properties": {
@@ -2458,7 +2455,43 @@
     },
     "unanswered": {
       "items": {
-        "type": "string"
+        "additionalProperties": false,
+        "properties": {
+          "kind_id": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind_id",
+          "target",
+          "stale",
+          "reason"
+        ],
+        "type": "object"
       },
       "type": "array"
     },
@@ -2517,7 +2550,6 @@
     "schema_version",
     "published",
     "violations",
-    "rebind",
     "dry_run",
     "operations",
     "predictions",

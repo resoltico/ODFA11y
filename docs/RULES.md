@@ -121,7 +121,7 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `REVISION003` | Warning | Tracked declaration has no established current-flow anchor. |  |
 | `SCHEMA001` | Warning | A member does not validate against the ODF schema. |  |
 | `SCHEMA002` | Info | No ODF schema is bundled for the declared version. |  |
-| `SHEET001` | Error | Sheet has no name. |  |
+| `SHEET001` | Error | Sheet has no name. | `sheet.name` |
 | `SHEET002` | Warning | Sheet keeps its default name. | `sheet.name` |
 | `SHEET007` | Warning | Empty sheet follows the last sheet with content. |  |
 | `STYLE001` | Warning | Paragraph style scope or properties are unresolved. |  |

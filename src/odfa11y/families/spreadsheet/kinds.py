@@ -6,6 +6,7 @@ from typing import Annotated, ClassVar
 lazy from collections.abc import Sequence
 
 from odfa11y.concepts import GraphicAlternative, LinkDescription
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
 from odfa11y.contracts import (
     Constraint,
     Description,
@@ -13,10 +14,10 @@ from odfa11y.contracts import (
 )
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import GraphicAlternativeAnswer, LinkDescriptionAnswer
-from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
+from odfa11y.families.spreadsheet.domains import SHEETS
 from odfa11y.families.spreadsheet.names import SetSheetNames, SheetNameChange, invalid_name_reason
 from odfa11y.families.spreadsheet.objects import SetGraphicAlternatives, SetLinkDescriptions
-from odfa11y.odf import Family
+from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
@@ -50,8 +51,8 @@ SHEET_NAME = DecisionKind(
     "sheet.name",
     DecisionScope.TARGET,
     SheetNameAnswer,
-    frozenset({Family.SPREADSHEET}),
-    SetSheetNames.name,
+    domain=SHEETS,
+    resolves=(rules.SHEET001, rules.SHEET002),
 )
 DECISION_KINDS = (SHEET_NAME, GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION)
 

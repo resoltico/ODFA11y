@@ -14,8 +14,8 @@ from odfa11y.errors import DocumentRefusal, PlanError
 from odfa11y.families import adapter_for
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.plans import load_plan
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate import SetMetadata
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute

@@ -17,6 +17,7 @@ from odfa11y.concepts import (
     link_location,
     visible_words,
 )
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.spreadsheet.kinds import SHEET_NAME
 from odfa11y.families.spreadsheet.sheets import (
@@ -62,7 +63,7 @@ def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
             report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
-                decision=link_decision(document, link, index, rules.LINK003.id),
+                decision=link_decision(document, link, index, LINK_DESCRIPTION, rules.LINK003.id),
             )
     _audit_trailing_empty_sheets(all_sheets, report)
     _audit_hidden(content, all_sheets, report)
@@ -162,7 +163,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
                 "frame": declared_name,
                 "href": href,
             },
-            decision=identity.open_decision(frame, rules.GRAPHIC003.id),
+            decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE, rules.GRAPHIC003.id),
         )
 
 

@@ -2,6 +2,7 @@
 """Audit the standard image body without fetching or converting its graphic."""
 
 from odfa11y.concepts import GraphicIdentity, audit_graphic_role
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.families.image.payload import inspect_payload
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
@@ -40,7 +41,7 @@ def audit_image(document: OdfDocument, report: Report) -> None:
             rules.GRAPHIC003,
             location=Location(identity.target(frame)),
             details={"frame": name},
-            decision=identity.open_decision(frame, rules.GRAPHIC003.id),
+            decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE, rules.GRAPHIC003.id),
         )
     for image in images:
         problem, review = inspect_payload(document, image)

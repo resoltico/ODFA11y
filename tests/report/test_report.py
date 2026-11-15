@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import InvalidOption
-from odfa11y.plans import registered_kinds
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.report import (
     RULES,
     FactKeys,
@@ -138,7 +138,11 @@ def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_tit
                 match.group(4).replace("`", "").strip(),
             )
     assert documented == {
-        key: (rule.severity.value, rule.title, ", ".join(rule.decision_kinds))
+        key: (
+            rule.severity.value,
+            rule.title,
+            ", ".join(kind.id for kind in registered_kinds().values() if rule in kind.resolves),
+        )
         for key, rule in RULES.items()
     }
 

@@ -30,7 +30,6 @@ def pipeline_command(args: argparse.Namespace) -> int:
         tools=api.Tools(args.soffice, args.verapdf_path, args.timeout),
         profile=args.profile,
         observer=progress_callback(args.format),
-        rebind=args.rebind,
         native_tools=args.native_tools,
     )
     if args.format == "json":

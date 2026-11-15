@@ -2,10 +2,10 @@
 """Compile bound decision plans into common and family-owned operations."""
 
 from odfa11y.decisions.answers import DocumentMetadataAnswer, OdfVersionAnswer
-from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import PlanError
 from odfa11y.families import adapter_for
 from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.remediate.metadata import SetMetadata
 from odfa11y.remediate.version import SetOdfVersion
 lazy from odfa11y.concepts.edits import Operation
@@ -29,14 +29,12 @@ def compile_operations(document: OdfDocument, plan: Plan) -> tuple[Operation, ..
     """
     kinds = registered_kinds()
     adapter = adapter_for(document.kind)
-    family = document.kind.family if document.kind else None
+    applicable = (*COMMON_KINDS, *adapter.kinds)
     for decision in plan.decisions:
-        if kinds.get(decision.kind.id) is not decision.kind or family not in decision.kind.families:
+        if kinds.get(decision.kind.id) is not decision.kind or decision.kind not in applicable:
             msg = f"Decision {decision.kind.id!r} does not apply to this document family"
             raise PlanError(msg)
-    positions = {
-        kind.id: index for index, kind in enumerate((*COMMON_KINDS, *adapter.decision_kinds))
-    }
+    positions = {kind.id: index for index, kind in enumerate((*COMMON_KINDS, *adapter.kinds))}
     decisions = sorted(
         plan.decisions,
         key=lambda decision: (

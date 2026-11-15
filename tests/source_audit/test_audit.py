@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.odf import PackageStorage
-from odfa11y.plans import load_plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.report import RULES, FactKeys, Location, Severity
 from tests.fixtures.plans import question_for
 from tests.fixtures.writer import make_minimal_odt

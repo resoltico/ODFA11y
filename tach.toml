@@ -130,7 +130,7 @@ cannot_depend_on = ["odfa11y.decisions", "odfa11y.report", "odfa11y.plans"]
 [[modules]]
 path = "odfa11y.decisions"
 layer = "model"
-depends_on = ["odfa11y.contracts", "odfa11y.errors", "odfa11y.odf", "odfa11y.targets"]
+depends_on = ["odfa11y.rules", "odfa11y.contracts", "odfa11y.errors", "odfa11y.odf", "odfa11y.targets"]
 cannot_depend_on = ["odfa11y.report"]
 
 [[modules]]
@@ -224,12 +224,12 @@ cannot_depend_on = ["odfa11y.families.text", "odfa11y.families.spreadsheet", "od
 [[modules]]
 path = "odfa11y.audit"
 layer = "workflows"
-depends_on = ["odfa11y.capture", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.report", "odfa11y.rules"]
+depends_on = ["odfa11y.remediate.document_ops", "odfa11y.capture", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.report", "odfa11y.rules"]
 
 [[modules]]
 path = "odfa11y.remediate"
 layer = "workflows"
-depends_on = ["odfa11y.audit", "odfa11y.report", "odfa11y.capture", "odfa11y.concepts", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.records", "odfa11y.remediate.violations", "odfa11y.status"]
+depends_on = ["odfa11y.plans.registry", "odfa11y.remediate.document_ops", "odfa11y.audit", "odfa11y.report", "odfa11y.capture", "odfa11y.concepts", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.records", "odfa11y.remediate.violations", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.run"
@@ -249,7 +249,7 @@ depends_on = ["odfa11y.errors", "odfa11y.progress"]
 [[modules]]
 path = "odfa11y.batch"
 # Temporary until WP6: target layer runs; upward edges odfa11y.application.native.
-depends_on = ["odfa11y.application.native", "odfa11y.contracts", "odfa11y.errors", "odfa11y.evidence", "odfa11y.native.probes", "odfa11y.native.process", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.run", "odfa11y.run.record", "odfa11y.staging", "odfa11y.status"]
+depends_on = ["odfa11y.plans.registry", "odfa11y.application.native", "odfa11y.contracts", "odfa11y.errors", "odfa11y.evidence", "odfa11y.native.probes", "odfa11y.native.process", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.run", "odfa11y.run.record", "odfa11y.staging", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.evidence"
@@ -291,3 +291,13 @@ depends_on = ["odfa11y.cli"]
 path = "odfa11y.evidence.redact"
 layer = "foundation"
 depends_on = []
+
+[[modules]]
+path = "odfa11y.remediate.document_ops"
+layer = "workflows"
+depends_on = ["odfa11y.report", "odfa11y.rules", "odfa11y.decisions", "odfa11y.odf"]
+
+[[modules]]
+path = "odfa11y.plans.registry"
+layer = "workflows"
+depends_on = ["odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.plans", "odfa11y.remediate.document_ops"]

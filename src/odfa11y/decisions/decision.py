@@ -10,7 +10,8 @@ lazy from collections.abc import Mapping
 from odfa11y.contracts import JsonProperty, validate
 from odfa11y.errors import PlanError
 from odfa11y.targets import Target
-lazy from odfa11y.odf import Family
+lazy from odfa11y.decisions.domain import TargetDomain
+lazy from odfa11y.rules.registry import Rule
 
 
 class DecisionScope(StrEnum):
@@ -29,14 +30,14 @@ class DecisionScope(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class DecisionKind:
+class DecisionKind[A]:
     """One decision's identity, answer contract, applicability and executable operation."""
 
     id: str
     scope: DecisionScope
-    _answer_type: type[object]
-    families: frozenset[Family]
-    operation: str
+    _answer_type: type[A]
+    domain: TargetDomain | None = None
+    resolves: tuple[Rule, ...] = ()
 
     def __post_init__(self) -> None:
         """Require an introspectable answer contract.
@@ -52,7 +53,7 @@ class DecisionKind:
             raise PlanError(msg)
 
     @property
-    def answer_type(self) -> type[object]:
+    def answer_type(self) -> type[A]:
         return self._answer_type
 
 

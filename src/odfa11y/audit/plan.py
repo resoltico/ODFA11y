@@ -5,7 +5,9 @@ import tempfile
 from pathlib import Path
 
 from odfa11y.audit.engine import BLOCKING_RULE_IDS, audit_odf
+from odfa11y.audit.questions import available_questions, with_context
 from odfa11y.capture import capture_source
+from odfa11y.decisions import Decision, OpenDecision
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.plans import Plan, render_plan
@@ -31,7 +33,9 @@ def plan_blockers(report: Report) -> Report | None:
     )
 
 
-def prepare_plan(source: str | Path) -> tuple[Report, str | None]:
+def prepare_plan(
+    source: str | Path, *, previous: Plan | None = None, include_all: bool = False
+) -> tuple[Report, str | None]:
     """Audit and print a bound header with disabled typed human answers.
 
     Returns
@@ -46,14 +50,16 @@ def prepare_plan(source: str | Path) -> tuple[Report, str | None]:
             tempfile.TemporaryDirectory(prefix="odfa11y-plan-") as directory,
             capture_source(source, directory=Path(directory)) as captured,
         ):
-            return _prepare_captured(source, captured)
+            return _prepare_captured(source, captured, previous=previous, include_all=include_all)
     except (OSError, PackageError) as exc:
         report = Report(kind=ReportKind.ODF, subject=str(source), _sources=(source,))
         report.raise_(rules.PKG000, f"Cannot capture source for planning: {exc}")
         return report, None
 
 
-def _prepare_captured(source: Path, captured: Path) -> tuple[Report, str | None]:
+def _prepare_captured(
+    source: Path, captured: Path, *, previous: Plan | None, include_all: bool
+) -> tuple[Report, str | None]:
     report = audit_odf(captured)
     report.subject, report.sources = str(source), (source,)
     if plan_blockers(report) is not None:
@@ -61,4 +67,48 @@ def _prepare_captured(source: Path, captured: Path) -> tuple[Report, str | None]
     document = OdfDocument.open(captured)
     document.require(Use.PLAN)
     header = Plan.for_source(captured).header
-    return report, render_plan(header, report.decisions, findings=report.findings)
+    available = available_questions(document)
+    questions = tuple(with_context(question, available) for question in report.decisions)
+    carried, not_carried = _carry(previous, available)
+    raised = {_key(question) for question in questions}
+    carried_keys = {_key(answer) for answer in carried}
+    optional = tuple(
+        question
+        for question in available
+        if _key(question) not in raised and (include_all or _key(question) in carried_keys)
+    )
+    return report, render_plan(
+        header,
+        questions,
+        findings=report.findings,
+        optional=optional,
+        answers=carried,
+        not_carried=not_carried,
+        fidelity=previous.fidelity if previous else None,
+    )
+
+
+def _key(decision: Decision | OpenDecision) -> tuple[str, str | None]:
+    return decision.kind.id, decision.target.path if decision.target else None
+
+
+def _carry(
+    previous: Plan | None, available: tuple[OpenDecision, ...]
+) -> tuple[tuple[Decision, ...], tuple[tuple[Decision, str], ...]]:
+    if previous is None:
+        return (), ()
+    current = {_key(question): question for question in available}
+    carried = []
+    not_carried = []
+    for answer in previous.decisions:
+        match = current.get(_key(answer))
+        if match is None:
+            not_carried.append((
+                answer,
+                "The decision kind or target is unavailable in this source.",
+            ))
+        elif match.target != answer.target:
+            not_carried.append((answer, "The target fingerprint changed; review a fresh answer."))
+        else:
+            carried.append(answer)
+    return tuple(carried), tuple(not_carried)

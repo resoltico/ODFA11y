@@ -13,9 +13,9 @@ from odfa11y.cli import main
 from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
 from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kind import COMMON_KINDS
 from odfa11y.errors import OutputOccupied, PlanError, Remedy, RemedyAction, ToolUnavailable
 from odfa11y.plans import PlanHeader, SourceBinding, render_plan
+from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules

@@ -20,7 +20,7 @@ class FormulaAdapter(FamilyAdapter):
     audit = staticmethod(audit_formula)
     default_language = staticmethod(language)
     set_default_language = staticmethod(set_language)
-    decision_kinds = DECISION_KINDS
+    kinds = DECISION_KINDS
     probes = PROBES
     operations = staticmethod(operations)
     review_items = (

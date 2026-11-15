@@ -14,8 +14,7 @@ from odfa11y.concepts.graphic_identity import SHAPE_TAGS, GraphicIdentity
 from odfa11y.concepts.graphic_styles import normalized_graphic_tree
 from odfa11y.concepts.text import eligible_text_node, reading_context_path, visible_words
 from odfa11y.concepts.xml import protected_xml
-from odfa11y.decisions import OpenDecision
-from odfa11y.decisions.kind import LINK_DESCRIPTION
+from odfa11y.decisions import DecisionKind, OpenDecision
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
@@ -197,7 +196,7 @@ def _link_problem(
 
 
 def link_decision(
-    document: OdfDocument, link: etree._Element, index: int, rule_id: str
+    document: OdfDocument, link: etree._Element, index: int, kind: DecisionKind, rule_id: str
 ) -> OpenDecision:
     """Describe one reviewed link without hiding its identity in diagnostic details.
 
@@ -208,7 +207,7 @@ def link_decision(
 
     """
     return OpenDecision(
-        LINK_DESCRIPTION,
+        kind,
         Target(
             (link_location(link, index)).path,
             Fingerprint(link_fingerprint(document, link)),

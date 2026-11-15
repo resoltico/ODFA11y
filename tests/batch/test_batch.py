@@ -180,7 +180,6 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
         output_dir: str | Path,
         options: RunSettings | None = None,
         *,
-        rebind: bool = False,
         probe_cache: ProbeCache | None = None,
         native_tools: NativeTools | None = None,
     ) -> RunRecord:
@@ -192,7 +191,6 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
             plan,
             output_dir,
             options,
-            rebind=rebind,
             probe_cache=probe_cache,
             native_tools=native_tools,
         )

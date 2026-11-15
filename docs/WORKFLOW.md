@@ -68,8 +68,8 @@ Read `REVIEW.md` and perform the [human checks](ACCESSIBILITY.md#human-acceptanc
 
 ## Resolve a refusal
 
-Regenerate/review a stale plan; use `--rebind` only to explicitly accept a different source
-hash. It does not waive fingerprints or guards. For `NATIVE001`/`NATIVE002`, inspect the
+Create and review a newly bound plan with `odfa11y plan NEW_SOURCE --from OLD_PLAN`.
+Only answers whose target identities still match remain active. For `NATIVE001`/`NATIVE002`, inspect the
 [native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies).
 For schema failures, inspect the introduced violations. For fidelity failures, review
 actual differences before changing policy. Use a fresh evidence directory after interruption.

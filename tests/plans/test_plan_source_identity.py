@@ -10,7 +10,8 @@ import pytest
 
 from odfa11y.audit import prepare_plan
 from odfa11y.errors import PlanError
-from odfa11y.plans import Plan, parse_tables, registered_kinds
+from odfa11y.plans import Plan, parse_tables
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate import remediate
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.writer import make_minimal_odt

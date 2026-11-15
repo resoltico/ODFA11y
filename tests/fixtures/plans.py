@@ -29,8 +29,9 @@ from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.plans import Plan, PlanHeader, SourceBinding, registered_kinds
+from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint, Target, TargetPath
 lazy from odfa11y.concepts.edits import Operation

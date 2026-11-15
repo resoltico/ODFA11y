@@ -43,7 +43,8 @@ from odfa11y.errors import (
 )
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import validate_timeout
-from odfa11y.plans import Plan, PlanHeader, SourceBinding, load_plan, registered_kinds
+from odfa11y.plans import Plan, PlanHeader, SourceBinding
+from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
 from odfa11y.records import DoctorRecord
 from odfa11y.remediate import RemediationResult

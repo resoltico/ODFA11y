@@ -67,7 +67,7 @@ it publishes a passing whole candidate atomically. See [preservation](ACCESSIBIL
 
 Presentation/drawing share `families.pages`; profiles retain genuinely different contexts
 and wording. Other families own distinct contracts rather than a universal document model.
-Eight-family conformance tests cover decision round trips, rebind/idempotence, preservation,
+Eight-family conformance tests cover decision round trips, new plan binding/idempotence, preservation,
 blocked packages, audit non-mutation and serialized schemas.
 
 ## Cross the native boundary

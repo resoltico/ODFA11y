@@ -21,7 +21,7 @@ can prevent evidence publication. [Batch](BATCH.md) requires a new output root.
 ## Consume the record
 
 Use the shipped [JSON Schemas](SCHEMAS.md). `run.json` records source identity, plan header,
-answered decisions, explicit rebind, operations, policy/profile, stages, tool identities,
+answered decisions, operations, policy/profile, stages, tool identities,
 scoped capability results, schema assurance, fonts, outputs and required human review.
 Unknown identities remain null. Reports carry registered typed facts.
 

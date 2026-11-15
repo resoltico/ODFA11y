@@ -13,7 +13,7 @@ from odfa11y.concepts.edits import Status
 from odfa11y.families.text import HeadingLevel, SetHeadingLevels
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.plans import load_plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate.compile import compile_operations
 from odfa11y.targets import require_target
 from tests.fixtures.documents import Variant, make_flat, make_package

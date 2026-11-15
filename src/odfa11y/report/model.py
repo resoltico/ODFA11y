@@ -4,7 +4,7 @@
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Literal
-lazy from collections.abc import Mapping
+lazy from collections.abc import Callable, Mapping
 lazy from pathlib import Path
 
 from odfa11y.contracts import JsonProperty, record_dict
@@ -97,6 +97,9 @@ class Report:
     findings: list[Finding] = field(default_factory=list)
     facts: FactSet = field(default_factory=FactSet)
     _sources: tuple[Path, ...] = field(default=())
+    _question_for: Callable[[Rule, Report], OpenDecision | None] | None = field(
+        default=None, repr=False
+    )
 
     def raise_(
         self,
@@ -108,6 +111,8 @@ class Report:
         decision: OpenDecision | None = None,
     ) -> None:
         """Append a finding for a rule, defaulting the message to the rule title."""
+        if decision is None and self._question_for is not None:
+            decision = self._question_for(rule, self)
         if decision is not None and decision.context is None:
             path = decision.target.path if decision.target else "document"
             element_kind = path.rsplit("/", 1)[-1].split("[", 1)[0]

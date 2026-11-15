@@ -6,6 +6,7 @@ from typing import Annotated, ClassVar
 lazy from collections.abc import Sequence
 
 from odfa11y.concepts import GraphicAlternative, LinkDescription
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
 from odfa11y.contracts import (
     Description,
     ItemCount,
@@ -16,7 +17,7 @@ from odfa11y.contracts import (
 )
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import GraphicAlternativeAnswer, LinkDescriptionAnswer, SwitchAnswer
-from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
+from odfa11y.families.text.domains import HEADINGS, LANGUAGES, TABLES
 from odfa11y.families.text.graphics import SetGraphicAlternatives, SetLinkDescriptions
 from odfa11y.families.text.headings.edit import (
     MAX_HEADING_LEVEL,
@@ -29,6 +30,7 @@ from odfa11y.families.text.spacing.edit import NormalizeSpacing
 from odfa11y.families.text.spacing.remove import RemoveEmptySpacers
 from odfa11y.families.text.tables import MarkTableHeaders, TableHeaders
 from odfa11y.odf import Family
+from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
@@ -93,22 +95,41 @@ class TextSpacingAnswer:
 
 FAMILIES = frozenset({Family.TEXT})
 LINKIFY_ADDRESSES = DecisionKind(
-    "text.linkify_addresses", DecisionScope.DOCUMENT, SwitchAnswer, FAMILIES, LinkifyAddresses.name
+    "text.linkify_addresses",
+    DecisionScope.DOCUMENT,
+    SwitchAnswer,
+    resolves=(rules.LINK001,),
 )
 REMOVE_SPACERS = DecisionKind(
-    "text.remove_spacers", DecisionScope.DOCUMENT, SwitchAnswer, FAMILIES, RemoveEmptySpacers.name
+    "text.remove_spacers",
+    DecisionScope.DOCUMENT,
+    SwitchAnswer,
+    resolves=(rules.LAYOUT001,),
 )
 HEADING_LEVEL = DecisionKind(
-    "heading.level", DecisionScope.TARGET, HeadingLevelAnswer, FAMILIES, SetHeadingLevels.name
+    "heading.level",
+    DecisionScope.TARGET,
+    HeadingLevelAnswer,
+    domain=HEADINGS,
+    resolves=(
+        rules.HEADING001,
+        rules.HEADING002,
+    ),
 )
 TABLE_HEADERS = DecisionKind(
-    "table.headers", DecisionScope.TARGET, TableHeadersAnswer, FAMILIES, MarkTableHeaders.name
+    "table.headers",
+    DecisionScope.TARGET,
+    TableHeadersAnswer,
+    domain=TABLES,
+    resolves=(rules.TABLE003,),
 )
-TEXT_SPACING = DecisionKind(
-    "text.spacing", DecisionScope.DOCUMENT, TextSpacingAnswer, FAMILIES, NormalizeSpacing.name
-)
+TEXT_SPACING = DecisionKind("text.spacing", DecisionScope.DOCUMENT, TextSpacingAnswer)
 TARGET_LANGUAGE = DecisionKind(
-    "language.target", DecisionScope.TARGET, TargetLanguageAnswer, FAMILIES, SetTargetLanguages.name
+    "language.target",
+    DecisionScope.TARGET,
+    TargetLanguageAnswer,
+    domain=LANGUAGES,
+    resolves=(rules.LANG004,),
 )
 DECISION_KINDS = (
     LINKIFY_ADDRESSES,

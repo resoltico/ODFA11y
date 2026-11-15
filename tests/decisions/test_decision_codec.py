@@ -3,7 +3,7 @@
 
 import tomllib
 from dataclasses import dataclass
-from typing import Annotated, ClassVar, cast
+from typing import Annotated, ClassVar
 lazy from pathlib import Path
 
 import pytest
@@ -17,7 +17,6 @@ from odfa11y.contracts import (
 )
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
 from odfa11y.errors import PlanError
-from odfa11y.odf import Family
 from odfa11y.plans import Plan, parse_tables, plan_schema, render_plan
 from odfa11y.plans.fidelity import SamePagination
 from odfa11y.report import Location
@@ -40,12 +39,8 @@ class Metadata:
     __contract__: ClassVar[Annotated[object, RequireAny(("title", "description"))]]
 
 
-HEADING = DecisionKind(
-    "heading.level", DecisionScope.TARGET, Level, frozenset({Family.TEXT}), "set_heading_levels"
-)
-METADATA = DecisionKind(
-    "document.metadata", DecisionScope.DOCUMENT, Metadata, frozenset(Family), "set_metadata"
-)
+HEADING = DecisionKind("heading.level", DecisionScope.TARGET, Level)
+METADATA = DecisionKind("document.metadata", DecisionScope.DOCUMENT, Metadata)
 KINDS = {kind.id: kind for kind in [HEADING, METADATA]}
 
 
@@ -140,7 +135,7 @@ def test_header_and_kind_registry_are_mandatory(values: dict[str, object]) -> No
         parse_tables(values, KINDS)
 
 
-def test_source_binding_refuses_another_source_without_explicit_rebind(tmp_path: Path) -> None:
+def test_source_binding_refuses_another_source_and_requests_a_new_plan(tmp_path: Path) -> None:
     source, other = tmp_path / "source", tmp_path / "other"
     source.write_bytes(b"reviewed bytes")
     other.write_bytes(b"other bytes")
@@ -148,7 +143,6 @@ def test_source_binding_refuses_another_source_without_explicit_rebind(tmp_path:
     plan.verify_source(source)
     with pytest.raises(PlanError, match="digest mismatch"):
         plan.verify_source(other)
-    plan.verify_source(other, rebind=True)
 
 
 @pytest.mark.parametrize("digest", ["a" * 63, "a" * 65, "A" * 64, "a" * 64 + "\n"])
@@ -175,12 +169,3 @@ def test_policy_numeric_input_types_are_preserved_without_coercion() -> None:
     assert isinstance(floating.fidelity, SamePagination)
     assert type(integer.fidelity.raster_tolerance) is int
     assert type(floating.fidelity.raster_tolerance) is float
-
-
-@pytest.mark.parametrize("value", [1, "true", "false"])
-def test_truthy_nonboolean_values_cannot_authorize_rebinding(tmp_path: Path, value: object) -> None:
-    source = tmp_path / "source"
-    source.write_bytes(b"reviewed")
-    plan = Plan.for_source(source)
-    with pytest.raises(PlanError, match="explicit boolean"):
-        plan.verify_source(source, rebind=cast("bool", value))

@@ -14,8 +14,8 @@ from odfa11y.errors import PlanError
 from odfa11y.families.database import DatabaseDescription, SetObjectDescriptions
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.plans import load_plan
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate import SetMetadata
 from odfa11y.remediate.compile import compile_operations
 from odfa11y.run.context import RunSettings

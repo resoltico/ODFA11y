@@ -8,7 +8,7 @@ import pytest
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument
-from odfa11y.plans import load_plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.report import FactKeys
 from odfa11y.targets import require_target
 from tests.fixtures.documents import make_package

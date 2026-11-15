@@ -27,6 +27,16 @@ class Violation:
 
 
 @dataclass(frozen=True, slots=True)
+class UnansweredReview:
+    """An inert answer block and any warning about its stale source target."""
+
+    kind_id: str
+    target: TargetPath | None
+    stale: bool
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class DecisionPrediction:
     """Findings resolved by an answer and related findings remaining in the candidate."""
 
@@ -47,12 +57,11 @@ class RemediationResult:
     schema_version: Literal[1] = field(default=1, init=False)
     published: bool = False
     violations: tuple[Violation, ...] = ()
-    rebind: bool = False
     dry_run: bool = False
     operations: tuple[JsonObject, ...] = field(default_factory=tuple)
     predictions: tuple[DecisionPrediction, ...] = ()
     candidate: Report | None = None
-    unanswered: tuple[str, ...] = ()
+    unanswered: tuple[UnansweredReview, ...] = ()
 
     @JsonProperty
     def changed(self) -> bool:

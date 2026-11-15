@@ -14,9 +14,15 @@ from odfa11y.decisions import Decision
 from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError
 from odfa11y.families import adapter_for
 from odfa11y.odf import OdfDocument, Use, regressions, validate
+from odfa11y.plans.registry import registered_kinds
 from odfa11y.records import SchemaCheck
 from odfa11y.remediate.compile import compile_operations
-from odfa11y.remediate.result import DecisionPrediction, RemediationResult, Violation
+from odfa11y.remediate.result import (
+    DecisionPrediction,
+    RemediationResult,
+    UnansweredReview,
+    Violation,
+)
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import Finding, Report
 from odfa11y.status import StageStatus
@@ -33,7 +39,6 @@ def remediate(
     plan: Plan,
     *,
     dry_run: bool = False,
-    rebind: bool = False,
 ) -> RemediationResult:
     """Apply a bound plan under source, family, preservation and schema guards.
 
@@ -51,11 +56,9 @@ def remediate(
         capture_source(source, directory=Path(directory)) as captured,
     ):
         document = _document(captured, destination)
-        plan.verify_source(captured, rebind=rebind)
+        plan.verify_source(captured)
         operations = compile_operations(document, plan)
-        return _execute(
-            document, source, destination, operations, dry_run=dry_run, rebind=rebind, plan=plan
-        )
+        return _execute(document, source, destination, operations, dry_run=dry_run, plan=plan)
 
 
 def _document(source: Path, destination: Path) -> OdfDocument:
@@ -83,7 +86,6 @@ def _execute(
     operations: Sequence[Operation],
     *,
     dry_run: bool,
-    rebind: bool = False,
     plan: Plan | None = None,
 ) -> RemediationResult:
     adapter = adapter_for(document.kind)
@@ -91,6 +93,7 @@ def _execute(
     opaque_before = opaque_payloads(document)
     schema_before = validate(document)
     audit_before = audit_document(document, subject=source.name)
+    unanswered = _unanswered(document, plan) if plan else ()
     state = _run_operations(document, adapter, operations)
     schema = _postconditions(document, adapter, before, opaque_before, schema_before, state=state)
     candidate = audit_document(document, subject=source.name)
@@ -109,23 +112,40 @@ def _execute(
         schema=schema,
         published=published,
         violations=tuple(state.violations),
-        rebind=rebind,
         dry_run=dry_run,
         operations=tuple(operation.as_dict() for operation in operations),
         predictions=predictions,
         candidate=candidate,
-        unanswered=tuple(
-            question.kind_id + (" @ " + question.path if question.path else "")
-            for question in plan.unanswered
-        )
-        if plan
-        else (),
+        unanswered=unanswered,
     )
+
+
+def _unanswered(document: OdfDocument, plan: Plan) -> tuple[UnansweredReview, ...]:
+    reviews = []
+    kinds = registered_kinds()
+    for question in plan.unanswered:
+        kind = kinds.get(question.kind_id)
+        reason = None
+        if kind is None:
+            reason = "The decision kind is unavailable."
+        elif question.path is not None and kind.domain is not None:
+            try:
+                current = kind.domain.binding(document, question.path)
+                if question.fingerprint is not None and current.fingerprint != question.fingerprint:
+                    reason = (
+                        "The target fingerprint changed since this unanswered block was generated."
+                    )
+            except DocumentRefusal as error:
+                reason = error.message
+        reviews.append(
+            UnansweredReview(question.kind_id, question.path, reason is not None, reason)
+        )
+    return tuple(reviews)
 
 
 def _predict(decision: Decision, before: Report, after: Report) -> DecisionPrediction:
     def related(finding: Finding) -> bool:
-        if decision.kind.id not in finding.rule.decision_kinds:
+        if finding.rule not in decision.kind.resolves:
             return False
         return decision.target is None or (
             finding.location is not None and finding.location.path == decision.target.path

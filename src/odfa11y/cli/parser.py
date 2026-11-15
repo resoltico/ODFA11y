@@ -89,6 +89,18 @@ def build_parser() -> argparse.ArgumentParser:
         description="Print a source-bound plan of disabled human answers.",
     )
     p.add_argument("source", type=Path)
+    p.add_argument(
+        "--from",
+        dest="from_plan",
+        type=Path,
+        help="Carry matching reviewed answers into a newly bound plan.",
+    )
+    p.add_argument(
+        "--all",
+        dest="include_all",
+        action="store_true",
+        help="Include optional overrides for every available decision.",
+    )
 
     p = _command(
         sub,
@@ -102,11 +114,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("source", type=Path)
     p.add_argument("destination", type=Path)
     p.add_argument("--plan", type=Path, required=True, help="Source-bound TOML plan.")
-    p.add_argument(
-        "--rebind",
-        action="store_true",
-        help="Explicitly accept a different source digest; target fingerprints still apply.",
-    )
     p.add_argument("--dry-run", action="store_true", help="Report outcomes without writing.")
     p.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -164,10 +171,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_tool_options(p)
     p.add_argument("--format", choices=("text", "json"), default="text")
-
-    p.add_argument(
-        "--rebind", action="store_true", help="Explicitly rebind this plan to the selected source."
-    )
 
     _add_batch(sub)
 
@@ -245,9 +248,6 @@ def _add_batch(sub: argparse._SubParsersAction) -> None:
             "  odfa11y batch manifest.toml --output-dir production --profile production"
         ),
         description="Run independent manifest items and retain aggregate evidence.",
-    )
-    p.add_argument(
-        "--rebind", action="store_true", help="Explicitly rebind each plan to its selected source."
     )
     p.add_argument("manifest", type=Path)
     p.add_argument("--output-dir", type=Path, required=True)

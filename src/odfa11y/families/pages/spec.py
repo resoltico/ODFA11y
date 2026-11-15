@@ -23,7 +23,7 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
 class PagesAdapter(FamilyAdapter):
     """Apply one page contract with explicit native-family differences."""
 
-    decision_kinds = DECISION_KINDS
+    kinds = DECISION_KINDS
     operations = staticmethod(operations)
     default_language = staticmethod(_language)
     set_default_language = staticmethod(_set_language)

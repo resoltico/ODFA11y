@@ -6,7 +6,8 @@ lazy from collections.abc import Sequence
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import FormulaAlternativeAnswer
 from odfa11y.families.formula.alternative import SetFormulaAlternative
-from odfa11y.odf import Family
+from odfa11y.families.formula.domain import FORMULA
+from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation
 lazy from odfa11y.decisions import Decision
@@ -16,8 +17,8 @@ FORMULA_ALTERNATIVE = DecisionKind(
     "formula.alternative",
     DecisionScope.TARGET,
     FormulaAlternativeAnswer,
-    frozenset({Family.FORMULA}),
-    SetFormulaAlternative.name,
+    domain=FORMULA,
+    resolves=(rules.MATH002,),
 )
 DECISION_KINDS = (FORMULA_ALTERNATIVE,)
 

@@ -9,6 +9,7 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.families import GENERIC, adapter_for
 from odfa11y.odf import KINDS, OdfDocument, validate
+from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.report import RULES, FactKeys
 from tests.fixtures.documents import KIND_SPECS, make_flat, make_package
 lazy from odfa11y.report import Report
@@ -46,7 +47,10 @@ def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
     assert all(finding.rule is RULES[finding.rule_id] for finding in report.findings)
     document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
     assert document.kind is not None
-    assert all(document.kind.family in question.kind.families for question in report.decisions)
+    assert all(
+        question.kind in (*COMMON_KINDS, *adapter_for(document.kind).kinds)
+        for question in report.decisions
+    )
 
 
 @pytest.mark.parametrize(("name", "layout"), [c for c in CASES if KIND_SPECS[c[0]].schema_valid])

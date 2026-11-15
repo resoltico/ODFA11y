@@ -211,3 +211,5 @@ XLINK_TYPE = qn("xlink", "type")
 XML_BASE = "{http://www.w3.org/XML/1998/namespace}base"
 XML_ID = "{http://www.w3.org/XML/1998/namespace}id"
 XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
+
+SVG_WIDTH = qn("svg", "width")

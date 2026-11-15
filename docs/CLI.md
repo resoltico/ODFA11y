@@ -35,6 +35,8 @@ Print a source-bound plan of disabled human answers.
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
 | `source` | 1 | yes |  |  |
+| `--from` | 1 | no |  | Carry matching reviewed answers into a newly bound plan. |
+| `--all` | 0 | no | False | Include optional overrides for every available decision. |
 
 ## remediate
 
@@ -46,7 +48,6 @@ Apply reviewed decisions to a separate ODF document.
 | `source` | 1 | yes |  |  |
 | `destination` | 1 | yes |  |  |
 | `--plan` | 1 | yes |  | Source-bound TOML plan. |
-| `--rebind` | 0 | no | False | Explicitly accept a different source digest; target fingerprints still apply. |
 | `--dry-run` | 0 | no | False | Report outcomes without writing. |
 | `--format` | 1 | no | text; choices: text, json |  |
 
@@ -94,7 +95,6 @@ Remediate, export, validate, compare and keep evidence.
 | `--soffice` | 1 | no |  | LibreOffice executable. |
 | `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json |  |
-| `--rebind` | 0 | no | False | Explicitly rebind this plan to the selected source. |
 
 ## batch
 
@@ -103,7 +103,6 @@ Run independent manifest items and retain aggregate evidence.
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `--rebind` | 0 | no | False | Explicitly rebind each plan to its selected source. |
 | `manifest` | 1 | yes |  |  |
 | `--output-dir` | 1 | yes |  |  |
 | `--profile` | 1 | no | verify; choices: source, verify, production | Assurance profile (default: verify): source checks source/remediation; verify adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |

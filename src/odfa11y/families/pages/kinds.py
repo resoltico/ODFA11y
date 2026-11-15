@@ -4,17 +4,17 @@
 lazy from collections.abc import Sequence
 
 from odfa11y.concepts import GraphicAlternative, LinkDescription, PageDecision
+from odfa11y.concepts.kinds import (
+    GRAPHIC_ALTERNATIVE,
+    LINK_DESCRIPTION,
+    PAGE_METADATA,
+    PAGE_NAVIGATION,
+)
 from odfa11y.decisions.answers import (
     GraphicAlternativeAnswer,
     LinkDescriptionAnswer,
     PageMetadataAnswer,
     PageNavigationAnswer,
-)
-from odfa11y.decisions.kind import (
-    GRAPHIC_ALTERNATIVE,
-    LINK_DESCRIPTION,
-    PAGE_METADATA,
-    PAGE_NAVIGATION,
 )
 from odfa11y.families.pages.operations import (
     SetGraphicAlternatives,

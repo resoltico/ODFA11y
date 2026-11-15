@@ -4,8 +4,8 @@
 lazy from collections.abc import Sequence
 
 from odfa11y.concepts import GraphicAlternative
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.decisions.answers import GraphicAlternativeAnswer
-from odfa11y.decisions.kind import GRAPHIC_ALTERNATIVE
 from odfa11y.families.image.operations import SetGraphicAlternatives
 from odfa11y.targets import require_target
 lazy from odfa11y.concepts.edits import Operation

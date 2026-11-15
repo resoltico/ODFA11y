@@ -15,9 +15,10 @@ from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.errors import Failure, IoFailure, OdfA11yError
 from odfa11y.evidence import check_bundle
 from odfa11y.native.process import termination_interrupt
-from odfa11y.plans import Plan, load_plan
+from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import FidelityPolicy as FidelityPolicy
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate import remediate as apply_plan
 from odfa11y.report import exit_status, render_reports
 from odfa11y.run.comparison import compare_documents
@@ -274,7 +275,9 @@ def audit(
 
 
 @_interruptible
-def plan(source: str | Path) -> PlanResult:
+def plan(
+    source: str | Path, *, from_plan: Plan | str | Path | None = None, include_all: bool = False
+) -> PlanResult:
     """Prepare source-bound human questions without changing the document.
 
     Returns
@@ -283,7 +286,8 @@ def plan(source: str | Path) -> PlanResult:
         The source report and optional reviewed-answer template.
 
     """
-    report, template = prepare_plan(source)
+    previous = _selected_plan(from_plan) if from_plan is not None else None
+    report, template = prepare_plan(source, previous=previous, include_all=include_all)
     return PlanResult(report, template)
 
 
@@ -294,7 +298,6 @@ def remediate(
     plan: Plan | str | Path,
     *,
     dry_run: bool = False,
-    rebind: bool = False,
 ) -> RemediationResult:
     """Apply reviewed answers under source, preservation and publication guards.
 
@@ -304,7 +307,7 @@ def remediate(
         Every operation outcome and the physical publication result.
 
     """
-    return apply_plan(source, destination, _selected_plan(plan), dry_run=dry_run, rebind=rebind)
+    return apply_plan(source, destination, _selected_plan(plan), dry_run=dry_run)
 
 
 @_interruptible
@@ -375,7 +378,6 @@ def run(
     tools: Tools | None = None,
     profile: Profile = DEFAULT_PROFILE,
     observer: ProgressObserver | None = None,
-    rebind: bool = False,
     native_tools: NativeTools | None = None,
 ) -> RunRecord:
     """Execute the selected assurance profile and publish reviewable evidence.
@@ -391,7 +393,6 @@ def run(
         _selected_plan(plan),
         output_dir,
         RunSettings(tools or Tools(), profile, observer),
-        rebind=rebind,
         native_tools=native_tools,
     )
 
@@ -404,7 +405,6 @@ def run_batch(
     tools: Tools | None = None,
     profile: Profile = DEFAULT_PROFILE,
     observer: ProgressObserver | None = None,
-    rebind: bool = False,
     native_tools: NativeTools | None = None,
 ) -> BatchRecord:
     """Execute independent manifest entries with one batch-lifetime native probe cache.
@@ -420,7 +420,6 @@ def run_batch(
         output_dir,
         RunSettings(tools or Tools(), profile),
         on_progress=observer,
-        rebind=rebind,
         native_tools=native_tools,
     )
 

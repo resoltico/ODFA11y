@@ -21,7 +21,7 @@ from odfa11y.families import image, spreadsheet, text
 from odfa11y.families import pages as page_family
 from odfa11y.families.text import SetLinkDescriptions
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
-from odfa11y.plans import load_plan
+from odfa11y.plans.registry import load_plan
 from odfa11y.remediate.compile import compile_operations
 from tests.concepts.test_graphic_roles_links import _graphic
 from tests.fixtures.documents import Variant, make_flat, make_package

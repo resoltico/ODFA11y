@@ -10,7 +10,6 @@ from odfa11y.plans.codec import (
     render_plan,
 )
 from odfa11y.plans.model import Plan, PlanHeader, SourceBinding
-from odfa11y.plans.registry import load_plan, registered_kinds
 
 __all__ = [
     "Plan",
@@ -18,10 +17,8 @@ __all__ = [
     "SourceBinding",
     "answer_schema",
     "decision_reference",
-    "load_plan",
     "parse_plan",
     "parse_tables",
     "plan_schema",
-    "registered_kinds",
     "render_plan",
 ]
