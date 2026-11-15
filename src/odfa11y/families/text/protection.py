@@ -22,14 +22,14 @@ from odfa11y.families.text.language.styles import STYLE_NAME
 from odfa11y.families.text.links.prose import address_wrapper_scope
 from odfa11y.families.text.links.urls import URI_RE, split_trailing_punctuation
 from odfa11y.families.text.spacing.candidates import spacer_candidates
-from odfa11y.families.text.styles.catalogue import (
-    NO_STYLE,
-    catalog_of,
-    derived_style_name,
-    is_generated_from,
-)
 from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.styles import (
+    NO_STYLE,
+    derived_style_name,
+    is_generated_from,
+    styles_of,
+)
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import OdfDocument
 
@@ -65,7 +65,7 @@ class ProtectedEdit:
             self.spacers = {
                 node
                 for node in spacer_candidates(tree)
-                if not catalog_of(self.document).has_break_semantics(
+                if not styles_of(self.document).has_break_semantics(
                     node.get(xml_names.TEXT_STYLE_NAME)
                 )
             }
@@ -232,10 +232,10 @@ class ProtectedEdit:
     def _spacing(self, root: etree._Element) -> None:
         if not self.spacing:
             return
-        catalog = catalog_of(self.document)
+        catalog = styles_of(self.document)
         proven = set()
         for name, base in self.spacing.items():
-            style = catalog.style("paragraph", name)
+            style = catalog.resolve("paragraph", name)
             if style is not None and is_generated_from(
                 catalog, style, None if base == NO_STYLE else base, name
             ):
@@ -253,8 +253,8 @@ class ProtectedEdit:
         if name not in self.spacing:
             return
         base = self.spacing[name]
-        catalog = catalog_of(self.document)
-        style = catalog.style("paragraph", name)
+        catalog = styles_of(self.document)
+        style = catalog.resolve("paragraph", name)
         if style is not None and is_generated_from(
             catalog, style, None if base == NO_STYLE else base, name
         ):

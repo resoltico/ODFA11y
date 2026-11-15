@@ -7,7 +7,7 @@ from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import DocumentMetadataAnswer
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part, ensure_metadata_part
 from odfa11y.odf import names as xml_names
@@ -44,11 +44,11 @@ def edit_metadata(
 ) -> tuple[Outcome, ...]:
     """Set supplied document metadata and the family's established default language."""
     answer = decision.answer
-    adapter = adapter_for(document.kind)
+    adapter = require_spec(document.kind)
     language = normalize_language(answer.language) if answer.language is not None else None
-    if language is not None:
+    if language is not None and adapter.language is not None:
         try:
-            adapter.default_language(document)
+            adapter.language.read(document)
         except ValueError as error:
             raise DocumentRefusal(str(error)) from error
     outcomes = []
@@ -77,7 +77,9 @@ def edit_metadata(
         changed = node is None or (node.text or "") != language
         if changed:
             _ensure_meta_node(document, xml_names.DC_LANGUAGE).text = language
-        changed = adapter.set_default_language(document, language) or changed
+        changed = (
+            adapter.language.write(document, language) if adapter.language is not None else False
+        ) or changed
         outcomes.append(
             Outcome(
                 decision.kind.id,

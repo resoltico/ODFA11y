@@ -3,6 +3,7 @@
 
 import json
 from collections.abc import Callable
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
@@ -11,7 +12,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.cli import main
 from odfa11y.errors import PlanError
 from odfa11y.families import REGISTRY
-from odfa11y.families.generic import GenericAdapter
+from odfa11y.families.spec import Unsupported
 from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.report import FactKeys, Location, Severity
@@ -172,7 +173,11 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     monkeypatch.setitem(
         REGISTRY,
         Family.PRESENTATION,
-        SourceOnlyPresentation(),
+        replace(
+            REGISTRY[Family.PRESENTATION],
+            export=Unsupported("No PDF export is defined for this test family."),
+            audit=_source_only,
+        ),
     )
     source = make_package(tmp_path, "presentation")
     record = execute(
@@ -189,7 +194,7 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     assert record.passed
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["document"]["kind"] == "presentation"
-    assert run["document"]["adapter"] == "generic"
+    assert run["document"]["adapter"] == "presentation"
     assert (tmp_path / "out" / "remediated.odp").is_file()
 
 
@@ -200,7 +205,11 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
     monkeypatch.setitem(
         REGISTRY,
         Family.PRESENTATION,
-        SourceOnlyPresentation(),
+        replace(
+            REGISTRY[Family.PRESENTATION],
+            export=Unsupported("No PDF export is defined for this test family."),
+            audit=_source_only,
+        ),
     )
     record = execute(
         make_package(tmp_path, "presentation"),
@@ -220,11 +229,7 @@ def test_a_new_family_needs_only_a_registry_entry(
     def audit(_document: OdfDocument, report: Report) -> None:
         report.raise_(rules.ODF009, "Presentation adapter ran.", location=Location("document"))
 
-    class CustomPresentation(SourceOnlyPresentation):
-        name = "presentation"
-
-    presentation = CustomPresentation()
-    monkeypatch.setattr(presentation, "audit", audit)
+    presentation = replace(REGISTRY[Family.PRESENTATION], audit=audit)
     monkeypatch.setitem(REGISTRY, Family.PRESENTATION, presentation)
     report = audit_odf(make_package(tmp_path, "presentation"))
     assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "presentation"
@@ -239,7 +244,5 @@ def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -
     assert "declares no ODF version" in finding.message
 
 
-class SourceOnlyPresentation(GenericAdapter):
-    """Exercise an implemented source family without a native export capability."""
-
-    family = Family.PRESENTATION
+def _source_only(_document: OdfDocument, report: Report) -> None:
+    report.raise_(rules.ODF009, "Controlled source-only family audit.")

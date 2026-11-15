@@ -9,7 +9,7 @@ lazy from collections.abc import Callable, Mapping
 from odfa11y.contracts import JsonProperty, validate
 from odfa11y.decisions.edit import Outcome
 from odfa11y.errors import PlanError
-from odfa11y.targets import Target
+from odfa11y.targets import Target, TargetPath
 lazy from odfa11y.decisions.domain import TargetDomain
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.rules.registry import Rule
@@ -141,7 +141,7 @@ class Decision[A]:
         return result
 
     @property
-    def target_path(self) -> str:
+    def target_path(self) -> TargetPath:
         """The required path of a targeted decision.
 
         Raises

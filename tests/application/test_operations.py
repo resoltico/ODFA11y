@@ -10,8 +10,8 @@ from lxml import etree
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
 from odfa11y.families.text import derived_style_name
-from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.odf.styles import styles_of
 from tests.fixtures.answers import (
     Authored,
     RawDecisions,
@@ -200,10 +200,10 @@ def test_spacing_copies_reference_spacing_onto_a_derived_style_once(tmp_path: Pa
     assert run(operation, doc) == (Status.APPLIED,)
     last = select_elements(doc.tree(Part.CONTENT), "//text:p[last()]")[0]
     assert last.get(qn("text", "style-name")) == derived_style_name("BodyTight")
-    assert catalog_of(doc).spacing_signature(derived_style_name("BodyTight")) == catalog_of(
+    assert styles_of(doc).spacing_signature(derived_style_name("BodyTight")) == styles_of(
         doc
     ).spacing_signature("Body")
-    assert catalog_of(doc).style("paragraph", "BodyTight") is not None
+    assert styles_of(doc).resolve("paragraph", "BodyTight") is not None
     assert run(operation, doc) == (Status.UNCHANGED,)
 
 

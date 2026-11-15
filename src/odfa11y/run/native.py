@@ -6,7 +6,8 @@ lazy from pathlib import Path
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
+from odfa11y.families.spec import Unsupported
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import validate_timeout
 from odfa11y.odf import OdfDocument, Use
@@ -38,13 +39,11 @@ def native_export_settings(
     """
     validate_timeout(timeout)
     document.require(Use.EXPORT)
-    pdf_filter = adapter_for(document.kind).pdf_filter
-    if pdf_filter is None:
-        kind = document.kind.name if document.kind is not None else "unrecognised"
-        msg = f"No PDF export is defined for {kind} documents."
-        raise DocumentRefusal(msg)
+    capability = require_spec(document.kind).export
+    if isinstance(capability, Unsupported):
+        raise DocumentRefusal(capability.reason)
     require_native_context(document, captured_identity=captured_identity)
-    return ExportSettings(pdf_filter, soffice, timeout, profile_dir)
+    return ExportSettings(capability.filter, soffice, timeout, profile_dir)
 
 
 def export_document(

@@ -9,17 +9,19 @@ lazy from collections.abc import Sequence
 lazy from lxml import etree
 
 from odfa11y.concepts.graphic_styles import (
-    GraphicStyles,
+    GraphicRoles,
+    graphic_normalization,
     graphic_style_fingerprint,
-    normalized_graphic_tree,
 )
 from odfa11y.concepts.tables import AXES, declarations, repeated
 from odfa11y.concepts.text import reading_context_path
-from odfa11y.concepts.xml import protected_xml
 from odfa11y.decisions import DecisionKind, OpenDecision
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import NS, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.canonical import protected_xml
 from odfa11y.odf.resources import ResourceIdentity
+from odfa11y.odf.styles import normalize_generated
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
@@ -102,7 +104,7 @@ class GraphicIdentity:
         self._facts: dict[etree._Element, list[object]] = {}
         self._style_facts: dict[etree._Element, str] = {}
         self._style_problems: dict[etree._Element, str | None] = {}
-        self._styles = GraphicStyles(document)
+        self._styles = GraphicRoles(document)
         self._group_digests: dict[int, Fingerprint] = {}
         self._sibling_ordinals: dict[etree._Element, dict[etree._Element, int]] = {}
         self._table_ordinals: dict[tuple[etree._Element, str], dict[etree._Element, int]] = {}
@@ -179,7 +181,7 @@ class GraphicIdentity:
                 self.logical_position(frame),
                 self.style_dependencies(frame),
                 protected_xml(
-                    normalized_graphic_tree(self._document, frame),
+                    normalize_generated(frame, graphic_normalization(self._document)),
                     omitted_elements=(xml_names.SVG_TITLE, xml_names.SVG_DESC),
                     omitted_element_attributes={
                         qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")
@@ -223,7 +225,7 @@ class GraphicIdentity:
         try:
             self._style_facts[node] = graphic_style_fingerprint(self._document, node)
             problem = None
-        except ValueError as error:
+        except DocumentRefusal as error:
             self._style_facts[node] = "unresolved"
             problem = str(error)
         if node.tag != xml_names.DRAW_PAGE:

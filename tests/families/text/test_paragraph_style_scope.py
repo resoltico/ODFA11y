@@ -10,8 +10,8 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Status
-from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
+from odfa11y.odf.styles import styles_of
 from odfa11y.report import FactKeys
 from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
@@ -83,12 +83,12 @@ def test_automatic_parent_uses_common_scope_even_when_names_match(tmp_path: Path
         qn("fo", "margin-top"), "1cm"
     )
     paragraph = _empty(document, "Shared")
-    properties = catalog_of(document).effective_paragraph_properties("Shared")
+    properties = styles_of(document).effective_paragraph_properties("Shared")
     assert properties[qn("fo", "break-before")] == "page"
     assert properties[qn("fo", "margin-top")] == "1cm"
     assert apply_in_memory(document, spacer_input())[0].status is not Status.FAILED
     assert paragraph.getparent() is not None
-    assert len(catalog_of(document).styles("paragraph")) == 5
+    assert len(styles_of(document).styles("paragraph")) == 5
 
 
 @pytest.mark.parametrize(

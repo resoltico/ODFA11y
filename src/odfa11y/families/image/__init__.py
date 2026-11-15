@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Standard image semantics and explicit source-only decisions."""
 
-from odfa11y.families.image.spec import ADAPTER
+from odfa11y.families.image.spec import SPEC
 
-__all__ = ["ADAPTER"]
+__all__ = ["SPEC"]

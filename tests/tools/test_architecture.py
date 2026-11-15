@@ -17,7 +17,7 @@ ROOT = REPOSITORY
         "odfa11y.pdf.fidelity",
         "odfa11y.native.probes",
         "odfa11y.concepts",
-        "odfa11y.families.text.styles.catalogue",
+        "odfa11y.odf.styles",
         "odfa11y.run",
     ],
 )

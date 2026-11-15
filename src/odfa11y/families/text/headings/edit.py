@@ -5,13 +5,14 @@ from urllib.parse import quote
 
 lazy from lxml import etree
 
-from odfa11y.concepts import normalized_graphic_tree, protected_xml
+from odfa11y.concepts import graphic_normalization, protected_xml
 from odfa11y.decisions import Decision
 from odfa11y.decisions.domain import resolved_node
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.families.text.answers import HeadingLevelAnswer
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.styles import normalize_generated
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
@@ -49,7 +50,9 @@ def heading_fingerprint(
     """
     return Fingerprint.from_digest(
         protected_xml(
-            normalized_graphic_tree(document, heading) if document is not None else heading,
+            normalize_generated(heading, graphic_normalization(document))
+            if document is not None
+            else heading,
             omitted_element_attributes={
                 qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")
             },

@@ -7,22 +7,31 @@ from odfa11y.families.formula.audit import audit_formula
 from odfa11y.families.formula.expression import language, set_language, snapshot
 from odfa11y.families.formula.kinds import DECISION_KINDS
 from odfa11y.families.formula.probes import PROBES
-from odfa11y.families.spec import FamilyAdapter, ReviewItem
+from odfa11y.families.spec import FamilySpec, LanguageTargets, PdfExport, ReviewItem
 from odfa11y.odf import Family
 lazy from odfa11y.odf import OdfDocument
 
 
-class FormulaAdapter(FamilyAdapter):
-    """Implement the formula family contract."""
+def _preservation(document: OdfDocument) -> PreservationSnapshot:
+    """Capture protected meaning.
 
-    name = "formula"
-    family = Family.FORMULA
-    audit = staticmethod(audit_formula)
-    default_language = staticmethod(language)
-    set_default_language = staticmethod(set_language)
-    kinds = DECISION_KINDS
-    probes = PROBES
-    review_items = (
+    Returns
+    -------
+    PreservationSnapshot
+        The family-owned protected facts.
+
+    """
+    return PreservationSnapshot(snapshot(document))
+
+
+SPEC = FamilySpec(
+    family=Family.FORMULA,
+    audit=audit_formula,
+    kinds=DECISION_KINDS,
+    export=PdfExport("math_pdf_Export"),
+    snapshot=_preservation,
+    language=LanguageTargets(language, set_language),
+    review_items=(
         ReviewItem(
             ReviewTopic.MATHEMATICS,
             "Whether the spoken alternative conveys every symbol, relation and grouping correctly.",
@@ -35,20 +44,6 @@ class FormulaAdapter(FamilyAdapter):
             ReviewTopic.EXPORT_BOUNDARY,
             "Native Math export lacks PDF tagging; source correctness is not PDF/UA conformance.",
         ),
-    )
-    pdf_filter = "math_pdf_Export"
-
-    @staticmethod
-    def snapshot(document: OdfDocument) -> PreservationSnapshot:
-        """Capture protected meaning.
-
-        Returns
-        -------
-        PreservationSnapshot
-            The family-owned protected facts.
-
-        """
-        return PreservationSnapshot(snapshot(document))
-
-
-ADAPTER = FormulaAdapter()
+    ),
+    probes=PROBES,
+)

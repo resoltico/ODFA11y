@@ -1,15 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """One semantic adapter for presentation and drawing page documents."""
 
+from functools import partial
+
 from odfa11y.concepts import page_snapshot, set_style_language, style_language
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.families.pages.audit import audit_document
 from odfa11y.families.pages.kinds import DECISION_KINDS
 from odfa11y.families.pages.profiles import DRAWING_PROFILE, PRESENTATION_PROFILE
-from odfa11y.families.spec import FamilyAdapter
+from odfa11y.families.spec import FamilySpec, LanguageTargets, PdfExport
 lazy from odfa11y.families.pages.profiles import PageProfile
 lazy from odfa11y.odf import OdfDocument
-lazy from odfa11y.report import Report
 
 
 def _language(document: OdfDocument) -> str | None:
@@ -20,36 +21,21 @@ def _set_language(document: OdfDocument, tag: str) -> bool:
     return set_style_language(document, tag, "paragraph")
 
 
-class PagesAdapter(FamilyAdapter):
-    """Apply one page contract with explicit native-family differences."""
-
-    kinds = DECISION_KINDS
-    default_language = staticmethod(_language)
-    set_default_language = staticmethod(_set_language)
-
-    def __init__(self, profile: PageProfile) -> None:
-        self.profile = profile
-        self.name = profile.family.value
-        self.family = profile.family
-        self.pdf_filter = profile.pdf_filter
-        self.review_items = profile.review_items
-
-    def audit(self, document: OdfDocument, report: Report) -> None:
-        """Inspect source semantics under the declared native-family profile."""
-        audit_document(document, report, self.profile)
-
-    @staticmethod
-    def snapshot(document: OdfDocument) -> PreservationSnapshot:
-        """Capture protected page contents.
-
-        Returns
-        -------
-        PreservationSnapshot
-            Words, geometry, notes, references and resource identities.
-
-        """
-        return PreservationSnapshot(page_snapshot(document))
+def _preservation(document: OdfDocument) -> PreservationSnapshot:
+    return PreservationSnapshot(page_snapshot(document))
 
 
-PRESENTATION_ADAPTER = PagesAdapter(PRESENTATION_PROFILE)
-DRAWING_ADAPTER = PagesAdapter(DRAWING_PROFILE)
+def _spec(profile: PageProfile) -> FamilySpec:
+    return FamilySpec(
+        profile.family,
+        partial(audit_document, profile=profile),
+        DECISION_KINDS,
+        PdfExport(profile.pdf_filter),
+        _preservation,
+        language=LanguageTargets(_language, _set_language),
+        review_items=profile.review_items,
+    )
+
+
+PRESENTATION_SPEC = _spec(PRESENTATION_PROFILE)
+DRAWING_SPEC = _spec(DRAWING_PROFILE)

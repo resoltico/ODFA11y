@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Apply and verify paragraph spacing through isolated derived styles."""
 
-from copy import deepcopy
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 lazy from lxml import etree
@@ -12,20 +12,21 @@ from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, XmlParseError
 from odfa11y.families.text.answers import TextSpacingAnswer
 from odfa11y.families.text.contexts import text_nodes
-from odfa11y.families.text.styles.catalogue import (
+from odfa11y.families.text.styles.properties import paragraph_style_name
+from odfa11y.odf import Part, qn
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.styles import (
     NO_STYLE,
+    StyleNormalization,
     adopt_style,
-    catalog_of,
     derive_paragraph_style,
     derived_style_name,
     is_generated_from,
     set_spacing,
+    styles_of,
 )
-from odfa11y.families.text.styles.properties import paragraph_style_name
-from odfa11y.odf import Part, qn
-from odfa11y.odf import names as xml_names
-lazy from odfa11y.families.text.styles.catalogue import StyleCatalog
 lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf.styles import StyleResolver
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,9 +37,9 @@ class _Plan:
     needed: list[str]
 
 
-def _conflict(catalog: StyleCatalog, base: str) -> str | None:
+def _conflict(catalog: StyleResolver, base: str) -> str | None:
     name = derived_style_name(base)
-    existing = catalog.style("paragraph", name)
+    existing = catalog.resolve("paragraph", name)
     if existing is None or is_generated_from(
         catalog, existing, None if base == NO_STYLE else base, name
     ):
@@ -50,9 +51,9 @@ def _conflict(catalog: StyleCatalog, base: str) -> str | None:
     )
 
 
-def _ensure_style(catalog: StyleCatalog, base: str, spacing: dict[str, str]) -> int:
+def _ensure_style(catalog: StyleResolver, base: str, spacing: dict[str, str]) -> int:
     name = derived_style_name(base)
-    existing = catalog.style("paragraph", name)
+    existing = catalog.resolve("paragraph", name)
     if existing is not None:
         if catalog.own_spacing(name) == spacing:
             return 0
@@ -72,7 +73,7 @@ def _style_key(paragraph: etree._Element) -> str:
 def _excluded_consumers(
     document: OdfDocument, plan: _Plan, selected: set[etree._Element]
 ) -> list[str]:
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     changed = {
         derived_style_name(base)
         for base in plan.needed
@@ -96,45 +97,35 @@ def _excluded_consumers(
     return []
 
 
-def normalized_spacing_tree(document: OdfDocument, root: etree._Element) -> etree._Element:
-    """Restore original references only for established generated paragraph styles.
-
-    Returns
-    -------
-    etree._Element
-        A copy retaining every unproven or excluded-context style reference.
-
-    """
-    clone = deepcopy(root)
-    nodes = [
-        target
-        for source, target in zip(root.iter(), clone.iter(), strict=True)
-        if source.tag in {xml_names.TEXT_P, xml_names.TEXT_H}
-        and eligible_text_node(source, main_only=True)
-        and not any(
-            qn("text", name) in source.attrib for name in ("class-names", "cond-style-name")
-        )
-    ]
-    used = {node.get(xml_names.TEXT_STYLE_NAME) for node in nodes}
-    if not any(name and name.startswith("A11ySpacing_") for name in used):
-        return clone
+def spacing_normalization(document: OdfDocument) -> StyleNormalization:
     try:
+        used = {
+            style.get(xml_names.STYLE_NAME) for style in styles_of(document).styles("paragraph")
+        }
         proven = _proven_references(document, used)
     except DocumentRefusal, XmlParseError:
-        return clone  # Unknown definitions cannot authorize normalization.
-    for node in nodes:
-        name = node.get(xml_names.TEXT_STYLE_NAME)
-        if name not in proven:
-            continue
-        if proven[name] == NO_STYLE:
-            node.attrib.pop(xml_names.TEXT_STYLE_NAME, None)
-        else:
-            node.set(xml_names.TEXT_STYLE_NAME, proven[name])
-    return clone
+        proven = {}
+
+    def restore(
+        source: etree._Element, current: Mapping[str, str]
+    ) -> Mapping[str, str | None] | None:
+        if source.tag not in {xml_names.TEXT_P, xml_names.TEXT_H} or not eligible_text_node(
+            source, main_only=True
+        ):
+            return None
+        if any(qn("text", name) in source.attrib for name in ("class-names", "cond-style-name")):
+            return None
+        name = current.get(xml_names.TEXT_STYLE_NAME)
+        if name is None or name not in proven:
+            return None
+        base = proven[name]
+        return {xml_names.TEXT_STYLE_NAME: None if base == NO_STYLE else base}
+
+    return StyleNormalization((xml_names.TEXT_STYLE_NAME,), restore)
 
 
 def _proven_references(document: OdfDocument, used: set[str | None]) -> dict[str, str]:
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     bases = {
         NO_STYLE,
         *(style.get(xml_names.STYLE_NAME, "") for style in catalog.styles("paragraph")),
@@ -144,7 +135,7 @@ def _proven_references(document: OdfDocument, used: set[str | None]) -> dict[str
         name = derived_style_name(base)
         if name not in used:
             continue
-        style = catalog.style("paragraph", name)
+        style = catalog.resolve("paragraph", name)
         if style is not None and is_generated_from(
             catalog, style, None if base == NO_STYLE else base, name
         ):
@@ -157,7 +148,7 @@ class _SpacingEdit:
     """Give paragraphs of the target styles the effective spacing of a reference paragraph.
 
     Spacing is copied onto a derived style named after its base style and a digest of that
-    name (``A11ySpacing_<style>_<digest>``). A style of that name is reused only when it is
+    name (``ODFA11y_spacing_<style>_<digest>``). A style of that name is reused only when it is
     provably our own earlier output; ODFA11y never overwrites or reinterprets another style.
     """
 
@@ -170,7 +161,7 @@ class _SpacingEdit:
             return (self._failed(str(exc)),)
         if isinstance(plan, tuple):
             return plan
-        catalog = catalog_of(document)
+        catalog = styles_of(document)
         changed = sum(_ensure_style(catalog, base, plan.spacing) for base in plan.needed)
         for paragraph in plan.direct:
             paragraph.set(xml_names.TEXT_STYLE_NAME, derived_style_name(_style_key(paragraph)))
@@ -200,7 +191,7 @@ class _SpacingEdit:
                 ),
             )
         reference_style = paragraph_style_name(reference)
-        spacing = catalog_of(document).spacing_signature(reference_style)
+        spacing = styles_of(document).spacing_signature(reference_style)
         if not spacing:
             return (self._failed(f"Reference style {reference_style!r} has no spacing to copy."),)
         clones = {derived_style_name(style): style for style in self.decision.answer.target_styles}
@@ -220,7 +211,7 @@ class _SpacingEdit:
             return (self._failed("No paragraph uses a target style."),)
         needed = sorted({_style_key(p) for p in direct} | {clones[_style_key(p)] for p in derived})
         plan = _Plan(reference_style, spacing, direct, needed)
-        catalog = catalog_of(document)
+        catalog = styles_of(document)
         for base in needed:
             catalog.effective_paragraph_properties(None if base == NO_STYLE else base)
         conflicts = [

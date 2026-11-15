@@ -25,14 +25,14 @@ from odfa11y.families.text.language.styles import (
     binding_of,
     derive,
     family_of,
-    normalized_language_tree,
+    language_normalization,
 )
-from odfa11y.families.text.styles.catalogue import adopt_style, catalog_of
 from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS
 from odfa11y.odf import names as xml_names
-from odfa11y.targets import Fingerprint
+from odfa11y.odf.styles import adopt_style, normalize_generated, styles_of
+from odfa11y.targets import Fingerprint, TargetPath
 lazy from odfa11y.families.text.language.styles import Binding
 lazy from odfa11y.odf import OdfDocument
 
@@ -41,7 +41,7 @@ lazy from odfa11y.odf import OdfDocument
 class PreparedLanguage:
     """One fully checked style derivation, with no mutation performed yet."""
 
-    target: str
+    target: TargetPath
     node: etree._Element
     binding: Binding
     style: etree._Element
@@ -51,9 +51,9 @@ class PreparedLanguage:
 def _require_effective_override(
     document: OdfDocument, node: etree._Element, binding: Binding, style: etree._Element
 ) -> None:
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     family = family_of(node)
-    chain = catalog.inheritance_chain(family, binding.base)
+    chain = catalog.chain(family, binding.base)
     parent = chain[-1].get(xml_names.STYLE_PARENT_STYLE_NAME) if chain else None
     container = node.getparent()
     props = (
@@ -61,7 +61,7 @@ def _require_effective_override(
         if node.tag in INLINE and container is not None
         else {}
     )
-    props.update(catalog.effective_properties(family, parent, "text-properties"))
+    props.update(catalog.effective(family, parent, "text-properties"))
     properties = style.find("style:text-properties", NS)
     if properties is not None:
         props.update(properties.attrib)
@@ -86,7 +86,7 @@ def language_fingerprint(document: OdfDocument, node: etree._Element) -> Fingerp
 
     """
     targets = {node: target for target, node in language_targets(document).items()}
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     styles = []
     for styled in reversed([node, *node.iterancestors()]):
         if styled.tag not in BLOCKS | INLINE:
@@ -94,16 +94,16 @@ def language_fingerprint(document: OdfDocument, node: etree._Element) -> Fingerp
         binding = binding_of(document, styled, targets[styled])
         family = family_of(styled)
         styles.append([
-            catalog.effective_properties(family, binding.base, "text-properties"),
-            catalog.effective_properties(family, binding.base, "paragraph-properties"),
-            [protected_xml(style) for style in catalog.inheritance_chain(family, binding.base)],
+            catalog.effective(family, binding.base, "text-properties"),
+            catalog.effective(family, binding.base, "paragraph-properties"),
+            [protected_xml(style) for style in catalog.chain(family, binding.base)],
         ])
-    content = protected_xml(normalized_language_tree(document, node))
+    content = protected_xml(normalize_generated(node, language_normalization(document)))
     return Fingerprint.of(json.dumps([content, styles], sort_keys=True).encode())
 
 
 def _prepare_answer(
-    document: OdfDocument, target: str, node: etree._Element, answer: TargetLanguageAnswer
+    document: OdfDocument, target: TargetPath, node: etree._Element, answer: TargetLanguageAnswer
 ) -> PreparedLanguage:
     paragraph_style_name(node)
     old = binding_of(document, node, target)
@@ -115,7 +115,7 @@ def _prepare_answer(
             overrides[index] = normalize_language(tag)
     binding = replace(old, overrides=tuple(overrides))
     style = derive(document, family_of(node), binding)
-    existing = catalog_of(document).style(family_of(node), binding.name)
+    existing = styles_of(document).resolve(family_of(node), binding.name)
     if existing is not None and protected_xml(existing) != protected_xml(style):
         message = "Generated language style name belongs to a different definition."
         raise DocumentRefusal(message)
@@ -140,10 +140,10 @@ def edit_language(
 ) -> tuple[Outcome, ...]:
     """Apply explicit language channels without changing authored text or shared styles."""
     item = prepare_language(document, decision)
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     if item.changed:
         family = family_of(item.node)
-        if catalog.style(family, item.binding.name) is None:
+        if catalog.resolve(family, item.binding.name) is None:
             adopt_style(catalog, item.style)
         item.node.set(STYLE_NAME, item.binding.name)
     return (

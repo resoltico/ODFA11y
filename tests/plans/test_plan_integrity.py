@@ -166,7 +166,7 @@ def test_a_foreign_style_in_the_styles_part_is_protected_too(tmp_path: Path) -> 
 def test_distinct_base_styles_never_share_a_derived_name() -> None:
     assert derived_style_name("Body Text") != derived_style_name("Body_Text")
     assert derived_style_name("x" * 60 + "a") != derived_style_name("x" * 60 + "b")
-    assert derived_style_name("BodyTight").startswith("A11ySpacing_BodyTight_")
+    assert derived_style_name("BodyTight").startswith("ODFA11y_spacing_")
 
 
 def test_the_generated_style_converges_when_the_reference_changes(tmp_path: Path) -> None:
@@ -176,7 +176,7 @@ def test_the_generated_style_converges_when_the_reference_changes(tmp_path: Path
     first = {
         style.get(qn("style", "name"))
         for style in select_elements(document.tree(Part.CONTENT), "//style:style")
-        if "A11ySpacing" in (style.get(qn("style", "name")) or "")
+        if "ODFA11y_spacing_" in (style.get(qn("style", "name")) or "")
     }
     select_elements(document.tree(Part.CONTENT), "//text:p")[0].set(
         qn("text", "style-name"), "Heading1"
@@ -185,6 +185,6 @@ def test_the_generated_style_converges_when_the_reference_changes(tmp_path: Path
     second = {
         style.get(qn("style", "name"))
         for style in select_elements(document.tree(Part.CONTENT), "//style:style")
-        if "A11ySpacing" in (style.get(qn("style", "name")) or "")
+        if "ODFA11y_spacing_" in (style.get(qn("style", "name")) or "")
     }
     assert first == second == {derived_style_name("BodyTight")}

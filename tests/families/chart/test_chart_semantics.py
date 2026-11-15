@@ -11,7 +11,7 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, PlanError
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
@@ -56,7 +56,7 @@ def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path)
     assert apply_answers(SOURCE, once, _plan()).changed
     assert not apply_answers(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
-    assert adapter_for(before.kind).snapshot(before) == adapter_for(after.kind).snapshot(after)
+    assert require_spec(before.kind).snapshot(before) == require_spec(after.kind).snapshot(after)
     assert before.storage.read("content.xml") == after.storage.read("content.xml")
     assert once.read_bytes() == twice.read_bytes()
     assert validate(after).count == 0

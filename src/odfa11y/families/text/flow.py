@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
 """Extract and compare the visible text of a text document."""
 
-lazy from lxml import etree
+from lxml import etree
 
 from odfa11y.concepts import table_content_fingerprint, visible_words
 from odfa11y.families.text.contexts import text_nodes
-from odfa11y.families.text.language.styles import normalized_language_tree
-from odfa11y.families.text.spacing.edit import normalized_spacing_tree
+from odfa11y.families.text.language.styles import language_normalization
+from odfa11y.families.text.spacing.edit import spacing_normalization
 from odfa11y.odf import names as xml_names
 lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf.styles import normalize_generated
 
 INERT_ATTRIBUTES = {
     xml_names.TEXT_P: frozenset({xml_names.TEXT_STYLE_NAME}),
@@ -58,7 +59,9 @@ def visible_text_snapshot(
             continue
         if node.tag == xml_names.TABLE_TABLE:
             table = (
-                normalized_spacing_tree(document, normalized_language_tree(document, node))
+                normalize_generated(
+                    node, language_normalization(document), spacing_normalization(document)
+                )
                 if document is not None
                 else node
             )

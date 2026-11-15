@@ -10,10 +10,10 @@ import pytest
 
 from odfa11y.errors import OutputOccupied
 from odfa11y.evidence import Redactor, check_bundle, write_bundle
-from odfa11y.families.text import ADAPTER
+from odfa11y.families.text import SPEC
 from tests.fixtures.records import record
 
-REVIEW_ITEMS = ADAPTER.review_items
+REVIEW_ITEMS = SPEC.review_items
 NO_REDACTION = Redactor(())
 
 

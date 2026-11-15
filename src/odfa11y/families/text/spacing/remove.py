@@ -7,14 +7,14 @@ from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import SwitchAnswer
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.families.text.spacing.candidates import spacer_candidates
-from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
-lazy from odfa11y.families.text.styles.catalogue import StyleCatalog
+from odfa11y.odf.styles import styles_of
 lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf.styles import StyleResolver
 
 
-def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleCatalog) -> int:
+def remove_empty_spacer_paragraphs(tree: etree._ElementTree, catalog: StyleResolver) -> int:
     """Remove empty body spacers while preserving structural and break semantics.
 
     Returns
@@ -42,7 +42,7 @@ def edit_spacers(document: OdfDocument, decision: Decision[SwitchAnswer]) -> tup
     """Apply the explicitly enabled document policy."""
     if not decision.answer.enabled:
         return (Outcome(decision.kind.id, Status.UNCHANGED, "The reviewed policy is disabled."),)
-    count = remove_empty_spacer_paragraphs(document.tree(Part.CONTENT), catalog_of(document))
+    count = remove_empty_spacer_paragraphs(document.tree(Part.CONTENT), styles_of(document))
     return (
         Outcome(
             decision.kind.id,

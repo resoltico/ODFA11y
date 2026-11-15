@@ -5,12 +5,12 @@ from odfa11y.language_tags import normalize_language
 from odfa11y.odf import NS, Part
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
-lazy from odfa11y.families.spec import FamilyAdapter
+lazy from odfa11y.families.spec import FamilySpec
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
 
-def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report) -> None:
+def audit_metadata(document: OdfDocument, adapter: FamilySpec, report: Report) -> None:
     """Report missing or empty title and language, with the family's default language."""
     meta = document.tree(Part.META) if document.has(Part.META) else None
     title = meta.findtext("office:meta/dc:title", namespaces=NS) if meta is not None else None
@@ -32,12 +32,12 @@ def audit_metadata(document: OdfDocument, adapter: FamilyAdapter, report: Report
 
 
 def _audit_language(
-    document: OdfDocument, adapter: FamilyAdapter, report: Report, declared: str | None
+    document: OdfDocument, adapter: FamilySpec, report: Report, declared: str | None
 ) -> None:
     problems: dict[str, str] = {}
     language = _declared_language(declared, "metadata", problems)
     try:
-        default_declared = adapter.default_language(document)
+        default_declared = adapter.language.read(document) if adapter.language is not None else None
     except ValueError as exc:
         problems["default_style"] = str(exc)
         default_declared = None

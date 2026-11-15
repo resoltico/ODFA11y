@@ -9,7 +9,7 @@ from odfa11y.concepts.text import visible_words
 from odfa11y.decisions import OpenDecision
 from odfa11y.decisions.decision import QuestionContext
 from odfa11y.errors import DocumentRefusal
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.odf import Family, OdfDocument
 from odfa11y.odf import names as xml_names
 from odfa11y.remediate.document_ops import COMMON_KINDS
@@ -18,7 +18,7 @@ from odfa11y.targets import Target
 
 def available_questions(document: OdfDocument) -> tuple[OpenDecision, ...]:
     questions = []
-    for kind in (*COMMON_KINDS, *adapter_for(document.kind).kinds):
+    for kind in (*COMMON_KINDS, *require_spec(document.kind).kinds):
         if kind.domain is None:
             questions.append(OpenDecision(kind, None, {}, context=QuestionContext("document")))
             continue

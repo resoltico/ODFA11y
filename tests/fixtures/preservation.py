@@ -32,9 +32,9 @@ from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
-from odfa11y.families.text.styles.catalogue import NO_STYLE
 from odfa11y.odf import Family, OdfDocument, Part
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.styles import NO_STYLE
 from odfa11y.plans import Plan
 from odfa11y.remediate import remediate
 from odfa11y.targets import Fingerprint, Target, TargetPath

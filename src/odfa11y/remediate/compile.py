@@ -4,7 +4,7 @@
 from odfa11y.decisions import Decision
 from odfa11y.decisions.domain import resolved_node
 from odfa11y.errors import DocumentRefusal, PlanError, Remedy, RemedyAction
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.families.spreadsheet.kinds import SHEET_NAME
 from odfa11y.families.spreadsheet.sheets import sheet_name
 from odfa11y.odf import OdfDocument
@@ -18,7 +18,7 @@ def compile_decisions(
 ) -> tuple[Decision, ...]:
     """Check every answered binding before any edit and sort by registered dependency order."""
     kinds = registered_kinds()
-    applicable = (*COMMON_KINDS, *adapter_for(document.kind).kinds)
+    applicable = (*COMMON_KINDS, *require_spec(document.kind).kinds)
     positions = {kind.id: index for index, kind in enumerate(applicable)}
     problems = []
     if source_sha256 is not None and plan.header.source.sha256 != source_sha256:

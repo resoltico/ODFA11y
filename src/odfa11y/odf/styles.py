@@ -1,26 +1,118 @@
 # SPDX-License-Identifier: MPL-2.0
 """Resolve scoped paragraph styles and derive verifiable spacing styles."""
 
+import base64
+import binascii
 import copy
-import hashlib
-import re
+import json
+from collections.abc import Callable, Collection, Mapping
+from dataclasses import dataclass
 
 from lxml import etree
 
-from odfa11y.concepts import protected_xml
+from odfa11y.contracts import decode, record_dict
 from odfa11y.errors import DocumentRefusal
-from odfa11y.families.text.styles.properties import (
-    BREAK_ATTRIBUTES,
-    SPACING_ATTRIBUTES,
-    attr_from_display,
-    display_attr,
-)
 from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.canonical import attribute_bindings
 lazy from odfa11y.odf import OdfDocument
 
+SPACING_ATTRIBUTES = (
+    xml_names.FO_MARGIN_TOP,
+    xml_names.FO_MARGIN_BOTTOM,
+    xml_names.FO_LINE_HEIGHT,
+    xml_names.FO_LINE_HEIGHT_AT_LEAST,
+    xml_names.STYLE_CONTEXTUAL_SPACING,
+)
 
-class StyleCatalog:
+BREAK_ATTRIBUTES = (
+    xml_names.FO_BREAK_BEFORE,
+    xml_names.FO_BREAK_AFTER,
+    xml_names.STYLE_MASTER_PAGE_NAME,
+    xml_names.STYLE_PAGE_NUMBER,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedStyle:
+    name: str
+    element: etree._Element
+
+
+@dataclass(frozen=True, slots=True)
+class SpacingBinding:
+    base: str | None
+
+
+def _definition(style: etree._Element) -> tuple[object, ...]:
+    """Compare expanded XML names while retaining bindings used by attribute values."""
+    return tuple(
+        (
+            str(node.tag),
+            len(node),
+            tuple(sorted(node.attrib.items())),
+            node.text,
+            node.tail,
+            attribute_bindings(node),
+        )
+        for node in style.iter()
+    )
+
+
+def generated_prefix(purpose: str) -> str:
+    return "ODFA11y_" + purpose + "_"
+
+
+def generated_name(purpose: str, binding: object) -> str:
+    payload = json.dumps(record_dict(binding), sort_keys=True, separators=(",", ":"))
+    return generated_prefix(purpose) + base64.urlsafe_b64encode(payload.encode()).decode().rstrip(
+        "="
+    )
+
+
+def generated_binding[T](name: str, purpose: str, expected: type[T]) -> T:
+    prefix = generated_prefix(purpose)
+    if not name.startswith(prefix):
+        message = f"Style is not a {purpose} derivation."
+        raise DocumentRefusal(message)
+    payload = name[len(prefix) :]
+    try:
+        values = json.loads(
+            base64.b64decode(payload + "=" * (-len(payload) % 4), altchars=b"-_", validate=True)
+        )
+    except (binascii.Error, UnicodeError, json.JSONDecodeError) as error:
+        message = "Generated style provenance is malformed."
+        raise DocumentRefusal(message) from error
+    binding = decode(expected, values, label="style provenance", error=DocumentRefusal)
+    if generated_name(purpose, binding) != name:
+        message = "Generated style provenance is not canonical."
+        raise DocumentRefusal(message)
+    return binding
+
+
+@dataclass(frozen=True, slots=True)
+class StyleNormalization:
+    references: tuple[str, ...]
+    restore: Callable[[etree._Element, Mapping[str, str]], Mapping[str, str | None] | None]
+
+
+def normalize_generated(root: etree._Element, *policies: StyleNormalization) -> etree._Element:
+    """Copy once and restore only references authorized by verified purpose policies."""
+    clone = copy.deepcopy(root)
+    for source, target in zip(root.iter(), clone.iter(), strict=True):
+        for policy in policies:
+            restored = policy.restore(source, dict(target.attrib))
+            if restored is None:
+                continue
+            for reference in policy.references:
+                target.attrib.pop(reference, None)
+            for reference, value in restored.items():
+                if value is not None:
+                    target.set(reference, value)
+    return clone
+
+
+class StyleResolver:
     """Resolve ODF style inheritance across the styles and content parts."""
 
     def __init__(self, content_tree: etree._ElementTree, styles_tree: etree._ElementTree) -> None:
@@ -33,19 +125,24 @@ class StyleCatalog:
         self._scope_problems: list[str] = []
         self._index()
 
+    @classmethod
+    def for_document(cls, document: OdfDocument) -> StyleResolver:
+        """Build a fresh lookup context over the document's current live trees."""
+        return cls(*_trees(document))
+
     def _index(self) -> None:
         roots = {
             id(tree.getroot()): tree.getroot() for tree in (self.styles_tree, self.content_tree)
         }
         common_roots = {qn("office", name) for name in ("document", "document-styles")}
         if self.styles_tree.getroot().tag not in common_roots:
-            self._scope_problems.append("Paragraph styles part has an unsupported root.")
+            self._scope_problems.append("Style styles part has an unsupported root.")
         for root in roots.values():
             if root.tag not in common_roots:
                 continue
             containers = root.findall("office:styles", NS)
             if len(containers) > 1:
-                self._scope_problems.append("Paragraph common style scope is ambiguous.")
+                self._scope_problems.append("Style common style scope is ambiguous.")
             for container in containers:
                 for node in container.findall("style:default-style", NS):
                     self._defaults.setdefault(node.get(xml_names.STYLE_FAMILY, ""), []).append(node)
@@ -56,7 +153,7 @@ class StyleCatalog:
     def _index_automatic(self) -> None:
         automatic = self.content_tree.getroot().findall("office:automatic-styles", NS)
         if len(automatic) > 1:
-            self._scope_problems.append("Paragraph automatic style scope is ambiguous.")
+            self._scope_problems.append("Style automatic style scope is ambiguous.")
         for container in automatic:
             for node in container.findall("style:style", NS):
                 self._add(self._automatic, node)
@@ -97,7 +194,7 @@ class StyleCatalog:
             for node in nodes
         ]
 
-    def style(
+    def resolve(
         self, family: str, name: str | None, *, common: bool = False
     ) -> etree._Element | None:
         """Resolve a unique style; absence remains available for derivation existence probes.
@@ -122,10 +219,10 @@ class StyleCatalog:
             else self._automatic.get(key, []) or self._common.get(key, [])
         )
         if len(nodes) > 1:
-            msg = f"Paragraph style {name!r} is ambiguous in its legal scope."
+            msg = f"Style {name!r} is ambiguous in its legal scope."
             raise DocumentRefusal(msg)
-        if nodes and nodes[0].find("style:map", NS) is not None:
-            msg = f"Conditional paragraph style {name!r} cannot establish effective properties."
+        if family in {"paragraph", "text"} and nodes and nodes[0].find("style:map", NS) is not None:
+            msg = f"Conditional {family} style {name!r} cannot establish effective properties."
             raise DocumentRefusal(msg)
         return nodes[0] if nodes else None
 
@@ -141,10 +238,10 @@ class StyleCatalog:
         str | None
             The declared parent style name, or None.
         """
-        style = self.style(family, name)
+        style = self.resolve(family, name)
         return style.get(xml_names.STYLE_PARENT_STYLE_NAME) if style is not None else None
 
-    def inheritance_chain(self, family: str, name: str | None) -> list[etree._Element]:
+    def chain(self, family: str, name: str | None) -> list[etree._Element]:
         """Resolve scoped common parents, refusing missing references and cycles.
 
         Returns
@@ -157,28 +254,85 @@ class StyleCatalog:
         DocumentRefusal
             A reference is missing, ambiguous, conditional or cyclic.
         """
-        chain: list[etree._Element] = []
-        seen: set[etree._Element] = set()
-        current = name
-        common = False
-        while current:
-            style = self.style(family, current, common=common)
-            if style is None:
-                msg = f"Paragraph style {current!r} is missing in its legal scope."
-                raise DocumentRefusal(msg)
+        if not name:
+            return []
+        style = self.resolve(family, name)
+        if style is None:
+            message = f"Style {name!r} is missing in its legal scope."
+            raise DocumentRefusal(message)
+        return self.chain_from(family, style)
+
+    def chain_from(self, family: str, style: etree._Element) -> list[etree._Element]:
+        """Resolve common parents of an already selected scoped definition."""
+        chain = []
+        seen = set()
+        while True:
             if style in seen:
-                msg = f"Paragraph style inheritance contains a cycle at {current!r}."
-                raise DocumentRefusal(msg)
+                message = "Style inheritance contains a cycle."
+                raise DocumentRefusal(message)
             seen.add(style)
             chain.append(style)
-            current = style.get(xml_names.STYLE_PARENT_STYLE_NAME)
-            common = True
+            parent = style.get(xml_names.STYLE_PARENT_STYLE_NAME)
+            if not parent:
+                break
+            found = self.resolve(family, parent, common=True)
+            if found is None:
+                message = f"Style {parent!r} is missing in its legal scope."
+                raise DocumentRefusal(message)
+            style = found
         chain.reverse()
         return chain
 
-    def effective_properties(
-        self, family: str, name: str | None, property_element: str
-    ) -> dict[str, str]:
+    def derive(
+        self, family: str, base: etree._Element | None, *, purpose: str, binding: object
+    ) -> GeneratedStyle:
+        """Clone a selected base with one canonical purpose-tagged provenance encoding."""
+        element = (
+            copy.deepcopy(base)
+            if base is not None
+            else etree.Element(xml_names.STYLE_STYLE, nsmap=self.content_tree.getroot().nsmap)
+        )
+        name = generated_name(purpose, binding)
+        element.set(xml_names.STYLE_NAME, name)
+        element.set(xml_names.STYLE_FAMILY, family)
+        return GeneratedStyle(name, element)
+
+    def is_generated(
+        self,
+        existing: etree._Element,
+        expected: GeneratedStyle,
+        *,
+        ignored: Mapping[str, Collection[str]] | None = None,
+    ) -> bool:
+        """Prove a content automatic definition against the declared derivation."""
+        parent = existing.getparent()
+        if (
+            parent is None
+            or parent.tag != xml_names.OFFICE_AUTOMATIC_STYLES
+            or parent.getparent() is not self.content_tree.getroot()
+        ):
+            return False
+        if existing.get(xml_names.STYLE_NAME) != expected.name:
+            return False
+        values = []
+        for element in (existing, expected.element):
+            clone = copy.deepcopy(element)
+            for node in list(clone.iter()):
+                if not isinstance(node.tag, str) or node.tag not in (ignored or {}):
+                    continue
+                for attribute in (ignored or {})[node.tag]:
+                    node.attrib.pop(attribute, None)
+                if (
+                    not node.attrib
+                    and not len(node)
+                    and not node.text
+                    and (parent := node.getparent()) is not None
+                ):
+                    parent.remove(node)
+            values.append(_definition(clone))
+        return values[0] == values[1]
+
+    def effective(self, family: str, name: str | None, property_element: str) -> dict[str, str]:
         """Overlay default and inherited properties in precedence order.
 
         Returns
@@ -197,7 +351,7 @@ class StyleCatalog:
         if len(defaults) > 1:
             msg = f"Default {family} style is ambiguous."
             raise DocumentRefusal(msg)
-        for style in [*defaults, *self.inheritance_chain(family, name)]:
+        for style in [*defaults, *self.chain(family, name)]:
             node = _properties(style, property_element)
             if node is not None:
                 props.update(node.attrib)
@@ -211,7 +365,7 @@ class StyleCatalog:
         dict[str, str]
             Resolved paragraph attributes.
         """
-        return self.effective_properties("paragraph", name, "paragraph-properties")
+        return self.effective("paragraph", name, "paragraph-properties")
 
     def effective_text_properties(self, name: str | None) -> dict[str, str]:
         """Resolve inherited text properties.
@@ -221,7 +375,7 @@ class StyleCatalog:
         dict[str, str]
             Resolved text attributes.
         """
-        return self.effective_properties("paragraph", name, "text-properties")
+        return self.effective("paragraph", name, "text-properties")
 
     def spacing_signature(self, name: str | None) -> dict[str, str]:
         """Return effective spacing attributes using readable qualified names.
@@ -242,7 +396,7 @@ class StyleCatalog:
         dict[str, str]
             Readable qualified spacing attributes declared directly on the style.
         """
-        style = self.style("paragraph", name)
+        style = self.resolve("paragraph", name)
         props = _properties(style, "paragraph-properties") if style is not None else None
         if props is None:
             return {}
@@ -265,19 +419,19 @@ class StyleCatalog:
             key in props and props[key] not in {"auto", "none", ""} for key in BREAK_ATTRIBUTES
         ) or any(
             style.get(xml_names.STYLE_MASTER_PAGE_NAME) not in {None, "", "auto", "none"}
-            for style in self.inheritance_chain("paragraph", name)
+            for style in self.chain("paragraph", name)
         )
 
 
-def catalog_of(document: OdfDocument) -> StyleCatalog:
+def styles_of(document: OdfDocument) -> StyleResolver:
     """Return the document's style catalog, built once over its live trees.
 
     Returns
     -------
-    StyleCatalog
+    StyleResolver
         The catalog shared by every text operation on this document.
     """
-    return document.derived("text.style_catalog", lambda: StyleCatalog(*_trees(document)))
+    return document.derived("odf.styles", lambda: StyleResolver(*_trees(document)))
 
 
 def _trees(document: OdfDocument) -> tuple[etree._ElementTree, etree._ElementTree]:
@@ -293,7 +447,7 @@ def _properties(style: etree._Element, name: str) -> etree._Element | None:
         raise DocumentRefusal(msg)
     nodes = style.findall(qn("style", name))
     if len(nodes) > 1:
-        msg = f"Paragraph style has ambiguous {name} targets."
+        msg = f"Style has ambiguous {name} targets."
         raise DocumentRefusal(msg)
     return nodes[0] if nodes else None
 
@@ -301,14 +455,8 @@ def _properties(style: etree._Element, name: str) -> etree._Element | None:
 NO_STYLE = "(none)"
 
 
-SAFE_NAME_LENGTH = 32
-
-
-NAME_DIGEST_LENGTH = 8
-
-
 def derive_paragraph_style(
-    catalog: StyleCatalog,
+    catalog: StyleResolver,
     base_style_name: str | None,
     new_style_name: str,
     spacing: dict[str, str],
@@ -321,21 +469,20 @@ def derive_paragraph_style(
         A detached paragraph style named ``new_style_name``.
 
     """
-    base = catalog.style("paragraph", base_style_name)
-    if base is not None:
-        derived = copy.deepcopy(base)
-    else:
-        derived = etree.Element(xml_names.STYLE_STYLE, nsmap=catalog.content_tree.getroot().nsmap)
-        if base_style_name:
-            derived.set(xml_names.STYLE_PARENT_STYLE_NAME, base_style_name)
-    derived.set(xml_names.STYLE_NAME, new_style_name)
-    derived.set(xml_names.STYLE_FAMILY, "paragraph")
+    base = catalog.resolve("paragraph", base_style_name)
+    generated = catalog.derive(
+        "paragraph", base, purpose="spacing", binding=SpacingBinding(base_style_name)
+    )
+    if generated.name != new_style_name:
+        message = "Spacing style name contradicts its declared provenance."
+        raise DocumentRefusal(message)
+    derived = generated.element
     set_spacing(derived, spacing)
     return derived
 
 
 def is_generated_from(
-    catalog: StyleCatalog,
+    catalog: StyleResolver,
     existing: etree._Element,
     base_style_name: str | None,
     new_style_name: str,
@@ -352,20 +499,15 @@ def is_generated_from(
         True when ``existing`` can be proven to be our own earlier output.
 
     """
-    parent = existing.getparent()
-    if (
-        parent is None
-        or parent.tag != xml_names.OFFICE_AUTOMATIC_STYLES
-        or parent.getparent() is not catalog.content_tree.getroot()
-    ):
-        return False
-    if parent.getroottree().getroot() is not catalog.content_tree.getroot():
-        return False
     expected = derive_paragraph_style(catalog, base_style_name, new_style_name, {})
-    return _style_fingerprint(existing) == _style_fingerprint(expected)
+    return catalog.is_generated(
+        existing,
+        GeneratedStyle(new_style_name, expected),
+        ignored={xml_names.STYLE_PARAGRAPH_PROPERTIES: SPACING_ATTRIBUTES},
+    )
 
 
-def adopt_style(catalog: StyleCatalog, style: etree._Element) -> None:
+def adopt_style(catalog: StyleResolver, style: etree._Element) -> None:
     """Insert a derived style among the content part's automatic styles and index it.
 
     Raises
@@ -405,23 +547,6 @@ def set_spacing(style: etree._Element, spacing: dict[str, str]) -> None:
             props.set(key, value)
 
 
-def _style_fingerprint(style: etree._Element) -> str:
-    """Fingerprint a style outside spacing, retaining referenced namespace bindings.
-
-    Returns
-    -------
-    str
-        Protected XML digest of a copy that carries no spacing.
-
-    """
-    clone = copy.deepcopy(style)
-    props = clone.find(xml_names.STYLE_PARAGRAPH_PROPERTIES)
-    if props is not None:
-        for key in SPACING_ATTRIBUTES:
-            props.attrib.pop(key, None)
-    return protected_xml(clone)
-
-
 def derived_style_name(base: str) -> str:
     """Name the derived style that carries normalized spacing for a base style.
 
@@ -434,6 +559,37 @@ def derived_style_name(base: str) -> str:
         A deterministic style name containing only letters, digits and underscores.
 
     """
-    safe = re.sub(r"[^A-Za-z0-9_]+", "_", base).strip("_")[:SAFE_NAME_LENGTH] or "Body"
-    digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:NAME_DIGEST_LENGTH]
-    return f"A11ySpacing_{safe}_{digest}"
+    return generated_name("spacing", SpacingBinding(None if base == NO_STYLE else base))
+
+
+def display_attr(qname: str) -> str:
+    """Render a Clark-notation attribute name with its namespace prefix.
+
+    Returns
+    -------
+    str
+        The prefixed name, or the input when its namespace is unknown.
+
+    """
+    for prefix, uri in NS.items():
+        marker = f"{{{uri}}}"
+        if qname.startswith(marker):
+            return f"{prefix}:{qname[len(marker) :]}"
+    return qname
+
+
+def attr_from_display(name: str) -> str:
+    """Parse a prefixed attribute name into Clark notation.
+
+    Returns
+    -------
+    str
+        The Clark-notation name, or the input when its prefix is unknown.
+
+    """
+    if ":" not in name:
+        return name
+    prefix, local = name.split(":", 1)
+    if prefix not in NS:
+        return name
+    return qn(prefix, local)

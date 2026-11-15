@@ -3,7 +3,7 @@
 
 from dataclasses import replace
 
-from odfa11y.families.text import ADAPTER
+from odfa11y.families.text import SPEC
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
 from odfa11y.records import DocumentIdentity
@@ -44,5 +44,5 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
         fidelity_policy=Pagination.SAME(),
         profile=PROFILES["verify"],
         stages=stages,
-        human_review=ADAPTER.review_items,
+        human_review=SPEC.review_items,
     )

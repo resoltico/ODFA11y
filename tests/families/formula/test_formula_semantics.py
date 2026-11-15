@@ -10,7 +10,7 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PlanError
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.families.formula.expression import fingerprint
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.registry import load_plan
@@ -72,7 +72,7 @@ def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_
     tmp_path: Path,
 ) -> None:
     before = OdfDocument.open(SOURCE)
-    adapter = adapter_for(before.kind)
+    adapter = require_spec(before.kind)
     once, twice = tmp_path / "once.odf", tmp_path / "twice.odf"
     assert apply_answers(SOURCE, once, _plan()).changed
     assert not apply_answers(once, twice, _plan()).changed

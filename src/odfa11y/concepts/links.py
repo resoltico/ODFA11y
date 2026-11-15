@@ -8,9 +8,8 @@ from urllib.parse import quote
 lazy from lxml import etree
 
 from odfa11y.concepts.graphic_identity import SHAPE_TAGS, GraphicIdentity
-from odfa11y.concepts.graphic_styles import normalized_graphic_tree
+from odfa11y.concepts.graphic_styles import graphic_normalization
 from odfa11y.concepts.text import eligible_text_node, reading_context_path, visible_words
-from odfa11y.concepts.xml import protected_xml
 from odfa11y.decisions import Decision, DecisionKind, OpenDecision
 from odfa11y.decisions.answers import LinkDescriptionAnswer
 from odfa11y.decisions.domain import resolved_node
@@ -18,6 +17,8 @@ from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.canonical import protected_xml
+from odfa11y.odf.styles import normalize_generated
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint, Target
 lazy from odfa11y.odf import OdfDocument
@@ -70,7 +71,7 @@ def link_fingerprint(document: OdfDocument, link: etree._Element) -> Fingerprint
         The reviewed protected source identity.
 
     """
-    clone = normalized_graphic_tree(document, link)
+    clone = normalize_generated(link, graphic_normalization(document))
     content = protected_xml(
         clone,
         omitted_elements=(xml_names.SVG_TITLE, xml_names.SVG_DESC),

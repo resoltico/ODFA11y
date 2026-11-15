@@ -12,7 +12,7 @@ from odfa11y.concepts import opaque_payloads
 from odfa11y.decisions import Decision
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError, PlanError
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.odf import OdfDocument, Use, regressions, validate
 from odfa11y.plans import Plan
 from odfa11y.plans.registry import load_plan
@@ -29,7 +29,7 @@ from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import Finding, Report
 from odfa11y.status import StageStatus
 lazy from odfa11y.concepts.preservation import PreservationSnapshot
-lazy from odfa11y.families.spec import FamilyAdapter
+lazy from odfa11y.families.spec import FamilySpec
 lazy from odfa11y.odf import SchemaResult
 
 
@@ -90,7 +90,7 @@ def _execute(
     dry_run: bool,
     plan: Plan | None = None,
 ) -> RemediationResult:
-    adapter = adapter_for(document.kind)
+    adapter = require_spec(document.kind)
     before = adapter.snapshot(document)
     opaque_before = opaque_payloads(document)
     schema_before = validate(document)
@@ -124,7 +124,7 @@ def _execute(
 
 def _unanswered(document: OdfDocument, plan: Plan) -> tuple[UnansweredReview, ...]:
     reviews = []
-    applicable = (*COMMON_KINDS, *adapter_for(document.kind).kinds)
+    applicable = (*COMMON_KINDS, *require_spec(document.kind).kinds)
     for question in plan.unanswered:
         kind = question.kind
         reason = None
@@ -165,7 +165,7 @@ def _predict(decision: Decision, before: Report, after: Report) -> DecisionPredi
 
 
 def _run_decisions(
-    document: OdfDocument, adapter: FamilyAdapter, decisions: Sequence[Decision]
+    document: OdfDocument, adapter: FamilySpec, decisions: Sequence[Decision]
 ) -> _Execution:
     state = _Execution()
     try:
@@ -193,7 +193,7 @@ def _run_decisions(
 
 
 def _run_decision(
-    document: OdfDocument, adapter: FamilyAdapter, decision: Decision, state: _Execution
+    document: OdfDocument, adapter: FamilySpec, decision: Decision, state: _Execution
 ) -> None:
     before = document.checkpoint()
     protected = None
@@ -230,7 +230,7 @@ def _run_decision(
 
 def _postconditions(
     document: OdfDocument,
-    adapter: FamilyAdapter,
+    adapter: FamilySpec,
     before: PreservationSnapshot,
     opaque_before: tuple[tuple[str, str], ...],
     schema_before: SchemaResult,

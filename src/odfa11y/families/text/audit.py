@@ -18,12 +18,12 @@ from odfa11y.families.text.links.urls import URI_RE, split_trailing_punctuation
 from odfa11y.families.text.lists import audit_lists
 from odfa11y.families.text.references import audit_references
 from odfa11y.families.text.spacing.candidates import spacer_candidates
-from odfa11y.families.text.styles.catalogue import catalog_of
 from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.families.text.tables.audit import audit_tables
 from odfa11y.families.text.visibility import audit_visibility
 from odfa11y.odf import Part, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.styles import styles_of
 from odfa11y.report import FactKeys, Location
 from odfa11y.rules import registry as rules
 lazy from odfa11y.families.text.styles.usage import StyleUsage
@@ -73,7 +73,7 @@ def _audit_links(tree: etree._ElementTree, report: Report) -> None:
 
 
 def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     styles = []
     breaks = 0
     for paragraph in spacer_candidates(document.tree(Part.CONTENT)):
@@ -134,7 +134,7 @@ def _style_rows(document: OdfDocument) -> tuple[list[StyleUsage], dict[str, str]
             problems[name] = str(exc)
         else:
             counts[name] += 1
-    catalog = catalog_of(document)
+    catalog = styles_of(document)
     rows: list[StyleUsage] = []
     for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
         style_name = None if name == "(none)" else name

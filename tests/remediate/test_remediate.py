@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import OutputOccupied, PlanError
-from odfa11y.families.text import ADAPTER
+from odfa11y.families.text import SPEC
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
 from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
@@ -154,7 +154,7 @@ def test_new_schema_violations_are_rejected_before_publication(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Isolate the schema regression check from the stronger protected-XML check.
-    monkeypatch.setattr(ADAPTER, "protect_edit", lambda _document, _operation: None)
+    monkeypatch.setattr(SPEC, "protect_edit", lambda _document, _operation: None)
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "out.odt"
     assert_refused(
@@ -243,4 +243,4 @@ def test_saved_archive_keeps_the_mimetype_invariant(tmp_path: Path) -> None:
     with zipfile.ZipFile(destination) as archive:
         first = archive.infolist()[0]
         assert (first.filename, first.compress_type) == ("mimetype", zipfile.ZIP_STORED)
-    assert ADAPTER.snapshot(OdfDocument.open(destination))
+    assert SPEC.snapshot(OdfDocument.open(destination))

@@ -7,7 +7,7 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.audit import audit_odf
-from odfa11y.families import GENERIC, adapter_for
+from odfa11y.families import require_spec, spec_for
 from odfa11y.odf import KINDS, OdfDocument, validate
 from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.report import RULES, FactKeys
@@ -48,7 +48,7 @@ def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
     document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
     assert document.kind is not None
     assert all(
-        question.kind in (*COMMON_KINDS, *adapter_for(document.kind).kinds)
+        question.kind in (*COMMON_KINDS, *require_spec(document.kind).kinds)
         for question in report.decisions
     )
 
@@ -64,11 +64,10 @@ def test_synthetic_documents_validate_against_the_bundled_schema(
 
 def test_the_registry_serves_each_implemented_family_and_everything_else_generically() -> None:
     for kind in KINDS.values():
-        adapter = adapter_for(kind)
-        assert adapter is (adapter_for(kind))
-        assert adapter.name == kind.family.value
+        adapter = require_spec(kind)
+        assert adapter is (require_spec(kind))
         assert adapter.family is kind.family
-    assert adapter_for(None) is GENERIC
+    assert spec_for(None) is None
 
 
 def test_every_kind_has_its_own_short_name() -> None:

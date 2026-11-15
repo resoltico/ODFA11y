@@ -9,7 +9,7 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import effective_graphic_role, normalized_role_attributes
-from odfa11y.concepts.graphic_styles import GraphicRoleEditor, GraphicStyles
+from odfa11y.concepts.graphic_styles import GraphicRoleEditor, GraphicRoles
 from odfa11y.decisions.edit import Status
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from tests.concepts.test_graphic_roles_links import _decision, _graphic
@@ -152,4 +152,4 @@ def test_graphic_cascade_contains_only_present_names(
     shape.set(qn(namespace, "class-names"), "First Second")
     family = "graphic" if namespace == "draw" else "presentation"
     expected = ([style_name] if style_name else []) + ["First", "Second"]
-    assert GraphicStyles.context(shape) == (namespace, family, expected)
+    assert GraphicRoles.context(shape) == (namespace, family, expected)

@@ -1,18 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
 """Resolve, verify and derive graphic-role styles without changing visual meaning."""
 
-import base64
 import hashlib
 import json
+from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Annotated
 
 from lxml import etree
 
 from odfa11y.concepts.text import reading_context_path, visible_words
-from odfa11y.concepts.xml import protected_xml
+from odfa11y.contracts import Choices
+from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.canonical import protected_xml
+from odfa11y.odf.styles import (
+    GeneratedStyle,
+    StyleNormalization,
+    StyleResolver,
+    adopt_style,
+    generated_binding,
+    generated_prefix,
+    normalize_generated,
+)
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint
@@ -31,103 +43,49 @@ class GraphicRole:
     declared: bool = False
 
 
-class GraphicStyles:
+class GraphicRoles:
     """Resolve common parents separately from content automatic styles."""
 
     def __init__(self, document: OdfDocument) -> None:
         self.document = document
-        self.common: dict[tuple[str, str], list[etree._Element]] = {}
-        self.automatic: dict[tuple[str, str], list[etree._Element]] = {}
-        self.defaults: dict[str, list[etree._Element]] = {}
-        self.scope_problem: str | None = None
-        for part, container_tag in ((Part.STYLES, "styles"), (Part.CONTENT, "automatic-styles")):
-            if not document.has(part):
+        self.resolver = StyleResolver.for_document(document)
+        self.common = self.resolver._common
+        self.automatic = self.resolver._automatic
+        self.defaults = self.resolver._defaults
+        self.scope_problem = " ".join(self.resolver._scope_problems) or None
+
+    def resolve(self, family: str, name: str, *, common: bool = False) -> etree._Element:
+        style = self.resolver.resolve(family, name, common=common)
+        if style is None:
+            message = f"Graphic style {name!r} is missing in {family!r} scope."
+            raise DocumentRefusal(message)
+        return style
+
+    def chain_role(self, node: etree._Element, family: str) -> str | None:
+        """Read explicit graphic roles over the shared legal inheritance chain."""
+        value = None
+        for style in self.resolver.chain_from(family, node):
+            if style.find("style:map", NS) is not None:
+                message = "Conditional graphic style mapping is not established."
+                raise DocumentRefusal(message)
+            properties = style.findall("style:graphic-properties", NS)
+            if len(properties) > 1:
+                message = "Graphic property declarations are ambiguous."
+                raise DocumentRefusal(message)
+            declared = properties[0].get(ROLE) if properties else None
+            if declared is None:
                 continue
-            containers = document.tree(part).getroot().findall(qn("office", container_tag))
-            if len(containers) > 1:
-                self.scope_problem = f"Applicable office:{container_tag} container is ambiguous."
-            for container in containers:
-                self._index(container, automatic=container_tag == "automatic-styles")
-
-    def _index(self, container: etree._Element, *, automatic: bool) -> None:
-        for node in container:
-            family = node.get(xml_names.STYLE_FAMILY, "")
-            if node.tag == xml_names.STYLE_DEFAULT_STYLE and not automatic:
-                self.defaults.setdefault(family, []).append(node)
-            elif node.tag == xml_names.STYLE_STYLE:
-                index = self.automatic if automatic else self.common
-                index.setdefault((family, node.get(xml_names.STYLE_NAME, "")), []).append(node)
-
-    def style(self, family: str, name: str, *, common: bool = False) -> etree._Element:
-        """Resolve a name in its legal scope, refusing ambiguity and broken references.
-
-        Returns
-        -------
-        etree._Element
-            The uniquely resolved style.
-
-        Raises
-        ------
-        ValueError
-            The source context or supplied decision cannot be established safely.
-
-        """
-        key = (family, name)
-        found = (
-            self.common.get(key, [])
-            if common
-            else self.automatic.get(key, []) or self.common.get(key, [])
-        )
-        if len(found) != 1:
-            msg = f"Graphic style {name!r} is missing or ambiguous in {family!r} scope."
-            raise ValueError(msg)
-        return found[0]
-
-    def chain_role(
-        self, node: etree._Element, family: str, seen: set[etree._Element]
-    ) -> str | None:
-        """Read role inheritance through legal common style parents.
-
-        Returns
-        -------
-        str | None
-            The inherited explicit role, or None for the standard default.
-
-        Raises
-        ------
-        ValueError
-            The source context or supplied decision cannot be established safely.
-
-        """
-        if node in seen:
-            msg = "Graphic style inheritance contains a cycle."
-            raise ValueError(msg)
-        seen = seen.copy()
-        seen.add(node)
-        if node.find("style:map", NS) is not None:
-            message = "Conditional graphic style mapping is not established."
-            raise ValueError(message)
-        parent = node.get(xml_names.STYLE_PARENT_STYLE_NAME)
-        inherited = (
-            self.chain_role(self.style(family, parent, common=True), family, seen)
-            if parent
-            else None
-        )
-        properties = node.findall("style:graphic-properties", NS)
-        if len(properties) > 1:
-            message = "Graphic property declarations are ambiguous."
-            raise ValueError(message)
-        value = properties[0].get(ROLE) if properties else None
-        if value is not None and (
-            node.getroottree().getroot().get(xml_names.OFFICE_VERSION) != "1.4"
-            or self.document.tree(Part.CONTENT).getroot().get(xml_names.OFFICE_VERSION) != "1.4"
-        ):
-            message = "Native decorative declarations require ODF 1.4 source semantics."
-            raise ValueError(message)
-        if value is not None and value not in {"true", "false"}:
-            msg = "Graphic decorative property is not a boolean."
-            raise ValueError(msg)
-        return value if value is not None else inherited
+            if (
+                style.getroottree().getroot().get(xml_names.OFFICE_VERSION) != "1.4"
+                or self.document.tree(Part.CONTENT).getroot().get(xml_names.OFFICE_VERSION) != "1.4"
+            ):
+                message = "Native decorative declarations require ODF 1.4 source semantics."
+                raise DocumentRefusal(message)
+            if declared not in {"true", "false"}:
+                message = "Graphic decorative property is not a boolean."
+                raise DocumentRefusal(message)
+            value = declared
+        return value
 
     @staticmethod
     def context(shape: etree._Element) -> tuple[str, str, list[str]]:
@@ -140,7 +98,7 @@ class GraphicStyles:
 
         Raises
         ------
-        ValueError
+        DocumentRefusal
             The source context or supplied decision cannot be established safely.
 
         """
@@ -151,7 +109,7 @@ class GraphicStyles:
         ]
         if len(active) > 1:
             msg = "Mixed graphic/presentation style precedence is not established."
-            raise ValueError(msg)
+            raise DocumentRefusal(msg)
         ns = active[0] if active else "draw"
         family = "graphic" if ns == "draw" else "presentation"
         style_name = shape.get(qn(ns, "style-name"))
@@ -170,20 +128,20 @@ class GraphicStyles:
         try:
             value = self._role_value(shape)
             return GraphicRole(value == "true", declared=value is not None)
-        except ValueError as error:
+        except DocumentRefusal as error:
             return GraphicRole(problem=str(error))
 
     def _role_value(self, shape: etree._Element) -> str | None:
         if self.scope_problem:
-            raise ValueError(self.scope_problem)
+            raise DocumentRefusal(self.scope_problem)
         _ns, family, names = self.context(shape)
         defaults = self.defaults.get(family, [])
         if len(defaults) > 1:
             message = "Graphic default style is ambiguous."
-            raise ValueError(message)
-        value = self.chain_role(defaults[0], family, set()) if defaults else None
+            raise DocumentRefusal(message)
+        value = self.chain_role(defaults[0], family) if defaults else None
         for name in names:
-            explicit = self.chain_role(self.style(family, name), family, set())
+            explicit = self.chain_role(self.resolve(family, name), family)
             if explicit is not None:
                 value = explicit
         return value
@@ -198,7 +156,7 @@ def effective_graphic_role(document: OdfDocument, shape: etree._Element) -> Grap
         The effective source declaration and any resolution problem.
 
     """
-    return GraphicStyles(document).role(shape)
+    return GraphicRoles(document).role(shape)
 
 
 def decorative_problem(shape: etree._Element) -> str | None:
@@ -268,12 +226,18 @@ def audit_graphic_role(document: OdfDocument, shape: etree._Element, report: Rep
     return role.decorative
 
 
-PREFIX = "ODFA11yRole_"
+PREFIX = generated_prefix("graphic-role")
 
 
 STYLE_ATTRIBUTES = tuple(
     qn(ns, key) for ns in ("draw", "presentation") for key in ("style-name", "class-names")
 )
+
+
+@dataclass(frozen=True, slots=True)
+class RoleBinding:
+    original: Mapping[Annotated[str, Choices(STYLE_ATTRIBUTES)], str]
+    context: str
 
 
 def normalized_role_attributes(document: OdfDocument, shape: etree._Element) -> dict[str, str]:
@@ -293,32 +257,23 @@ def normalized_role_attributes(document: OdfDocument, shape: etree._Element) -> 
         return attrs
     try:
         return _proven_role_attributes(document, shape, attrs, generated[0])
-    except ValueError, KeyError, TypeError:
+    except DocumentRefusal, ValueError, KeyError, TypeError:
         return attrs
 
 
 def _proven_role_attributes(
     document: OdfDocument, shape: etree._Element, attrs: dict[str, str], name: str
 ) -> dict[str, str]:
-    encoded = name.removeprefix(PREFIX).rsplit("_", 1)[0]
-    original = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
-    if not isinstance(original, dict) or any(
-        k not in STYLE_ATTRIBUTES or not isinstance(v, str) for k, v in original.items()
-    ):
-        return attrs
+    binding = generated_binding(name, "graphic-role", RoleBinding)
+    original = dict(binding.original)
     shadow = deepcopy(shape)
     for attr in STYLE_ATTRIBUTES:
         shadow.attrib.pop(attr, None)
     shadow.attrib.update(original)
-    catalog = GraphicStyles(document)
+    catalog = GraphicRoles(document)
     ns, family, names = catalog.context(shadow)
-    expected = (
-        deepcopy(catalog.style(family, names[-1]))
-        if names
-        else etree.Element(xml_names.STYLE_STYLE)
-    )
-    expected.set(xml_names.STYLE_NAME, name)
-    expected.set(xml_names.STYLE_FAMILY, family)
+    base = catalog.resolve(family, names[-1]) if names else None
+    expected = catalog.resolver.derive(family, base, purpose="graphic-role", binding=binding)
     generated = catalog.automatic.get((family, name), [])
     if len(generated) != 1:
         return attrs
@@ -327,13 +282,6 @@ def _proven_role_attributes(
         return attrs
     if document.tree(Part.CONTENT).getroot().get(xml_names.OFFICE_VERSION) != "1.4":
         return attrs
-    actual = deepcopy(generated[0])
-    for node in (expected, actual):
-        props = node.find("style:graphic-properties", NS)
-        if props is not None:
-            props.attrib.pop(ROLE, None)
-            if not props.attrib and not len(props):
-                node.remove(props)
     applied = dict(original)
     attribute = (
         qn(ns, "class-names") if original.get(qn(ns, "class-names")) else qn(ns, "style-name")
@@ -343,28 +291,20 @@ def _proven_role_attributes(
         if attribute.endswith("class-names")
         else name
     )
-    if attrs == applied and _style_signature(actual) == _style_signature(expected):
+    if attrs == applied and catalog.resolver.is_generated(
+        generated[0], expected, ignored={xml_names.STYLE_GRAPHIC_PROPERTIES: (ROLE,)}
+    ):
         return original
     return attrs
 
 
-def normalized_graphic_tree(document: OdfDocument, root: etree._Element) -> etree._Element:
-    """Copy content, restoring only proven role derivations to original references.
+def graphic_normalization(document: OdfDocument) -> StyleNormalization:
+    def restore(source: etree._Element, current: Mapping[str, str]) -> Mapping[str, str] | None:
+        if any(source.get(attribute) is not None for attribute in STYLE_ATTRIBUTES):
+            return normalized_role_attributes(document, source)
+        return None
 
-    Returns
-    -------
-    etree._Element
-        A copy with proven style references restored.
-
-    """
-    clone = deepcopy(root)
-    for source, target in zip(root.iter(), clone.iter(), strict=True):
-        if any(source.get(attr) is not None for attr in STYLE_ATTRIBUTES):
-            attributes = normalized_role_attributes(document, source)
-            for attr in STYLE_ATTRIBUTES:
-                target.attrib.pop(attr, None)
-            target.attrib.update(attributes)
-    return clone
+    return StyleNormalization(STYLE_ATTRIBUTES, restore)
 
 
 def graphic_style_fingerprint(document: OdfDocument, shape: etree._Element) -> str:
@@ -376,14 +316,14 @@ def graphic_style_fingerprint(document: OdfDocument, shape: etree._Element) -> s
         A digest that changes when authored style properties change.
 
     """
-    catalog = GraphicStyles(document)
-    shadow = normalized_graphic_tree(document, shape)
+    catalog = GraphicRoles(document)
+    shadow = normalize_generated(shape, graphic_normalization(document))
     return _style_facts(catalog, shadow)
 
 
-def _style_facts(catalog: GraphicStyles, shadow: etree._Element) -> Fingerprint:
+def _style_facts(catalog: GraphicRoles, shadow: etree._Element) -> Fingerprint:
     if catalog.scope_problem:
-        raise ValueError(catalog.scope_problem)
+        raise DocumentRefusal(catalog.scope_problem)
     if shadow.tag == xml_names.DRAW_PAGE:
         family = "drawing-page"
         names = [name] if (name := shadow.get(xml_names.DRAW_STYLE_NAME)) else []
@@ -392,57 +332,25 @@ def _style_facts(catalog: GraphicStyles, shadow: etree._Element) -> Fingerprint:
     defaults = catalog.defaults.get(family, [])
     if len(defaults) > 1:
         message = "Graphic default style is ambiguous."
-        raise ValueError(message)
+        raise DocumentRefusal(message)
     facts = [_visual_style_xml(style) for style in defaults]
     for source_name in names:
-        name = source_name
-        style = catalog.style(family, name)
-        seen: set[etree._Element] = set()
-        while True:
-            if style in seen:
-                message = "Graphic visual style inheritance contains a cycle."
-                raise ValueError(message)
-            seen.add(style)
-            facts.append(_visual_style_xml(style))
-            parent = style.get(xml_names.STYLE_PARENT_STYLE_NAME)
-            if not parent:
-                break
-            style = catalog.style(family, parent, common=True)
+        # Preserve source-first fingerprint ordering while sharing common-parent resolution.
+        facts.extend(
+            _visual_style_xml(style)
+            for style in reversed(catalog.resolver.chain(family, source_name))
+        )
     return Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
 
 
 def _visual_style_xml(style: etree._Element) -> str:
     if style.find("style:map", NS) is not None:
         message = "Conditional graphic style mapping is not established."
-        raise ValueError(message)
+        raise DocumentRefusal(message)
     return protected_xml(style)
 
 
-def _style_signature(style: etree._Element) -> list[object]:
-    return [
-        (
-            node.tag,
-            len(node),
-            sorted(node.attrib.items()),
-            node.text,
-            node.tail,
-            [
-                (
-                    attribute,
-                    [
-                        (prefix, uri)
-                        for prefix, uri in node.nsmap.items()
-                        if prefix and f"{prefix}:" in value
-                    ],
-                )
-                for attribute, value in sorted(node.attrib.items())
-            ],
-        )
-        for node in style.iter()
-    ]
-
-
-class GraphicRoleEditor(GraphicStyles):
+class GraphicRoleEditor(GraphicRoles):
     """Derive isolated role styles from an established graphic style catalog."""
 
     def derived(self, shape: etree._Element, *, decorative: bool) -> tuple[str, etree._Element]:
@@ -460,25 +368,11 @@ class GraphicRoleEditor(GraphicStyles):
             shadow.attrib.pop(attr, None)
         shadow.attrib.update(original)
         ns, family, names = self.context(shadow)
-        style = (
-            deepcopy(self.style(family, names[-1]))
-            if names
-            else etree.Element(xml_names.STYLE_STYLE)
+        base = self.resolve(family, names[-1]) if names else None
+        binding = RoleBinding(
+            original, hashlib.sha256(shape.getroottree().getpath(shape).encode()).hexdigest()[:12]
         )
-        encoded = (
-            base64
-            .urlsafe_b64encode(json.dumps(original, sort_keys=True).encode())
-            .decode()
-            .rstrip("=")
-        )
-        name = (
-            PREFIX
-            + encoded
-            + "_"
-            + hashlib.sha256(shape.getroottree().getpath(shape).encode()).hexdigest()[:12]
-        )
-        style.set(xml_names.STYLE_NAME, name)
-        style.set(xml_names.STYLE_FAMILY, family)
+        style = self.resolver.derive(family, base, purpose="graphic-role", binding=binding).element
         props = style.find("style:graphic-properties", NS)
         if props is None:
             props = etree.Element(xml_names.STYLE_GRAPHIC_PROPERTIES)
@@ -496,7 +390,7 @@ class GraphicRoleEditor(GraphicStyles):
 
         Raises
         ------
-        ValueError
+        DocumentRefusal
             The source context or supplied decision cannot be established safely.
 
         """
@@ -504,18 +398,18 @@ class GraphicRoleEditor(GraphicStyles):
             return False
         problem = self.change_problem(shape, decorative=decorative)
         if problem:
-            raise ValueError(problem)
+            raise DocumentRefusal(problem)
         ns, style = self.derived(shape, decorative=decorative)
         name = style.get(xml_names.STYLE_NAME, "")
         family = style.get(xml_names.STYLE_FAMILY, "")
         if self.common.get((family, name)):
             message = "Generated role style name collides with an authored common style."
-            raise ValueError(message)
+            raise DocumentRefusal(message)
         found = self.automatic.get((family, name), [])
         if found:
             problem = self._existing_problem(shape, style, found)
             if problem:
-                raise ValueError(problem)
+                raise DocumentRefusal(problem)
             props = found[0].find("style:graphic-properties", NS)
             if props is None:
                 props = etree.SubElement(found[0], xml_names.STYLE_GRAPHIC_PROPERTIES)
@@ -559,12 +453,10 @@ class GraphicRoleEditor(GraphicStyles):
     ) -> str | None:
         if len(found) != 1:
             return "Generated graphic style name is ambiguous."
-        expected, existing = deepcopy(style), deepcopy(found[0])
-        for node in (expected, existing):
-            props = node.find("style:graphic-properties", NS)
-            if props is not None:
-                props.attrib.pop(ROLE, None)
-        if _style_signature(expected) != _style_signature(existing):
+        expected = GeneratedStyle(style.get(xml_names.STYLE_NAME, ""), style)
+        if not self.resolver.is_generated(
+            found[0], expected, ignored={xml_names.STYLE_GRAPHIC_PROPERTIES: (ROLE,)}
+        ):
             return "Generated graphic style name belongs to unproven authored content."
         name = style.get(xml_names.STYLE_NAME, "")
         if any(
@@ -576,13 +468,4 @@ class GraphicRoleEditor(GraphicStyles):
         return None
 
     def _adopt(self, style: etree._Element) -> None:
-        family = style.get(xml_names.STYLE_FAMILY, "")
-        name = style.get(xml_names.STYLE_NAME, "")
-        root = self.document.tree(Part.CONTENT).getroot()
-        auto = root.find("office:automatic-styles", NS)
-        if auto is None:
-            auto = etree.Element(xml_names.OFFICE_AUTOMATIC_STYLES)
-            body = root.find("office:body", NS)
-            root.insert(root.index(body) if body is not None else len(root), auto)
-        auto.append(style)
-        self.automatic[family, name] = [style]
+        adopt_style(self.resolver, style)

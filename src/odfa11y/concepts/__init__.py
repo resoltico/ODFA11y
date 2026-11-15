@@ -9,7 +9,7 @@ from odfa11y.concepts.graphic_identity import (
 from odfa11y.concepts.graphic_styles import (
     audit_graphic_role,
     effective_graphic_role,
-    normalized_graphic_tree,
+    graphic_normalization,
     normalized_role_attributes,
 )
 from odfa11y.concepts.graphics import set_description
@@ -43,7 +43,7 @@ from odfa11y.concepts.tables import (
     require_safe_boundary,
 )
 from odfa11y.concepts.text import eligible_text_node, reading_context_path, visible_words
-from odfa11y.concepts.xml import protected_xml
+from odfa11y.odf.canonical import protected_xml
 
 __all__ = [
     "AXES",
@@ -57,6 +57,7 @@ __all__ = [
     "document_links",
     "effective_graphic_role",
     "eligible_text_node",
+    "graphic_normalization",
     "graphic_selector",
     "graphics_fingerprint",
     "header_count",
@@ -65,7 +66,6 @@ __all__ = [
     "link_has_description",
     "link_location",
     "navigation_problem",
-    "normalized_graphic_tree",
     "normalized_role_attributes",
     "opaque_payloads",
     "page_fingerprint",

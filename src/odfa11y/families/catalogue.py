@@ -1,37 +1,48 @@
 # SPDX-License-Identifier: MPL-2.0
 """Which adapter serves which kind of document."""
 
-from odfa11y.families.chart import ADAPTER as CHART_ADAPTER
-from odfa11y.families.database import ADAPTER as DATABASE_ADAPTER
-from odfa11y.families.formula import ADAPTER as FORMULA_ADAPTER
-from odfa11y.families.generic import GENERIC
-from odfa11y.families.image import ADAPTER as IMAGE_ADAPTER
-from odfa11y.families.pages import DRAWING_ADAPTER, PRESENTATION_ADAPTER
-from odfa11y.families.spreadsheet import ADAPTER as SPREADSHEET_ADAPTER
-from odfa11y.families.text import ADAPTER as TEXT_ADAPTER
+from odfa11y.errors import DocumentRefusal, Remedy, RemedyAction
+from odfa11y.families.chart import SPEC as CHART_SPEC
+from odfa11y.families.database import SPEC as DATABASE_SPEC
+from odfa11y.families.formula import SPEC as FORMULA_SPEC
+from odfa11y.families.image import SPEC as IMAGE_SPEC
+from odfa11y.families.pages import DRAWING_SPEC, PRESENTATION_SPEC
+from odfa11y.families.spreadsheet import SPEC as SPREADSHEET_SPEC
+from odfa11y.families.text import SPEC as TEXT_SPEC
 from odfa11y.odf import Family
-lazy from odfa11y.families.spec import FamilyAdapter
+lazy from odfa11y.families.spec import FamilySpec
 lazy from odfa11y.odf import DocumentKind
 
-REGISTRY: dict[Family, FamilyAdapter] = {
-    Family.TEXT: TEXT_ADAPTER,
-    Family.DATABASE: DATABASE_ADAPTER,
-    Family.IMAGE: IMAGE_ADAPTER,
-    Family.CHART: CHART_ADAPTER,
-    Family.FORMULA: FORMULA_ADAPTER,
-    Family.PRESENTATION: PRESENTATION_ADAPTER,
-    Family.DRAWING: DRAWING_ADAPTER,
-    Family.SPREADSHEET: SPREADSHEET_ADAPTER,
+REGISTRY: dict[Family, FamilySpec] = {
+    Family.TEXT: TEXT_SPEC,
+    Family.DATABASE: DATABASE_SPEC,
+    Family.IMAGE: IMAGE_SPEC,
+    Family.CHART: CHART_SPEC,
+    Family.FORMULA: FORMULA_SPEC,
+    Family.PRESENTATION: PRESENTATION_SPEC,
+    Family.DRAWING: DRAWING_SPEC,
+    Family.SPREADSHEET: SPREADSHEET_SPEC,
 }
 
 
-def adapter_for(kind: DocumentKind | None) -> FamilyAdapter:
-    """Select the adapter for a document kind; kinds without one get the generic adapter.
+def spec_for(kind: DocumentKind | None) -> FamilySpec | None:
+    return REGISTRY.get(kind.family) if kind is not None else None
 
-    Returns
-    -------
-    FamilyAdapter
-        The family's adapter, or the generic adapter.
 
-    """
-    return REGISTRY.get(kind.family, GENERIC) if kind is not None else GENERIC
+def require_spec(kind: DocumentKind | None) -> FamilySpec:
+    spec = spec_for(kind)
+    if spec is None:
+        label = kind.name if kind is not None else "unrecognised source media type"
+        message = (
+            f"No supported source family for {label}; "
+            "save a supported OpenDocument type in the source application."
+        )
+        raise DocumentRefusal(
+            message,
+            remedy=Remedy(
+                RemedyAction.EDIT_IN_APPLICATION,
+                label,
+                "Save a supported OpenDocument type and regenerate the plan.",
+            ),
+        )
+    return spec

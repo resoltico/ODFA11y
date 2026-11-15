@@ -8,12 +8,12 @@ import pytest
 
 from odfa11y.errors import OutputOccupied
 from odfa11y.evidence import Redactor, render_review, require_free_directory, write_bundle
-from odfa11y.families.text import ADAPTER
+from odfa11y.families.text import SPEC
 from odfa11y.status import StageStatus
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.records import record
 
-REVIEW_ITEMS = ADAPTER.review_items
+REVIEW_ITEMS = SPEC.review_items
 NO_REDACTION = Redactor(())
 
 

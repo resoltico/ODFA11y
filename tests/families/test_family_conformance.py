@@ -10,7 +10,7 @@ import pytest
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
-from odfa11y.families import adapter_for
+from odfa11y.families import require_spec
 from odfa11y.odf import NS, OdfDocument, PackageStorage, Part
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.registry import registered_kinds
@@ -39,7 +39,7 @@ def test_family_question_roundtrip_preservation_and_rebinding(tmp_path: Path, fi
     source = family_source(tmp_path, fixture)
     document = OdfDocument.open(source)
     original_bytes = source.read_bytes()
-    before = adapter_for(document.kind).snapshot(document)
+    before = require_spec(document.kind).snapshot(document)
     plan = reviewed_title_plan(source)
     destination = tmp_path / ("reviewed" + source.suffix)
     result = remediate(source, destination, plan)
@@ -48,7 +48,7 @@ def test_family_question_roundtrip_preservation_and_rebinding(tmp_path: Path, fi
     assert result.exit_status == 0
     assert "META001" not in {f.rule_id for f in audit_odf(destination).findings}
     after = OdfDocument.open(destination)
-    assert adapter_for(after.kind).snapshot(after) == before
+    assert require_spec(after.kind).snapshot(after) == before
     assert source.read_bytes() == original_bytes
     second = tmp_path / ("second" + source.suffix)
     with pytest.raises(PlanError, match="digest mismatch"):

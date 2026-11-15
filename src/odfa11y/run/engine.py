@@ -12,7 +12,8 @@ from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.capture import capture_source, source_digest
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory
-from odfa11y.families import GENERIC, adapter_for
+from odfa11y.families import spec_for
+from odfa11y.families.spec import PdfExport
 from odfa11y.native.probes import ProbeCache
 from odfa11y.odf import OdfDocument, Use, declared_version
 from odfa11y.pdf import audit_pdfua, check_pdfua, list_fonts
@@ -27,7 +28,7 @@ from odfa11y.run.publication import publish_evidence
 from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.run.stages import run_stage
 from odfa11y.status import StageStatus
-lazy from odfa11y.families.spec import FamilyAdapter
+lazy from odfa11y.families.spec import FamilySpec
 lazy from odfa11y.plans import Plan
 lazy from odfa11y.report import Report
 
@@ -42,7 +43,7 @@ class _Run:
     lifetime: ExitStack
     probe_cache: ProbeCache = field(default_factory=ProbeCache)
     captured: Path | None = None
-    adapter: FamilyAdapter = GENERIC
+    adapter: FamilySpec | None = None
     executable: str | None = None
     native_tools: NativeTools = field(default_factory=NativeTools)
 
@@ -69,7 +70,7 @@ class _Run:
                 Stage.IDENTIFY_SOURCE, StageStatus.PASSED, _gate=False
             )  # audit-source explains
         detection = document.detection
-        self.adapter = adapter_for(detection.kind)
+        self.adapter = spec_for(detection.kind)
         self.record.document = DocumentIdentity(
             name=self.record.document.name,
             sha256=self.record.document.sha256,
@@ -77,10 +78,10 @@ class _Run:
             media_type=detection.media_type,
             layout=document.layout,
             family=detection.kind.family.value if detection.kind else None,
-            adapter=self.adapter.name,
+            adapter=self.adapter.family.value if self.adapter else None,
             odf_version=declared_version(document),
         )
-        self.record.human_review = self.adapter.review_items
+        self.record.human_review = self.adapter.review_items if self.adapter else ()
         return StageResult(Stage.IDENTIFY_SOURCE, StageStatus.PASSED, _gate=False)
 
     def audit_source(self) -> StageResult:
@@ -168,7 +169,7 @@ class _Run:
 
     @property
     def _exportable(self) -> bool:
-        return self.adapter.pdf_filter is not None
+        return self.adapter is not None and isinstance(self.adapter.export, PdfExport)
 
     def _no_pdf(self, name: Stage) -> StageResult:
         kind = self.record.document.kind or "this kind of"
@@ -189,7 +190,7 @@ class _Run:
         )
 
     def _export(self, name: Stage, document: Path, pdf_name: str) -> StageResult:
-        if self.adapter.pdf_filter is None:
+        if self.adapter is None or not self._exportable:
             return self._no_pdf(name)
         settings = native_export_settings(
             OdfDocument.open(document),
@@ -258,7 +259,7 @@ def execute(
         plan=plan.header,
         decisions=plan.decisions,
         profile=profile,
-        human_review=GENERIC.review_items,
+        human_review=(),
     )
     with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
         work = Path(scratch)

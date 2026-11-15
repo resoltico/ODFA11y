@@ -7,14 +7,14 @@ import pytest
 
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.families import REGISTRY
-from odfa11y.families.spec import FamilyAdapter
+from odfa11y.families.spec import FamilySpec
 from odfa11y.odf import OdfDocument
 from tests.fixtures.writer import make_minimal_odt
 
 
 def test_incomplete_family_cannot_be_registered_as_an_instance() -> None:
-    with pytest.raises(TypeError, match="abstract"):
-        FamilyAdapter()  # ty: ignore[call-non-callable]  Negative control: incomplete contracts cannot execute.
+    with pytest.raises(TypeError, match="required positional"):
+        FamilySpec()  # ty: ignore[missing-argument]  Negative control: incomplete contracts cannot execute.
 
 
 def test_family_snapshots_are_immutable_typed_values(tmp_path: Path) -> None:

@@ -10,8 +10,8 @@ from lxml import etree
 from odfa11y.concepts import protected_xml
 from odfa11y.concepts.graphic_styles import (
     GraphicRoleEditor,
-    GraphicStyles,
-    normalized_graphic_tree,
+    GraphicRoles,
+    graphic_normalization,
 )
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.language.effective import language_targets
@@ -19,17 +19,19 @@ from odfa11y.families.text.language.styles import (
     Binding,
     binding_of,
     derive,
-    normalized_language_tree,
-)
-from odfa11y.families.text.styles.catalogue import (
-    adopt_style,
-    catalog_of,
-    derive_paragraph_style,
-    derived_style_name,
-    is_generated_from,
+    language_normalization,
 )
 from odfa11y.odf import NS, OdfDocument, Part
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.styles import (
+    adopt_style,
+    derive_paragraph_style,
+    derived_style_name,
+    is_generated_from,
+    normalize_generated,
+    styles_of,
+)
+from odfa11y.targets import TargetPath
 from tests.fixtures.graphics import _style as graphic_style
 from tests.fixtures.writer import make_minimal_odt
 
@@ -67,17 +69,17 @@ def test_paragraph_automatic_styles_shadow_common_names_and_inherit_common_paren
     etree.SubElement(
         automatic, xml_names.STYLE_PARAGRAPH_PROPERTIES, {xml_names.FO_MARGIN_BOTTOM: "0.8cm"}
     )
-    catalog = catalog_of(document)
-    assert catalog.style("paragraph", "Shared") is automatic
-    assert catalog.style("paragraph", "Shared", common=True) is common
-    assert catalog.inheritance_chain("paragraph", "Shared") == [common, automatic]
+    catalog = styles_of(document)
+    assert catalog.resolve("paragraph", "Shared") is automatic
+    assert catalog.resolve("paragraph", "Shared", common=True) is common
+    assert catalog.chain("paragraph", "Shared") == [common, automatic]
     properties = catalog.effective_paragraph_properties("Shared")
     assert properties[xml_names.FO_MARGIN_TOP] == "0.2cm"
     assert properties[xml_names.FO_MARGIN_BOTTOM] == "0.8cm"
     common_scope.append(deepcopy(common))
     document.checkpoint()
     with pytest.raises(DocumentRefusal, match="ambiguous"):
-        catalog_of(document).inheritance_chain("paragraph", "Shared")
+        styles_of(document).chain("paragraph", "Shared")
 
 
 def test_graphic_role_inheritance_respects_the_same_two_legal_scopes(tmp_path: Path) -> None:
@@ -91,25 +93,25 @@ def test_graphic_role_inheritance_respects_the_same_two_legal_scopes(tmp_path: P
         common, xml_names.STYLE_GRAPHIC_PROPERTIES, {xml_names.DRAW_DECORATIVE: "true"}
     )
     automatic = _style(automatic_scope, "graphic", "Shared", base="Shared")
-    styles = GraphicStyles(document)
-    assert styles.style("graphic", "Shared") is automatic
-    assert styles.style("graphic", "Shared", common=True) is common
-    assert styles.chain_role(automatic, "graphic", set()) == "true"
+    styles = GraphicRoles(document)
+    assert styles.resolve("graphic", "Shared") is automatic
+    assert styles.resolve("graphic", "Shared", common=True) is common
+    assert styles.chain_role(automatic, "graphic") == "true"
     etree.SubElement(
         automatic, xml_names.STYLE_GRAPHIC_PROPERTIES, {xml_names.DRAW_DECORATIVE: "false"}
     )
-    assert GraphicStyles(document).chain_role(automatic, "graphic", set()) == "false"
+    assert GraphicRoles(document).chain_role(automatic, "graphic") == "false"
     common_scope.append(deepcopy(common))
-    with pytest.raises(ValueError, match="ambiguous"):
-        GraphicStyles(document).chain_role(automatic, "graphic", set())
+    with pytest.raises(DocumentRefusal, match="ambiguous"):
+        GraphicRoles(document).chain_role(automatic, "graphic")
 
 
 def test_spacing_provenance_accepts_only_the_declared_change_and_content_scope(
     tmp_path: Path,
 ) -> None:
     document = _document(tmp_path)
-    catalog = catalog_of(document)
-    base = catalog.style("paragraph", "Body")
+    catalog = styles_of(document)
+    base = catalog.resolve("paragraph", "Body")
     assert base is not None
     before = protected_xml(base)
     name = derived_style_name("Body")
@@ -134,13 +136,13 @@ def test_language_provenance_is_target_bound_and_preserves_nonlanguage_propertie
     )
     binding = Binding("Body", ("de-DE", None, None), target)
     generated = derive(document, "paragraph", binding)
-    adopt_style(catalog_of(document), generated)
+    adopt_style(styles_of(document), generated)
     node.set(xml_names.TEXT_STYLE_NAME, binding.name)
     assert binding_of(document, node, binding.target) == binding
-    clone = normalized_language_tree(document, node)
+    clone = normalize_generated(node, language_normalization(document))
     assert clone.get(xml_names.TEXT_STYLE_NAME) == "Body"
     with pytest.raises(DocumentRefusal, match="verified derivation"):
-        binding_of(document, node, "content/language[999]")
+        binding_of(document, node, TargetPath("content/language[999]"))
     properties = generated.find("style:text-properties", NS)
     assert properties is not None
     properties.set(xml_names.FO_FONT_WEIGHT, "bold")
@@ -158,11 +160,17 @@ def test_graphic_role_provenance_restores_only_a_verified_reference(tmp_path: Pa
     name = frame.get(xml_names.DRAW_STYLE_NAME)
     assert name
     assert name != original
-    assert normalized_graphic_tree(document, frame).get(xml_names.DRAW_STYLE_NAME) == original
+    assert (
+        normalize_generated(frame, graphic_normalization(document)).get(xml_names.DRAW_STYLE_NAME)
+        == original
+    )
     styles = document.tree(Part.CONTENT).find("office:automatic-styles", NS)
     assert styles is not None
     generated = next(style for style in styles if style.get(xml_names.STYLE_NAME) == name)
     properties = generated.find("style:graphic-properties", NS)
     assert properties is not None
     properties.set(xml_names.DRAW_FILL_COLOR, "#ff0000")
-    assert normalized_graphic_tree(document, frame).get(xml_names.DRAW_STYLE_NAME) == name
+    assert (
+        normalize_generated(frame, graphic_normalization(document)).get(xml_names.DRAW_STYLE_NAME)
+        == name
+    )

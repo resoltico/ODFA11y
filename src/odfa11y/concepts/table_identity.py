@@ -6,12 +6,13 @@ from copy import deepcopy
 
 from lxml import etree
 
-from odfa11y.concepts.graphic_styles import normalized_graphic_tree
+from odfa11y.concepts.graphic_styles import graphic_normalization
 from odfa11y.concepts.tables import declarations, repeated
 from odfa11y.concepts.text import visible_words
-from odfa11y.concepts.xml import attribute_bindings, protected_xml
 from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn, select_elements
+from odfa11y.odf.canonical import attribute_bindings, protected_xml
+from odfa11y.odf.styles import normalize_generated
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
@@ -26,7 +27,9 @@ def table_fingerprint(table: etree._Element, document: OdfDocument | None = None
 
     """
     return _fingerprint(
-        normalized_graphic_tree(document, table) if document is not None else table,
+        normalize_generated(table, graphic_normalization(document))
+        if document is not None
+        else table,
         include_styles=True,
     )
 
@@ -41,7 +44,9 @@ def table_content_fingerprint(table: etree._Element, document: OdfDocument | Non
 
     """
     return _fingerprint(
-        normalized_graphic_tree(document, table) if document is not None else table,
+        normalize_generated(table, graphic_normalization(document))
+        if document is not None
+        else table,
         include_styles=False,
     )
 

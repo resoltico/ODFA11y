@@ -10,7 +10,7 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import graphics_fingerprint
 from odfa11y.concepts.graphic_styles import (
-    GraphicStyles,
+    GraphicRoles,
     effective_graphic_role,
     normalized_role_attributes,
 )
@@ -90,7 +90,7 @@ def test_ordered_class_overlay_and_common_parent_remain_legal(tmp_path: Path) ->
     assert not effective_graphic_role(document, frame).decorative
     operation = _decision(document, frame, decorative=True)
     assert apply_in_memory(document, operation)[0].status == Status.APPLIED
-    assert frame.get(qn("draw", "class-names"), "").startswith("Overlay ODFA11yRole_")
+    assert frame.get(qn("draw", "class-names"), "").startswith("Overlay ODFA11y_graphic-role_")
     assert effective_graphic_role(document, frame).decorative
     assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     assert validate(document).count == 0
@@ -265,7 +265,7 @@ def test_unproven_generated_style_cannot_normalize_geometry_or_visual_drift(tmp_
     operation = _decision(document, frame, decorative=True)
     assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     name = frame.get(qn("draw", "style-name"), "")
-    generated = GraphicStyles(document).style("graphic", name)
+    generated = GraphicRoles(document).resolve("graphic", name)
     props = generated.find("style:graphic-properties", NS)
     assert props is not None
     props.set(qn("draw", "fill-color"), "#123456")

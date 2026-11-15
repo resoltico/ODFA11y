@@ -12,7 +12,7 @@ from odfa11y.audit.package import (
     storage_location,
 )
 from odfa11y.errors import PackageError
-from odfa11y.families import adapter_for
+from odfa11y.families import spec_for
 from odfa11y.odf import OdfDocument, Part, Use
 from odfa11y.odf.export_context import native_export_limitations
 from odfa11y.remediate.document_ops import document_question
@@ -87,8 +87,15 @@ def audit_document(
         return report
     if not _parseable(document, report):
         return report
-    adapter = adapter_for(document.kind)
-    report.facts[FactKeys.DOCUMENT_ADAPTER] = adapter.name
+    adapter = spec_for(document.kind)
+    if adapter is None:
+        report.raise_(
+            rules.ODF009, "No supported source family; only package and structure checks ran."
+        )
+        if schema:
+            audit_schema(document, report)
+        return report
+    report.facts[FactKeys.DOCUMENT_ADAPTER] = adapter.family.value
     audit_versions(document, report)
     audit_metadata(document, adapter, report)
     adapter.audit(document, report)

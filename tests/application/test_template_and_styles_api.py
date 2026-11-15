@@ -2,7 +2,7 @@
 """Document planning and family capabilities are available without command handlers."""
 
 import tomllib
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 
@@ -15,6 +15,7 @@ from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import make_flat, make_package
 from tests.fixtures.writer import make_minimal_odt
+lazy from odfa11y.errors import DocumentRefusal
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
@@ -67,16 +68,15 @@ def test_blocker_projection_preserves_original_full_report() -> None:
     assert report.as_dict() == before
 
 
-def test_generic_adapter_retains_common_metadata_decisions(
+def test_planning_refuses_a_family_without_a_registered_spec(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", title="")
     monkeypatch.delitem(REGISTRY, Family.TEXT)
-    report, template = prepare_plan(source)
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == "generic"
-    assert template is not None
-    assert '[decisions."document.metadata"]' in template
-    assert "META001" in template
+    report = audit(source).reports[0]
+    assert not report.decisions
+    with pytest.raises(DocumentRefusal, match="No supported source family"):
+        prepare_plan(source)
 
 
 def test_style_usage_api_reports_text_family_usage(tmp_path: Path) -> None:
@@ -95,13 +95,10 @@ def test_style_usage_api_rejects_unsupported_family(tmp_path: Path, layout: str)
     assert FactKeys.TEXT_PARAGRAPH_STYLES not in audit(source).reports[0].facts
 
 
-def test_template_api_without_decisions_still_returns_commented_template(
+def test_unavailable_family_does_not_produce_an_empty_supported_plan(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delitem(REGISTRY, Family.TEXT)
     source = make_minimal_odt(tmp_path / "source.odt")
-    report, template = prepare_plan(source)
-    assert not report.decisions
-    assert template is not None
-    assert "[decisions." not in template
-    assert set(tomllib.loads(template)) == {"plan"}
+    with pytest.raises(DocumentRefusal, match="No supported source family"):
+        prepare_plan(source)

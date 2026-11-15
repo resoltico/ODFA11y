@@ -6,7 +6,7 @@ lazy from collections.abc import Sequence
 from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions.edit import Outcome
-from odfa11y.families.spec import FamilyAdapter, ReviewItem
+from odfa11y.families.spec import FamilySpec, LanguageTargets, PdfExport, ReviewItem
 from odfa11y.families.spreadsheet.audit import audit_spreadsheet
 from odfa11y.families.spreadsheet.kinds import DECISION_KINDS
 from odfa11y.families.spreadsheet.language import default_language, set_default_language
@@ -45,45 +45,41 @@ REVIEW_ITEMS = (
 )
 
 
-class SpreadsheetAdapter(FamilyAdapter):
-    """Implement the spreadsheet family contract."""
+def _preservation(document: OdfDocument) -> PreservationSnapshot:
+    """Capture protected meaning.
 
-    name = "spreadsheet"
-    family = Family.SPREADSHEET
-    audit = staticmethod(audit_spreadsheet)
-    default_language = staticmethod(default_language)
-    set_default_language = staticmethod(set_default_language)
-    kinds = DECISION_KINDS
-    probes = PROBES
-    review_items = REVIEW_ITEMS
-    pdf_filter = "calc_pdf_Export"
+    Returns
+    -------
+    PreservationSnapshot
+        The family-owned protected facts.
 
-    @staticmethod
-    def snapshot(document: OdfDocument) -> PreservationSnapshot:
-        """Capture protected meaning.
-
-        Returns
-        -------
-        PreservationSnapshot
-            The family-owned protected facts.
-
-        """
-        return PreservationSnapshot(sheet_snapshot(document))
-
-    @staticmethod
-    def preserved(
-        before: PreservationSnapshot, after: PreservationSnapshot, outcomes: Sequence[Outcome]
-    ) -> bool:
-        """Compare protected meaning using the family outcome contract.
-
-        Returns
-        -------
-        bool
-            Whether protected meaning survived.
-
-        """
-        del outcomes
-        return sheets_preserved(before.content, after.content)
+    """
+    return PreservationSnapshot(sheet_snapshot(document))
 
 
-ADAPTER = SpreadsheetAdapter()
+def _preserved(
+    before: PreservationSnapshot, after: PreservationSnapshot, outcomes: Sequence[Outcome]
+) -> bool:
+    """Compare protected meaning using the family outcome contract.
+
+    Returns
+    -------
+    bool
+        Whether protected meaning survived.
+
+    """
+    del outcomes
+    return sheets_preserved(before.content, after.content)
+
+
+SPEC = FamilySpec(
+    family=Family.SPREADSHEET,
+    audit=audit_spreadsheet,
+    kinds=DECISION_KINDS,
+    export=PdfExport("calc_pdf_Export"),
+    snapshot=_preservation,
+    language=LanguageTargets(default_language, set_default_language),
+    review_items=REVIEW_ITEMS,
+    probes=PROBES,
+    preserved=_preserved,
+)

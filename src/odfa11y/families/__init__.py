@@ -1,7 +1,15 @@
 # SPDX-License-Identifier: MPL-2.0
-"""The registry of document families: which adapter serves which kind of document."""
+"""Explicit supported document-family records."""
 
-from odfa11y.families.catalogue import REGISTRY, adapter_for
-from odfa11y.families.generic import GENERIC
+from odfa11y.families.catalogue import REGISTRY, require_spec, spec_for
+from odfa11y.families.spec import FamilySpec, LanguageTargets, PdfExport, Unsupported
 
-__all__ = ["GENERIC", "REGISTRY", "adapter_for"]
+__all__ = [
+    "REGISTRY",
+    "FamilySpec",
+    "LanguageTargets",
+    "PdfExport",
+    "Unsupported",
+    "require_spec",
+    "spec_for",
+]

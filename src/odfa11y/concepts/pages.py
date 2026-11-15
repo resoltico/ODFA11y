@@ -11,9 +11,8 @@ from odfa11y.concepts.graphic_identity import (
     GraphicIdentity,
     graphic_style_dependencies,
 )
-from odfa11y.concepts.graphic_styles import normalized_graphic_tree
+from odfa11y.concepts.graphic_styles import graphic_normalization
 from odfa11y.concepts.graphics import set_description
-from odfa11y.concepts.xml import protected_xml
 from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import PageMetadataAnswer, PageNavigationAnswer
 from odfa11y.decisions.domain import resolved_node
@@ -21,6 +20,8 @@ from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.canonical import protected_xml
+from odfa11y.odf.styles import normalize_generated
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
@@ -91,7 +92,7 @@ def page_fingerprint(page: etree._Element, document: OdfDocument) -> Fingerprint
 
     """
     content = protected_xml(
-        normalized_graphic_tree(document, page),
+        normalize_generated(page, graphic_normalization(document)),
         omitted_element_attributes={
             qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")
         },
@@ -114,7 +115,7 @@ def page_snapshot(document: OdfDocument) -> tuple[str, ...]:
     body = select_elements(document.tree(Part.CONTENT), "//office:body")[0]
     return (
         protected_xml(
-            normalized_graphic_tree(document, body),
+            normalize_generated(body, graphic_normalization(document)),
             omitted_elements=DESCRIPTIONS,
             omitted_element_attributes={
                 xml_names.DRAW_PAGE: (xml_names.DRAW_NAV_ORDER,),
