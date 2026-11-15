@@ -28,6 +28,7 @@ def audit_command(args: argparse.Namespace) -> int:
         validate_pdf=args.verapdf,
         strict=args.strict,
         observer=progress_callback(args.format),
+        native_tools=args.native_tools,
     )
     rendered = result.render(args.format, source_root=args.source_root)
     for item in result.failures:

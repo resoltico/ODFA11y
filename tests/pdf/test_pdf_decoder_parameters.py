@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Malformed decoder parameters refuse at the real written/read PDF boundary."""
 
-import importlib
 import json
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, NumberObject
 
+from odfa11y.application.native import NativeTools
 from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
@@ -75,7 +76,7 @@ def test_supported_flate_predictors_remain_inspectable(tmp_path: Path, predictor
 
 
 def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     before = source.read_bytes()
@@ -98,16 +99,11 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
         destination.write_bytes((bad if calls <= 2 else good).read_bytes())
         return destination
 
-    runner = importlib.import_module("odfa11y.run.engine")
-    monkeypatch.setattr(runner, "find_soffice", lambda _: "synthetic-exporter")
-    monkeypatch.setattr(
-        runner,
-        "identify_soffice",
-        lambda _: ToolIdentity("LibreOffice", "26.8.0.3"),
-    )
+    native_tools = replace(native_tools, locate=lambda _: "synthetic-exporter")
+    native_tools = replace(native_tools, identify=lambda _: ToolIdentity("LibreOffice", "26.8.0.3"))
     monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
-    monkeypatch.setattr(runner, "export_pdfua", export)
-    result = run_batch(manifest, tmp_path / "out", RunSettings())
+    native_tools = replace(native_tools, export=export)
+    result = run_batch(manifest, tmp_path / "out", RunSettings(), native_tools=native_tools)
     assert [item.exit_status for item in result.items] == [2, 0]
     assert result.items[0].failed_stage == "audit-pdf"
     assert result.items[1].status == "completed"

@@ -2,14 +2,15 @@
 """Exercise SARIF through CLI dispatch and real document/PDF boundaries."""
 
 import json
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 from jsonschema import Draft7Validator
 
+from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailedError
-from odfa11y.run import comparison as run_comparison
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
 from tests.report.test_sarif import SCHEMA
@@ -60,7 +61,10 @@ def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
 
 
 def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_deleted(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     candidate = make_minimal_odt(tmp_path / "candidate.odt")
@@ -72,17 +76,20 @@ def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_de
         line = "Unchanged" if input_path == source else "Changed"
         return text_pdf(destination, [[line]])
 
-    monkeypatch.setattr(run_comparison, "export_pdfua", exporter)
+    native_tools = replace(native_tools, export=exporter)
     assert (
-        main([
-            "compare",
-            str(source),
-            str(candidate),
-            "--format",
-            "sarif",
-            "--source-root",
-            str(tmp_path),
-        ])
+        main(
+            [
+                "compare",
+                str(source),
+                str(candidate),
+                "--format",
+                "sarif",
+                "--source-root",
+                str(tmp_path),
+            ],
+            native_tools=native_tools,
+        )
         == 2
     )
     output = capsys.readouterr()
@@ -217,6 +224,7 @@ def test_sarif_preserves_strict_warning_exit_status(
 
 @pytest.mark.parametrize("outside", [False, True])
 def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
+    native_tools: NativeTools,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -231,7 +239,7 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
         calls.append(input_path)
         return text_pdf(destination, [["Actual comparison"]])
 
-    monkeypatch.setattr(run_comparison, "export_pdfua", exporter)
+    native_tools = replace(native_tools, export=exporter)
     diff = tmp_path / "diff"
     extra: list[str] = []
     if outside:
@@ -239,16 +247,19 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
         root.mkdir()
         extra = ["--source-root", str(root)]
     assert (
-        main([
-            "compare",
-            str(source),
-            str(candidate),
-            "--format",
-            "sarif",
-            "--diff-dir",
-            str(diff),
-            *extra,
-        ])
+        main(
+            [
+                "compare",
+                str(source),
+                str(candidate),
+                "--format",
+                "sarif",
+                "--diff-dir",
+                str(diff),
+                *extra,
+            ],
+            native_tools=native_tools,
+        )
         == 4
     )
     assert not calls
@@ -257,7 +268,10 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
 
 
 def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     candidate = make_minimal_odt(tmp_path / "candidate.odt")
@@ -267,12 +281,18 @@ def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
         message = "Conversion failed"
         raise ToolFailedError(message, details=diagnostic)
 
-    monkeypatch.setattr(run_comparison, "export_pdfua", exporter)
+    native_tools = replace(native_tools, export=exporter)
     arguments = ["compare", str(source), str(candidate)]
-    assert main([*arguments, "--format", "sarif", "--source-root", str(tmp_path)]) == 3
+    assert (
+        main(
+            [*arguments, "--format", "sarif", "--source-root", str(tmp_path)],
+            native_tools=native_tools,
+        )
+        == 3
+    )
     sarif_output = capsys.readouterr()
     assert not sarif_output.out
     assert "unpublishable" not in sarif_output.err
     assert str(tmp_path) not in sarif_output.err
-    assert main(arguments) == 3
+    assert main(arguments, native_tools=native_tools) == 3
     assert diagnostic in capsys.readouterr().err

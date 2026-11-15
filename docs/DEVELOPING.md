@@ -24,22 +24,16 @@ Dependabot version proposals are not a release-version authority.
 Run on stable inputs, using focused checks while iterating:
 
 ```sh
-uv run --no-sync ruff check .
-uv run --no-sync ruff format --check .
-uv run --no-sync python -m tools.check types
-uv run --no-sync tach check
-uv run --no-sync tach check-external
-uv run --no-sync python -m tools.generate_reference --check
-uv run --no-sync pytest -m 'not integration' --cov
-ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync pytest -m integration -n 2 --max-worker-restart=0 --cov --cov-append
-uv build
+uv run --no-sync python -m tools.check lint types boundaries reference unit
+ODFA11Y_REQUIRE_INTEGRATION=1 uv run --no-sync python -m tools.check integration
+uv run --no-sync python -m tools.check build
 ```
 
-Run unit then native coverage sequentially; they share `.coverage`. Keep unit tests
-sequential for hostile-input timing controls. Native workers have separate inputs,
-outputs and LibreOffice profiles; worker crashes fail without retry. Required native mode
-turns absent tools into failures. Record versions, failures/fixes, skipped work and unavailable
-platforms. Branch coverage must remain at least 88%; inspect `coverage json` totals.
+The unit run uses `pytest -n auto` and alone enforces 88% branch coverage. Hostile-input
+controls assert work limits. Native tests live under `tests/integration/`; their workers
+have separate inputs, outputs and LibreOffice profiles, and crashes fail without retry.
+Required native mode turns absent tools into failures. Record failures, fixes, skipped
+work and unavailable platforms.
 
 Ruff respects `.gitignore`; `[tool.ty.src]` owns type-checker inputs.
 `python -m tools.check` owns the lint, types, boundaries, reference, unit, integration,
@@ -81,7 +75,9 @@ is not an accessible publication. Fixtures/hashes alone do not establish semanti
   [focused reproductions](../tests/reproductions/README.md): use disposable profiles for trusted
   authoring macros. Inspection itself executes no macros, SQL or connections.
 
-Shared fixtures live under `tests/fixtures`; tests follow owner packages and `tests/native`.
+Shared fixtures live under `tests/fixtures`; unit tests follow owner packages.
+Native application tests are selected by their `tests/integration/` directory.
+Record contract tests call the explicit `assert_record_schema` helper.
 Eight-family conformance covers the shared contracts.
 Hypothesis uses the deterministic required profile; `--hypothesis-profile=smoke` is for
 iteration only. Successful pytest scratch is cleaned best-effort; failed/abrupt runs can

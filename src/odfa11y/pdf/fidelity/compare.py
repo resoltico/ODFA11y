@@ -2,6 +2,7 @@
 """Compare two PDFs: pages, text, links and rendered pixels."""
 
 import sys
+from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
 
@@ -21,12 +22,18 @@ POINTS_PER_INCH = 72
 RATIO_PRECISION = 6
 
 
+type Rasterizer = Callable[
+    [tuple[Path, Path], PdfSnapshot, FidelityPolicy, Report, Path | None], list[float]
+]
+
+
 def compare_pdfs(
     source: str | Path,
     candidate: str | Path,
     policy: FidelityPolicy,
     *,
     diff_dir: str | Path | None = None,
+    render: Rasterizer | None = None,
 ) -> Report:
     """Compare a candidate PDF with its source PDF under a fidelity policy.
 
@@ -52,7 +59,12 @@ def compare_pdfs(
     _compare_links(before, after, report)
     if policy.pagination == "same" and _compare_pages(before, after, report):
         _compare_raster(
-            (source, candidate), before, policy, report, Path(diff_dir) if diff_dir else None
+            (source, candidate),
+            before,
+            policy,
+            report,
+            Path(diff_dir) if diff_dir else None,
+            render=render,
         )
     return report
 
@@ -111,6 +123,8 @@ def _compare_raster(
     policy: FidelityPolicy,
     report: Report,
     diff_dir: Path | None,
+    *,
+    render: Rasterizer | None,
 ) -> None:
     if policy.dpi > sys.float_info.max:
         msg = "DPI exceeds the numeric range supported by PDF rendering"
@@ -125,7 +139,7 @@ def _compare_raster(
         report.add(rules.FID007, details={"pages": oversized, "pixel_limit": MAX_RENDER_PIXELS})
         return
     try:
-        ratios = _render_ratios(paths, snapshot, policy, report, diff_dir)
+        ratios = (render or render_pages)(paths, snapshot, policy, report, diff_dir)
     except pypdfium2.PdfiumError as exc:
         msg = f"Cannot render PDF for comparison: {exc}"
         raise ToolFailedError(msg) from exc
@@ -146,7 +160,7 @@ def _difference(
     return moved.histogram()[255] / ink, moved.convert("L")
 
 
-def _render_ratios(
+def render_pages(
     paths: tuple[Path, Path],
     snapshot: PdfSnapshot,
     policy: FidelityPolicy,

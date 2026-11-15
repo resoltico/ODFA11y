@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Core document inspection preserves content dispatch and incremental audit reports."""
 
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.native import NativeTools
 from odfa11y.errors import ToolFailedError
 from odfa11y.report import FactKeys
-from odfa11y.run import inspection
 from odfa11y.run.inspection import audit_document
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.writer import make_minimal_odt
@@ -48,6 +49,7 @@ def test_core_validator_path_implies_validation_and_missing_tool_is_warning(
 
 
 def test_core_retains_completed_pdf_report_when_validator_execution_fails(
+    native_tools: NativeTools,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -58,10 +60,10 @@ def test_core_retains_completed_pdf_report_when_validator_execution_fails(
         message = "native validator failed"
         raise ToolFailedError(message)
 
-    monkeypatch.setattr(inspection, "check_pdfua", failed)
+    native_tools = replace(native_tools, validate=failed)
     reports = []
     with pytest.raises(ToolFailedError, match="validator failed"):
-        reports.extend(audit_document(source, verapdf=True))
+        reports.extend(audit_document(source, verapdf=True, native_tools=native_tools))
     assert len(reports) == 1
     assert reports[0].kind == "pdf"
     assert reports[0].sources == (source,)

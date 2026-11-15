@@ -7,12 +7,12 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 lazy from collections.abc import Callable
 
+from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.capture import capture_source
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory, sha256_file
 from odfa11y.families import GENERIC, adapter_for
-from odfa11y.native.export import export_pdfua, find_soffice, identify_soffice
 from odfa11y.native.probes import ProbeCache
 from odfa11y.odf import OdfDocument, Use, declared_version
 from odfa11y.pdf import audit_pdfua, check_pdfua, list_fonts
@@ -45,6 +45,7 @@ class _Run:
     captured: Path | None = None
     adapter: FamilyAdapter = GENERIC
     executable: str | None = None
+    native_tools: NativeTools = field(default_factory=NativeTools)
 
     # Stage methods raise OdfA11yError or OSError on execution failure; execute turns
     # either into a failed stage, so no failure can prevent the evidence from being written.
@@ -149,6 +150,8 @@ class _Run:
             subject="remediated.pdf",
             executable=self.options.tools.verapdf,
             timeout=self.options.tools.timeout,
+            validator=self.native_tools.validate,
+            locate=self.native_tools.validator,
         )
         if result is None:
             required = self.record.profile.verapdf_required
@@ -171,6 +174,7 @@ class _Run:
             self.work / "remediated.pdf",
             self.plan.fidelity,
             diff_dir=self.work / StageName.FIDELITY,
+            render=self.native_tools.render,
         )
         report.subject = "remediated.pdf vs source.pdf"
         return self._gate(StageName.FIDELITY, report)
@@ -208,8 +212,8 @@ class _Run:
             captured_identity=True,
         )
         if self.executable is None:
-            self.executable = find_soffice(self.options.tools.soffice)
-            self.record.toolchain.libreoffice = identify_soffice(self.executable)
+            self.executable = self.native_tools.locate(self.options.tools.soffice)
+            self.record.toolchain.libreoffice = self.native_tools.identify(self.executable)
             for probe in self.adapter.probes:
                 if not probe.relevant(self.adapter.family, self.plan.decisions):
                     continue
@@ -219,11 +223,13 @@ class _Run:
                     replace(settings, soffice=self.executable),
                     verapdf_path=self.options.tools.verapdf,
                     observer=self.options.on_progress,
+                    export=self.native_tools.export,
+                    validate=self.native_tools.validate,
                 )
                 self.record.toolchain.capabilities += (execution.result,)
                 if execution.error is not None:
                     raise execution.error
-        export_pdfua(
+        self.native_tools.export(
             document,
             self.work / pdf_name,
             replace(settings, soffice=self.executable),
@@ -239,6 +245,7 @@ def execute(
     *,
     rebind: bool = False,
     probe_cache: ProbeCache | None = None,
+    native_tools: NativeTools | None = None,
 ) -> RunRecord:
     """Identify, audit, remediate, export, validate and compare, then publish evidence.
 
@@ -280,6 +287,7 @@ def execute(
             lifetime,
             rebind=rebind,
             probe_cache=probe_cache or ProbeCache(),
+            native_tools=native_tools or NativeTools(),
         )
         steps: dict[StageName, Callable[[], StageResult]] = {
             StageName.IDENTIFY_SOURCE: run.identify_source,

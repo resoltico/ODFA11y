@@ -31,6 +31,7 @@ def pipeline_command(args: argparse.Namespace) -> int:
         profile=args.profile,
         observer=progress_callback(args.format),
         rebind=args.rebind,
+        native_tools=args.native_tools,
     )
     if args.format == "json":
         sys.stdout.write(json.dumps(record.as_dict(), indent=2, sort_keys=True) + "\n")

@@ -45,7 +45,13 @@ def find_soffice(requested: str | Path | None = None) -> str:
 
     """
     executable = find_executable(requested, ("soffice", "libreoffice"))
-    version = identify_soffice(executable).version
+    require_supported_version(identify_soffice(executable))
+    return executable
+
+
+def require_supported_version(identity: ToolIdentity) -> None:
+    """Refuse LibreOffice versions below the supported minimum."""
+    version = identity.version
     minimum = ".".join(str(part) for part in MINIMUM_LIBREOFFICE_VERSION)
     if (
         version == "unknown"
@@ -53,7 +59,6 @@ def find_soffice(requested: str | Path | None = None) -> str:
     ):
         msg = f"LibreOffice {version} is unsupported; install LibreOffice {minimum} or newer."
         raise ToolFailedError(msg)
-    return executable
 
 
 def identify_soffice(executable: str) -> ToolIdentity:

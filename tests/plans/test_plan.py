@@ -12,6 +12,7 @@ from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.plans import load_plan
 from odfa11y.remediate.compile import compile_operations
 from tests.fixtures.paths import REPOSITORY
+from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
 
 HEADER = '[plan]\nformat = 1\ngenerator = "0.8.0"\nsource.sha256 = "' + "a" * 64 + '"\n'
@@ -64,6 +65,7 @@ def write(tmp_path: Path, text: str) -> Path:
 
 def test_full_plan_compiles_in_canonical_order(tmp_path: Path) -> None:
     plan = load_plan(write(tmp_path, FULL))
+    assert_record_schema(plan)
     document = OdfDocument.open(make_minimal_odt(tmp_path / "source.odt"))
     operations = compile_operations(document, plan)
     assert [item.name for item in operations] == [

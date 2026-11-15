@@ -9,6 +9,7 @@ lazy from collections.abc import Callable
 import odfa11y as api
 from odfa11y import (
     ExitStatus,
+    NativeTools,
     OdfA11yError,
     PlanError,
     failure_status,
@@ -24,7 +25,7 @@ from .pipeline import pipeline_command
 from .progress import progress_callback
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, native_tools: NativeTools | None = None) -> int:
     """Run a command and return its documented exit status.
 
     Returns
@@ -39,6 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help(file=sys.stderr)
         parser.exit(ExitStatus.USAGE_ERROR)
     args = parser.parse_args(arguments)
+    args.native_tools = native_tools
     handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "audit": audit_command,
         "batch": batch_command,
@@ -124,7 +126,11 @@ def _remediate(args: argparse.Namespace) -> int:
 
 def _export(args: argparse.Namespace) -> int:
     result = api.export(
-        args.source, args.destination, tools=_tools(args), observer=progress_callback("text")
+        args.source,
+        args.destination,
+        tools=_tools(args),
+        observer=progress_callback("text"),
+        native_tools=args.native_tools,
     )
     output = result.output
     print(f"Wrote PDF: {terminal_text(output)}")  # noqa: T201  CLI output is the command interface.
@@ -141,6 +147,7 @@ def _compare(args: argparse.Namespace) -> int:
         tools=_tools(args),
         strict=args.strict,
         observer=progress_callback(args.format),
+        native_tools=args.native_tools,
     )
     command_gate(args, result.exit_status, scope="fidelity checks under the selected policy.")
     print(render_reports([result.report], output_format=args.format, source_root=args.source_root))  # noqa: T201  CLI output.
@@ -170,7 +177,9 @@ def _check_evidence(args: argparse.Namespace) -> int:
 
 
 def _doctor(args: argparse.Namespace) -> int:
-    info = api.doctor(tools=_tools(args), observer=progress_callback(args.format))
+    info = api.doctor(
+        tools=_tools(args), observer=progress_callback(args.format), native_tools=args.native_tools
+    )
     error = info.error
     status = info.exit_status
     if error:

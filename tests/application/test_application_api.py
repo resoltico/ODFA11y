@@ -14,6 +14,7 @@ from odfa11y.records import DoctorRecord, Toolchain
 from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.pdf import text_pdf
+from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -40,7 +41,7 @@ def test_multi_input_audit_retains_success_after_execution_failure(tmp_path: Pat
     assert result.inputs[1].error is None
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
     assert len(result.reports) == 1
-    serialized = result.as_dict()
+    serialized = assert_record_schema(result)
     assert serialized["exit_status"] == 3
     inputs = serialized["inputs"]
     assert isinstance(inputs, list)

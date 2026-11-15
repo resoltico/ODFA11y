@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MPL-2.0
+"""The explicit native operations selected by an application use case."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
+
+from odfa11y.native.export import ExportSettings, export_pdfua, find_soffice, identify_soffice
+from odfa11y.native.process import ToolIdentity
+from odfa11y.native.process import identify as identify_tool
+from odfa11y.pdf.fidelity.compare import Rasterizer, render_pages
+from odfa11y.pdf.validate import PdfValidator, find_verapdf, validate_pdfua
+
+
+class ValidatorIdentity(Protocol):
+    """Identify a selected veraPDF executable."""
+
+    def __call__(self, name: str, executable: str, arguments: tuple[str, ...], /) -> ToolIdentity:
+        """Return the identity measured from the executable."""
+        ...
+
+
+type Exporter = Callable[[Path, Path, ExportSettings], Path]
+type Locator = Callable[[str | Path | None], str]
+
+
+@dataclass(frozen=True, slots=True)
+class NativeTools:
+    """Inject native behavior without replacing module attributes."""
+
+    export: Exporter = export_pdfua
+    validate: PdfValidator = validate_pdfua
+    identify: Callable[[str], ToolIdentity] = identify_soffice
+    render: Rasterizer = render_pages
+    locate: Locator = find_soffice
+    validator: Locator = find_verapdf
+    identify_validator: ValidatorIdentity = identify_tool

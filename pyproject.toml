@@ -91,7 +91,6 @@ testpaths = ["tests"]
 # Remove successful tmp_path outputs; retain pytest's three-session failed-call history.
 tmp_path_retention_policy = "failed"
 markers = [
-  "integration: tests that invoke an external application such as LibreOffice",
 ]
 
 [tool.coverage.run]

@@ -3,10 +3,11 @@
 
 lazy from pathlib import Path
 
+from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.errors import UnsupportedKindError
 from odfa11y.families import adapter_for
-from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import validate_timeout
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.odf.export_context import require_native_context
@@ -52,6 +53,7 @@ def export_document(
     tools: Tools | None = None,
     *,
     on_progress: ProgressObserver | None = None,
+    native_tools: NativeTools | None = None,
 ) -> Path:
     """Export the original document after family selection and native preflight.
 
@@ -64,11 +66,12 @@ def export_document(
         The atomically published PDF path.
 
     """
+    native_tools = native_tools or NativeTools()
     tools = tools or Tools()
     settings = native_export_settings(OdfDocument.open(source), tools.soffice, tools.timeout)
     if on_progress is not None:
         on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.RUNNING))
-    result = export_pdfua(source, destination, settings)
+    result = native_tools.export(Path(source), Path(destination), settings)
     if on_progress is not None:
         on_progress(ProgressEvent(StepName.EXPORT_PDF, StepState.PASSED))
     return result

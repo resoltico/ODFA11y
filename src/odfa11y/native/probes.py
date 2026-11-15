@@ -9,6 +9,7 @@ lazy from collections.abc import Callable, Sequence
 
 from odfa11y.errors import OdfA11yError, ToolFailedError
 from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.pdf.validate import PdfValidator
 from odfa11y.progress import ProgressEvent, StepName, StepState
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.native.process import ToolIdentity
@@ -16,7 +17,7 @@ lazy from odfa11y.odf import Family
 lazy from odfa11y.progress import ProgressObserver
 
 SourceWriter = Callable[[Path], Path]
-Evaluation = Callable[[Path, str | Path | None, float], bool]
+Evaluation = Callable[[Path, str | Path | None, float, PdfValidator | None], bool]
 Exporter = Callable[[Path, Path, ExportSettings], Path]
 
 
@@ -100,6 +101,7 @@ class ProbeCache:
         verapdf_path: str | Path | None = None,
         observer: ProgressObserver | None = None,
         export: Exporter | None = None,
+        validate: PdfValidator | None = None,
     ) -> ProbeExecution:
         """Export the synthetic case once per executable identity and probe.
 
@@ -116,7 +118,9 @@ class ProbeCache:
         if observer:
             observer(ProgressEvent(StepName.PROBE_CAPABILITIES, StepState.RUNNING))
         try:
-            supported = _conduct(probe, settings, verapdf_path, export or export_pdfua)
+            supported = _conduct(
+                probe, settings, verapdf_path, export or export_pdfua, validate=validate
+            )
         except OSError as exc:
             error = ToolFailedError("Capability probe I/O failed", details=str(exc))
             return self._not_tested(probe, identity, error, observer)
@@ -151,7 +155,12 @@ class ProbeCache:
 
 
 def _conduct(
-    probe: CapabilityProbe, settings: ExportSettings, verapdf: str | Path | None, export: Exporter
+    probe: CapabilityProbe,
+    settings: ExportSettings,
+    verapdf: str | Path | None,
+    export: Exporter,
+    *,
+    validate: PdfValidator | None,
 ) -> bool:
     with tempfile.TemporaryDirectory(prefix=f"odfa11y-probe-{probe.id}-") as directory:
         work = Path(directory)
@@ -160,4 +169,4 @@ def _conduct(
             probe.export_filter, settings.soffice, settings.timeout, work / "profile"
         )
         pdf = export(source, work / "probe.pdf", selected)
-        return probe.evaluate(pdf, verapdf, float(settings.timeout))
+        return probe.evaluate(pdf, verapdf, float(settings.timeout), validate)

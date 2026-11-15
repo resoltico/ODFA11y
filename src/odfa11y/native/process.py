@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -237,7 +238,9 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
     return ToolIdentity(name, found.group(0) if found else "unknown")
 
 
-def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
+def identify_by_file_version(
+    name: str, executable: str, *, runner: Callable[..., ToolRun] = run_bounded
+) -> ToolIdentity:
     """Read an executable's product version from its file metadata, without running it.
 
     LibreOffice's Windows ``--version`` starts a session without returning.
@@ -251,7 +254,7 @@ def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
     script = f"(Get-Item -LiteralPath '{quoted}').VersionInfo.ProductVersion"
     command = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
     try:
-        completed = run_bounded(command, timeout=IDENTIFY_TIMEOUT_SECONDS)
+        completed = runner(command, timeout=IDENTIFY_TIMEOUT_SECONDS)
     except OSError, subprocess.TimeoutExpired:
         return ToolIdentity(name, "unknown")
     found = VERSION_RE.search(completed.stdout)
@@ -259,7 +262,11 @@ def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
 
 
 def identify_running_or_by_file(
-    name: str, executable: str, version_args: tuple[str, ...]
+    name: str,
+    executable: str,
+    version_args: tuple[str, ...],
+    *,
+    runner: Callable[..., ToolRun] = run_bounded,
 ) -> ToolIdentity:
     """Identify via runtime version, or Windows file metadata.
 
@@ -269,7 +276,7 @@ def identify_running_or_by_file(
         The reported version, or ``unknown`` on failure.
     """
     if sys.platform == "win32":
-        return identify_by_file_version(name, executable)
+        return identify_by_file_version(name, executable, runner=runner)
     return identify(name, executable, version_args)
 
 

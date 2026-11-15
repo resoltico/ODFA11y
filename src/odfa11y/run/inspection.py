@@ -4,6 +4,7 @@
 from pathlib import Path
 lazy from collections.abc import Iterator
 
+from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
 from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
 from odfa11y.native.process import validate_timeout
@@ -22,6 +23,7 @@ def audit_document(
     verapdf_path: str | Path | None = None,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     on_progress: ProgressObserver | None = None,
+    native_tools: NativeTools | None = None,
 ) -> Iterator[Report]:
     """Inspect a regular document by content, then optionally validate a PDF.
 
@@ -36,6 +38,7 @@ def audit_document(
         The ODF or built-in PDF report, followed by a requested veraPDF report for PDFs.
 
     """
+    native_tools = native_tools or NativeTools()
     validate_timeout(timeout)
     source = Path(source)
     if on_progress is not None:
@@ -48,6 +51,11 @@ def audit_document(
         if on_progress is not None:
             on_progress(ProgressEvent(StepName.VALIDATE_PDF, StepState.RUNNING))
         report, _result = check_pdfua(
-            source, subject=str(source), executable=verapdf_path, timeout=timeout
+            source,
+            subject=str(source),
+            executable=verapdf_path,
+            timeout=timeout,
+            validator=native_tools.validate,
+            locate=native_tools.validator,
         )
         yield report

@@ -1,14 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
 """Fidelity comparison: each kind of difference fails with the right rule; equal renders pass."""
 
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.native import NativeTools
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
-from odfa11y.pdf.fidelity import compare as comparison
 from odfa11y.report import FactKeys
+from tests.fixtures.native import refusing
 from tests.fixtures.pdf import text_pdf
 lazy from odfa11y.report import Report
 
@@ -140,14 +142,20 @@ def test_unreadable_pdfs_raise_a_tool_error(tmp_path: Path) -> None:
 
 
 def test_enormous_dpi_is_controlled_before_float_conversion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pdf = text_pdf(tmp_path / "dpi.pdf", [LINES])
     before = pdf.read_bytes()
     rendered = []
-    monkeypatch.setattr(comparison, "_render_ratios", lambda *args: rendered.append(args))
+    native_tools = replace(native_tools, render=refusing(rendered))
     with pytest.raises(ToolFailedError, match="DPI exceeds the numeric range"):
-        compare_pdfs(pdf, pdf, FidelityPolicy(dpi=10**400), diff_dir=tmp_path / "diff")
+        compare_pdfs(
+            pdf,
+            pdf,
+            FidelityPolicy(dpi=10**400),
+            diff_dir=tmp_path / "diff",
+            render=native_tools.render,
+        )
     assert not rendered
     assert not (tmp_path / "diff").exists()
     assert pdf.read_bytes() == before

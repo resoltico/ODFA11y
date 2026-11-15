@@ -109,7 +109,7 @@ def test_tag_and_manual_release_runs_cannot_restore_go_analysis_caches() -> None
 def test_parallel_native_tests_still_require_tools_and_reject_worker_crashes() -> None:
     integration = job_block("integration")
     assert 'ODFA11Y_REQUIRE_INTEGRATION: "1"' in integration
-    assert "pytest -m integration -n 2 --max-worker-restart=0" in integration
+    assert "pytest tests/integration -n 2 --max-worker-restart=0" in integration
     assert "os: [ubuntu-latest, macos-latest, windows-latest]" in integration
 
 
@@ -178,5 +178,5 @@ def test_contributor_and_installed_checks_run_from_the_extracted_source_archive(
 def test_extracted_checks_rebuild_and_inspect_archives_after_property_test_caches_exist() -> None:
     flow = job_block("test").split("- name: Verify extracted source archive contributor flow", 1)[1]
     flow = flow.split("- name: Verify installed wheel", 1)[0]
-    assert flow.index("pytest -m 'not integration'") < flow.index("uv build")
+    assert flow.index("pytest --ignore=tests/integration -n auto") < flow.index("uv build")
     assert flow.index("uv build") < flow.index('tools.check_release "$tag" dist')

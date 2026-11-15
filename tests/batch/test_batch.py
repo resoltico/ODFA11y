@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from odfa11y.application.native import NativeTools
 from odfa11y.batch import load_manifest, run_batch
 from odfa11y.batch.batch_file import preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
@@ -18,6 +19,7 @@ from odfa11y.run.context import RunSettings
 from odfa11y.run.profiles import profile_named
 from odfa11y.status import BatchStatus, ExitStatus
 from tests.fixtures.plans import plan_header
+from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.native.probes import ProbeCache
 lazy from odfa11y.plans import Plan
@@ -61,6 +63,7 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
         ],
     )
     record = run_batch(manifest, tmp_path / "out", RunSettings(profile=profile_named("source")))
+    assert_record_schema(record)
     assert record.status == "failed"
     assert record.exit_status == 3
     assert [item.exit_status for item in record.items] == [4, 3, 2, 0]
@@ -179,11 +182,20 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
         *,
         rebind: bool = False,
         probe_cache: ProbeCache | None = None,
+        native_tools: NativeTools | None = None,
     ) -> RunRecord:
         if str(output_dir).endswith("broken"):
             msg = "PRIVATE /private/host/path"
             raise OSError(msg)
-        return original(source, plan, output_dir, options, rebind=rebind, probe_cache=probe_cache)
+        return original(
+            source,
+            plan,
+            output_dir,
+            options,
+            rebind=rebind,
+            probe_cache=probe_cache,
+            native_tools=native_tools,
+        )
 
     monkeypatch.setattr(runner, "execute", failing_pipeline)
     record = run_batch(manifest, tmp_path / "out", RunSettings(profile=profile_named("source")))

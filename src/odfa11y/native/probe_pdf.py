@@ -11,6 +11,7 @@ from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
 from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
+from odfa11y.pdf.validate import PdfValidator
 from odfa11y.report import FactKeys, exit_status
 lazy from odfa11y.report import Report
 
@@ -27,7 +28,12 @@ def _inspect(pdf: Path) -> Report:
 
 
 def link_descriptions(
-    pdf: Path, _validator: str | Path | None, _timeout: float, *, expected: str
+    pdf: Path,
+    _validator: str | Path | None,
+    _timeout: float,
+    _validate: PdfValidator | None = None,
+    *,
+    expected: str,
 ) -> bool:
     """Require tagged link structure and the independently authored purpose string.
 
@@ -107,7 +113,9 @@ def _images(
     return total, decorated
 
 
-def decorative_role(pdf: Path, _validator: str | Path | None, _timeout: float) -> bool:
+def decorative_role(
+    pdf: Path, _validator: str | Path | None, _timeout: float, _validate: PdfValidator | None = None
+) -> bool:
     """Require two painted images with only the decorative peer marked as an artifact.
 
     Returns
@@ -133,7 +141,9 @@ def decorative_role(pdf: Path, _validator: str | Path | None, _timeout: float) -
     )
 
 
-def writer_header_columns(pdf: Path, _validator: str | Path | None, _timeout: float) -> bool:
+def writer_header_columns(
+    pdf: Path, _validator: str | Path | None, _timeout: float, _validate: PdfValidator | None = None
+) -> bool:
     """Require semantic header cells for both rows of the column-header case.
 
     Returns
@@ -146,7 +156,9 @@ def writer_header_columns(pdf: Path, _validator: str | Path | None, _timeout: fl
     return tags.get("Table", 0) >= 1 and tags.get("TH", 0) >= PROBE_HEADERS
 
 
-def math_tagging(pdf: Path, _validator: str | Path | None, _timeout: float) -> bool:
+def math_tagging(
+    pdf: Path, _validator: str | Path | None, _timeout: float, _validate: PdfValidator | None = None
+) -> bool:
     """Require tagged, reconciled content in the expression-only Math case.
 
     Returns
@@ -159,7 +171,9 @@ def math_tagging(pdf: Path, _validator: str | Path | None, _timeout: float) -> b
     return report.passed and bool(report.facts.get(FactKeys.PDF_STRUCTURE_TAGS))
 
 
-def calc_pdfua(pdf: Path, validator: str | Path | None, timeout: float) -> bool:
+def calc_pdfua(
+    pdf: Path, validator: str | Path | None, timeout: float, validate: PdfValidator | None = None
+) -> bool:
     """Check the small semantic Calc table with PDF inspection and veraPDF.
 
     Returns
@@ -172,5 +186,5 @@ def calc_pdfua(pdf: Path, validator: str | Path | None, timeout: float) -> bool:
     return (
         bool((report.facts.get(FactKeys.PDF_STRUCTURE_TAGS) or {}).get("Table"))
         and exit_status([report], strict=True) == 0
-        and validate_pdfua(pdf, executable=validator, timeout=timeout).compliant
+        and (validate or validate_pdfua)(pdf, executable=validator, timeout=timeout).compliant
     )

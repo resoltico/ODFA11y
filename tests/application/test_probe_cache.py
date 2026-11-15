@@ -7,6 +7,7 @@ lazy from pathlib import Path
 
 lazy import pytest
 
+from odfa11y.application.native import NativeTools
 from odfa11y.batch import run_batch
 from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.errors import ToolFailedError
@@ -15,7 +16,6 @@ from odfa11y.native.export import ExportSettings
 from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument, PackageStorage
-from odfa11y.run import engine as run_engine
 from odfa11y.run.context import RunSettings
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.pdf import tagged_writer
@@ -89,7 +89,7 @@ def test_indeterminate_failure_is_not_reused_as_a_conclusive_verdict() -> None:
 
 
 def test_batch_of_text_items_runs_relevant_link_probe_once(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     storage = PackageStorage(source)
@@ -113,30 +113,33 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
     manifest = manifest_file(
         tmp_path, [(name, "source.odt", plan.name) for name in ["one", "two", "three"]]
     )
-    monkeypatch.setattr(run_engine, "find_soffice", lambda _: "controlled-soffice")
-    monkeypatch.setattr(
-        run_engine,
-        "identify_soffice",
-        lambda _: ToolIdentity("LibreOffice", "26.8.1.1"),
-    )
+    native_tools = replace(native_tools, locate=lambda _: "controlled-soffice")
+    native_tools = replace(native_tools, identify=lambda _: ToolIdentity("LibreOffice", "26.8.1.1"))
     control = fake_export(ProbeId.LINK_DESCRIPTIONS, supported=True)
 
     def document_export(_source: Path, destination: Path, _settings: ExportSettings) -> Path:
         tagged_writer(["H1", "P"]).write(destination)
         return destination
 
-    monkeypatch.setattr(run_engine, "export_pdfua", document_export)
+    native_tools = replace(native_tools, export=document_export)
     calls = []
 
     def probe_export(source: Path, destination: Path, settings: ExportSettings) -> Path:
         calls.append(source.name)
         return control(source, destination, settings)
 
-    monkeypatch.setattr("odfa11y.native.probes.export_pdfua", probe_export)
-    result = run_batch(manifest, tmp_path / "out", RunSettings())
+    def export(source: Path, destination: Path, settings: ExportSettings) -> Path:
+        if source.name == "link.odt":
+            return probe_export(source, destination, settings)
+        return document_export(source, destination, settings)
+
+    native_tools = replace(native_tools, export=export)
+    result = run_batch(manifest, tmp_path / "out", RunSettings(), native_tools=native_tools)
     assert result.exit_status == 0, result.as_dict()
     assert calls == ["link.odt"]
-    repeated_batch = run_batch(manifest, tmp_path / "second-out", RunSettings())
+    repeated_batch = run_batch(
+        manifest, tmp_path / "second-out", RunSettings(), native_tools=native_tools
+    )
     assert repeated_batch.exit_status == 0, repeated_batch.as_dict()
     assert calls == ["link.odt", "link.odt"]
     for name in ["one", "two", "three"]:

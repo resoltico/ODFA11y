@@ -25,6 +25,7 @@ from odfa11y.application import (
 from odfa11y.application import (
     run as _run,
 )
+from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.audit import plan_blockers
 from odfa11y.batch import BatchRecord
@@ -59,6 +60,7 @@ __all__ = [
     "ExitStatus",
     "ExportResult",
     "Location",
+    "NativeTools",
     "OdfA11yError",
     "OpenDecision",
     "OutputError",

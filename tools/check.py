@@ -27,10 +27,10 @@ def commands(stage: str) -> tuple[list[str], ...]:
         case "reference":
             return ([python, "-m", "tools.generate_reference", "--check"],)
         case "unit":
-            return ([python, "-m", "pytest", "-m", "not integration", "--cov"],)
+            return ([python, "-m", "pytest", "--ignore=tests/integration", "-n", "auto", "--cov"],)
         case "integration":
             return (
-                [python, "-m", "pytest", "-m", "integration", "-n", "2", "--max-worker-restart=0"],
+                [python, "-m", "pytest", "tests/integration", "-n", "2", "--max-worker-restart=0"],
             )
         case "build":
             return (["uv", "build"],)

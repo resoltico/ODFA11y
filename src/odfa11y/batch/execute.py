@@ -3,6 +3,7 @@
 
 from pathlib import Path
 
+from odfa11y.application.native import NativeTools
 from odfa11y.batch.batch_file import load_manifest, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OdfA11yError
@@ -28,6 +29,7 @@ def run_batch(
     *,
     on_progress: ProgressObserver | None = None,
     rebind: bool = False,
+    native_tools: NativeTools | None = None,
 ) -> BatchRecord:
     """Run every item, keeping completed evidence through ordinary failures and interruption.
 
@@ -50,7 +52,14 @@ def run_batch(
     with termination_interrupt():
         try:
             _run_items(
-                items, record, output, options, on_progress, rebind=rebind, probe_cache=ProbeCache()
+                items,
+                record,
+                output,
+                options,
+                on_progress,
+                rebind=rebind,
+                probe_cache=ProbeCache(),
+                native_tools=native_tools or NativeTools(),
             )
         except KeyboardInterrupt:
             for progress in record.items:
@@ -75,6 +84,7 @@ def _run_items(
     *,
     rebind: bool,
     probe_cache: ProbeCache,
+    native_tools: NativeTools,
 ) -> None:
     for item, progress in zip(items, record.items, strict=True):
         progress.status = BatchStatus.RUNNING
@@ -82,7 +92,13 @@ def _run_items(
         if on_progress is not None:
             on_progress(ProgressEvent(StepName.BATCH_ITEM, StepState.RUNNING))
         _advance_item(
-            item, progress, output / item.id, options, rebind=rebind, probe_cache=probe_cache
+            item,
+            progress,
+            output / item.id,
+            options,
+            rebind=rebind,
+            probe_cache=probe_cache,
+            native_tools=native_tools,
         )
         record.publish(output)
         if on_progress is not None:
@@ -104,9 +120,12 @@ def _advance_item(
     *,
     rebind: bool,
     probe_cache: ProbeCache,
+    native_tools: NativeTools,
 ) -> None:
     try:
-        result = _run_item(item, target, options, rebind=rebind, probe_cache=probe_cache)
+        result = _run_item(
+            item, target, options, rebind=rebind, probe_cache=probe_cache, native_tools=native_tools
+        )
     except (OdfA11yError, OSError) as exc:
         progress.status = BatchStatus.FAILED
         progress.exit_status = failure_status(exc)
@@ -125,13 +144,22 @@ def _run_item(
     *,
     rebind: bool,
     probe_cache: ProbeCache,
+    native_tools: NativeTools,
 ) -> RunRecord:
     try:
         plan = load_plan(item.plan)
     except (OdfA11yError, OSError) as exc:
         return _failure(item, target, options, StageName.LOAD_PLAN, exc)
     try:
-        return execute(item.source, plan, target, options, rebind=rebind, probe_cache=probe_cache)
+        return execute(
+            item.source,
+            plan,
+            target,
+            options,
+            rebind=rebind,
+            probe_cache=probe_cache,
+            native_tools=native_tools,
+        )
     except (OdfA11yError, OSError) as exc:
         return _failure(item, target, options, StageName.PIPELINE, exc)
 

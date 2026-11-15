@@ -2,17 +2,18 @@
 """Protection declarations stop guarded work before content parsing or operation calls."""
 
 import zipfile
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from lxml import etree
 
 import odfa11y.odf
+from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
 from odfa11y.remediate import SetMetadata
-from odfa11y.run import native as run_native
 from odfa11y.run.native import export_document
 from tests.fixtures.operations import execute_operations
 from tests.fixtures.writer import make_minimal_odt
@@ -111,7 +112,11 @@ def encrypted_manifest(storage: PackageStorage, member: str, declaration: str) -
 @pytest.mark.parametrize("member", ["content.xml", "opaque.bin"])
 @pytest.mark.parametrize("declaration", ["encryption-data", "encrypted-key"])
 def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, member: str, declaration: str
+    native_tools: NativeTools,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    member: str,
+    declaration: str,
 ) -> None:
     source = make_minimal_odt(tmp_path / "encrypted.odt")
     storage = PackageStorage(source)
@@ -129,7 +134,7 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
         pytest.fail("guarded operation/native invocation executed for encrypted input")
 
     monkeypatch.setattr(SetMetadata, "apply", forbidden)
-    monkeypatch.setattr(run_native, "export_pdfua", forbidden)
+    native_tools = replace(native_tools, export=forbidden)
     report, template = prepare_plan(source)
     assert [finding.rule_id for finding in report.findings] == ["PKG009"]
     assert template is None
@@ -140,7 +145,7 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
             with pytest.raises(PackageError, match="Protected"):
                 execute_operations(source, destination, operations, dry_run=dry_run)
     with pytest.raises(PackageError, match="encrypted"):
-        export_document(source, tmp_path / "out.pdf")
+        export_document(source, tmp_path / "out.pdf", native_tools=native_tools)
     assert calls == []
     assert source.read_bytes() == original
     assert destination.read_bytes() == b"existing destination"

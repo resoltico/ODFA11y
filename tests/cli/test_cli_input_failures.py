@@ -5,14 +5,16 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import EncodedStreamObject, NameObject, StreamObject
 
+from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
-from odfa11y.run import comparison as run_comparison
 from odfa11y.run.comparison import is_pdf
+from tests.fixtures.native import refusing
 from tests.fixtures.pdf import register, tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
 
@@ -136,12 +138,12 @@ def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_fa
 
 
 def test_compare_preflight_rejects_candidate_before_export(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     calls = []
-    monkeypatch.setattr(run_comparison, "export_pdfua", lambda *args: calls.append(args))
-    assert main(["compare", str(source), str(tmp_path / "missing")]) == 3
+    native_tools = replace(native_tools, export=refusing(calls))
+    assert main(["compare", str(source), str(tmp_path / "missing")], native_tools=native_tools) == 3
     assert not calls
 
 

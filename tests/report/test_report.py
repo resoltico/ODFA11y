@@ -21,6 +21,7 @@ from odfa11y.report import (
 )
 from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
+from tests.fixtures.schema import assert_record_schema
 
 
 def _report() -> Report:
@@ -66,6 +67,7 @@ def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
 
 
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
+    assert_record_schema(_report())
     single = json.loads(render_reports([_report()], output_format="json"))
     assert single["format"] == 6
     assert single["kind"] == "odf"

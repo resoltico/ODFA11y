@@ -2,18 +2,19 @@
 """Ambiguous and unsafe ZIP names never establish a native or editing package view."""
 
 import zipfile
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
 
 from odfa11y import audit
+from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.pdf.fidelity import FidelityPolicy
 from odfa11y.remediate import SetMetadata
 from odfa11y.report import FactKeys
-from odfa11y.run import native as run_native
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.native import export_document
@@ -29,7 +30,11 @@ from tests.odf.test_package_protection import encrypted_manifest
 )
 @pytest.mark.parametrize("order", ["ambiguous-first", "ambiguous-last"])
 def test_duplicate_members_refuse_every_guard_before_kind_or_native_access(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, member: str, order: str
+    native_tools: NativeTools,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    member: str,
+    order: str,
 ) -> None:
     original = make_minimal_odt(tmp_path / "original.odt")
     storage = PackageStorage(original)
@@ -49,11 +54,11 @@ def test_duplicate_members_refuse_every_guard_before_kind_or_native_access(
         archive.writestr(member, pair[0])
         with pytest.warns(UserWarning, match="Duplicate name"):
             archive.writestr(member, pair[1])
-    _assert_guarded_refusal(source, tmp_path, monkeypatch, "PKG006")
+    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG006")
 
 
 def test_unsafe_member_names_refuse_before_kind_or_native_access(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "unsafe.odt")
     storage = PackageStorage(source)
@@ -62,11 +67,15 @@ def test_unsafe_member_names_refuse_before_kind_or_native_access(
         for name in storage.order:
             archive.writestr(name, storage.read(name))
         archive.writestr("../outside.xml", b"unestablished bytes")
-    _assert_guarded_refusal(source, tmp_path, monkeypatch, "PKG007")
+    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG007")
 
 
 def _assert_guarded_refusal(
-    source: Path, directory: Path, monkeypatch: pytest.MonkeyPatch, rule: str
+    native_tools: NativeTools,
+    source: Path,
+    directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    rule: str,
 ) -> None:
     before = source.read_bytes()
     protection = OdfDocument.open(source).protection
@@ -81,7 +90,7 @@ def _assert_guarded_refusal(
 
     monkeypatch.setattr(OdfDocument, "kind", property(forbidden_kind))
     monkeypatch.setattr(OdfDocument, "detection", property(forbidden_kind))
-    monkeypatch.setattr(run_native, "export_pdfua", forbidden_native)
+    native_tools = replace(native_tools, export=forbidden_native)
     report = audit_odf(source)
     assert [finding.rule_id for finding in report.findings] == [rule]
     assert "complete inspection" in report.findings[0].message
@@ -98,7 +107,7 @@ def _assert_guarded_refusal(
     pdf = directory / "existing.pdf"
     pdf.write_bytes(b"existing PDF")
     with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
-        export_document(source, pdf)
+        export_document(source, pdf, native_tools=native_tools)
     style_report = audit(source).reports[0]
     assert style_report.error_count > 0
     assert FactKeys.TEXT_PARAGRAPH_STYLES not in style_report.facts
@@ -107,6 +116,7 @@ def _assert_guarded_refusal(
         reviewed_plan(source, [], FidelityPolicy()),
         directory / "evidence",
         RunSettings(profile=profile_named("source")),
+        native_tools=native_tools,
     )
     assert record.failed_stage == "audit-source"
     assert record.exit_status == 2

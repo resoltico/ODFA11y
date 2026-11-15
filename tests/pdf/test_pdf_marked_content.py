@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Marked-content reconciliation, verified against independently built content streams."""
 
-import time
 from typing import cast
 lazy from pathlib import Path
 
@@ -13,6 +12,7 @@ lazy from pypdf.generic import IndirectObject
 from odfa11y.errors import ToolFailedError
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf import marked_content as marked
+from odfa11y.pdf.reading.content import scan as content_scan
 from odfa11y.pdf.reading.content import scan_content
 from odfa11y.report import FactKeys
 from tests.fixtures.pdf import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
@@ -234,20 +234,22 @@ def test_content_scanning_follows_pdf_syntax(data: bytes, mcids: set[int], unmar
     assert (scan.mcids, scan.unmarked_text_operations) == (mcids, unmarked)
 
 
-def test_hostile_content_scanning_keeps_results_and_meets_the_time_budget() -> None:
+def test_hostile_content_scanning_keeps_results_with_bounded_operands() -> None:
     hostile = [
         (b"/P <</MCID 1>> BDC " * 200_000, {1}),
         (b"(" * 2_000_000, set()),
         (b"<<" * 1_000_000 + b">>", set()),
         (b"/A " * 1_000_000, set()),
     ]
-    started = time.perf_counter()
     for data, expected in hostile:
         scan = scan_content(data, lambda _name: None)
         assert (scan.mcids, scan.unmarked_text_operations) == (expected, 0)
     with pytest.raises(ToolFailedError, match="Inline image has no data delimiter"):
         scan_content(b"BI " * 500_000, lambda _name: None)
-    assert time.perf_counter() - started < 10
+    scanner = content_scan._Scanner(lambda _name: None)
+    for _ in range(content_scan.MAX_OPERANDS * 100):
+        scanner.operand("name", "/A")
+        assert len(scanner.operands) <= content_scan.MAX_OPERANDS
 
 
 def test_page_content_above_the_size_limit_is_reported_as_uninspectable(

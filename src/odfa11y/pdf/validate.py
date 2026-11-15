@@ -2,8 +2,10 @@
 """Run veraPDF and turn its machine-validation report into findings."""
 
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from lxml import etree
 
@@ -41,6 +43,19 @@ class VeraPdfResult:
     compliant: bool
     failures: tuple[FailedRule, ...]
     raw_xml: str
+
+
+class PdfValidator(Protocol):
+    """The independent validator operation accepted by PDF checks."""
+
+    def __call__(
+        self,
+        pdf: str | Path,
+        *,
+        executable: str | Path | None = None,
+        flavour: str = "ua1",
+        timeout: float = 180,
+    ) -> VeraPdfResult: ...
 
 
 def find_verapdf(requested: str | Path | None = None) -> str:
@@ -110,6 +125,8 @@ def check_pdfua(
     subject: str,
     executable: str | Path | None = None,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    validator: PdfValidator | None = None,
+    locate: Callable[[str | Path | None], str] | None = None,
 ) -> tuple[Report, VeraPdfResult | None]:
     """Validate a PDF and report the outcome, treating an unavailable validator as a warning.
 
@@ -123,11 +140,11 @@ def check_pdfua(
     validate_timeout(timeout)
     report = Report(kind="verapdf", subject=subject, sources=(Path(pdf),))
     try:
-        located = find_verapdf(executable)
+        located = (locate or find_verapdf)(executable)
     except ToolNotFoundError as exc:
         report.add(rules.VERA000, str(exc))
         return report, None
-    result = validate_pdfua(pdf, executable=located, timeout=timeout)
+    result = (validator or validate_pdfua)(pdf, executable=located, timeout=timeout)
     add_verapdf_findings(report, result)
     return report, result
 

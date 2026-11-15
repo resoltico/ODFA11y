@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 lazy from collections.abc import Callable, Sequence
 
+from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.audit import prepare_plan
 from odfa11y.batch import run_batch as execute_batch
@@ -191,6 +192,7 @@ def audit(
     validate_pdf: bool = False,
     strict: bool = False,
     observer: ProgressObserver | None = None,
+    native_tools: NativeTools | None = None,
 ) -> AuditRun:
     """Inspect independent inputs, retaining completed checks through later failures.
 
@@ -215,6 +217,7 @@ def audit(
                     verapdf_path=tools.verapdf,
                     timeout=tools.timeout,
                     on_progress=observer,
+                    native_tools=native_tools,
                 )
             )
         except (OdfA11yError, OSError, ValueError) as exc:
@@ -264,6 +267,7 @@ def export(
     *,
     tools: Tools | None = None,
     observer: ProgressObserver | None = None,
+    native_tools: NativeTools | None = None,
 ) -> ExportResult:
     """Publish a guarded native export with caller-selected tools.
 
@@ -274,7 +278,9 @@ def export(
 
     """
     return ExportResult(
-        export_document(source, destination, tools or Tools(), on_progress=observer)
+        export_document(
+            source, destination, tools or Tools(), on_progress=observer, native_tools=native_tools
+        )
     )
 
 
@@ -288,6 +294,7 @@ def compare(
     diff_dir: str | Path | None = None,
     strict: bool = False,
     observer: ProgressObserver | None = None,
+    native_tools: NativeTools | None = None,
 ) -> ComparisonResult:
     """Compare original ODF/PDF inputs under the selected fidelity policy.
 
@@ -300,7 +307,13 @@ def compare(
     policy = _selected_plan(plan).fidelity if plan is not None else FidelityPolicy()
     return ComparisonResult(
         compare_documents(
-            source, candidate, policy, diff_dir, tools or Tools(), on_progress=observer
+            source,
+            candidate,
+            policy,
+            diff_dir,
+            tools or Tools(),
+            on_progress=observer,
+            native_tools=native_tools,
         ),
         strict,
     )
@@ -316,6 +329,7 @@ def run(
     profile: Profile = DEFAULT_PROFILE,
     observer: ProgressObserver | None = None,
     rebind: bool = False,
+    native_tools: NativeTools | None = None,
 ) -> RunRecord:
     """Execute the selected assurance profile and publish reviewable evidence.
 
@@ -331,6 +345,7 @@ def run(
         output_dir,
         RunSettings(tools or Tools(), profile, observer),
         rebind=rebind,
+        native_tools=native_tools,
     )
 
 
@@ -343,6 +358,7 @@ def run_batch(
     profile: Profile = DEFAULT_PROFILE,
     observer: ProgressObserver | None = None,
     rebind: bool = False,
+    native_tools: NativeTools | None = None,
 ) -> BatchRecord:
     """Execute independent manifest entries with one batch-lifetime native probe cache.
 
@@ -358,11 +374,17 @@ def run_batch(
         RunSettings(tools or Tools(), profile),
         on_progress=observer,
         rebind=rebind,
+        native_tools=native_tools,
     )
 
 
 @_interruptible
-def doctor(*, tools: Tools | None = None, observer: ProgressObserver | None = None) -> DoctorRecord:
+def doctor(
+    *,
+    tools: Tools | None = None,
+    observer: ProgressObserver | None = None,
+    native_tools: NativeTools | None = None,
+) -> DoctorRecord:
     """Measure dependency identities and every declared native capability.
 
     Returns
@@ -371,7 +393,7 @@ def doctor(*, tools: Tools | None = None, observer: ProgressObserver | None = No
         All observations, any controlled error and the effective execution status.
 
     """
-    record, error = inspect_tools(tools or Tools(), on_progress=observer)
+    record, error = inspect_tools(tools or Tools(), on_progress=observer, native_tools=native_tools)
     record.error = error
     return record
 
