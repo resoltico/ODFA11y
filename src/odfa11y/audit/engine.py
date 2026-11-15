@@ -28,14 +28,14 @@ from odfa11y.rules import registry as rules
 PARSED_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.MANIFEST)
 # Findings that end an audit early: what follows (and any plan made from it) would be guesswork.
 BLOCKING_RULES = frozenset({
-    rules.PKG000,
-    rules.PKG005,
-    rules.PKG006,
-    rules.PKG007,
+    rules.PKG001,
+    rules.PKG008,
     rules.PKG009,
+    rules.PKG010,
+    rules.PKG012,
     rules.XML001,
-    rules.ODF005,
-    rules.ODF010,
+    rules.ODF006,
+    rules.ODF011,
 })
 
 
@@ -65,7 +65,7 @@ def audit_odf(source: str | Path, *, schema: bool = False) -> Report:
     try:
         document = OdfDocument.open(source)
     except (PackageError, OSError) as exc:
-        report.raise_(rules.PKG000, _describe(exc, source))
+        report.raise_(rules.PKG001, _describe(exc, source))
         return report
 
     return audit_document(document, subject=str(source), source=source, schema=schema)
@@ -83,7 +83,7 @@ def audit_document(
     protection = document.protection
     if protection.signatures:
         report.raise_(
-            rules.PKG008,
+            rules.PKG011,
             "Declared signatures are unverified: structure, references, cryptography and trust "
             "were not validated.",
             details={"members": list(protection.signatures)},
@@ -94,7 +94,7 @@ def audit_document(
         if protection.malformed_manifest:
             report.raise_(rules.XML001, protection.malformed_manifest)
         elif protection.encrypted:
-            report.raise_(rules.PKG009)
+            report.raise_(rules.PKG012)
         else:
             audit_structure(document, report)
         return report
@@ -105,7 +105,7 @@ def audit_document(
     adapter = spec_for(document.kind)
     if adapter is None:
         report.raise_(
-            rules.ODF009, "No supported source family; only package and structure checks ran."
+            rules.ODF010, "No supported source family; only package and structure checks ran."
         )
         if schema:
             audit_schema(document, report)

@@ -1,0 +1,780 @@
+[
+  {
+    "old": "PKG000",
+    "new": [
+      "PKG001"
+    ]
+  },
+  {
+    "old": "PKG001",
+    "new": [
+      "PKG002",
+      "PKG003",
+      "PKG004"
+    ]
+  },
+  {
+    "old": "PKG002",
+    "new": [
+      "PKG005"
+    ]
+  },
+  {
+    "old": "PKG003",
+    "new": [
+      "PKG006"
+    ]
+  },
+  {
+    "old": "PKG004",
+    "new": [
+      "PKG007"
+    ]
+  },
+  {
+    "old": "PKG005",
+    "new": [
+      "PKG008"
+    ]
+  },
+  {
+    "old": "PKG006",
+    "new": [
+      "PKG009"
+    ]
+  },
+  {
+    "old": "PKG007",
+    "new": [
+      "PKG010"
+    ]
+  },
+  {
+    "old": "PKG008",
+    "new": [
+      "PKG011"
+    ]
+  },
+  {
+    "old": "PKG009",
+    "new": [
+      "PKG012"
+    ]
+  },
+  {
+    "old": "XML001",
+    "new": [
+      "XML001"
+    ]
+  },
+  {
+    "old": "ODF001",
+    "new": [
+      "ODF001"
+    ]
+  },
+  {
+    "old": "ODF002",
+    "new": [
+      "ODF002"
+    ]
+  },
+  {
+    "old": "ODF003",
+    "new": [
+      "ODF003",
+      "ODF004"
+    ]
+  },
+  {
+    "old": "ODF004",
+    "new": [
+      "ODF005"
+    ]
+  },
+  {
+    "old": "ODF005",
+    "new": [
+      "ODF006"
+    ]
+  },
+  {
+    "old": "ODF006",
+    "new": [
+      "ODF007"
+    ]
+  },
+  {
+    "old": "ODF007",
+    "new": [
+      "ODF008"
+    ]
+  },
+  {
+    "old": "ODF008",
+    "new": [
+      "ODF009"
+    ]
+  },
+  {
+    "old": "ODF009",
+    "new": [
+      "ODF010"
+    ]
+  },
+  {
+    "old": "ODF010",
+    "new": [
+      "ODF011"
+    ]
+  },
+  {
+    "old": "ODF011",
+    "new": [
+      "ODF012"
+    ]
+  },
+  {
+    "old": "SCHEMA001",
+    "new": [
+      "SCHEMA001"
+    ]
+  },
+  {
+    "old": "SCHEMA002",
+    "new": [
+      "SCHEMA002"
+    ]
+  },
+  {
+    "old": "NATIVE001",
+    "new": [
+      "NATIVE001"
+    ]
+  },
+  {
+    "old": "NATIVE002",
+    "new": [
+      "NATIVE002"
+    ]
+  },
+  {
+    "old": "META001",
+    "new": [
+      "META001"
+    ]
+  },
+  {
+    "old": "META002",
+    "new": [
+      "META002"
+    ]
+  },
+  {
+    "old": "META003",
+    "new": [
+      "META003"
+    ]
+  },
+  {
+    "old": "META004",
+    "new": [
+      "META004"
+    ]
+  },
+  {
+    "old": "HEADING001",
+    "new": [
+      "HEADING001"
+    ]
+  },
+  {
+    "old": "HEADING002",
+    "new": [
+      "HEADING002",
+      "HEADING003"
+    ]
+  },
+  {
+    "old": "HEADING003",
+    "new": [
+      "HEADING004"
+    ]
+  },
+  {
+    "old": "HEADING004",
+    "new": [
+      "HEADING005"
+    ]
+  },
+  {
+    "old": "NOTE001",
+    "new": [
+      "NOTE001"
+    ]
+  },
+  {
+    "old": "REVISION002",
+    "new": [
+      "REVISION001",
+      "REVISION002",
+      "REVISION003"
+    ]
+  },
+  {
+    "old": "REVISION003",
+    "new": [
+      "REVISION004",
+      "REVISION005"
+    ]
+  },
+  {
+    "old": "HIDDEN002",
+    "new": [
+      "ORDER001"
+    ]
+  },
+  {
+    "old": "ORDER001",
+    "new": [
+      "ORDER002"
+    ]
+  },
+  {
+    "old": "REVISION001",
+    "new": [
+      "REVISION006"
+    ]
+  },
+  {
+    "old": "HIDDEN001",
+    "new": [
+      "ORDER003"
+    ]
+  },
+  {
+    "old": "STYLE001",
+    "new": [
+      "STYLE001"
+    ]
+  },
+  {
+    "old": "GRAPHIC003",
+    "new": [
+      "GRAPHIC001"
+    ]
+  },
+  {
+    "old": "TABLE001",
+    "new": [
+      "TABLE001"
+    ]
+  },
+  {
+    "old": "TABLE002",
+    "new": [
+      "TABLE002"
+    ]
+  },
+  {
+    "old": "TABLE003",
+    "new": [
+      "TABLE003"
+    ]
+  },
+  {
+    "old": "LANG004",
+    "new": [
+      "LANG001"
+    ]
+  },
+  {
+    "old": "LANG005",
+    "new": [
+      "LANG002"
+    ]
+  },
+  {
+    "old": "REFERENCE001",
+    "new": [
+      "REF001"
+    ]
+  },
+  {
+    "old": "REFERENCE002",
+    "new": [
+      "REF002"
+    ]
+  },
+  {
+    "old": "REFERENCE003",
+    "new": [
+      "REF003"
+    ]
+  },
+  {
+    "old": "REFERENCE004",
+    "new": [
+      "REF004"
+    ]
+  },
+  {
+    "old": "NOTE002",
+    "new": [
+      "NOTE002",
+      "NOTE003",
+      "NOTE004"
+    ]
+  },
+  {
+    "old": "LINK001",
+    "new": [
+      "LINK001"
+    ]
+  },
+  {
+    "old": "LAYOUT001",
+    "new": [
+      "STYLE002"
+    ]
+  },
+  {
+    "old": "STYLE002",
+    "new": [
+      "STYLE003"
+    ]
+  },
+  {
+    "old": "SHEET001",
+    "new": [
+      "SHEET001"
+    ]
+  },
+  {
+    "old": "SHEET002",
+    "new": [
+      "SHEET002"
+    ]
+  },
+  {
+    "old": "TABLE004",
+    "new": [
+      "TABLE004"
+    ]
+  },
+  {
+    "old": "TABLE005",
+    "new": [
+      "TABLE005"
+    ]
+  },
+  {
+    "old": "LINK002",
+    "new": [
+      "LINK002"
+    ]
+  },
+  {
+    "old": "SHEET007",
+    "new": [
+      "SHEET003"
+    ]
+  },
+  {
+    "old": "PAGE001",
+    "new": [
+      "PAGE001",
+      "PAGE002"
+    ]
+  },
+  {
+    "old": "PAGE002",
+    "new": [
+      "PAGE003"
+    ]
+  },
+  {
+    "old": "GRAPHIC005",
+    "new": [
+      "GRAPHIC002"
+    ]
+  },
+  {
+    "old": "PAGE003",
+    "new": [
+      "PAGE004"
+    ]
+  },
+  {
+    "old": "PAGE004",
+    "new": [
+      "PAGE005"
+    ]
+  },
+  {
+    "old": "LINK003",
+    "new": [
+      "LINK003"
+    ]
+  },
+  {
+    "old": "MATH001",
+    "new": [
+      "MATH001",
+      "MATH002"
+    ]
+  },
+  {
+    "old": "MATH002",
+    "new": [
+      "MATH003"
+    ]
+  },
+  {
+    "old": "MATH003",
+    "new": [
+      "MATH004"
+    ]
+  },
+  {
+    "old": "CHART001",
+    "new": [
+      "CHART001",
+      "CHART002"
+    ]
+  },
+  {
+    "old": "CHART002",
+    "new": [
+      "CHART003"
+    ]
+  },
+  {
+    "old": "CHART003",
+    "new": [
+      "CHART004"
+    ]
+  },
+  {
+    "old": "CHART004",
+    "new": [
+      "CHART005"
+    ]
+  },
+  {
+    "old": "CHART005",
+    "new": [
+      "CHART006",
+      "CHART007"
+    ]
+  },
+  {
+    "old": "CHART006",
+    "new": [
+      "CHART008",
+      "CHART009",
+      "CHART010",
+      "CHART011"
+    ]
+  },
+  {
+    "old": "IMAGE005",
+    "new": [
+      "IMAGE001"
+    ]
+  },
+  {
+    "old": "IMAGE004",
+    "new": [
+      "IMAGE002"
+    ]
+  },
+  {
+    "old": "IMAGE001",
+    "new": [
+      "IMAGE003",
+      "IMAGE004"
+    ]
+  },
+  {
+    "old": "IMAGE003",
+    "new": [
+      "IMAGE005"
+    ]
+  },
+  {
+    "old": "BASE001",
+    "new": [
+      "DATABASE001",
+      "DATABASE002",
+      "DATABASE003"
+    ]
+  },
+  {
+    "old": "BASE002",
+    "new": [
+      "DATABASE004"
+    ]
+  },
+  {
+    "old": "BASE003",
+    "new": [
+      "DATABASE005",
+      "DATABASE006",
+      "DATABASE007"
+    ]
+  },
+  {
+    "old": "BASE004",
+    "new": [
+      "DATABASE008",
+      "DATABASE009"
+    ]
+  },
+  {
+    "old": "BASE005",
+    "new": [
+      "DATABASE010"
+    ]
+  },
+  {
+    "old": "BASE006",
+    "new": [
+      "DATABASE011",
+      "DATABASE012"
+    ]
+  },
+  {
+    "old": "PDF000",
+    "new": [
+      "PDF001"
+    ]
+  },
+  {
+    "old": "PDF001",
+    "new": [
+      "PDF002"
+    ]
+  },
+  {
+    "old": "PDF002",
+    "new": [
+      "PDF003"
+    ]
+  },
+  {
+    "old": "PDF003",
+    "new": [
+      "PDF004"
+    ]
+  },
+  {
+    "old": "PDF004",
+    "new": [
+      "PDF005"
+    ]
+  },
+  {
+    "old": "PDF005",
+    "new": [
+      "PDF006"
+    ]
+  },
+  {
+    "old": "PDF006",
+    "new": [
+      "PDF007"
+    ]
+  },
+  {
+    "old": "PDF007",
+    "new": [
+      "PDF008"
+    ]
+  },
+  {
+    "old": "PDF008",
+    "new": [
+      "PDF009"
+    ]
+  },
+  {
+    "old": "PDF009",
+    "new": [
+      "PDF010"
+    ]
+  },
+  {
+    "old": "PDF010",
+    "new": [
+      "PDF011"
+    ]
+  },
+  {
+    "old": "PDF011",
+    "new": [
+      "PDF012"
+    ]
+  },
+  {
+    "old": "PDF012",
+    "new": [
+      "PDF013"
+    ]
+  },
+  {
+    "old": "PDF013",
+    "new": [
+      "PDF014"
+    ]
+  },
+  {
+    "old": "PDF014",
+    "new": [
+      "PDF015"
+    ]
+  },
+  {
+    "old": "PDF015",
+    "new": [
+      "PDF016"
+    ]
+  },
+  {
+    "old": "PDF016",
+    "new": [
+      "PDF017"
+    ]
+  },
+  {
+    "old": "PDF017",
+    "new": [
+      "PDF018"
+    ]
+  },
+  {
+    "old": "PDF018",
+    "new": [
+      "PDF019"
+    ]
+  },
+  {
+    "old": "PDF019",
+    "new": [
+      "PDF020"
+    ]
+  },
+  {
+    "old": "PDF020",
+    "new": [
+      "PDF021"
+    ]
+  },
+  {
+    "old": "PDF021",
+    "new": [
+      "PDF022"
+    ]
+  },
+  {
+    "old": "PDF022",
+    "new": [
+      "PDF023"
+    ]
+  },
+  {
+    "old": "PDF023",
+    "new": [
+      "PDF024"
+    ]
+  },
+  {
+    "old": "VERA001",
+    "new": [
+      "PDFUA001"
+    ]
+  },
+  {
+    "old": "FID001",
+    "new": [
+      "FIDELITY001"
+    ]
+  },
+  {
+    "old": "FID002",
+    "new": [
+      "FIDELITY002"
+    ]
+  },
+  {
+    "old": "FID003",
+    "new": [
+      "FIDELITY003"
+    ]
+  },
+  {
+    "old": "FID004",
+    "new": [
+      "FIDELITY004"
+    ]
+  },
+  {
+    "old": "FID005",
+    "new": [
+      "FIDELITY005"
+    ]
+  },
+  {
+    "old": "FID006",
+    "new": [
+      "FIDELITY006"
+    ]
+  },
+  {
+    "old": "FID007",
+    "new": [
+      "FIDELITY007"
+    ]
+  },
+  {
+    "old": "GRAPHIC001",
+    "new": [
+      "GRAPHIC003"
+    ]
+  },
+  {
+    "old": "GRAPHIC002",
+    "new": [
+      "GRAPHIC004"
+    ]
+  },
+  {
+    "old": "LIST001",
+    "new": [
+      "LIST001",
+      "LIST002",
+      "LIST003",
+      "LIST004"
+    ]
+  },
+  {
+    "old": "LIST002",
+    "new": [
+      "LIST005",
+      "LIST006"
+    ]
+  },
+  {
+    "old": "LIST003",
+    "new": [
+      "LIST007",
+      "LIST008"
+    ]
+  },
+  {
+    "old": "LIST004",
+    "new": [
+      "LIST009"
+    ]
+  }
+]

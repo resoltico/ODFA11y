@@ -45,7 +45,7 @@ def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
     family = KIND_SPECS[name].family
     assert measured(measurement(report, PackageMeasurements).family) == family
     assert measured(measurement(report, PackageMeasurements).family) == family
-    assert "ODF009" not in ids(report)
+    assert "ODF010" not in ids(report)
     assert all(finding.rule is RULES[finding.rule_id] for finding in report.findings)
     document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
     assert document.kind is not None
@@ -89,8 +89,8 @@ def test_a_damaged_mimetype_member_is_reported_and_the_audit_continues(
             data = original.read(member.filename)
             copy.writestr(member, data + damage if member.filename == "mimetype" else data)
     report = audit_odf(damaged)
-    assert "PKG001" in {f.rule_id for f in report.findings}
-    assert "ODF005" not in {f.rule_id for f in report.findings}
+    assert "PKG004" in {f.rule_id for f in report.findings}
+    assert "ODF006" not in {f.rule_id for f in report.findings}
     assert measured(measurement(report, PackageMeasurements).kind) == "text"
 
 
@@ -101,5 +101,5 @@ def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path)
         for member in original.infolist():
             data = original.read(member.filename)
             copy.writestr(member, b"<foo/>" if member.filename == "content.xml" else data)
-    assert "ODF011" in {f.rule_id for f in audit_odf(wrong).findings}
-    assert "ODF011" not in {f.rule_id for f in audit_odf(source).findings}
+    assert "ODF012" in {f.rule_id for f in audit_odf(wrong).findings}
+    assert "ODF012" not in {f.rule_id for f in audit_odf(source).findings}

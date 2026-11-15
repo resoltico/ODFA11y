@@ -15,14 +15,13 @@ from odfa11y.errors import RemedyAction
 from odfa11y.families.text.tables.classification import TableKind
 from odfa11y.glossary import TERMS
 from odfa11y.native.probes import CapabilityStatus, ProbeId
-from odfa11y.odf import Family, Part, Use
+from odfa11y.odf import Family, Layout, Part, Use
 from odfa11y.plans.codec import decision_reference
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.progress import Stage, Step, StepState
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import (
     RULES,
-    Category,
     ReportKind,
 )
 from odfa11y.rules.registry import Severity
@@ -54,6 +53,7 @@ USER_ENUMS = (
     SkipReason,
     DecisionScope,
     Family,
+    Layout,
     Part,
     Use,
     ProbeId,
@@ -64,7 +64,6 @@ USER_ENUMS = (
     StageStatus,
     RunStatus,
     BatchStatus,
-    Category,
 )
 
 
@@ -108,6 +107,20 @@ def rule_reference() -> str:
         lines.append(
             f"| `{rule.id}` | {rule.severity.value.title()} | {rule.title} | {decisions} |"
         )
+    mapping = json.loads(
+        (Path(__file__).resolve().parents[1] / "src/odfa11y/rules/renamed.json").read_text()
+    )
+    lines += [
+        "",
+        "## Renamed in the next release",
+        "",
+        "| Previous ID | Current IDs |",
+        "| --- | --- |",
+    ]
+    lines.extend(
+        "| `" + row["old"] + "` | " + ", ".join("`" + value + "`" for value in row["new"]) + " |"
+        for row in mapping
+    )
     return "\n".join(lines) + "\n\n"
 
 

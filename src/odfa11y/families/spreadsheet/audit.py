@@ -9,27 +9,26 @@ from typing import Annotated, Literal
 lazy from lxml import etree
 
 from odfa11y.concepts import (
-    SHAPE_TAGS,
     GraphicIdentity,
     audit_graphic_role,
     document_links,
-    eligible_text_node,
     link_decision,
     link_has_description,
     link_location,
     visible_words,
 )
+from odfa11y.concepts.domains import GRAPHICS
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
+from odfa11y.families.spreadsheet.domains import SHEETS
 from odfa11y.families.spreadsheet.kinds import SHEET_NAME
 from odfa11y.families.spreadsheet.sheets import (
     cell_text,
     is_data_sheet,
     is_empty,
     sheet_name,
-    sheets,
 )
 from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import NS, Part, select_elements
@@ -65,7 +64,7 @@ class SpreadsheetMeasurements:
 def audit_spreadsheet(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Report the accessibility findings that belong to spreadsheets."""
     content = document.tree(Part.CONTENT)
-    all_sheets = sheets(content)
+    all_sheets = [node for _, node in SHEETS.enumerate(document)]
     report.measure(SpreadsheetMeasurements(count=len(all_sheets)))
     _audit_names(document, all_sheets, report)
     _audit_data_sheets(all_sheets, report)
@@ -144,15 +143,8 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
 
 
 def _audit_graphics(document: OdfDocument, report: Report) -> None:
-    content = document.tree(Part.CONTENT)
-    frames = [
-        node
-        for node in select_elements(content, "//office:body//*")
-        if node.tag in SHAPE_TAGS and node.tag != xml_names.DRAW_G and eligible_text_node(node)
-    ]
+    frames = [node for _, node in GRAPHICS.enumerate(document)]
     report.measure(SpreadsheetMeasurements(graphic_count=len(frames)))
-    for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
-        audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)
     for frame in frames:
         if audit_graphic_role(document, frame, report):
@@ -169,7 +161,7 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         image = frame.find("draw:image", NS)
         href = image.get(xml_names.XLINK_HREF) if image is not None else None
         report.raise_(
-            rules.GRAPHIC003,
+            rules.GRAPHIC001,
             "Picture, chart or object has neither accessible title nor description.",
             location=Location(identity.target(frame)),
             details={
@@ -199,7 +191,7 @@ def _audit_trailing_empty_sheets(all_sheets: list[etree._Element], report: Repor
     for index, sheet in enumerate(all_sheets):
         if index > kept and empty[index]:
             report.raise_(
-                rules.SHEET007,
+                rules.SHEET003,
                 "Sheet is empty and follows the last sheet with content.",
                 location=_location(index + 1, sheet),
                 details={"sheet": sheet_name(sheet)},
@@ -221,7 +213,7 @@ def _audit_hidden(
     columns = len(select_elements(content, HIDDEN_COLUMNS))
     if sheet_names or rows or columns:
         report.raise_(
-            rules.HIDDEN001,
+            rules.ORDER003,
             "Hidden sheets, rows or columns hold content that not every reader is told about.",
             location=Location(Part.CONTENT.value),
             details={"sheets": sheet_names, "rows": rows, "columns": columns},

@@ -177,7 +177,7 @@ def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:
     )
     for failure in result.failures:
         report.raise_(
-            rules.VERA001,
+            rules.PDFUA001,
             f"{failure.specification} clause {failure.clause} test {failure.test_number}: "
             f"{failure.description}",
             details={

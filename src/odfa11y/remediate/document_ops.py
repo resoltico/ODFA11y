@@ -17,6 +17,7 @@ COMMON_KINDS = (
         resolves=(
             rules.ODF001,
             rules.ODF003,
+            rules.ODF004,
         ),
         edit=edit_version,
     ),
@@ -28,8 +29,8 @@ COMMON_KINDS = (
             rules.META001,
             rules.META002,
             rules.META003,
-            rules.CHART002,
             rules.CHART003,
+            rules.CHART004,
         ),
         edit=edit_metadata,
     ),

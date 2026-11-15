@@ -118,7 +118,7 @@ def test_a_picture_without_accessible_text_is_an_error_with_a_fingerprinted_sele
 ) -> None:
     body = sheet("Logos", row(picture("Logo"), picture("Seal", alt=ALT)))
     report = audit(tmp_path, layout, body)
-    [finding] = found(report, "GRAPHIC003")
+    [finding] = found(report, "GRAPHIC001")
     assert finding.severity.value == "error"
     assert question_for(report, finding).kind.id == "graphic.alternative"
     assert finding.details["frame"] == "Logo"
@@ -130,7 +130,7 @@ def test_a_picture_without_accessible_text_is_an_error_with_a_fingerprinted_sele
 @by_layout
 def test_a_description_alone_is_accessible_text(tmp_path: Path, layout: str) -> None:
     described = picture("Logo", alt="<svg:desc>Company logo</svg:desc>")
-    assert not found(audit(tmp_path, layout, sheet("Logos", row(described))), "GRAPHIC003")
+    assert not found(audit(tmp_path, layout, sheet("Logos", row(described))), "GRAPHIC001")
 
 
 @by_layout
@@ -157,26 +157,26 @@ def test_empty_sheets_after_the_last_sheet_with_content_are_reported(
     tmp_path: Path, layout: str
 ) -> None:
     report = audit(tmp_path, layout, CONTENT, EMPTY, sheet("Extra"))
-    assert [f.details["sheet"] for f in found(report, "SHEET007")] == ["Spare", "Extra"]
+    assert [f.details["sheet"] for f in found(report, "SHEET003")] == ["Spare", "Extra"]
 
 
 @by_layout
 def test_an_empty_sheet_between_sheets_with_content_is_not_trailing(
     tmp_path: Path, layout: str
 ) -> None:
-    assert not found(audit(tmp_path, layout, EMPTY, CONTENT), "SHEET007")
+    assert not found(audit(tmp_path, layout, EMPTY, CONTENT), "SHEET003")
 
 
 @by_layout
 def test_a_sheet_holding_only_a_picture_is_not_empty(tmp_path: Path, layout: str) -> None:
     only_picture = sheet("Logos", row(picture("Logo", alt=ALT)))
-    assert not found(audit(tmp_path, layout, CONTENT, only_picture), "SHEET007")
+    assert not found(audit(tmp_path, layout, CONTENT, only_picture), "SHEET003")
 
 
 @by_layout
 def test_a_document_of_empty_sheets_keeps_its_first_sheet(tmp_path: Path, layout: str) -> None:
     report = audit(tmp_path, layout, EMPTY, sheet("Extra"))
-    assert [f.details["sheet"] for f in found(report, "SHEET007")] == ["Extra"]
+    assert [f.details["sheet"] for f in found(report, "SHEET003")] == ["Extra"]
 
 
 @by_layout
@@ -189,7 +189,7 @@ def test_hidden_sheets_rows_and_columns_are_counted(tmp_path: Path, layout: str)
         "<table:table-column/>", hidden_column, 1
     )
     report = audit(tmp_path, layout, covered, shown, styles=HIDDEN_SHEET_STYLE)
-    [finding] = found(report, "HIDDEN001")
+    [finding] = found(report, "ORDER003")
     assert finding.details == {"sheets": ["Notes"], "rows": 2, "columns": 1}
 
 
@@ -200,13 +200,13 @@ def test_visible_content_reports_no_hidden_findings(tmp_path: Path, layout: str)
         '<style:style style:name="taOther" style:family="table">'
         '<style:table-properties table:display="true"/></style:style>'
     )
-    assert not found(audit(tmp_path, layout, shown, styles=visible_style), "HIDDEN001")
-    assert not found(audit(tmp_path, layout, shown), "HIDDEN001")
+    assert not found(audit(tmp_path, layout, shown, styles=visible_style), "ORDER003")
+    assert not found(audit(tmp_path, layout, shown), "ORDER003")
 
 
 def test_a_sheet_style_hiding_one_sheet_does_not_hide_unstyled_sheets(tmp_path: Path) -> None:
     report = audit(tmp_path, "package", CONTENT, styles=HIDDEN_SHEET_STYLE)
-    assert not found(report, "HIDDEN001")
+    assert not found(report, "ORDER003")
 
 
 def test_text_documents_never_produce_spreadsheet_rules(tmp_path: Path) -> None:

@@ -52,7 +52,7 @@ def audit_text(document: OdfDocument, report: Report, metadata: DocumentMetadata
     audit_languages(document, report)
     audit_lists(document, report)
     audit_references(document, report)
-    audit_headings(content, report, document)
+    audit_headings(document, report)
     audit_images(document, report)
     audit_tables(document, report)
     _audit_links(content, report)
@@ -99,7 +99,7 @@ def _audit_empty_spacers(document: OdfDocument, report: Report) -> None:
         styles.append(name)
     if styles:
         report.raise_(
-            rules.LAYOUT001,
+            rules.STYLE002,
             (
                 "Empty body paragraphs were found. If they are only visual "
                 "spacers, prefer paragraph spacing instead."
@@ -120,7 +120,7 @@ def _audit_blinking(document: OdfDocument, report: Report) -> None:
         for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
     ):
         report.raise_(
-            rules.STYLE002,
+            rules.STYLE003,
             "Blinking text styling is present.",
             location=Location(Part.STYLES.value),
         )

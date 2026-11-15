@@ -29,14 +29,14 @@ def test_writer_reference_wording_and_source_scope(
     pdf_rules = {finding.rule_id for finding in audit_pdfua(output).findings}
     validation = validate_pdfua(output, executable=external_tool("verapdf"))
     if case == "positive":
-        assert pdf_rules == {"PDF008", "PDF019"}
+        assert pdf_rules == {"PDF009", "PDF020"}
         assert not validation.compliant
         assert {(failure.clause, failure.test_number) for failure in validation.failures} == {
             ("7.18.1", "2"),
             ("7.18.5", "2"),
         }
     else:
-        assert pdf_rules == {"PDF008", "PDF017"}
+        assert pdf_rules == {"PDF009", "PDF018"}
         assert validation.compliant
     report = audit_odf(source)
     assert measured(measurement(report, ReferenceMeasurements).reference_count) == 1
@@ -51,4 +51,4 @@ def test_writer_reference_wording_and_source_scope(
             for annotation in page.get("/Annots", [])
         )
     else:
-        assert "REFERENCE001" in {finding.rule_id for finding in report.findings}
+        assert "REF001" in {finding.rule_id for finding in report.findings}

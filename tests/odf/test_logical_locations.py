@@ -42,9 +42,9 @@ BODY = (
 
 EXPECTED = {
     ("HEADING002", "content/heading[1]"),
-    ("HEADING002", "content/heading[2]"),
-    ("HEADING003", "content/heading[1]"),
-    ("GRAPHIC003", "content/frame[name=Logo]"),
+    ("HEADING003", "content/heading[2]"),
+    ("HEADING004", "content/heading[1]"),
+    ("GRAPHIC001", "content/frame[name=Logo]"),
     ("TABLE003", "content/table[name=Data]"),
     ("TABLE003", "content/table[2]"),
     ("LINK001", "content/paragraph[1]"),
@@ -111,7 +111,7 @@ def test_a_physical_member_name_is_never_the_logical_path(tmp_path: Path) -> Non
 
 def test_package_level_findings_keep_the_member_beside_the_logical_path(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(manifest_media_type="text/plain"))
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "ODF004")
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == "ODF005")
     assert finding.location is not None
     assert (finding.location.path, finding.location.member) == ("manifest", "META-INF/manifest.xml")
 
@@ -125,4 +125,4 @@ def test_json_report_serializes_the_path_and_the_member(
     locations = {f["rule_id"]: f["location"] for f in reversed(report["findings"])}
     assert report["schema_version"] == 1
     assert locations["LINK001"] == {"path": "content/paragraph[1]", "member": None}
-    assert locations["ODF004"] == {"path": "manifest", "member": "META-INF/manifest.xml"}
+    assert locations["ODF005"] == {"path": "manifest", "member": "META-INF/manifest.xml"}

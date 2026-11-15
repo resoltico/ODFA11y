@@ -85,12 +85,12 @@ def _check_roles(nodes: list[StructureNode], report: Report) -> None:
     unmapped = sorted({node.tag for node in nodes if node.role is None})
     if unmapped:
         report.raise_(
-            rules.PDF011,
+            rules.PDF012,
             "Custom structure types do not resolve to standard types through /RoleMap.",
             details={"unmapped_structure_types": unmapped},
         )
     if not any(_heading_level(node) for node in nodes):
-        report.raise_(rules.PDF008, "No PDF heading structure tags were detected.")
+        report.raise_(rules.PDF009, "No PDF heading structure tags were detected.")
 
 
 def _check_figures(nodes: list[StructureNode], report: Report) -> None:
@@ -98,7 +98,7 @@ def _check_figures(nodes: list[StructureNode], report: Report) -> None:
     missing = [node for node in figures if not _has_text(node.element.get("/Alt"))]
     if missing:
         report.raise_(
-            rules.PDF007,
+            rules.PDF008,
             "One or more Figure structure elements have no /Alt text.",
             details={
                 "figure_xrefs": [_xref(node) for node in figures],
@@ -118,7 +118,7 @@ def _check_headings(nodes: list[StructureNode], report: Report) -> None:
             skips.append(f"H{previous} to H{level}" if previous else f"start to H{level}")
         previous = level
     if skips:
-        report.raise_(rules.PDF012, details={"skips": skips})
+        report.raise_(rules.PDF013, details={"skips": skips})
 
 
 def _check_lists(nodes: list[StructureNode], report: Report) -> None:
@@ -137,7 +137,7 @@ def _check_lists(nodes: list[StructureNode], report: Report) -> None:
                 if child.role not in LIST_ITEM_CHILDREN
             ]
     if problems:
-        report.raise_(rules.PDF013, details={"problems": sorted(set(problems))})
+        report.raise_(rules.PDF014, details={"problems": sorted(set(problems))})
 
 
 def _check_tables(nodes: list[StructureNode], report: Report) -> None:
@@ -158,9 +158,9 @@ def _check_tables(nodes: list[StructureNode], report: Report) -> None:
             descendants = [n for n in node.walk() if n is not node]
             rows = sum(n.role == "TR" for n in descendants)
             if rows >= MIN_ROWS_FOR_HEADERS and not any(n.role == "TH" for n in descendants):
-                report.raise_(rules.PDF015, details={"rows": rows})
+                report.raise_(rules.PDF016, details={"rows": rows})
     if problems:
-        report.raise_(rules.PDF014, details={"problems": sorted(set(problems))})
+        report.raise_(rules.PDF015, details={"problems": sorted(set(problems))})
 
 
 def _heading_level(node: StructureNode) -> int:

@@ -14,13 +14,13 @@ lazy from tests.fixtures.corpus import CorpusDocument
 
 EVERY_DOCUMENT = pytest.mark.parametrize("document", DOCUMENTS, ids=DOCUMENT_IDS)
 CORPUS_RULES = {
-    "HEADING002",
+    "HEADING003",
     "NOTE001",
-    "ORDER001",
-    "GRAPHIC003",
+    "ORDER002",
+    "GRAPHIC001",
     "TABLE001",
     "LINK001",
-    "LAYOUT001",
+    "STYLE002",
 }
 
 

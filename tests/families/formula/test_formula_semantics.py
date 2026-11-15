@@ -58,14 +58,14 @@ def test_native_formula_validates_and_missing_alternative_requests_an_answer() -
     assert result.version == "1.4"
     assert result.count == 0
     report = audit_odf(SOURCE, schema=True)
-    finding = next(f for f in report.findings if f.rule_id == "MATH002")
+    finding = next(f for f in report.findings if f.rule_id == "MATH003")
     question = next(d for d in report.decisions if d.kind.id == "formula.alternative")
     assert question.target is not None
     assert question.target.path == "content/formula"
     assert question.target.fingerprint == fingerprint(document.tree(Part.CONTENT).getroot())
     assert finding.location is not None
     assert finding.location.path == "content/formula"
-    assert "MATH002" in question.rule_ids
+    assert "MATH003" in question.rule_ids
 
 
 def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_idempotent(
@@ -83,7 +83,7 @@ def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_
     assert root.get("{http://www.w3.org/XML/1998/namespace}lang") == "en-US"
     assert select_elements(root, ".//math:annotation")[0].text == "a + b = c"
     assert validate(after).count == 0
-    assert "MATH002" not in {f.rule_id for f in audit_odf(twice).findings}
+    assert "MATH003" not in {f.rule_id for f in audit_odf(twice).findings}
     assert once.read_bytes() == twice.read_bytes()
 
 

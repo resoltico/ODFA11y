@@ -45,7 +45,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     baseline = export_pdfua(
         source, tmp_path / "baseline.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
-    assert "PDF012" in {f.rule_id for f in audit_pdfua(baseline).findings}
+    assert "PDF013" in {f.rule_id for f in audit_pdfua(baseline).findings}
     edited = tmp_path / "headings.odt"
     apply_answers(source, edited, [heading_inputs(decisions)])
     pdf = export_pdfua(
@@ -60,7 +60,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
         "H2": 1,
         "H3": 1,
     }
-    assert "PDF012" not in {f.rule_id for f in report.findings}
+    assert "PDF013" not in {f.rule_id for f in report.findings}
     assert report.error_count == 0
     assert validate_pdfua(pdf, executable=verapdf).compliant
 
@@ -80,7 +80,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     )
     report = audit_pdfua(pdf)
     assert measured(measurement(report, PdfStructureMeasurements).structure_tags).get("TH", 0) == 0
-    assert "PDF015" in {f.rule_id for f in report.findings}
+    assert "PDF016" in {f.rule_id for f in report.findings}
     # The independent validator does not detect this missing header semantics property.
     assert validate_pdfua(pdf, executable=verapdf).compliant
     clean = make_minimal_odt(tmp_path / "clean.odt", features={"with_data_table": True})

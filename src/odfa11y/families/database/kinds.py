@@ -12,7 +12,7 @@ DATABASE_DESCRIPTION = DecisionKind(
     DecisionScope.TARGET,
     DatabaseDescriptionAnswer,
     domain=OBJECTS,
-    resolves=(rules.BASE004,),
+    resolves=(rules.DATABASE009,),
     edit=edit_description,
 )
 DECISION_KINDS = (DATABASE_DESCRIPTION,)

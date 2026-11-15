@@ -262,8 +262,8 @@ def test_unrelated_derived_style_change_is_detected_by_publication_guard(
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_writer_language_source_controls(case: str) -> None:
     report = audit_odf(TESTS / "text_corpus" / f"language-{case}.odt")
-    assert ("LANG004" in {f.rule_id for f in report.findings}) is (case == "negative")
-    assert "LANG005" not in {f.rule_id for f in report.findings}
+    assert ("LANG001" in {f.rule_id for f in report.findings}) is (case == "negative")
+    assert "LANG002" not in {f.rule_id for f in report.findings}
 
 
 def test_unresolved_inheritance_is_reviewed_without_an_unsafe_question(tmp_path: Path) -> None:
@@ -272,7 +272,7 @@ def test_unresolved_inheritance_is_reviewed_without_an_unsafe_question(tmp_path:
     )
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=styles))
     report = audit_odf(source)
-    assert "LANG005" in {f.rule_id for f in report.findings}
+    assert "LANG002" in {f.rule_id for f in report.findings}
     assert not any(question.kind.id == "language.target" for question in report.decisions)
 
 
@@ -291,7 +291,7 @@ def test_nonwestern_declarations_are_not_misreported_as_absent(
         Variant(body=BODY.replace('text:style-name="French"', ""), automatic_styles=styles),
     )
     report = audit_odf(source)
-    assert "LANG004" not in {finding.rule_id for finding in report.findings}
+    assert "LANG001" not in {finding.rule_id for finding in report.findings}
 
 
 def test_unstyled_target_derivation_uses_document_namespace_bindings(tmp_path: Path) -> None:

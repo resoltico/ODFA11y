@@ -5,23 +5,19 @@ import re
 from typing import Annotated, Literal
 lazy from dataclasses import dataclass, field
 
-from lxml import etree
-
 from odfa11y.concepts import (
-    SHAPE_TAGS,
     GraphicIdentity,
     audit_graphic_role,
-    eligible_text_node,
     visible_words,
 )
+from odfa11y.concepts.domains import GRAPHICS
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.text.answers import MAX_HEADING_LEVEL
-from odfa11y.families.text.contexts import text_nodes
+from odfa11y.families.text.domains import HEADINGS
 from odfa11y.families.text.headings.edit import (
     heading_fingerprint,
-    heading_location,
 )
 from odfa11y.families.text.kinds import HEADING_LEVEL
 from odfa11y.odf import NS, Part, select_elements
@@ -51,22 +47,21 @@ class TextContentMeasurements:
     ] = None
 
 
-def audit_headings(
-    tree: etree._ElementTree, report: Report, document: OdfDocument | None = None
-) -> None:
-    """Report heading-structure defects such as skipped levels and empty headings."""
-    headings = text_nodes(tree, xml_names.TEXT_H, main_only=True)
+def audit_headings(document: OdfDocument, report: Report) -> None:
+    """Report heading structure over the canonical heading domain."""
+    entries = tuple(HEADINGS.enumerate(document))
+    headings = [node for _, node in entries]
     report.measure(TextContentMeasurements(heading_count=len(headings)))
     previous_level: int | None = None
-    for index, heading in enumerate(headings, start=1):
+    for path, heading in entries:
         raw = heading.get(xml_names.TEXT_OUTLINE_LEVEL)
         text = visible_words(heading)
         try:
             level = int(raw) if raw is not None else 0
         except ValueError:
             level = 0
-        location = heading_location(heading, index)
-        excerpt = {"text": text[:80]}
+        location = Location(path)
+        excerpt = {"text": text}
         decision = OpenDecision(
             HEADING_LEVEL,
             Target((location).path, Fingerprint(heading_fingerprint(heading, document))),
@@ -98,7 +93,7 @@ def audit_headings(
             )
         elif previous_level is not None and level > previous_level + 1:
             report.raise_(
-                rules.HEADING002,
+                rules.HEADING003,
                 f"Heading hierarchy skips from level {previous_level} to {level}.",
                 location=location,
                 details=excerpt,
@@ -107,7 +102,7 @@ def audit_headings(
         previous_level = level
         if _looks_manually_numbered_heading(text):
             report.raise_(
-                rules.HEADING003,
+                rules.HEADING004,
                 (
                     "Heading appears to use manually typed numbering; integrated "
                     "numbering is safer for accessible export."
@@ -117,7 +112,7 @@ def audit_headings(
             )
     if not headings:
         report.raise_(
-            rules.HEADING004,
+            rules.HEADING005,
             "No structural headings were found. This may be legitimate for a very short document.",
             location=Location(Part.CONTENT.value),
         )
@@ -125,12 +120,7 @@ def audit_headings(
 
 def audit_images(document: OdfDocument, report: Report) -> None:
     """Report graphics and embedded objects that lack alternative text."""
-    tree = document.tree(Part.CONTENT)
-    frames = [
-        node
-        for node in select_elements(tree, "//office:body//*")
-        if node.tag in SHAPE_TAGS and node.tag != xml_names.DRAW_G and eligible_text_node(node)
-    ]
+    frames = [node for _, node in GRAPHICS.enumerate(document)]
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)
@@ -149,7 +139,7 @@ def audit_images(document: OdfDocument, report: Report) -> None:
         href = image.get(xml_names.XLINK_HREF) if image is not None else None
         if not ((title and title.strip()) or (desc and desc.strip())):
             report.raise_(
-                rules.GRAPHIC003,
+                rules.GRAPHIC001,
                 "Graphic object has neither accessible title nor description.",
                 location=Location(identity.target(frame)),
                 details={

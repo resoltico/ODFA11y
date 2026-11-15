@@ -19,7 +19,7 @@ from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.pdf import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
 lazy from odfa11y.report import Finding, Report
 
-CONTENT_RULES = {"PDF020", "PDF021", "PDF022", "PDF023"}
+CONTENT_RULES = {"PDF021", "PDF022", "PDF023", "PDF024"}
 TEXT = "BT /F1 12 Tf 10 50 Td (x) Tj ET"
 
 
@@ -84,7 +84,7 @@ def test_content_that_every_element_and_sequence_agrees_on_has_no_findings(tmp_p
 def test_marked_content_no_structure_element_refers_to_is_an_error(tmp_path: Path) -> None:
     writer = tagged_writer(["H1"])
     set_content(writer, f"{marked_text(0)}\n{marked_text(7)}\n{marked_text(3)}")
-    finding = content_findings(audit(tmp_path, writer))["PDF020"]
+    finding = content_findings(audit(tmp_path, writer))["PDF021"]
     assert finding.severity.value == "error"
     assert finding.details["pages"] == [{"page": 1, "count": 2, "mcids": [3, 7]}]
 
@@ -93,9 +93,9 @@ def test_a_reference_to_marked_content_the_page_lacks_is_a_warning(tmp_path: Pat
     writer = tagged_writer(["H1", "P"])
     set_content(writer, marked_text(0))
     findings = content_findings(audit(tmp_path, writer))
-    assert set(findings) == {"PDF021"}
-    assert findings["PDF021"].severity.value == "warning"
-    assert findings["PDF021"].details["references"] == [{"page": 1, "mcid": 1}]
+    assert set(findings) == {"PDF022"}
+    assert findings["PDF022"].severity.value == "warning"
+    assert findings["PDF022"].details["references"] == [{"page": 1, "mcid": 1}]
 
 
 def test_a_reference_resolved_through_another_page_is_not_content_of_this_page(
@@ -105,17 +105,17 @@ def test_a_reference_resolved_through_another_page_is_not_content_of_this_page(
     other = writer.add_blank_page(width=100, height=100)
     dictionary(leaves(writer)[1])[NameObject("/Pg")] = other.indirect_reference
     findings = content_findings(audit(tmp_path, writer))
-    assert set(findings) == {"PDF020", "PDF021"}
-    assert findings["PDF021"].details["references"] == [{"page": 2, "mcid": 1}]
+    assert set(findings) == {"PDF021", "PDF022"}
+    assert findings["PDF022"].details["references"] == [{"page": 2, "mcid": 1}]
 
 
 def test_marked_content_referred_to_twice_is_a_warning(tmp_path: Path) -> None:
     writer = tagged_writer(["H1", "P"])
     dictionary(leaves(writer)[1])[NameObject("/K")] = NumberObject(0)
     findings = content_findings(audit(tmp_path, writer))
-    assert set(findings) == {"PDF020", "PDF022"}
-    assert findings["PDF022"].severity.value == "warning"
-    assert findings["PDF022"].details["mcids"] == [{"page": 1, "mcid": 0, "references": 2}]
+    assert set(findings) == {"PDF021", "PDF023"}
+    assert findings["PDF023"].severity.value == "warning"
+    assert findings["PDF023"].details["mcids"] == [{"page": 1, "mcid": 0, "references": 2}]
 
 
 def test_a_marked_content_reference_dictionary_counts_like_an_integer(tmp_path: Path) -> None:
@@ -129,7 +129,7 @@ def test_a_marked_content_reference_dictionary_counts_like_an_integer(tmp_path: 
     dictionary(leaves(writer)[0])[NameObject("/K")] = ArrayObject([reference])
     assert not content_findings(audit(tmp_path, writer))
     reference[NameObject("/MCID")] = NumberObject(4)
-    assert set(content_findings(audit(tmp_path, writer))) == {"PDF020", "PDF021"}
+    assert set(content_findings(audit(tmp_path, writer))) == {"PDF021", "PDF022"}
 
 
 def test_a_reference_into_a_form_xobject_is_not_judged_against_the_page(tmp_path: Path) -> None:
@@ -159,7 +159,7 @@ def test_text_outside_tagged_content_and_artifacts_is_an_error(
 ) -> None:
     writer = tagged_writer(["H1"])
     set_content(writer, operators)
-    finding = content_findings(audit(tmp_path, writer))["PDF023"]
+    finding = content_findings(audit(tmp_path, writer))["PDF024"]
     assert finding.severity.value == "error"
     assert finding.details["pages"] == [{"page": 1, "text_operations": 1}]
 
@@ -177,7 +177,7 @@ def test_text_outside_tagged_content_and_artifacts_is_an_error(
 def test_tagged_and_artifact_text_is_accepted(tmp_path: Path, operators: str) -> None:
     writer = tagged_writer(["H1"])
     set_content(writer, operators)
-    assert "PDF023" not in content_findings(audit(tmp_path, writer))
+    assert "PDF024" not in content_findings(audit(tmp_path, writer))
 
 
 def test_a_properties_resource_supplies_the_mcid_of_a_named_property_list(tmp_path: Path) -> None:
@@ -191,13 +191,13 @@ def test_a_named_property_list_without_an_mcid_does_not_tag_content(tmp_path: Pa
     set_content(writer, f"/P /MC0 BDC {TEXT} EMC")
     resources = cast("DictionaryObject", writer.pages[0]["/Resources"])
     cast("DictionaryObject", resources["/Properties"])[NameObject("/MC0")] = DictionaryObject()
-    assert {"PDF021", "PDF023"} <= set(content_findings(audit(tmp_path, writer)))
+    assert {"PDF022", "PDF024"} <= set(content_findings(audit(tmp_path, writer)))
 
 
 def test_a_pdf_without_a_structure_tree_still_reports_unmarked_content(tmp_path: Path) -> None:
     report = audit_pdfua(text_pdf(tmp_path / "untagged.pdf", [["x"]]))
-    assert "PDF004" in {f.rule_id for f in report.findings}
-    assert set(content_findings(report)) == {"PDF023"}
+    assert "PDF005" in {f.rule_id for f in report.findings}
+    assert set(content_findings(report)) == {"PDF024"}
 
 
 def test_every_page_is_reconciled_with_its_own_content(tmp_path: Path) -> None:
@@ -261,7 +261,7 @@ def test_page_content_above_the_size_limit_is_reported_as_uninspectable(
     writer.write(path)
     monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 10)
     report = audit_pdfua(path)
-    assert [f.rule_id for f in report.findings] == ["PDF000"]
+    assert [f.rule_id for f in report.findings] == ["PDF001"]
     assert "larger than the 10-byte limit" in report.findings[0].message
 
 
@@ -274,9 +274,9 @@ def test_the_content_limit_covers_all_pages_together(
     page_bytes = len(marked_text(0))
     monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes - 1)
     report = audit(tmp_path, writer)
-    assert [f.rule_id for f in report.findings] == ["PDF000"]
+    assert [f.rule_id for f in report.findings] == ["PDF001"]
     monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes + 1)
-    assert "PDF000" not in {f.rule_id for f in audit(tmp_path, writer).findings}
+    assert "PDF001" not in {f.rule_id for f in audit(tmp_path, writer).findings}
 
 
 @pytest.mark.parametrize("filter_name", [b"F", b"Filter", b"Fi#6cter"])

@@ -120,7 +120,7 @@ def check_link_structure(
     unmatched = [a for a in annotations if a.xref is None or a.xref not in mapped]
     if unmatched:
         report.raise_(
-            rules.PDF016,
+            rules.PDF017,
             details={
                 "count": len(unmatched),
                 "annotations": [a.describe() for a in unmatched[:MAX_LISTED]],
@@ -131,7 +131,7 @@ def check_link_structure(
     ]
     if orphans:
         report.raise_(
-            rules.PDF017,
+            rules.PDF018,
             details={
                 "count": len(orphans),
                 "page_xrefs": [n.page_xref for n in orphans[:MAX_LISTED]],
@@ -144,7 +144,7 @@ def check_link_structure(
     ]
     if conflicts:
         report.raise_(
-            rules.PDF018,
+            rules.PDF019,
             details={
                 "count": len(conflicts),
                 "annotations": [a.describe() for a in conflicts[:MAX_LISTED]],
@@ -153,7 +153,7 @@ def check_link_structure(
     undescribed = [a for a in annotations if not a.has_description and a.xref not in alternates]
     if undescribed:
         report.raise_(
-            rules.PDF019,
+            rules.PDF020,
             details={
                 "count": len(undescribed),
                 "annotations": [a.describe() for a in undescribed[:MAX_LISTED]],

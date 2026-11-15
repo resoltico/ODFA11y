@@ -147,7 +147,7 @@ def test_external_authentication_findings_do_not_disclose_values(tmp_path: Path)
     output = tmp_path / "external.odb"
     document.save(output)
     report = audit_odf(output)
-    assert {"BASE002", "BASE003"} <= {f.rule_id for f in report.findings}
+    assert {"DATABASE004", "DATABASE006"} <= {f.rule_id for f in report.findings}
     assert "private-secret" not in str(report.as_dict())
     assert "alice" not in str(report.as_dict())
 

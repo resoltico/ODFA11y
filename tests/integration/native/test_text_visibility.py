@@ -26,10 +26,10 @@ def test_writer_revision_visibility_and_reading_order_scope(
     source = TESTS / "text_corpus" / f"visibility-{case}.odt"
     report = audit_odf(source)
     findings = {finding.rule_id for finding in report.findings}
-    assert not {"REVISION002", "REVISION003", "HIDDEN002"} & findings
-    assert ("REVISION001" in findings) is (case == "negative")
-    assert ("HIDDEN001" in findings) is (case == "negative")
-    assert ("ORDER001" in findings) is (case == "negative")
+    assert not {"REVISION001", "REVISION004", "ORDER001"} & findings
+    assert ("REVISION006" in findings) is (case == "negative")
+    assert ("ORDER003" in findings) is (case == "negative")
+    assert ("ORDER002" in findings) is (case == "negative")
     facts = measured(measurement(report, RevisionMeasurements).revision_relationships)
     assert facts["declarations"] == facts["markers"] == (1 if case == "negative" else 0)
     edited = tmp_path / "reviewed.odt"

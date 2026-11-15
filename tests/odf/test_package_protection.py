@@ -34,8 +34,8 @@ def test_declared_signature_is_unverified_and_all_remediation_refuses(
     storage.save(source)
     original = source.read_bytes()
     report = audit_odf(source, schema=True)
-    assert "PKG008" in {finding.rule_id for finding in report.findings}
-    assert "cryptography" in next(f.message for f in report.findings if f.rule_id == "PKG008")
+    assert "PKG011" in {finding.rule_id for finding in report.findings}
+    assert "cryptography" in next(f.message for f in report.findings if f.rule_id == "PKG011")
 
     def forbidden(*_args: object) -> tuple[Outcome, ...]:
         pytest.fail("operation executed for signed input")
@@ -140,7 +140,7 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
 
     native_tools = replace(native_tools, export=forbidden)
     report, template = prepare_plan(source)
-    assert [finding.rule_id for finding in report.findings] == ["PKG009"]
+    assert [finding.rule_id for finding in report.findings] == ["PKG012"]
     assert template is None
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing destination")

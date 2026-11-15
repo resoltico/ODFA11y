@@ -22,7 +22,7 @@ PROBE_HEADERS = 2
 
 def _inspect(pdf: Path) -> PdfInspection:
     inspection = inspect_pdf(pdf)
-    if any(f.rule is rules.PDF000 for f in inspection.report.findings):
+    if any(f.rule is rules.PDF001 for f in inspection.report.findings):
         msg = "The capability probe PDF cannot be inspected."
         raise ToolFailure(msg)
     return inspection
@@ -57,7 +57,7 @@ def link_descriptions(
     tags = inspection.structure.tags if inspection.structure is not None else {}
     if not tags.get("Link") or any(
         f.rule
-        in {rules.PDF003, rules.PDF004, rules.PDF016, rules.PDF017, rules.PDF018, rules.PDF019}
+        in {rules.PDF004, rules.PDF005, rules.PDF017, rules.PDF018, rules.PDF019, rules.PDF020}
         for f in report.findings
     ):
         return False
@@ -141,7 +141,7 @@ def decorative_role(
         total == PROBE_IMAGES
         and artifacts == 1
         and tags.get("Figure") == 1
-        and not any(f.rule is rules.PDF007 for f in report.findings)
+        and not any(f.rule is rules.PDF008 for f in report.findings)
     )
 
 

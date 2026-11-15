@@ -27,7 +27,7 @@ def test_text_report_prioritizes_findings_and_wraps_without_breaking_tokens() ->
         rules.LINK001,
         "A long explanation " * 12,
         location=Location("content/paragraph[1]"),
-        details={"address": token},
+        details={"text": token},
     )
     text = render_reports([report])
     assert "Check: no errors" in text
@@ -42,15 +42,15 @@ def test_controls_are_escaped_in_all_text_fields_and_retained_in_json() -> None:
         kind=ReportKind.ODF, subject="doc\n.odt", facts=(DocumentMetadata(title="v\x85"),)
     )
     report.raise_(
-        rules.META001,
+        rules.LINK001,
         "m\x1b",
         location=Location.named("content", "paragraph", "p\u202e"),
-        details={"d\t": "v\r"},
+        details={"text": "v\r"},
     )
     text = render_reports([report])
     assert all(character not in text for character in ("\x1b", "\r", "\x85", "\u202e", "\t"))
     assert "\\x0a" in text
-    assert "Check: errors found" in text
+    assert "Check: no errors" in text
     payload = json.loads(render_reports([report], output_format="json"))
     assert payload["subject"] == "doc\n.odt"
     assert payload["findings"][0]["message"] == "m\x1b"

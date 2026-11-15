@@ -45,7 +45,7 @@ def audit_reading_order(document: OdfDocument, report: Report) -> None:
     for kind in ("multi-column", "floating-frame", "section"):
         if counts[kind]:
             report.raise_(
-                rules.ORDER001,
+                rules.ORDER002,
                 location=Location(Part.CONTENT.value),
                 details={
                     "kind": kind,

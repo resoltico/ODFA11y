@@ -28,7 +28,7 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
     report = Report[object](
         kind=ReportKind.PDF, subject="doc.pdf", facts=(PdfMeasurements(page_count=2),)
     )
-    report.raise_(rules.PDF005, "No title display.")
+    report.raise_(rules.PDF006, "No title display.")
     stages = [
         StageResult(Stage.AUDIT_PDF, StageStatus.PASSED, report=report),
         StageResult(Stage.VALIDATE_PDF, StageStatus.SKIPPED, "not requested"),

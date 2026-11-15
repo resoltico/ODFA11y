@@ -25,7 +25,7 @@ def test_writer_language_source_decision_and_pdf_tags(
 ) -> None:
     source = TESTS / "text_corpus" / f"language-{case}.odt"
     report = audit_odf(source)
-    assert ("LANG004" in {finding.rule_id for finding in report.findings}) is (case == "negative")
+    assert ("LANG001" in {finding.rule_id for finding in report.findings}) is (case == "negative")
     if case == "negative":
         question = next(q for q in plan(source).report.decisions if q.kind.id == "language.target")
         assert question.target is not None

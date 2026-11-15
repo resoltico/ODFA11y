@@ -18,7 +18,7 @@ def test_duplicate_zip_members_are_reported_and_cannot_be_rewritten(tmp_path: Pa
     content = PackageStorage(source).read("content.xml")
     with zipfile.ZipFile(source, "a") as archive, pytest.warns(UserWarning, match="Duplicate name"):
         archive.writestr("content.xml", content)
-    assert "PKG006" in {f.rule_id for f in audit_odf(source).findings}
+    assert "PKG009" in {f.rule_id for f in audit_odf(source).findings}
     destination = tmp_path / "existing.odt"
     destination.write_bytes(b"existing destination")
     with pytest.raises(PackageError, match="duplicate ZIP"):

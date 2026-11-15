@@ -6,7 +6,7 @@ lazy import os
 
 from odfa11y.errors import MissingMemberError, PackageError
 from odfa11y.odf.archive import MAX_UNCOMPRESSED_BYTES
-from odfa11y.odf.storage import OdfStorage, Part
+from odfa11y.odf.storage import Layout, OdfStorage, Part
 from odfa11y.staging import staging_sibling
 
 FLAT_MEMBER = "document"
@@ -15,7 +15,7 @@ FLAT_MEMBER = "document"
 class FlatXmlStorage(OdfStorage):
     """One XML member holding meta, settings, styles and body; there is no manifest."""
 
-    layout = "flat"
+    layout = Layout.FLAT
 
     def __init__(self, source: str | os.PathLike[str]) -> None:
         """Load the file, refusing one above the unpacked-size limit.

@@ -4,17 +4,15 @@
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
-from odfa11y.concepts import table_fingerprint
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
-from odfa11y.families.text.contexts import context_location, text_nodes
+from odfa11y.families.text.domains import TABLES
 from odfa11y.families.text.kinds import TABLE_HEADERS
 from odfa11y.families.text.tables.classification import TableKind, classify
-from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
 from odfa11y.rules import registry as rules
-from odfa11y.targets import Fingerprint, Target, TargetPath
+from odfa11y.targets import Location, TargetPath
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -55,12 +53,13 @@ class TableMeasurements:
 
 def audit_tables(document: OdfDocument, report: Report) -> None:
     """Audit actual grid and band relationships, preserving ambiguous table intent."""
-    tables = text_nodes(document.tree(Part.CONTENT), xml_names.TABLE_TABLE)
+    entries = tuple(TABLES.enumerate(document))
+    tables = [node for _, node in entries]
     report.measure(TableMeasurements(table_count=len(tables)))
     rows: list[MeasuredTable | UnresolvedTable] = []
-    for index, table in enumerate(tables, 1):
+    for path, table in entries:
         name = table.get(xml_names.TABLE_NAME)
-        location = context_location(table, "table", index, name)
+        location = Location(path)
         try:
             classification = classify(table)
         except DocumentRefusal as error:
@@ -99,7 +98,7 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
                 details={"table": name, "rows": classification.grid.rows},
                 decision=OpenDecision(
                     TABLE_HEADERS,
-                    Target((location).path, Fingerprint(table_fingerprint(table, document))),
+                    TABLES.binding(document, path),
                     {"rows": 0, "columns": 0},
                 ),
             )

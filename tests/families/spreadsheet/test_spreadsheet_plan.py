@@ -141,13 +141,13 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         graphic_inputs({"Logo": graphic_answer("Logo", "The company logo")}),
     ]
-    assert {"SHEET002", "GRAPHIC003"} <= ids(source)
+    assert {"SHEET002", "GRAPHIC001"} <= ids(source)
     output = tmp_path / f"out{source.suffix}"
     result = apply_answers(source, output, plan)
     assert result.changed
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.new_count == 0
-    assert not {"SHEET002", "GRAPHIC003"} & ids(output)
+    assert not {"SHEET002", "GRAPHIC001"} & ids(output)
     again = apply_answers(output, tmp_path / f"again{source.suffix}", plan)
     assert not again.changed
     assert {o.status for o in again.outcomes} == {Status.UNCHANGED}

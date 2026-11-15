@@ -38,7 +38,7 @@ def _report() -> Report:
         rules.LINK001,
         "Needs review",
         location=Location("content/paragraph[2]"),
-        details={"count": 2},
+        details={"text": "Two addresses"},
         decision=OpenDecision(
             registered_kinds()["text.linkify_addresses"], None, {"enabled": False}
         ),
@@ -58,7 +58,7 @@ def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
     assert "  WARNING LINK001: Needs review" in lines
     assert "    location: content/paragraph[2]" in lines
     assert any("text.linkify_addresses" in line for line in lines)
-    assert any(line.strip() == "count: 2" for line in lines)
+    assert any(line.strip() == "text: Two addresses" for line in lines)
 
 
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
@@ -71,7 +71,7 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     assert (finding["rule_id"], finding["severity"], finding["category"]) == (
         "LINK001",
         "warning",
-        "links",
+        "link",
     )
     assert "remedy" not in finding
     assert single["decisions"][0]["kind_id"] == "text.linkify_addresses"
@@ -149,16 +149,16 @@ def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_tit
 
 def test_finding_references_one_rule_without_serializing_its_implementation() -> None:
     report = Report(kind=ReportKind.ODF, subject="source.odt")
-    report.raise_(rules.HEADING004, "A source-specific observation")
+    report.raise_(rules.HEADING005, "A source-specific observation")
     [finding] = report.findings
-    assert finding.rule is rules.HEADING004
+    assert finding.rule is rules.HEADING005
     findings = report.as_dict()["findings"]
     assert isinstance(findings, list)
     [payload] = findings
     assert isinstance(payload, dict)
-    assert payload["rule_id"] == "HEADING004"
+    assert payload["rule_id"] == "HEADING005"
     assert payload["severity"] == "info"
-    assert payload["category"] == "semantics"
+    assert payload["category"] == "heading"
     assert payload["message"] == "A source-specific observation"
     assert "rule" not in payload
 

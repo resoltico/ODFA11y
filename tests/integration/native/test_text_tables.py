@@ -63,7 +63,7 @@ def test_writer_table_classification_and_pdf_scope(
     output = tmp_path / "table.pdf"
     export_document(source, output, Tools(soffice=external_tool("soffice", "libreoffice")))
     assert {finding.rule_id for finding in audit_pdfua(output).findings} == (
-        {"PDF008", "PDF015"} if case == "negative" else {"PDF008"}
+        {"PDF009", "PDF016"} if case == "negative" else {"PDF009"}
     )
     assert validate_pdfua(output, executable=external_tool("verapdf")).compliant
     reader = PdfReader(output)

@@ -2,6 +2,7 @@
 """How an ODF document is stored, and the logical parts every layout provides."""
 
 from abc import ABC, abstractmethod
+from enum import StrEnum
 from typing import ClassVar
 lazy import os
 lazy from pathlib import Path
@@ -13,10 +14,22 @@ from odfa11y.safe_xml import parse_secure
 from odfa11y.targets import Part
 
 
+class Layout(StrEnum):
+    PACKAGE = "package"
+    FLAT = "flat"
+
+    @property
+    def meaning(self) -> str:
+        return {
+            self.PACKAGE: "An OpenDocument ZIP package with separate members.",
+            self.FLAT: "A single XML document containing the OpenDocument parts.",
+        }[self]
+
+
 class OdfStorage(ABC):
     """A loaded document container: a ZIP package or a single flat XML file."""
 
-    layout: ClassVar[str]
+    layout: ClassVar[Layout]
     source: Path
 
     @abstractmethod

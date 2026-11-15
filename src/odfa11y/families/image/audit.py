@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
 from odfa11y.concepts import GraphicIdentity, audit_graphic_role
+from odfa11y.concepts.domains import GRAPHICS
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import Description
@@ -28,10 +29,10 @@ class ImageMeasurements:
 
 def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Check the mandatory frame, description and local/embedded resource boundary."""
-    frames = select_elements(document.tree(Part.CONTENT), "//office:body/office:image/draw:frame")
+    frames = [node for _, node in GRAPHICS.enumerate(document)]
     report.measure(ImageMeasurements(graphic_count=len(frames)))
     if len(frames) != 1:
-        report.raise_(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
+        report.raise_(rules.IMAGE003, location=Location(f"{Part.CONTENT}/image"))
         return
     frame = frames[0]
     name = frame.get(xml_names.DRAW_NAME)
@@ -42,7 +43,7 @@ def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadat
     )
     images = select_elements(frame, "./draw:image")
     if not images:
-        report.raise_(rules.IMAGE001, "Image frame has no image payload.", location=location)
+        report.raise_(rules.IMAGE004, "Image frame has no image payload.", location=location)
     description = (frame.findtext("svg:title", namespaces=NS) or "") + (
         frame.findtext("svg:desc", namespaces=NS) or ""
     )
@@ -51,7 +52,7 @@ def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadat
     decorative = audit_graphic_role(document, frame, report)
     if not description.strip() and not decorative:
         report.raise_(
-            rules.GRAPHIC003,
+            rules.GRAPHIC001,
             location=Location(identity.target(frame)),
             details={"frame": name},
             decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE),
@@ -59,15 +60,15 @@ def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadat
     for image in images:
         problem, review = inspect_payload(document, image)
         if problem:
-            report.raise_(rules.IMAGE004, problem, location=location)
+            report.raise_(rules.IMAGE002, problem, location=location)
         if review:
-            report.raise_(rules.IMAGE005, location=location)
+            report.raise_(rules.IMAGE001, location=location)
         href = image.get(xml_names.XLINK_HREF)
         embedded = image.find("office:binary-data", NS)
         local = local_resource_path(href) if href else None
         if embedded is None and (local is None or not document.storage.has(local)):
             report.raise_(
-                rules.IMAGE003,
+                rules.IMAGE005,
                 "Image resource is external, unavailable or not embedded; it was not fetched.",
                 location=location,
             )

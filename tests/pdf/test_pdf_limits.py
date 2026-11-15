@@ -25,7 +25,7 @@ def test_an_oversized_pdf_is_a_finding_not_a_crash(
 
     monkeypatch.setattr("odfa11y.pdf.audit.PdfReader", parse)
     report = audit_pdfua(path)
-    assert [f.rule_id for f in report.findings] == ["PDF000"]
+    assert [f.rule_id for f in report.findings] == ["PDF001"]
     assert "exceeds" in report.findings[0].message
     with pytest.raises(ToolFailure, match="exceeds"):
         compare_pdfs(path, path, Pagination.SAME())
@@ -48,7 +48,7 @@ def test_a_structure_tree_above_the_limit_is_a_finding(
     tagged_writer(["H1", "P", "P"]).write(path)
     monkeypatch.setattr(walk, "MAX_STRUCTURE_NODES", 2)
     report = audit_pdfua(path)
-    assert [f.rule_id for f in report.findings] == ["PDF000"]
+    assert [f.rule_id for f in report.findings] == ["PDF001"]
     assert "more than 2 elements" in report.findings[0].message
 
 

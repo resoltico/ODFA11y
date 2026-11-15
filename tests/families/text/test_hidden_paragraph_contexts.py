@@ -51,7 +51,7 @@ Conditional heading https://hidden.example
     report, template = prepare_plan(source)
     assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
     assert measured(measurement(report, TableMeasurements).table_count) == 0
-    assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
+    assert "ORDER003" in {finding.rule_id for finding in report.findings}
     addresses = [
         finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
     ]
@@ -77,7 +77,7 @@ Conditional heading https://hidden.example
     assert etree.tostring(retained) == before
     after = audit_odf(destination)
     assert measured(measurement(after, TextContentMeasurements).heading_count) == 1
-    assert "HIDDEN001" in {finding.rule_id for finding in after.findings}
+    assert "ORDER003" in {finding.rule_id for finding in after.findings}
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
@@ -94,7 +94,7 @@ def test_span_marker_excludes_its_whole_paragraph_including_sibling_prose(
     document = OdfDocument.open(source)
     assert validate(document).count == 0
     report = audit_odf(source)
-    assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
+    assert "ORDER003" in {finding.rule_id for finding in report.findings}
     assert [
         finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
     ] == ["https://visible.example"]

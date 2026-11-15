@@ -38,6 +38,11 @@ def _graphic_fingerprint(document: OdfDocument, node: etree._Element) -> Fingerp
     return identity.fingerprint(identity.matching(identity.target(node)))
 
 
+def _graphic_context(document: OdfDocument):
+    identity = GraphicIdentity(document, graphic_nodes(document))
+    return lambda node: identity.fingerprint(identity.matching(identity.target(node)))
+
+
 def _links(document: OdfDocument) -> Iterator[tuple[TargetPath, etree._Element]]:
     for index, node in enumerate(document_links(document), 1):
         yield link_location(node, index).path, node
@@ -52,6 +57,6 @@ def _page_fingerprint(document: OdfDocument, node: etree._Element) -> Fingerprin
     return page_fingerprint(node, document)
 
 
-GRAPHICS = TargetDomain(_graphics, _graphic_fingerprint)
+GRAPHICS = TargetDomain(_graphics, _graphic_fingerprint, _graphic_context)
 LINKS = TargetDomain(_links, link_fingerprint)
 PAGES = TargetDomain(_pages, _page_fingerprint)

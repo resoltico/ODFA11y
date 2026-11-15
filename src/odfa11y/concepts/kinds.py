@@ -21,8 +21,8 @@ GRAPHIC_ALTERNATIVE = DecisionKind(
     domain=GRAPHICS,
     edit=edit_graphic,
     resolves=(
-        rules.GRAPHIC003,
-        rules.GRAPHIC005,
+        rules.GRAPHIC001,
+        rules.GRAPHIC002,
     ),
 )
 LINK_DESCRIPTION = DecisionKind(
@@ -39,7 +39,7 @@ PAGE_METADATA = DecisionKind(
     PageMetadataAnswer,
     domain=PAGES,
     edit=edit_page_metadata,
-    resolves=(rules.PAGE002,),
+    resolves=(rules.PAGE003,),
 )
 PAGE_NAVIGATION = DecisionKind(
     "page.navigation",
@@ -48,7 +48,7 @@ PAGE_NAVIGATION = DecisionKind(
     domain=PAGES,
     edit=edit_page_navigation,
     resolves=(
-        rules.PAGE003,
         rules.PAGE004,
+        rules.PAGE005,
     ),
 )

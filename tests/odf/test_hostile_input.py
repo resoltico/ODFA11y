@@ -81,7 +81,7 @@ def test_zip_encrypted_members_are_an_invalid_package_not_a_crash(tmp_path: Path
     encrypted.write_bytes(bytes(data))
     with pytest.raises(PackageError):
         PackageStorage(encrypted)
-    assert {f.rule_id for f in audit_odf(encrypted).findings} == {"PKG000"}
+    assert {f.rule_id for f in audit_odf(encrypted).findings} == {"PKG001"}
 
 
 ANNOTATED = (
@@ -150,7 +150,7 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
         b'<text:list><text:list-item><text:p text:style-name="Body"/></text:list-item></text:list>'
     )
     source = with_body(tmp_path, listed)
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "LAYOUT001")
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == "STYLE002")
     (outcome,) = apply_in_memory(OdfDocument.open(source), spacer_input())
     assert finding.details["count"] == outcome.count == 1  # the list item's paragraph is neither
 

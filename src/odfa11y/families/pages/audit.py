@@ -19,9 +19,9 @@ from odfa11y.concepts import (
     page_fingerprint,
     page_location,
     page_shapes,
-    pages,
     visible_words,
 )
+from odfa11y.concepts.domains import GRAPHICS, PAGES
 from odfa11y.concepts.kinds import (
     GRAPHIC_ALTERNATIVE,
     LINK_DESCRIPTION,
@@ -59,7 +59,7 @@ def audit_document(
     document: OdfDocument, report: Report, metadata: DocumentMetadata, profile: PageProfile
 ) -> None:
     """Report semantic defects without executing scripts, links or rendering."""
-    available = pages(document)
+    available = [node for _, node in PAGES.enumerate(document)]
     names = Counter(page.get(xml_names.DRAW_NAME) for page in available)
     identities = Counter(
         identity
@@ -90,7 +90,7 @@ def _audit_page(
     fingerprint = page_fingerprint(page, document)
     details = {"page": name}
     if not name or names[name] != 1:
-        report.raise_(rules.PAGE001, location=location)
+        report.raise_(rules.PAGE002, location=location)
     if not (page.findtext("svg:title", namespaces=NS) or "").strip():
         decision = (
             OpenDecision(
@@ -104,7 +104,7 @@ def _audit_page(
             if not name or names[name] == 1
             else None
         )
-        report.raise_(rules.PAGE002, location=location, details=details, decision=decision)
+        report.raise_(rules.PAGE003, location=location, details=details, decision=decision)
     order = page.get(xml_names.DRAW_NAV_ORDER)
     shapes = page_shapes(page)
     supplied_ids = [shape.get(XML_ID) or shape.get(xml_names.DRAW_ID) for shape in shapes]
@@ -113,7 +113,7 @@ def _audit_page(
         navigation_problem(page, tuple(order.split()), identities) if order is not None else None
     )
     rule = (
-        rules.PAGE003 if problem else rules.PAGE004 if order is None and len(shapes) > 1 else None
+        rules.PAGE004 if problem else rules.PAGE005 if order is None and len(shapes) > 1 else None
     )
     if rule is None:
         return
@@ -134,13 +134,17 @@ def _audit_page(
 
 
 def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> None:
-    shapes = [
+    all_shapes = [
         node
         for node in select_elements(document.tree(Part.CONTENT), "//office:body//*")
         if node.tag in SHAPE_TAGS
     ]
+    shapes = [node for _, node in GRAPHICS.enumerate(document)]
+    for group in all_shapes:
+        if group.tag == xml_names.DRAW_G:
+            audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, shapes)
-    report.measure(PageMeasurements(shape_count=len(shapes)))
+    report.measure(PageMeasurements(shape_count=len(all_shapes)))
     for shape in shapes:
         decorative = audit_graphic_role(document, shape, report)
         if decorative or shape.tag == xml_names.DRAW_G:
@@ -156,7 +160,7 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
         payload = select_elements(shape, "./draw:image | ./draw:object | ./draw:object-ole")
         if not payload and visible_words(shape):
             continue
-        rule = rules.GRAPHIC003 if payload else rules.GRAPHIC005
+        rule = rules.GRAPHIC001 if payload else rules.GRAPHIC002
         report.raise_(
             rule,
             location=Location(identity.target(shape)),
@@ -191,7 +195,7 @@ def _review_content(document: OdfDocument, report: Report, profile: PageProfile)
         )
     hidden = profile.hidden_content(document)
     if hidden:
-        report.raise_(rules.HIDDEN001, details=hidden)
+        report.raise_(rules.ORDER003, details=hidden)
 
 
 def _skipped_shape(shape: etree._Element, profile: PageProfile) -> bool:

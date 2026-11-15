@@ -143,7 +143,7 @@ def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
     assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
-    assert {"REVISION001", "HIDDEN001"} <= {f.rule_id for f in report.findings}
+    assert {"REVISION006", "ORDER003"} <= {f.rule_id for f in report.findings}
     plain = [f.details["text"] for f in report.findings if f.rule_id == "LINK001"]
     assert plain == ["https://note.example"]
     destination = tmp_path / "out.fodt"

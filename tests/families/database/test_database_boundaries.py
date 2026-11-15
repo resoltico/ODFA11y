@@ -76,7 +76,7 @@ def test_nested_database_descriptions_do_not_invalidate_their_own_review(tmp_pat
     assert apply_answers(source, first, [plan]).changed
     assert not apply_answers(first, second, [plan]).changed
     assert first.read_bytes() == second.read_bytes()
-    assert "BASE004" not in {finding.rule_id for finding in audit_odf(second).findings}
+    assert "DATABASE008" not in {finding.rule_id for finding in audit_odf(second).findings}
     assert OdfDocument.open(second).storage.read("database/firebird.fbk") == document.storage.read(
         "database/firebird.fbk"
     )
@@ -165,8 +165,8 @@ def test_standard_server_database_declaration_is_external_instead_of_missing(
     source = document.save(tmp_path / "server.odb")
     assert validate(OdfDocument.open(source)).count == 0
     report = audit_odf(source)
-    assert "BASE002" in {finding.rule_id for finding in report.findings}
-    assert "BASE001" not in {finding.rule_id for finding in report.findings}
+    assert "DATABASE004" in {finding.rule_id for finding in report.findings}
+    assert "DATABASE001" not in {finding.rule_id for finding in report.findings}
     assert measured(measurement(report, DatabaseMeasurements).connection_declaration_count) == 1
     assert "invalid.example" not in str(report.as_dict())
     assert "private-invented-database" not in str(report.as_dict())
@@ -229,6 +229,6 @@ def test_named_authentication_settings_are_reported_without_exposing_values(
         source = document.save(tmp_path / "settings.odb")
     assert validate(OdfDocument.open(source)).count == 0
     report = audit_odf(source)
-    assert ("BASE003" in {finding.rule_id for finding in report.findings}) is credential
-    assert sum(finding.rule_id == "BASE003" for finding in report.findings) <= 1
+    assert ("DATABASE007" in {finding.rule_id for finding in report.findings}) is credential
+    assert sum(finding.rule_id == "DATABASE007" for finding in report.findings) <= 1
     assert "invented-sensitive-value" not in str(report.as_dict())

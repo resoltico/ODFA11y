@@ -9,13 +9,12 @@ from lxml import etree
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
-from odfa11y.families.formula.expression import expression, fingerprint
+from odfa11y.families.formula.domain import FORMULA
 from odfa11y.families.formula.kinds import FORMULA_ALTERNATIVE
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
-from odfa11y.targets import Target, TargetPath
 lazy from odfa11y.odf import OdfDocument
 lazy from odfa11y.report import Report
 
@@ -73,7 +72,8 @@ def _meaningful(node: etree._Element) -> bool:
 
 def audit_formula(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Check formula applicability and semantics; formal MathML validation is a schema gate."""
-    root = expression(document)
+    entries = tuple(FORMULA.enumerate(document))
+    root = entries[0][1] if entries else None
     location = Location(f"{Part.CONTENT}/formula")
     if root is None:
         report.raise_(
@@ -85,14 +85,14 @@ def audit_formula(document: OdfDocument, report: Report, metadata: DocumentMetad
     nodes = [node for node in root.iter() if isinstance(node.tag, str)]
     report.measure(FormulaMeasurements(element_count=len(nodes)))
     if not any(_meaningful(node) for node in nodes):
-        report.raise_(rules.MATH001, "The mathematical expression is empty.", location=location)
+        report.raise_(rules.MATH002, "The mathematical expression is empty.", location=location)
     if not (root.get("alttext") or "").strip():
         report.raise_(
-            rules.MATH002,
+            rules.MATH003,
             location=location,
             decision=OpenDecision(
                 FORMULA_ALTERNATIVE,
-                Target(TargetPath("content/formula"), fingerprint(root)),
+                FORMULA.binding(document, entries[0][0]),
                 {"alternative": root.get("alttext")},
             ),
         )
@@ -100,4 +100,4 @@ def audit_formula(document: OdfDocument, report: Report, metadata: DocumentMetad
         node.get("href") or node.get("src") or node.get("altimg") or node.get(xml_names.XLINK_HREF)
         for node in nodes
     ):
-        report.raise_(rules.MATH003, location=location)
+        report.raise_(rules.MATH004, location=location)

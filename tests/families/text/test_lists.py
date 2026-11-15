@@ -26,13 +26,13 @@ def _inspect(tmp_path: Path, body: str) -> Report:
 @pytest.mark.parametrize(
     ("body", "rule"),
     [
-        ("<text:list><text:p>Not an item</text:p></text:list>", "LIST001"),
-        (f"<text:list>{ITEM}<text:list-header/></text:list>", "LIST001"),
-        ('<text:list text:continue-numbering="yes">' + ITEM + "</text:list>", "LIST001"),
-        ('<text:list text:continue-list="missing">' + ITEM + "</text:list>", "LIST002"),
-        ('<text:list xml:id="self" text:continue-list="self">' + ITEM + "</text:list>", "LIST002"),
-        ('<text:list text:continue-numbering="true">' + ITEM + "</text:list>", "LIST003"),
-        ("<text:p>1. Apples</text:p>", "LIST004"),
+        ("<text:list><text:p>Not an item</text:p></text:list>", "LIST002"),
+        (f"<text:list>{ITEM}<text:list-header/></text:list>", "LIST002"),
+        ('<text:list text:continue-numbering="yes">' + ITEM + "</text:list>", "LIST004"),
+        ('<text:list text:continue-list="missing">' + ITEM + "</text:list>", "LIST006"),
+        ('<text:list xml:id="self" text:continue-list="self">' + ITEM + "</text:list>", "LIST005"),
+        ('<text:list text:continue-numbering="true">' + ITEM + "</text:list>", "LIST008"),
+        ("<text:p>1. Apples</text:p>", "LIST009"),
     ],
 )
 def test_invalid_and_review_relationship_controls(tmp_path: Path, body: str, rule: str) -> None:
@@ -62,7 +62,7 @@ def test_cycles_report_every_member_but_not_its_dependants(tmp_path: Path) -> No
             for name, target in [("a", "b"), ("b", "a"), ("c", "a")]
         ),
     )
-    assert len([f for f in report.findings if f.rule_id == "LIST002"]) == 2
+    assert len([f for f in report.findings if f.rule_id == "LIST005"]) == 2
 
 
 def test_duplicate_identity_with_non_list_owner(tmp_path: Path) -> None:
@@ -81,7 +81,7 @@ def test_duplicate_identity_with_non_list_owner(tmp_path: Path) -> None:
         "{http://www.w3.org/XML/1998/namespace}id", "target"
     )
     audit_lists(document, report)
-    assert {"LIST001", "LIST002"} <= {f.rule_id for f in report.findings}
+    assert {"LIST001", "LIST006"} <= {f.rule_id for f in report.findings}
 
 
 def test_table_cells_reset_nesting_and_do_not_share_implicit_counters(tmp_path: Path) -> None:
@@ -98,7 +98,7 @@ def test_table_cells_reset_nesting_and_do_not_share_implicit_counters(tmp_path: 
     )
     assert measured(measurement(report, ListMeasurements).list_max_level) == 1
     assert measured(measurement(report, ListMeasurements).list_continuation_count) == 0
-    assert len([f for f in report.findings if f.rule_id == "LIST003"]) == 1
+    assert len([f for f in report.findings if f.rule_id == "LIST008"]) == 1
 
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
@@ -106,7 +106,7 @@ def test_writer_list_fixtures_and_read_only_preservation(case: str) -> None:
     source = TESTS / "text_corpus" / f"lists-{case}.odt"
     report = audit_odf(source)
     findings = [f.rule_id for f in report.findings if f.rule_id.startswith("LIST")]
-    assert findings == ([] if case == "positive" else ["LIST004", "LIST004"])
+    assert findings == ([] if case == "positive" else ["LIST009", "LIST009"])
     document = OdfDocument.open(source)
     checkpoint = document.checkpoint()
     audit_lists(document, report)
@@ -141,7 +141,7 @@ def test_explicit_continuation_across_cells_requires_native_review(tmp_path: Pat
         + ITEM
         + "</text:list></table:table-cell></table:table-row></table:table>",
     )
-    assert [f.rule_id for f in report.findings if f.rule_id.startswith("LIST")] == ["LIST003"]
+    assert [f.rule_id for f in report.findings if f.rule_id.startswith("LIST")] == ["LIST007"]
 
 
 @pytest.mark.parametrize("body", ["<text:list/>", "<text:list><text:list-header/></text:list>"])

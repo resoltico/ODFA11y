@@ -29,7 +29,7 @@ def test_shared_reference_counts_each_owner(tmp_path: Path, *, array: bool) -> N
         dictionary(leaf)[NameObject("/K")] = shared
     path = tmp_path / "shared.pdf"
     writer.write(path)
-    finding = next(f for f in audit_pdfua(path).findings if f.rule_id == "PDF022")
+    finding = next(f for f in audit_pdfua(path).findings if f.rule_id == "PDF023")
     identifiers = finding.details["mcids"]
     assert isinstance(identifiers, list)
     reference = identifiers[0]

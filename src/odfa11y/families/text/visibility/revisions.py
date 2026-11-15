@@ -45,7 +45,7 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
         declarations[identity].append(region)
         if not _valid_region(region, identity):
             report.raise_(
-                rules.REVISION002,
+                rules.REVISION001,
                 "Tracked-region identities are missing or contradictory.",
                 location=Location.indexed(reading_context_path(region), "revision", index),
             )
@@ -60,20 +60,20 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
         marks = markers.get(identity, [])
         location = Location.named(reading_context_path(owners[0]), "revision", identity)
         if not marks:
-            report.raise_(rules.REVISION003, location=location)
+            report.raise_(rules.REVISION004, location=location)
             unanchored += 1
         else:
             unresolved += _audit_region_marks(owners, marks, positions, location, report)
             if any(not eligible_text_node(mark) for mark in marks):
                 report.raise_(
-                    rules.REVISION003,
+                    rules.REVISION005,
                     "Change anchor is inside an unestablished visibility context.",
                     location=location,
                 )
                 unanchored += 1
     if has_revisions(tree):
         report.raise_(
-            rules.REVISION001, details={"regions": len(regions), "markers": len(positions)}
+            rules.REVISION006, details={"regions": len(regions), "markers": len(positions)}
         )
     report.measure(
         RevisionMeasurements(
@@ -109,7 +109,7 @@ def _audit_missing_declarations(
     for identity, nodes in markers.items():
         if len(declarations.get(identity, [])) != 1:
             report.raise_(
-                rules.REVISION002,
+                rules.REVISION003,
                 "Change mark has no unique tracked-region declaration.",
                 location=Location.named(reading_context_path(nodes[0]), "revision", identity),
             )

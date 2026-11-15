@@ -70,7 +70,7 @@ class ChangeImageGeometry(FaultEdit):
 def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_path: Path) -> None:
     before = OdfDocument.open(SOURCE)
     assert validate(before).count == 0
-    assert "GRAPHIC003" in {f.rule_id for f in audit_odf(SOURCE).findings}
+    assert "GRAPHIC001" in {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odi", tmp_path / "twice.odi"
     assert apply_answers(SOURCE, once, _plan()).changed
     assert not apply_answers(once, twice, _plan()).changed
@@ -79,7 +79,7 @@ def test_image_native_content_and_description_are_preserved_and_idempotent(tmp_p
     assert before.storage.read(_payload(before)) == after.storage.read(_payload(after))
     assert once.read_bytes() == twice.read_bytes()
     assert validate(after).count == 0
-    assert {f.rule_id for f in audit_odf(twice, schema=True).findings} == {"ODF008"}
+    assert {f.rule_id for f in audit_odf(twice, schema=True).findings} == {"ODF009"}
 
 
 def test_image_geometry_change_is_rejected_before_publication(tmp_path: Path) -> None:
@@ -130,7 +130,7 @@ def test_image_payload_integrity_rejects_malformed_or_unresolved_graphics(
     document.storage.write_member(_payload(document), payload)
     source = document.save(tmp_path / "broken.odi")
     report = audit_odf(source)
-    assert "IMAGE004" in {f.rule_id for f in report.findings}
+    assert "IMAGE002" in {f.rule_id for f in report.findings}
     assert "/private/secret" not in str(report.as_dict())
 
 
@@ -141,7 +141,7 @@ def test_image_external_reference_is_not_fetched_or_echoed(tmp_path: Path) -> No
     image.set(qn("xlink", "href"), resource)
     source = document.save(tmp_path / "external.odi")
     report = audit_odf(source)
-    assert "IMAGE003" in {f.rule_id for f in report.findings}
+    assert "IMAGE005" in {f.rule_id for f in report.findings}
     assert resource not in str(report.as_dict())
 
 
@@ -184,7 +184,7 @@ def test_svg_declared_dependencies_and_active_content_require_review(
     payload = f'<svg xmlns="http://www.w3.org/2000/svg">{declaration}</svg>'.encode()
     document.storage.write_member(_payload(document), payload)
     report = audit_odf(document.save(tmp_path / "review.odi"))
-    assert "IMAGE005" in {f.rule_id for f in report.findings}
+    assert "IMAGE001" in {f.rule_id for f in report.findings}
     assert "invalid.example" not in str(report.as_dict())
 
 
@@ -196,7 +196,7 @@ def test_svg_external_stylesheet_requires_review(tmp_path: Path) -> None:
         b'<svg xmlns="http://www.w3.org/2000/svg"/>',
     )
     report = audit_odf(document.save(tmp_path / "stylesheet.odi"))
-    assert "IMAGE005" in {f.rule_id for f in report.findings}
+    assert "IMAGE001" in {f.rule_id for f in report.findings}
 
 
 def test_svg_self_contained_references_are_not_external_dependencies(tmp_path: Path) -> None:
@@ -207,7 +207,7 @@ def test_svg_self_contained_references_are_not_external_dependencies(tmp_path: P
         b'</defs><use href="#shape" fill="url(#paint)" style="stroke:url(\'#stroke\')"/></svg>',
     )
     report = audit_odf(document.save(tmp_path / "self-contained.odi"))
-    assert not {"IMAGE004", "IMAGE005"} & {f.rule_id for f in report.findings}
+    assert not {"IMAGE002", "IMAGE001"} & {f.rule_id for f in report.findings}
 
 
 def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
@@ -225,7 +225,7 @@ def test_flat_image_embedded_payload_is_preserved_without_a_package_reference(
     )
     after = OdfDocument.open(destination)
     assert select_elements(after.tree(Part.CONTENT), "//office:binary-data")[0].text == binary
-    assert not {"GRAPHIC003", "IMAGE003", "IMAGE004"} & {
+    assert not {"GRAPHIC001", "IMAGE005", "IMAGE002"} & {
         f.rule_id for f in audit_odf(destination).findings
     }
 
@@ -235,7 +235,7 @@ def test_flat_image_malformed_embedded_base64_has_an_integrity_finding(tmp_path:
     document = OdfDocument.open(source)
     select_elements(document.tree(Part.CONTENT), "//office:binary-data")[0].text = "%%%invalid%%%"
     report = audit_odf(document.save(tmp_path / "invalid.fodi"))
-    assert "IMAGE004" in {f.rule_id for f in report.findings}
+    assert "IMAGE002" in {f.rule_id for f in report.findings}
 
 
 def test_svg_external_dtd_is_uninspectable_even_without_an_entity_reference(tmp_path: Path) -> None:
@@ -246,4 +246,4 @@ def test_svg_external_dtd_is_uninspectable_even_without_an_entity_reference(tmp_
         b'<svg xmlns="http://www.w3.org/2000/svg"/>',
     )
     report = audit_odf(document.save(tmp_path / "external-dtd.odi"))
-    assert "IMAGE004" in {f.rule_id for f in report.findings}
+    assert "IMAGE002" in {f.rule_id for f in report.findings}

@@ -55,7 +55,7 @@ class ChangeChartData(FaultEdit):
 def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path) -> None:
     before = OdfDocument.open(SOURCE)
     assert validate(before).count == 0
-    assert {"CHART002", "CHART003"} <= {f.rule_id for f in audit_odf(SOURCE).findings}
+    assert {"CHART003", "CHART004"} <= {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odc", tmp_path / "twice.odc"
     assert apply_answers(SOURCE, once, _plan()).changed
     assert not apply_answers(once, twice, _plan()).changed
@@ -132,7 +132,7 @@ def test_chart_external_provider_is_not_fetched_or_echoed(tmp_path: Path) -> Non
     chart.set(qn("xlink", "href"), resource)
     source = document.save(tmp_path / "external.odc")
     report = audit_odf(source)
-    assert "CHART005" in {f.rule_id for f in report.findings}
+    assert "CHART006" in {f.rule_id for f in report.findings}
     assert resource not in str(report.as_dict())
 
 
@@ -156,7 +156,9 @@ def test_chart_series_category_and_value_consistency_requires_review(
         series = select_elements(tree, "//chart:series")[0]
         series.set(qn("chart", "values-cell-range-address"), "local-table.$B$1:.$B$3")
     report = audit_odf(document.save(tmp_path / "inconsistent.odc"))
-    assert "CHART006" in {f.rule_id for f in report.findings}
+    assert ("CHART010" if defect == "categories" else "CHART011") in {
+        f.rule_id for f in report.findings
+    }
 
 
 def test_chart_audit_uses_typed_metadata_without_a_report_fact_channel() -> None:

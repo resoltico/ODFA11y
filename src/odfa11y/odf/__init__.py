@@ -20,7 +20,7 @@ from odfa11y.odf.schema import (
     regressions,
     validate,
 )
-from odfa11y.odf.storage import OdfStorage, Part
+from odfa11y.odf.storage import Layout, OdfStorage, Part
 from odfa11y.odf.xpath import select_elements
 
 __all__ = [
@@ -33,6 +33,7 @@ __all__ = [
     "DocumentKind",
     "Family",
     "FlatXmlStorage",
+    "Layout",
     "OdfDocument",
     "OdfStorage",
     "PackageStorage",

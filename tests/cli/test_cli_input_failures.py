@@ -83,7 +83,7 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
         assert "Command: failed (exit 3" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
-        assert "GRAPHIC003" in output.out
+        assert "GRAPHIC001" in output.out
 
 
 def test_sniff_regular_alias_and_directory(tmp_path: Path) -> None:
@@ -126,7 +126,7 @@ def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_fa
     assert main(["audit", str(source), "--format", "json"]) == 2
     output = capsys.readouterr()
     report = json.loads(output.out)
-    assert [finding["rule_id"] for finding in report["findings"]] == ["PDF000"]
+    assert [finding["rule_id"] for finding in report["findings"]] == ["PDF001"]
     assert "Unsupported PDF stream decoding" in report["findings"][0]["message"]
     assert not output.err
     assert main(["compare", str(source), str(source)]) == 3

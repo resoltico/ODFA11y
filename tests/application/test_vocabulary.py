@@ -48,7 +48,7 @@ def test_skipped_and_inapplicable_stages_do_not_change_exit_status() -> None:
 
 def test_warning_only_report_respects_the_selected_profile() -> None:
     report = Report(ReportKind.ODF, "candidate.odt")
-    report.raise_(rules.HEADING003)
+    report.raise_(rules.HEADING004)
     assert gate_outcome(report, strict=Profile.PRODUCTION.strict).exit_status(True) == 1
     assert gate_outcome(report, strict=Profile.PDF.strict).exit_status(False) == 0
 

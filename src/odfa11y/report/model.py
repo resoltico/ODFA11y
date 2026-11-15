@@ -9,7 +9,8 @@ lazy from pathlib import Path
 
 from odfa11y.contracts import JsonProperty, record_dict, validate
 from odfa11y.decisions.decision import QuestionContext
-from odfa11y.errors import PackageError
+from odfa11y.errors import InvalidOption, PackageError
+from odfa11y.rules.details import bounded_details
 from odfa11y.rules.registry import Severity
 from odfa11y.targets import Location, TargetPath
 lazy from odfa11y.contracts import JsonObject
@@ -60,7 +61,7 @@ class Finding:
     @JsonProperty
     def category(self) -> str:
         """The rule's concern category."""
-        return self.rule.category.value
+        return self.rule.category
 
     def as_dict(self) -> JsonObject:
         """Serialize the typed record.
@@ -161,13 +162,18 @@ class Report[F = object]:
                     sheet=str(values["sheet"]) if values.get("sheet") else None,
                 ),
             )
+        detail_values = bounded_details(details or {})
+        try:
+            validate(detail_values, rule.details, label=f"{rule.id} details")
+        except InvalidOption as error:
+            raise ValueError(str(error)) from error
         self.findings.append(
             Finding(
                 _rule=rule,
                 _decision=decision,
                 message=message or rule.title,
                 location=location,
-                details=record_dict(details) if details else {},
+                details=detail_values,
             )
         )
 

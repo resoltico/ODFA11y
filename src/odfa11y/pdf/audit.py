@@ -64,7 +64,7 @@ def inspect_pdf(pdf_path: str | Path) -> PdfInspection:
         structure = _inspect(pdf_path, report)
         return PdfInspection(report, structure)
     except (OSError, PyPdfError, ValueError, KeyError, RecursionError, ToolFailure) as exc:
-        report.raise_(rules.PDF000, f"Cannot inspect PDF: {exc}")
+        report.raise_(rules.PDF001, f"Cannot inspect PDF: {exc}")
     return PdfInspection(report, None)
 
 
@@ -91,22 +91,22 @@ def _audit_metadata(reader: PdfReader, report: Report) -> DictionaryObject:
     if title:
         report.measure(PdfMeasurements(title=title))
     else:
-        report.raise_(rules.PDF001, "PDF document title metadata is missing.")
+        report.raise_(rules.PDF002, "PDF document title metadata is missing.")
     catalog = reader.root_object
     language = catalog.get("/Lang")
     if isinstance(language, str) and language.strip():
         report.measure(PdfMeasurements(language=language))
     else:
-        report.raise_(rules.PDF002, "PDF catalog /Lang is missing.")
+        report.raise_(rules.PDF003, "PDF catalog /Lang is missing.")
     marked = pdf_dictionary(catalog.get("/MarkInfo")).get("/Marked")
     if not isinstance(marked, BooleanObject) or not marked.value:
-        report.raise_(rules.PDF003, "PDF is not marked as a tagged document.")
+        report.raise_(rules.PDF004, "PDF is not marked as a tagged document.")
     structure = pdf_dictionary(catalog.get("/StructTreeRoot"))
     if not structure:
-        report.raise_(rules.PDF004, "PDF has no /StructTreeRoot.")
+        report.raise_(rules.PDF005, "PDF has no /StructTreeRoot.")
     display_title = pdf_dictionary(catalog.get("/ViewerPreferences")).get("/DisplayDocTitle")
     if not isinstance(display_title, BooleanObject) or not display_title.value:
-        report.raise_(rules.PDF005, "PDF viewer preferences do not display the title.")
+        report.raise_(rules.PDF006, "PDF viewer preferences do not display the title.")
     _audit_xmp(catalog, report)
     return structure
 
@@ -132,17 +132,17 @@ def _audit_xmp(catalog: DictionaryObject, report: Report) -> None:
     if part and part.strip() == "1":
         report.measure(PdfMeasurements(ua_part=1))
     else:
-        report.raise_(rules.PDF006, "PDF XMP metadata does not declare PDF/UA-1.")
+        report.raise_(rules.PDF007, "PDF XMP metadata does not declare PDF/UA-1.")
 
 
 def _audit_content(reader: PdfReader, report: Report, graphics: int) -> None:
     if not reader.pages:
-        report.raise_(rules.PDF009, "PDF contains no pages.")
+        report.raise_(rules.PDF010, "PDF contains no pages.")
         return
     text_chars = sum(len(page.extract_text() or "") for page in reader.pages)
     report.measure(PdfMeasurements(text_character_count=text_chars))
     report.measure(PdfMeasurements(described_graphic_count=graphics))
     if not text_chars and not graphics:
         report.raise_(
-            rules.PDF010, "No extractable text or inspected described graphical content was found."
+            rules.PDF011, "No extractable text or inspected described graphical content was found."
         )

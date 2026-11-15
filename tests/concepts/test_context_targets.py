@@ -61,7 +61,7 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     note_graphic = next(
         f
         for f in report.findings
-        if f.rule_id == "GRAPHIC003" and f.location and "/note[1]/" in f.location.path
+        if f.rule_id == "GRAPHIC001" and f.location and "/note[1]/" in f.location.path
     )
     note_table = next(
         f

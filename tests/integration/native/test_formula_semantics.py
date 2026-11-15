@@ -28,7 +28,7 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     )
     report = audit_pdfua(pdf)
     assert report.error_count != 0
-    assert "PDF004" in {f.rule_id for f in report.findings}
+    assert "PDF005" in {f.rule_id for f in report.findings}
     assert not validate_pdfua(pdf, executable=verapdf).compliant
     record = execute(
         SOURCE,

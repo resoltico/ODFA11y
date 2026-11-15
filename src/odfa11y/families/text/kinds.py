@@ -30,7 +30,7 @@ REMOVE_SPACERS = DecisionKind(
     "text.remove_spacers",
     DecisionScope.DOCUMENT,
     SwitchAnswer,
-    resolves=(rules.LAYOUT001,),
+    resolves=(rules.STYLE002,),
     edit=edit_spacers,
 )
 HEADING_LEVEL = DecisionKind(
@@ -41,6 +41,7 @@ HEADING_LEVEL = DecisionKind(
     resolves=(
         rules.HEADING001,
         rules.HEADING002,
+        rules.HEADING003,
     ),
     edit=edit_heading,
 )
@@ -60,7 +61,7 @@ TARGET_LANGUAGE = DecisionKind(
     DecisionScope.TARGET,
     TargetLanguageAnswer,
     domain=LANGUAGES,
-    resolves=(rules.LANG004,),
+    resolves=(rules.LANG001,),
     edit=edit_language,
 )
 DECISION_KINDS = (

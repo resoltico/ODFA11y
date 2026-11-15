@@ -51,13 +51,13 @@ def _region(kind: str = "insertion", identity: str = "r") -> str:
             ["REVISION002"],
         ),
         ("insertion", '<text:change-start text:change-id="r"/>', ["REVISION002"]),
-        ("deletion", '<text:change text:change-id="missing"/>', ["REVISION002", "REVISION003"]),
+        ("deletion", '<text:change text:change-id="missing"/>', ["REVISION003", "REVISION004"]),
         (
             "deletion",
             '<text:change text:change-id="r"/><text:change text:change-id="r"/>',
             ["REVISION002"],
         ),
-        ("insertion", "No current mark.", ["REVISION003"]),
+        ("insertion", "No current mark.", ["REVISION004"]),
     ],
 )
 def test_revision_mark_relationship_controls(
@@ -70,10 +70,15 @@ def test_revision_mark_relationship_controls(
     )
     report = audit_odf(source)
     assert (
-        sorted(f.rule_id for f in report.findings if f.rule_id in {"REVISION002", "REVISION003"})
+        sorted(
+            f.rule_id
+            for f in report.findings
+            if f.rule_id
+            in {"REVISION001", "REVISION002", "REVISION003", "REVISION004", "REVISION005"}
+        )
         == expected
     )
-    assert "REVISION001" in {f.rule_id for f in report.findings}
+    assert "REVISION006" in {f.rule_id for f in report.findings}
 
 
 @pytest.mark.parametrize(
@@ -105,8 +110,8 @@ def test_cached_visibility_never_overrides_condition_scope(
         tmp_path, "text", Variant(body=f"<office:text><text:p>{field}Body</text:p></office:text>")
     )
     report = audit_odf(source)
-    assert "HIDDEN001" in {f.rule_id for f in report.findings}
-    assert ("HIDDEN002" in {f.rule_id for f in report.findings}) is unresolved
+    assert "ORDER003" in {f.rule_id for f in report.findings}
+    assert ("ORDER001" in {f.rule_id for f in report.findings}) is unresolved
     assert len(measured(measurement(report, VisibilityMeasurements).visibility_contexts)) == 1
 
 
@@ -179,7 +184,7 @@ def test_reading_order_uncertainty_has_explicit_declared_scope(
             Variant(body=f"<office:text>{body}</office:text>", automatic_styles=styles),
         )
     )
-    findings = [f for f in report.findings if f.rule_id == "ORDER001"]
+    findings = [f for f in report.findings if f.rule_id == "ORDER002"]
     assert [f.details["kind"] for f in findings] == ([] if expected is None else [expected])
     assert all("Declared layout" in str(f.details["scope"]) for f in findings)
 
@@ -191,7 +196,7 @@ def test_xml_identity_is_authoritative_and_must_agree_with_text_identity(tmp_pat
         + '<text:p><text:change text:change-id="r"/></text:p></office:text>'
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    assert "REVISION002" in {finding.rule_id for finding in report.findings}
+    assert "REVISION001" in {finding.rule_id for finding in report.findings}
     assert (
         measured(measurement(report, RevisionMeasurements).revision_relationships)["unresolved"]
         == 1
@@ -206,8 +211,8 @@ def test_conditionally_hidden_anchor_remains_unestablished_current_flow(tmp_path
         '<text:change text:change-id="r"/></text:p></text:section></office:text>'
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    assert {"REVISION001", "REVISION003", "HIDDEN001"} <= {f.rule_id for f in report.findings}
-    assert "REVISION002" not in {finding.rule_id for finding in report.findings}
+    assert {"REVISION006", "REVISION005", "ORDER003"} <= {f.rule_id for f in report.findings}
+    assert "REVISION001" not in {finding.rule_id for finding in report.findings}
 
 
 def test_note_range_cannot_end_in_another_reading_context(tmp_path: Path) -> None:

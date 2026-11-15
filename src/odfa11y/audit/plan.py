@@ -53,7 +53,7 @@ def prepare_plan(
             return _prepare_captured(source, captured, previous=previous, include_all=include_all)
     except (OSError, PackageError) as exc:
         report = Report(kind=ReportKind.ODF, subject=str(source), _sources=(source,))
-        report.raise_(rules.PKG000, f"Cannot capture source for planning: {exc}")
+        report.raise_(rules.PKG001, f"Cannot capture source for planning: {exc}")
         return report, None
 
 

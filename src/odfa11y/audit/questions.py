@@ -8,28 +8,32 @@ from lxml import etree
 from odfa11y.concepts.text import visible_words
 from odfa11y.decisions import OpenDecision
 from odfa11y.decisions.decision import QuestionContext
-from odfa11y.errors import DocumentRefusal
+from odfa11y.errors import DocumentRefusal, PlanError
 from odfa11y.families import require_spec
 from odfa11y.odf import Family, OdfDocument
 from odfa11y.odf import names as xml_names
 from odfa11y.remediate.document_ops import COMMON_KINDS
-from odfa11y.targets import Target
 
 
 def available_questions(document: OdfDocument) -> tuple[OpenDecision, ...]:
     questions = []
+    indices = {}
     for kind in (*COMMON_KINDS, *require_spec(document.kind).kinds):
         if kind.domain is None:
             questions.append(OpenDecision(kind, None, {}, context=QuestionContext("document")))
             continue
+        if kind.domain not in indices:
+            indices[kind.domain] = kind.domain.inspect(document)
+        index = indices[kind.domain]
         seen = set()
-        for path, node in kind.domain.enumerate(document):
+        for path, nodes in index.nodes.items():
+            node = nodes[0]
             if path in seen:
                 continue
             seen.add(path)
             try:
-                target = Target(path, kind.domain.fingerprint(document, node))
-            except DocumentRefusal:
+                target = index.binding(path)
+            except DocumentRefusal, PlanError:
                 continue  # An unresolved source identity is unavailable for an override.
             questions.append(
                 OpenDecision(

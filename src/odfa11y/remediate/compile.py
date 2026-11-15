@@ -23,17 +23,21 @@ def compile_decisions(
     problems = []
     if source_sha256 is not None and plan.header.source.sha256 != source_sha256:
         problems.append("Plan/source digest mismatch; create a newly bound plan with plan --from.")
+    indices = {}
     for decision in plan.decisions:
         if kinds.get(decision.kind.id) is not decision.kind or decision.kind not in applicable:
             problems.append(f"Decision {decision.kind.id!r} does not apply to this document family")
             continue
         if decision.target is not None and decision.kind.domain is not None:
             try:
-                node = decision.kind.domain.resolve(document, decision.target.path)
+                domain = decision.kind.domain
+                if domain not in indices:
+                    indices[domain] = domain.inspect(document)
+                current = indices[domain].binding(decision.target.path)
             except PlanError as error:
                 problems.append(f"{decision.kind.id} @ {decision.target.path}: {error.message}")
                 continue
-            if decision.kind.domain.fingerprint(document, node) != decision.target.fingerprint:
+            if current.fingerprint != decision.target.fingerprint:
                 problems.append(
                     f"{decision.kind.id} @ {decision.target.path}: fingerprint mismatch"
                 )

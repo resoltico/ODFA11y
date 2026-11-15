@@ -17,7 +17,7 @@ from odfa11y.odf.archive import (
     is_unsafe_member_name,
     validate_archive,
 )
-from odfa11y.odf.storage import OdfStorage, Part
+from odfa11y.odf.storage import Layout, OdfStorage, Part
 from odfa11y.staging import staging_sibling
 
 # Errors raised while reading malformed or unsupported ZIP structure or damaged member data.
@@ -77,7 +77,7 @@ class PackageStorage(OdfStorage):
     makes that invariant explicit instead of relying on generic ZIP behaviour.
     """
 
-    layout = "package"
+    layout = Layout.PACKAGE
 
     def __init__(self, source: str | os.PathLike[str]) -> None:
         """Load and index the document resources.

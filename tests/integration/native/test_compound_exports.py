@@ -112,8 +112,8 @@ def test_writer_nested_headers_graphic_and_named_link(
     )
     report = audit_pdfua(pdf)
     assert measured(measurement(report, PdfStructureMeasurements).structure_tags).get("TH", 0) == 0
-    assert "PDF015" in {f.rule_id for f in report.findings}
-    assert not {"PDF000", "PDF007", "PDF010", "PDF019", "PDF023"} & {
+    assert "PDF016" in {f.rule_id for f in report.findings}
+    assert not {"PDF001", "PDF008", "PDF011", "PDF020", "PDF024"} & {
         f.rule_id for f in report.findings
     }
     assert validate_pdfua(pdf, executable=external_tool("verapdf")).compliant
@@ -168,7 +168,7 @@ def test_calc_formula_graphic_and_printed_header(
     assert not apply_answers(output, tmp_path / "again.ods", plan).changed
     pdf = export_pdfua(output, tmp_path / "calc.pdf", ExportSettings("calc_pdf_Export", soffice))
     report = audit_pdfua(pdf)
-    assert {f.rule_id for f in report.findings} == {"PDF008", "PDF015"}
+    assert {f.rule_id for f in report.findings} == {"PDF009", "PDF016"}
     assert validation_failures(pdf, external_tool("verapdf")) == {("7.2", "43")}
     assert "Fruit" in read_snapshot(pdf).text
     _assert_fidelity(source, pdf, "calc_pdf_Export", soffice)

@@ -168,7 +168,7 @@ def test_an_audit_hashes_each_frame_and_shared_payload_once(
     audit_images(document, report)
     assert len(report.findings) == count
     assert len(hash_calls) == count
-    assert read_calls == ["styles.xml", "Pictures/logo.svg"]
+    assert read_calls == ["mimetype", "META-INF/manifest.xml", "styles.xml", "Pictures/logo.svg"]
     assert len(group_hashes) == count
     if duplicate_names:
         assert (

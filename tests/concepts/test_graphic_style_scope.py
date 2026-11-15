@@ -35,7 +35,7 @@ def test_nested_foreign_style_payload_never_suppresses_real_graphic_alternatives
     assert not role.decorative
     assert role.problem is None
     source = document.save(tmp_path / "foreign-style.odt")
-    assert "GRAPHIC003" in {finding.rule_id for finding in audit_odf(source).findings}
+    assert "GRAPHIC001" in {finding.rule_id for finding in audit_odf(source).findings}
 
 
 @pytest.mark.parametrize(
@@ -121,7 +121,7 @@ def test_duplicate_graphic_properties_are_unresolved_and_cannot_hide_alternative
     assert apply_in_memory(document, operation)[0].status == Status.FAILED
     assert not document.changed_since(before)
     source = document.save(tmp_path / "ambiguous-properties.odt")
-    assert {"GRAPHIC001", "GRAPHIC003"} <= {
+    assert {"GRAPHIC003", "GRAPHIC001"} <= {
         finding.rule_id for finding in audit_odf(source).findings
     }
 
@@ -136,7 +136,7 @@ def test_odf13_decorative_declaration_is_unresolved_and_retains_missing_alternat
     frame.set(qn("draw", "style-name"), "Role")
     assert effective_graphic_role(document, frame).problem
     source = document.save(tmp_path / "unsupported-role.odt")
-    assert {"GRAPHIC001", "GRAPHIC003"} <= {
+    assert {"GRAPHIC003", "GRAPHIC001"} <= {
         finding.rule_id for finding in audit_odf(source).findings
     }
 

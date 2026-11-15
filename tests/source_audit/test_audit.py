@@ -65,7 +65,7 @@ def test_audit_detects_missing_graphic_alt_text(tmp_path: Path) -> None:
     report = audit_odf(
         make_minimal_odt(tmp_path / "image.odt", features={"with_image_without_alt": True})
     )
-    finding = next(f for f in report.findings if f.rule_id == "GRAPHIC003")
+    finding = next(f for f in report.findings if f.rule_id == "GRAPHIC001")
     assert finding.severity is Severity.ERROR
     assert finding.details["frame"] == "Logo"
     assert question_for(report, finding).kind.id == "graphic.alternative"
@@ -87,14 +87,14 @@ def test_unsafe_member_names_are_reported(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "unsafe.odt")
     with zipfile.ZipFile(source, "a") as archive:
         archive.writestr("../escape.txt", b"x")
-    assert "PKG007" in ids(audit_odf(source))
+    assert "PKG010" in ids(audit_odf(source))
 
 
 def test_unreadable_source_is_a_finding_not_an_exception(tmp_path: Path) -> None:
     source = tmp_path / "broken.odt"
     source.write_bytes(b"not a zip")
-    assert ids(audit_odf(source)) == {"PKG000"}
-    assert ids(audit_odf(tmp_path / "missing.odt")) == {"PKG000"}
+    assert ids(audit_odf(source)) == {"PKG001"}
+    assert ids(audit_odf(tmp_path / "missing.odt")) == {"PKG001"}
 
 
 def test_schema_audit_records_version_and_violations(tmp_path: Path) -> None:

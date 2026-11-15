@@ -56,7 +56,7 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
         )
         failures = {(failure.clause, failure.test_number) for failure in result.failures}
         assert failures == {("7.18.1", "2"), ("7.18.5", "2")}, failures
-        assert pdf_rules == {"PDF019"}, diagnostics
+        assert pdf_rules == {"PDF020"}, diagnostics
         assert record.failed_stage == "audit-pdf", diagnostics
         assert record.exit_status == 2
         assert stages["fidelity"] == "skipped", diagnostics

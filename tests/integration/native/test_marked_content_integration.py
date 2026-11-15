@@ -46,7 +46,7 @@ def test_content_errors_agree_with_verapdf_on_a_damaged_real_export(
     writer.write(path)
     report = audit_pdfua(path)
     content_rules = {f.rule_id for f in report.findings if f.rule_id.startswith("PDF02")}
-    expected = {"PDF020", "PDF021"} if defect == "unreferenced" else {"PDF021", "PDF023"}
+    expected = {"PDF021", "PDF022"} if defect == "unreferenced" else {"PDF022", "PDF024"}
     assert content_rules == expected
     assert report.error_count != 0
     result = validate_pdfua(path, executable=verapdf)

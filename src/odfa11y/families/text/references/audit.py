@@ -125,11 +125,11 @@ def _audit_ranges(index: _Index, report: Report) -> None:
         for owner in owners:
             paired = index.ends.get(key, [])
             if not key[1] or len(owners) != 1 or not _valid_range(owner, paired, index):
-                report.raise_(rules.REFERENCE003, location=index.locations[owner])
+                report.raise_(rules.REF003, location=index.locations[owner])
     for key, markers in index.ends.items():
         if key not in index.targets:
             for marker in markers:
-                report.raise_(rules.REFERENCE003, location=index.locations[marker])
+                report.raise_(rules.REF003, location=index.locations[marker])
 
 
 def _valid_range(owner: etree._Element, ends: list[etree._Element], index: _Index) -> bool:
@@ -158,7 +158,7 @@ def _audit_reference(
     owners = index.targets.get(reference, set())
     if reference in index.excluded:
         report.raise_(
-            rules.REFERENCE004,
+            rules.REF004,
             "A matching destination lies outside established current reading flow.",
             location=index.locations[node],
             details={"target": name, "target_kind": kind},
@@ -166,9 +166,9 @@ def _audit_reference(
         return
     if len(owners) != 1:
         rule = (
-            rules.REFERENCE002
+            rules.REF002
             if owners
-            else (rules.REFERENCE004 if kind == "link" and "|" in name else rules.REFERENCE001)
+            else (rules.REF004 if kind == "link" and "|" in name else rules.REF001)
         )
         report.raise_(
             rule,
@@ -196,7 +196,7 @@ def _note(node: etree._Element, location: Location, report: Report) -> None:
     bodies = list(node.iterchildren(xml_names.TEXT_NOTE_BODY))
     complete = len(citations) == 1 and len(bodies) == 1
     if not node.get(xml_names.TEXT_ID) or not complete or not visible_words(bodies[0]):
-        report.raise_(rules.NOTE002, location=location)
+        report.raise_(rules.NOTE003, location=location)
 
 
 def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
@@ -209,7 +209,7 @@ def _audit_notes(tree: etree._ElementTree, report: Report) -> None:
         identity = note.get(xml_names.TEXT_ID)
         if identity and identities[identity] > 1:
             report.raise_(
-                rules.NOTE002,
+                rules.NOTE004,
                 "Note identity is duplicated.",
                 location=Location.named(reading_context_path(note), "note", identity),
             )

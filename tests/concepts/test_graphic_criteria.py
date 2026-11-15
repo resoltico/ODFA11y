@@ -58,7 +58,7 @@ def test_graphic_text_criteria_are_identical_across_families(
     candidate = document.save(tmp_path / ("candidate" + source.suffix))
     before = candidate.read_bytes()
     report = audit_odf(candidate)
-    assert any(f.rule_id == "GRAPHIC003" for f in report.findings) is missing
+    assert any(f.rule_id == "GRAPHIC001" for f in report.findings) is missing
     assert candidate.read_bytes() == before
     assert validate(OdfDocument.open(candidate)).count == baseline.count
     report.as_dict()

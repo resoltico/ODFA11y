@@ -119,7 +119,7 @@ def _descriptor(rule_id: str) -> dict[str, Any]:
         "id": rule.id,
         "shortDescription": {"text": rule.title},
         "defaultConfiguration": {"level": _LEVELS[rule.severity]},
-        "properties": {"category": rule.category.value},
+        "properties": {"category": rule.category},
     }
     return result
 
@@ -146,7 +146,7 @@ def _result(
         "level": _LEVELS[finding.severity],
         "message": {"text": rule.title},
         "locations": locations,
-        "properties": {"category": rule.category.value},
+        "properties": {"category": rule.category},
     }
     return result
 

@@ -27,5 +27,5 @@ def test_production_requires_floating_frame_review_before_native_export(tmp_path
     assert record.exit_status == 1
     stage = next(stage for stage in record.stages if stage.name == "audit-remediated")
     assert stage.report is not None
-    assert "ORDER001" in {finding.rule_id for finding in stage.report.findings}
+    assert "ORDER002" in {finding.rule_id for finding in stage.report.findings}
     assert not (tmp_path / "evidence/source.pdf").exists()

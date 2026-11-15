@@ -176,6 +176,13 @@
 | `image` | An image document expresses graphic content. |
 | `database` | A database document describes forms, reports, queries and data sources. |
 
+## Layout
+
+| Value | Meaning |
+| --- | --- |
+| `package` | An OpenDocument ZIP package with separate members. |
+| `flat` | A single XML document containing the OpenDocument parts. |
+
 ## Part
 
 | Value | Meaning |
@@ -267,19 +274,3 @@
 | `completed` | The batch or item completed successfully. |
 | `failed` | The batch or item finished with a rejected outcome. |
 | `interrupted` | An interruption prevented the batch or item from completing. |
-
-## Category
-
-| Value | Meaning |
-| --- | --- |
-| `package` | The finding concerns the stored OpenDocument container. |
-| `xml` | The finding concerns XML parsing or structure. |
-| `odf` | The finding concerns OpenDocument conformance. |
-| `metadata` | The finding concerns descriptive document metadata. |
-| `semantics` | The finding concerns the meaning expressed by document structure. |
-| `layout` | The finding concerns document layout or reading flow. |
-| `links` | The finding concerns link structure or purpose. |
-| `style` | The finding concerns style use or inheritance. |
-| `pdf` | The finding concerns exported PDF structure or content. |
-| `validator` | The finding is a PDF/UA validator observation. |
-| `fidelity` | The finding concerns changes between source and candidate exports. |

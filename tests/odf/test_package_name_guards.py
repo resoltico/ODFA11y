@@ -54,7 +54,7 @@ def test_duplicate_members_refuse_every_guard_before_kind_or_native_access(
         archive.writestr(member, pair[0])
         with pytest.warns(UserWarning, match="Duplicate name"):
             archive.writestr(member, pair[1])
-    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG006")
+    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG009")
 
 
 def test_unsafe_member_names_refuse_before_kind_or_native_access(
@@ -67,7 +67,7 @@ def test_unsafe_member_names_refuse_before_kind_or_native_access(
         for name in storage.order:
             archive.writestr(name, storage.read(name))
         archive.writestr("../outside.xml", b"unestablished bytes")
-    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG007")
+    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG010")
 
 
 def _assert_guarded_refusal(

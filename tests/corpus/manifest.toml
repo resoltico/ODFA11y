@@ -27,8 +27,8 @@ sha256 = "1334647db20f6c1fbbcc33c766b684b7f29c49aa96d4d6a88851461c0e4b3276"
 
 [[document]]
 file = "frames-textbox.odt"
-rules = ["ORDER001"]
-rules_after_plan = ["ORDER001"]
+rules = ["ORDER002"]
+rules_after_plan = ["ORDER002"]
 schema_violations = 11
 sha256 = "839ecd92f4879c44bbca7ba224c83e0363e64fa78231d651841c307fcbe4c9ef"
 
@@ -48,8 +48,8 @@ sha256 = "012a29a0a085b78408519793d9c62b220c9c3e9bc59d0dd380f2beeb9f8f2530"
 
 [[document]]
 file = "headings-skipped.odt"
-rules = ["HEADING002"]
-rules_after_plan = ["HEADING002"]
+rules = ["HEADING003"]
+rules_after_plan = ["HEADING003"]
 schema_violations = 6
 sha256 = "1d133a4fdca4cbc364887065f9dc54cff17c7cd2cbd466e3fee886bf303e1c0f"
 
@@ -62,14 +62,14 @@ sha256 = "cf4a137cd41ce4a19fa542d6215ab07624eeb2580b121e428ba2f07829eb0c91"
 
 [[document]]
 file = "images-undescribed.fodt"
-rules = ["GRAPHIC003"]
+rules = ["GRAPHIC001"]
 rules_after_plan = []
 schema_violations = 6
 sha256 = "ad116aed39a6521fcb3d557a5e2eb0c4c70ae7cd4de91da6c74eb738044d647f"
 
 [[document]]
 file = "images-undescribed.odt"
-rules = ["GRAPHIC003"]
+rules = ["GRAPHIC001"]
 rules_after_plan = []
 schema_violations = 6
 sha256 = "401585b7c44ff08401dc5cbf12bffaea68557f87948b68ba0fa57fcea4c3dbc8"
@@ -104,35 +104,35 @@ sha256 = "44e402e4bdf55d9f59a15cb11f213bd6710169f801a44922dd0c3e0cdd0d6aee"
 
 [[document]]
 file = "page-breaks-spacers.odt"
-rules = ["LAYOUT001"]
+rules = ["STYLE002"]
 rules_after_plan = []
 schema_violations = 6
 sha256 = "8151c8e6ed9cbfff44307140816ac9260a580b72b82aecd2cf666484dba82830"
 
 [[document]]
 file = "table-header-row.odt"
-rules = ["LAYOUT001"]
+rules = ["STYLE002"]
 rules_after_plan = []
 schema_violations = 11
 sha256 = "7099bda2b8ac43e178cd0bd18fed405615a5cdccca3f69f2af827ed32b2d01dc"
 
 [[document]]
 file = "table-merged-cells.fodt"
-rules = ["TABLE001", "LAYOUT001"]
+rules = ["TABLE001", "STYLE002"]
 rules_after_plan = ["TABLE001"]
 schema_violations = 6
 sha256 = "f6c116fcb84405c780eaf46ee07492ab88d7af2eace1361aef0ac23de4ed70de"
 
 [[document]]
 file = "table-merged-cells.odt"
-rules = ["TABLE001", "LAYOUT001"]
+rules = ["TABLE001", "STYLE002"]
 rules_after_plan = ["TABLE001"]
 schema_violations = 11
 sha256 = "76ea0681c0ab19dd091a2e2d0402eeee3736f2be5d72f0d6ee2eba2867e120aa"
 
 [[document]]
 file = "table-no-header-row.odt"
-rules = ["TABLE001", "LAYOUT001"]
+rules = ["TABLE001", "STYLE002"]
 rules_after_plan = ["TABLE001"]
 schema_violations = 11
 sha256 = "083a68fb12b52d2a4835bc9325605944a0ce70fe208368b59fd4c73156047c3f"

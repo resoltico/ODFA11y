@@ -12,7 +12,7 @@ FORMULA_ALTERNATIVE = DecisionKind(
     DecisionScope.TARGET,
     FormulaAlternativeAnswer,
     domain=FORMULA,
-    resolves=(rules.MATH002,),
+    resolves=(rules.MATH003,),
     edit=edit_formula,
 )
 DECISION_KINDS = (FORMULA_ALTERNATIVE,)

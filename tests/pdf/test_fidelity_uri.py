@@ -38,7 +38,7 @@ def test_base_change_and_equivalent_absolute_destinations(tmp_path: Path) -> Non
         tmp_path / "right.pdf", ["file.pdf"] * 2, TextStringObject("https://example.test/two/")
     )
     report = compare_pdfs(left, right, Pagination.SAME())
-    assert {f.rule_id for f in report.findings} == {"FID004", "FID006"}
+    assert {f.rule_id for f in report.findings} == {"FIDELITY004", "FIDELITY006"}
     absolute = _with_base(
         tmp_path / "absolute.pdf",
         ["https://example.test/one/file.pdf"] * 2,

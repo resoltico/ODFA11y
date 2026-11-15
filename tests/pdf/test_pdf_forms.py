@@ -58,13 +58,13 @@ def test_form_content_correspondence(tmp_path: Path, case: str) -> None:
         owner[NameObject("/K")] = NumberObject(1)
     rules = findings(tmp_path, writer)
     expected = {
-        "unmarked": "PDF023",
-        "orphan": "PDF020",
-        "dangling": "PDF021",
-        "duplicate": "PDF022",
+        "unmarked": "PDF024",
+        "orphan": "PDF021",
+        "dangling": "PDF022",
+        "duplicate": "PDF023",
     }
     if case == "owned":
-        assert not rules & {"PDF000", "PDF020", "PDF021", "PDF022", "PDF023"}
+        assert not rules & {"PDF001", "PDF021", "PDF022", "PDF023", "PDF024"}
     else:
         assert expected[case] in rules
 
@@ -75,15 +75,15 @@ def test_form_graphics_require_actual_nonartifact_content(tmp_path: Path, conten
     set_page_content(writer, writer.pages[0], "/Figure <</MCID 0>> BDC /Fm Do EMC")
     add_form(writer, content)
     rules = findings(tmp_path, writer)
-    assert ("PDF010" in rules) == (not content or "Artifact" in content)
-    assert "PDF000" not in rules
+    assert ("PDF011" in rules) == (not content or "Artifact" in content)
+    assert "PDF001" not in rules
 
 
 def test_form_cycles_fail_explicitly(tmp_path: Path) -> None:
     writer = tagged_writer(["H1"])
     set_page_content(writer, writer.pages[0], "/Fm Do")
     add_form(writer, "/Fm Do")
-    assert "PDF000" in findings(tmp_path, writer)
+    assert "PDF001" in findings(tmp_path, writer)
 
 
 def test_page_and_two_form_mcids_are_distinct(tmp_path: Path) -> None:
@@ -103,7 +103,7 @@ def test_page_and_two_form_mcids_are_distinct(tmp_path: Path) -> None:
             NameObject("/MCID"): NumberObject(0),
             NameObject("/Stm"): stream,
         })
-    assert not findings(tmp_path, writer) & {"PDF000", "PDF020", "PDF021", "PDF022", "PDF023"}
+    assert not findings(tmp_path, writer) & {"PDF001", "PDF021", "PDF022", "PDF023", "PDF024"}
 
 
 @pytest.mark.parametrize("artifact", [False, True])
@@ -121,8 +121,8 @@ def test_nested_reused_forms_resolve_shadowed_resources(tmp_path: Path, *, artif
     assert isinstance(resources, DictionaryObject)
     resources[NameObject("/XObject")] = DictionaryObject({NameObject("/Fm"): outer})
     rules = findings(tmp_path, writer)
-    assert "PDF000" not in rules
-    assert ("PDF010" in rules) == artifact
+    assert "PDF001" not in rules
+    assert ("PDF011" in rules) == artifact
 
 
 def test_whole_object_form_ownership_is_explicitly_incomplete(tmp_path: Path) -> None:
@@ -130,4 +130,4 @@ def test_whole_object_form_ownership_is_explicitly_incomplete(tmp_path: Path) ->
     set_page_content(writer, writer.pages[0], "/Fm Do")
     form = add_form(writer, "BT (x) Tj ET")
     dictionary(form)[NameObject("/StructParent")] = NumberObject(0)
-    assert "PDF000" in findings(tmp_path, writer)
+    assert "PDF001" in findings(tmp_path, writer)

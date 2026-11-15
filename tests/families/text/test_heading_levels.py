@@ -38,7 +38,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
 ) -> None:
     source = make(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
-    finding = next(f for f in report.findings if f.rule_id == "HEADING002")
+    finding = next(f for f in report.findings if f.rule_id == "HEADING003")
     assert finding.location is not None
     target = finding.location.path
     assert target == "content/heading[2]"
@@ -47,7 +47,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
     operation = heading_inputs({target: level_answer(2, reviewed_fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
     apply_answers(source, once, [operation])
-    assert "HEADING002" not in {f.rule_id for f in audit_odf(once).findings}
+    assert "HEADING003" not in {f.rule_id for f in audit_odf(once).findings}
     assert not apply_answers(once, twice, [operation]).changed
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(twice).tree(Part.CONTENT)

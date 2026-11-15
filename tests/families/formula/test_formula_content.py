@@ -43,8 +43,8 @@ def test_schema_valid_empty_or_invisible_expressions_fail_semantic_audit(
     tmp_path: Path, xml: str
 ) -> None:
     report = audit_odf(_expression(tmp_path, xml), schema=True)
-    assert "MATH001" in {finding.rule_id for finding in report.findings}
-    assert "MATH002" not in {finding.rule_id for finding in report.findings}
+    assert "MATH002" in {finding.rule_id for finding in report.findings}
+    assert "MATH003" not in {finding.rule_id for finding in report.findings}
 
 
 @pytest.mark.parametrize(
@@ -101,4 +101,4 @@ def test_remote_glyph_remains_a_resource_warning_without_fetching(tmp_path: Path
     report = audit_odf(document.save(tmp_path / "glyph.odf"), schema=True)
     ids = {finding.rule_id for finding in report.findings}
     assert "MATH001" not in ids
-    assert "MATH003" in ids
+    assert "MATH004" in ids

@@ -8,8 +8,9 @@ from odfa11y.concepts import visible_words
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
+from odfa11y.families.text.domains import LANGUAGES
 from odfa11y.families.text.kinds import TARGET_LANGUAGE
-from odfa11y.families.text.language.effective import CHANNELS, effective_languages, language_targets
+from odfa11y.families.text.language.effective import CHANNELS, effective_languages
 from odfa11y.families.text.language.operations import language_fingerprint
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
@@ -50,7 +51,7 @@ class LanguageMeasurements:
 def audit_languages(document: OdfDocument, report: Report) -> None:
     """Resolve declarations without guessing a language from authored words."""
     rows: list[MeasuredLanguages | UnresolvedLanguages] = []
-    for target, node in language_targets(document).items():
+    for target, node in LANGUAGES.enumerate(document):
         if not visible_words(node):
             continue
         location = Location(target)
@@ -59,7 +60,7 @@ def audit_languages(document: OdfDocument, report: Report) -> None:
             fingerprint = language_fingerprint(document, node)
         except DocumentRefusal as error:
             report.raise_(
-                rules.LANG005,
+                rules.LANG002,
                 str(error),
                 location=location,
                 details={"native_editing": "Resolve the target's style inheritance in Writer."},
@@ -70,7 +71,7 @@ def audit_languages(document: OdfDocument, report: Report) -> None:
         rows.append(MeasuredLanguages(target, languages[0], languages[1], languages[2]))
         if all(language is None for language in languages):
             report.raise_(
-                rules.LANG004,
+                rules.LANG001,
                 location=location,
                 decision=OpenDecision(
                     TARGET_LANGUAGE,

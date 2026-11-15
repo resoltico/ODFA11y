@@ -172,7 +172,7 @@ def test_authored_style_drift_invalidates_review_and_payload_remains_checked(
     image.set(qn("xlink", "href"), "https://example.test/missing.svg")
     document.save(tmp_path / "external.odt")
     report = audit_odf(tmp_path / "external.odt")
-    assert "GRAPHIC003" not in {f.rule_id for f in report.findings}
+    assert "GRAPHIC001" not in {f.rule_id for f in report.findings}
     assert "NATIVE001" in {f.rule_id for f in report.findings}
 
 
@@ -240,7 +240,7 @@ def test_group_role_refuses_and_does_not_hide_child_findings(tmp_path: Path, dec
         apply_in_memory(document, _decision(document, group, decorative=True))
     source = document.save(tmp_path / "group.odt")
     ids = {finding.rule_id for finding in audit_odf(source).findings}
-    assert {"GRAPHIC001", "GRAPHIC003"} <= ids
+    assert {"GRAPHIC003", "GRAPHIC001"} <= ids
 
 
 def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> None:
@@ -254,7 +254,7 @@ def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> Non
         == Status.APPLIED
     )
     source = document.save(tmp_path / "conflict.odt")
-    assert {"GRAPHIC002"} <= {finding.rule_id for finding in audit_odf(source).findings}
+    assert {"GRAPHIC004"} <= {finding.rule_id for finding in audit_odf(source).findings}
     assert title.text == "Authored title"
 
 

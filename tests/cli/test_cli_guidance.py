@@ -105,7 +105,7 @@ def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str)
 def test_unreadable_document_does_not_offer_template() -> None:
     report = Report(kind=ReportKind.ODF, subject="bad.odt", _sources=(Path("bad.odt"),))
     report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
-    report.raise_(rules.PKG000)
+    report.raise_(rules.PKG001)
     assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
 
 

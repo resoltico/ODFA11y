@@ -69,7 +69,7 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
         )
         if not _coherent(node):
             report.raise_(
-                rules.HIDDEN002,
+                rules.ORDER001,
                 location=location,
                 details={
                     "native_editing": (
@@ -78,7 +78,7 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
                 },
             )
     if rows:
-        report.raise_(rules.HIDDEN001, details={"contexts": len(rows)})
+        report.raise_(rules.ORDER003, details={"contexts": len(rows)})
     report.measure(VisibilityMeasurements(visibility_contexts=rows))
     audit_reading_order(document, report)
 

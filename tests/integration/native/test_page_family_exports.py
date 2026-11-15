@@ -47,7 +47,7 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert all(stage.status == "passed" for stage in record.stages)
     assert check_bundle(root) == []
-    assert "PDF007" in {f.rule_id for f in audit_pdfua(root / "source.pdf").findings}
+    assert "PDF008" in {f.rule_id for f in audit_pdfua(root / "source.pdf").findings}
     damaged = validate_pdfua(root / "source.pdf", executable=verapdf)
     assert not damaged.compliant
     assert {(failure.clause, failure.test_number) for failure in damaged.failures} == {("7.3", "1")}
@@ -96,5 +96,5 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
     report = audit_pdfua(root / "remediated.pdf")
     assert measured(measurement(report, PdfMeasurements).text_character_count) == 0
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 1
-    assert "PDF010" not in {finding.rule_id for finding in report.findings}
+    assert "PDF011" not in {finding.rule_id for finding in report.findings}
     assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant

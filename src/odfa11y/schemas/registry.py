@@ -2,7 +2,9 @@
 """The single catalogue of published result and plan-file contracts."""
 
 from dataclasses import dataclass
-from typing import get_args
+from functools import reduce
+from operator import or_
+from typing import Literal, get_args
 
 from odfa11y.application import (
     AuditRun,
@@ -15,7 +17,7 @@ from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.audit.package import PackageMeasurements
 from odfa11y.batch.record import BatchRecord
 from odfa11y.concepts.metadata import DocumentMetadata
-from odfa11y.contracts import JsonObject, schema_for
+from odfa11y.contracts import JsonObject, mapping_contract, schema_for
 from odfa11y.contracts.types import computed_hints, record_hints, split
 from odfa11y.decisions import Decision, OpenDecision
 from odfa11y.families.chart.audit import ChartMeasurements
@@ -44,8 +46,10 @@ from odfa11y.plans.contracts import decision_contract, file_contract
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.records import DoctorRecord
 from odfa11y.remediate import RemediationResult
-from odfa11y.report import Report
+from odfa11y.report import Finding, Report
+from odfa11y.rules.registry import RULES
 from odfa11y.run.record import RunRecord
+from odfa11y.targets import Location
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +118,25 @@ def generated_schemas() -> dict[str, JsonObject]:
         | PdfStructureMeasurements
         | ValidationMeasurements
     )
+    findings = reduce(
+        or_,
+        (
+            mapping_contract(
+                rule.id + "Finding",
+                {
+                    "rule_id": Literal.__getitem__((rule.id,)),
+                    "message": str,
+                    "location": Location | None,
+                    "details": rule.details,
+                    "severity": Literal.__getitem__((rule.severity.value,)),
+                    "category": Literal.__getitem__((rule.category,)),
+                },
+            )
+            for rule in RULES.values()
+        ),
+    )
     overrides: dict[object, object] = {
+        Finding: findings,
         Report: Report[measurements],
         Decision: decision_contract(kinds, open_decision=False),
         OpenDecision: decision_contract(kinds, open_decision=True),

@@ -15,7 +15,7 @@ from odfa11y.odf.access import require_access
 from odfa11y.odf.detect import detect
 from odfa11y.odf.encryption import inspect_protection
 from odfa11y.odf.opening import open_storage
-from odfa11y.odf.storage import Part, parse_member_xml
+from odfa11y.odf.storage import Layout, Part, parse_member_xml
 lazy from odfa11y.odf.access import Use
 lazy from odfa11y.odf.detect import Detection
 lazy from odfa11y.odf.kinds import DocumentKind
@@ -68,7 +68,7 @@ class OdfDocument:
         return cls(open_storage(source))
 
     @property
-    def layout(self) -> str:
+    def layout(self) -> Layout:
         """``package`` for a ZIP package, ``flat`` for a single XML file."""
         return self.storage.layout
 
