@@ -22,7 +22,7 @@ Audit ODF or PDF files without changing them.
 | `--schema` | 0 | no | False | Validate ODF files against the ODF schema. |
 | `--verapdf` | 0 | no | False | Validate PDF files with veraPDF (PDF/UA-1). |
 | `--verapdf-path` | 1 | no |  | veraPDF executable (implies --verapdf); default: PATH. |
-| `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
+| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json, sarif |  |
 | `--source-root` | 1 | no |  | Confined source root, required for SARIF. |
 | `--strict` | 0 | no | False | Fail on warnings too. |
@@ -61,7 +61,7 @@ Export an ODF document to PDF/UA with LibreOffice.
 | `source` | 1 | yes |  |  |
 | `destination` | 1 | yes |  |  |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
+| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 
 ## compare
 
@@ -75,7 +75,7 @@ Compare two ODF or PDF files for fidelity.
 | `--plan` | 1 | no |  | TOML file whose [fidelity] table sets the policy. |
 | `--diff-dir` | 1 | no |  | Write images of pages that differ here. |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
+| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json, sarif |  |
 | `--source-root` | 1 | no |  | Confined source root, required for SARIF. |
 | `--strict` | 0 | no | False | Fail on warnings too. |
@@ -93,7 +93,7 @@ Remediate, export, validate, compare and keep evidence.
 | `--profile` | 1 | no | verify; choices: source, verify, production | Assurance profile (default: verify): source checks source/remediation; verify adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
 | `--verapdf-path` | 1 | no |  | veraPDF executable for the production profile. |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
+| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json |  |
 
 ## batch
@@ -108,7 +108,7 @@ Run independent manifest items and retain aggregate evidence.
 | `--profile` | 1 | no | verify; choices: source, verify, production | Assurance profile (default: verify): source checks source/remediation; verify adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
 | `--verapdf-path` | 1 | no |  |  |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
+| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json |  |
 
 ## verify
@@ -128,7 +128,7 @@ Show tool and dependency versions and what the PDF export supports.
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120 | Native tool timeout in seconds (default: 120). |
+| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--verapdf-path` | 1 | no |  | Selected veraPDF executable. |
 | `--format` | 1 | no | text; choices: text, json |  |
 

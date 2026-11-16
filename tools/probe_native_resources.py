@@ -15,7 +15,7 @@ from pathlib import Path
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.evidence import require_free_directory
-from odfa11y.native.export import (
+from odfa11y.native.libreoffice import (
     EXPORT_OPTIONS,
     ExportSettings,
     export_pdfua,

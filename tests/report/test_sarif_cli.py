@@ -16,7 +16,7 @@ from tests.fixtures.native import native_fakes, validation_result
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
 from tests.report.test_sarif import SCHEMA
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 
 def _run_log(output: str) -> dict:

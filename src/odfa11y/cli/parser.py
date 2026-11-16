@@ -8,15 +8,14 @@ from typing import Never
 
 from odfa11y import (
     DEFAULT_PROFILE,
-    DEFAULT_TIMEOUT_SECONDS,
     FORMATS,
     PROFILES,
     ExitStatus,
     InvalidOption,
+    Tools,
     __version__,
     profile_named,
     terminal_text,
-    validate_timeout,
 )
 lazy from odfa11y import Profile
 
@@ -211,22 +210,22 @@ def _add_tool_options(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_timeout(parser: argparse.ArgumentParser) -> None:
+    timeout = Tools().timeout
     parser.add_argument(
         "--timeout",
         type=_timeout_seconds,
-        default=DEFAULT_TIMEOUT_SECONDS,
-        help=f"Native tool timeout in seconds (default: {DEFAULT_TIMEOUT_SECONDS}).",
+        default=timeout,
+        help=f"Native tool timeout in seconds (default: {timeout:g}).",
     )
 
 
-def _timeout_seconds(value: str) -> int:
+def _timeout_seconds(value: str) -> float:
     try:
-        seconds = int(value)
-        validate_timeout(seconds)
+        seconds = Tools(timeout=float(value)).timeout
     except (ValueError, InvalidOption) as exc:
         msg = (
             f"Invalid timeout: {value!r}; "
-            "use positive whole seconds within the portable wait range."
+            "use finite positive seconds within the portable wait range."
         )
         raise argparse.ArgumentTypeError(msg) from exc
     return seconds

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Locate and identify the external applications ODFA11y drives."""
 
-import math
 import os
 import re
 import shutil
@@ -18,48 +17,16 @@ from typing import IO
 lazy from collections.abc import Generator
 lazy from types import FrameType
 
-from odfa11y.errors import InvalidOption, Remedy, RemedyAction, ToolUnavailable
+from odfa11y.errors import Remedy, RemedyAction, ToolUnavailable
 from odfa11y.tool_identity import ToolIdentity
+from odfa11y.tool_timeout import Timeout
 
-IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
 READ_CHUNK_BYTES = 64 * 1024
 READER_JOIN_SECONDS = 3
 VERSION_RE = re.compile(r"\d+(?:\.\d+)+")
 
 # Windows reserves 0xffffffff milliseconds for an infinite wait.
-MAX_TIMEOUT_SECONDS = (2**32 - 2) / 1000
-
-
-def validate_timeout(timeout: float) -> float:
-    """Require finite positive numeric seconds within the portable native wait range.
-
-    Returns
-    -------
-    float
-        Seconds preserving fractional input.
-
-    Raises
-    ------
-    InvalidOption
-        The input is not a supported finite, positive duration.
-    """
-    message = f"Timeout must be finite positive numeric seconds, at most {MAX_TIMEOUT_SECONDS}."
-    if type(timeout) not in {int, float}:
-        raise InvalidOption(message)
-    try:
-        seconds = float(timeout)
-    except OverflowError as exc:
-        raise InvalidOption(message) from exc
-    if (
-        not math.isfinite(seconds)
-        or seconds <= 0
-        or timeout > MAX_TIMEOUT_SECONDS
-        or seconds > MAX_TIMEOUT_SECONDS
-        or math.ceil(seconds * 1000) > 2**32 - 2
-    ):
-        raise InvalidOption(message)
-    return seconds
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +60,7 @@ def run_bounded(
     ToolRun
         The exit status and the captured heads of stdout and stderr.
     """
-    timeout = validate_timeout(timeout)
+    timeout = Timeout(timeout)
     process = subprocess.Popen(  # noqa: S603  Arguments select a local tool without a shell.
         command,
         stdin=subprocess.DEVNULL,
@@ -205,7 +172,14 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
     raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
 
 
-def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolIdentity:
+def identify(
+    name: str,
+    executable: str,
+    version_args: tuple[str, ...],
+    *,
+    timeout: float = Timeout.DEFAULT,
+    runner: Callable[..., ToolRun] = run_bounded,
+) -> ToolIdentity:
     """Ask an application for its version; failure yields ``unknown`` rather than an error.
 
     Returns
@@ -214,7 +188,7 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
         The reported version number, or ``unknown`` when it cannot be determined.
     """
     try:
-        completed = run_bounded([executable, *version_args], timeout=IDENTIFY_TIMEOUT_SECONDS)
+        completed = runner([executable, *version_args], timeout=Timeout(timeout))
     except OSError, subprocess.TimeoutExpired:
         return ToolIdentity(name, "unknown")
     found = VERSION_RE.search(completed.stdout or completed.stderr)
@@ -222,7 +196,11 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
 
 
 def identify_by_file_version(
-    name: str, executable: str, *, runner: Callable[..., ToolRun] = run_bounded
+    name: str,
+    executable: str,
+    *,
+    timeout: float = Timeout.DEFAULT,
+    runner: Callable[..., ToolRun] = run_bounded,
 ) -> ToolIdentity:
     """Read an executable's product version from its file metadata, without running it.
 
@@ -237,7 +215,7 @@ def identify_by_file_version(
     script = f"(Get-Item -LiteralPath '{quoted}').VersionInfo.ProductVersion"
     command = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
     try:
-        completed = runner(command, timeout=IDENTIFY_TIMEOUT_SECONDS)
+        completed = runner(command, timeout=Timeout(timeout))
     except OSError, subprocess.TimeoutExpired:
         return ToolIdentity(name, "unknown")
     found = VERSION_RE.search(completed.stdout)
@@ -250,6 +228,7 @@ def identify_running_or_by_file(
     version_args: tuple[str, ...],
     *,
     runner: Callable[..., ToolRun] = run_bounded,
+    timeout: float = Timeout.DEFAULT,
 ) -> ToolIdentity:
     """Identify via runtime version, or Windows file metadata.
 
@@ -259,8 +238,8 @@ def identify_running_or_by_file(
         The reported version, or ``unknown`` on failure.
     """
     if sys.platform == "win32":
-        return identify_by_file_version(name, executable, runner=runner)
-    return identify(name, executable, version_args)
+        return identify_by_file_version(name, executable, runner=runner, timeout=timeout)
+    return identify(name, executable, version_args, timeout=timeout, runner=runner)
 
 
 def _interrupt(_signum: int, _frame: FrameType | None) -> None:

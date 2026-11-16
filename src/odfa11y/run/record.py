@@ -11,7 +11,7 @@ from importlib import metadata
 from typing import Literal
 
 from odfa11y.contracts import JsonProperty, record_dict
-from odfa11y.native.export import EXPORT_OPTIONS
+from odfa11y.native.libreoffice import EXPORT_OPTIONS
 from odfa11y.odf import provenance
 from odfa11y.plans import Plan
 from odfa11y.records import Toolchain

@@ -10,16 +10,11 @@ from pathlib import Path
 from typing import BinaryIO
 
 from odfa11y.errors import OutputOccupied, Remedy, RemedyAction, ToolFailure, ToolUnavailable
-from odfa11y.native.process import (
-    find_executable,
-    identify_running_or_by_file,
-    run_bounded,
-    validate_timeout,
-)
+from odfa11y.native.process import find_executable, identify_running_or_by_file, run_bounded
 from odfa11y.publish import publish_file
 from odfa11y.tool_identity import ToolIdentity
+from odfa11y.tool_timeout import Timeout
 
-DEFAULT_TIMEOUT_SECONDS = 120
 MINIMUM_LIBREOFFICE_VERSION = (26, 8)
 
 EXPORT_OPTIONS: dict[str, dict[str, str]] = {
@@ -62,7 +57,7 @@ def require_supported_version(identity: ToolIdentity) -> None:
         raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, "LibreOffice"))
 
 
-def identify_soffice(executable: str) -> ToolIdentity:
+def identify_soffice(executable: str, *, timeout: float = Timeout.DEFAULT) -> ToolIdentity:
     """Report LibreOffice's version.
 
     ``soffice --version`` never returns on Windows, so there the file's product version is read.
@@ -73,7 +68,7 @@ def identify_soffice(executable: str) -> ToolIdentity:
         The name and version, or ``unknown`` when it cannot be read.
 
     """
-    return identify_running_or_by_file("LibreOffice", executable, ("--version",))
+    return identify_running_or_by_file("LibreOffice", executable, ("--version",), timeout=timeout)
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,12 +81,12 @@ class ExportSettings:
 
     pdf_filter: str
     soffice: str | Path | None = None
-    timeout: int | float = DEFAULT_TIMEOUT_SECONDS
+    timeout: int | float = Timeout.DEFAULT
     profile_dir: str | Path | None = None
 
     def __post_init__(self) -> None:
         """Reject an invalid duration before native work or output creation."""
-        validate_timeout(self.timeout)
+        object.__setattr__(self, "timeout", Timeout(self.timeout))
 
 
 def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: ExportSettings) -> Path:
@@ -115,7 +110,7 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
         LibreOffice fails, times out, or returns without producing a PDF.
 
     """
-    validate_timeout(settings.timeout)
+    Timeout(settings.timeout)
     source = Path(source).resolve()
     destination = Path(destination_pdf).absolute()
     if source == destination.resolve():

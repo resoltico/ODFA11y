@@ -4,8 +4,6 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
-from odfa11y.native.process import validate_timeout
 from odfa11y.native.verapdf import find_verapdf, run_verapdf
 from odfa11y.pdf.validation import (
     MAX_REPORT_BYTES,
@@ -15,6 +13,7 @@ from odfa11y.pdf.validation import (
     parse_validation,
 )
 from odfa11y.report import Report, ReportKind
+from odfa11y.tool_timeout import Timeout
 
 
 def validate_pdfua(
@@ -22,7 +21,7 @@ def validate_pdfua(
     *,
     executable: str | Path | None = None,
     flavour: str = "ua1",
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    timeout: float = Timeout.DEFAULT,
 ) -> VeraPdfResult:
     output = run_verapdf(
         pdf,
@@ -39,7 +38,7 @@ def check_pdfua(
     *,
     subject: str,
     executable: str | Path | None = None,
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    timeout: float = Timeout.DEFAULT,
     validator: PdfValidator | None = None,
     locate: Callable[[str | Path | None], str] | None = None,
 ) -> tuple[Report, VeraPdfResult]:
@@ -52,7 +51,7 @@ def check_pdfua(
         ToolUnavailable before a validation report is returned.
 
     """
-    validate_timeout(timeout)
+    timeout = Timeout(timeout)
     report = Report(kind=ReportKind.PDF_VALIDATION, subject=subject, _sources=(Path(pdf),))
     located = (locate or find_verapdf)(executable)
     result = (validator or validate_pdfua)(pdf, executable=located, timeout=timeout)

@@ -8,11 +8,11 @@ from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families import require_spec
 from odfa11y.families.spec import Unsupported
-from odfa11y.native.export import ExportSettings
-from odfa11y.native.process import validate_timeout
+from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.odf.export_context import require_native_context
 from odfa11y.progress import ProgressEvent, Step, StepState
+from odfa11y.tool_timeout import Timeout
 lazy from odfa11y.progress import ProgressObserver
 
 
@@ -37,7 +37,7 @@ def native_export_settings(
         The family has no native PDF export.
 
     """
-    validate_timeout(timeout)
+    timeout = Timeout(timeout)
     document.require(Use.EXPORT)
     capability = require_spec(document.kind).export
     if isinstance(capability, Unsupported):

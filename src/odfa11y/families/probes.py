@@ -8,7 +8,7 @@ from pathlib import Path
 lazy from collections.abc import Callable, Sequence
 
 from odfa11y.errors import OdfA11yError, ToolFailure
-from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.pdf.validation import PdfValidator
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.tool_identity import ToolIdentity

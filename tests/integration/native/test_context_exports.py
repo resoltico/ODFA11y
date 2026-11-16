@@ -9,7 +9,7 @@ from lxml import etree
 
 from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
-from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot

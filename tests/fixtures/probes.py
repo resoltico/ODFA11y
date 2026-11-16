@@ -27,7 +27,7 @@ from tests.fixtures.pdf import (
     tagged_writer,
 )
 lazy from odfa11y.families.probes import CapabilityProbe, ProbeCache
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 PURPOSE = "ODFA11y reviewed link purpose."
 

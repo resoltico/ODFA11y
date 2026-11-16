@@ -24,7 +24,7 @@ from odfa11y.families.probes import (
     ProbeId,
 )
 from odfa11y.families.text.probes import PROBES, write_link_probe
-from odfa11y.native.export import ExportSettings
+from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import Family, OdfDocument
 from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import (
@@ -72,12 +72,15 @@ def reported_tools(native_tools: NativeTools, monkeypatch: pytest.MonkeyPatch) -
     """Supply explicit identities for doctor output tests without launching native tools."""
     native_tools = replace(native_tools, locate=lambda _requested: "test-soffice")
     native_tools = replace(
-        native_tools, identify=lambda _executable: ToolIdentity("LibreOffice", "26.8.0.3")
+        native_tools,
+        identify=lambda _executable, **_options: ToolIdentity("LibreOffice", "26.8.0.3"),
     )
     native_tools = replace(native_tools, validator=lambda _requested=None: "test-verapdf")
     native_tools = replace(
         native_tools,
-        identify_validator=lambda _name, _executable, _arguments: ToolIdentity("veraPDF", "1.30.3"),
+        identify_validator=lambda _name, _executable, _arguments, **_options: ToolIdentity(
+            "veraPDF", "1.30.3"
+        ),
     )
     return native_tools
 

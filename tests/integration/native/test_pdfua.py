@@ -7,7 +7,7 @@ lazy from pathlib import Path
 from pypdf import PdfWriter
 
 from odfa11y.audit.validation import validate_pdfua
-from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.odf import PackageStorage
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements

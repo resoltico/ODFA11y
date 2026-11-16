@@ -41,8 +41,6 @@ from odfa11y.errors import (
     ToolFailure,
     ToolUnavailable,
 )
-from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
-from odfa11y.native.process import validate_timeout
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
@@ -57,7 +55,6 @@ from odfa11y.version import __version__
 
 __all__ = [
     "DEFAULT_PROFILE",
-    "DEFAULT_TIMEOUT_SECONDS",
     "FORMATS",
     "PROFILES",
     "AuditInput",
@@ -120,7 +117,6 @@ __all__ = [
     "run",
     "run_batch",
     "terminal_text",
-    "validate_timeout",
     "verify_evidence",
 ]
 

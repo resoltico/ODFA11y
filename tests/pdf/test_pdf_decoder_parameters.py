@@ -24,7 +24,7 @@ from tests.fixtures.pdf import register, tagged_writer
 from tests.fixtures.plans import plan_header
 from tests.fixtures.probes import conclusive_probe
 from tests.fixtures.writer import make_minimal_odt
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 
 def predictor_pdf(path: Path, predictor: object) -> Path:
@@ -104,7 +104,9 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
         return destination
 
     native_tools = replace(native_tools, locate=lambda _: "synthetic-exporter")
-    native_tools = replace(native_tools, identify=lambda _: ToolIdentity("LibreOffice", "26.8.0.3"))
+    native_tools = replace(
+        native_tools, identify=lambda _, **_options: ToolIdentity("LibreOffice", "26.8.0.3")
+    )
     monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
     native_tools = replace(native_tools, export=export)
     result = run_batch(manifest, tmp_path / "out", RunSettings(), native_tools=native_tools)

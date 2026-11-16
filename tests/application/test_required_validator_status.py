@@ -28,7 +28,7 @@ from tests.fixtures.writer import make_minimal_odt
 def successful_exports(native_tools: NativeTools, monkeypatch: pytest.MonkeyPatch) -> NativeTools:
     native_tools = replace(native_tools, locate=lambda _requested: "soffice")
     native_tools = replace(
-        native_tools, identify=lambda _path: ToolIdentity("LibreOffice", "26.8.0.3")
+        native_tools, identify=lambda _path, **_options: ToolIdentity("LibreOffice", "26.8.0.3")
     )
     monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
 

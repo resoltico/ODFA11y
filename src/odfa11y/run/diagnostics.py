@@ -15,7 +15,7 @@ from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal, ToolUnavailable
 from odfa11y.families import REGISTRY
 from odfa11y.families.probes import CapabilityResult, CapabilityStatus, ProbeCache
-from odfa11y.native.export import ExportSettings
+from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import SUPPORTED_VERSIONS
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.records import DoctorRecord, Toolchain

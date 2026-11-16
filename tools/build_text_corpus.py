@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from odfa11y.native.export import find_soffice, identify_soffice
+from odfa11y.native.libreoffice import find_soffice, identify_soffice
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from tests.fixtures.documents import Variant, make_flat

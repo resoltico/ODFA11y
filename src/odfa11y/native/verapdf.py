@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from odfa11y.errors import ToolFailure
-from odfa11y.native.process import find_executable, run_bounded, validate_timeout
+from odfa11y.native.process import find_executable, run_bounded
+from odfa11y.tool_timeout import Timeout
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +41,7 @@ def run_verapdf(
     Interpretation of a completed report belongs to the caller, including noncompliance
     reports returned with a nonzero process status.
     """
-    validate_timeout(timeout)
+    timeout = Timeout(timeout)
     command = [
         find_verapdf(executable),
         "-f",

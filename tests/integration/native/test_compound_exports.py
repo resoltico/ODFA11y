@@ -10,7 +10,7 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.audit.validation import validate_pdfua
 from odfa11y.concepts import table_fingerprint
-from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua

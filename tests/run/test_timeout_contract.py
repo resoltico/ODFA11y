@@ -16,9 +16,10 @@ from odfa11y.audit.validation import check_pdfua, validate_pdfua
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
 from odfa11y.errors import InvalidOption, ToolFailure
-from odfa11y.native.export import ExportSettings
-from odfa11y.native.process import MAX_TIMEOUT_SECONDS, run_bounded, validate_timeout
+from odfa11y.native.libreoffice import ExportSettings
+from odfa11y.native.process import run_bounded
 from odfa11y.run.inspection import audit_document
+from odfa11y.tool_timeout import Timeout
 
 
 @pytest.mark.parametrize(
@@ -32,8 +33,8 @@ from odfa11y.run.inspection import audit_document
         float("inf"),
         float("-inf"),
         10**400,
-        MAX_TIMEOUT_SECONDS + 0.001,
-        math.nextafter(MAX_TIMEOUT_SECONDS, math.inf),
+        Timeout.MAX_SECONDS + 0.001,
+        math.nextafter(Timeout.MAX_SECONDS, math.inf),
     ],
 )
 def test_invalid_timeouts_launch_nothing(value: object, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -57,13 +58,13 @@ def test_invalid_timeouts_launch_nothing(value: object, monkeypatch: pytest.Monk
 
 
 @pytest.mark.parametrize(
-    "value", [0.001, 0.5, 1, MAX_TIMEOUT_SECONDS, math.nextafter(MAX_TIMEOUT_SECONDS, 0)]
+    "value", [0.001, 0.5, 1, Timeout.MAX_SECONDS, math.nextafter(Timeout.MAX_SECONDS, 0)]
 )
 def test_valid_fractional_and_portable_boundary_values(value: float) -> None:
-    assert validate_timeout(value) == value
+    assert Timeout(value) == value
 
 
-@pytest.mark.parametrize("value", ["0", "-1", "nan", "1.5", str(10**400), "4294968"])
+@pytest.mark.parametrize("value", ["0", "-1", "nan", str(10**400), "4294968"])
 def test_cli_timeout_errors_exit_usage_status_before_outputs(tmp_path: Path, value: str) -> None:
     output = tmp_path / "output.pdf"
     with pytest.raises(SystemExit) as exc:

@@ -13,7 +13,7 @@ from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.errors import ToolFailure
 from odfa11y.families.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.families.text.probes import PROBES
-from odfa11y.native.export import ExportSettings
+from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.run.context import RunSettings
 from odfa11y.tool_identity import ToolIdentity
@@ -114,7 +114,9 @@ def test_batch_of_text_items_runs_relevant_link_probe_once(
         tmp_path, [(name, "source.odt", plan.name) for name in ["one", "two", "three"]]
     )
     native_tools = replace(native_tools, locate=lambda _: "controlled-soffice")
-    native_tools = replace(native_tools, identify=lambda _: ToolIdentity("LibreOffice", "26.8.1.1"))
+    native_tools = replace(
+        native_tools, identify=lambda _, **_options: ToolIdentity("LibreOffice", "26.8.1.1")
+    )
     control = fake_export(ProbeId.LINK_DESCRIPTIONS, supported=True)
 
     def document_export(_source: Path, destination: Path, _settings: ExportSettings) -> Path:

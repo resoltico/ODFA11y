@@ -6,7 +6,7 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.native.export import MINIMUM_LIBREOFFICE_VERSION
+from odfa11y.native.libreoffice import MINIMUM_LIBREOFFICE_VERSION
 from tests.fixtures.paths import REPOSITORY
 
 WORKFLOWS = sorted((REPOSITORY / ".github/workflows").glob("*.yml"))

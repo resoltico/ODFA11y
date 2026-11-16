@@ -7,7 +7,7 @@ from typing import Never
 
 from odfa11y.application.native import NativeTools
 from odfa11y.families.probes import ProbeId
-from odfa11y.native.export import ExportSettings
+from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.pdf.validation import FailedRule, VeraPdfResult
 from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import tagged_writer
@@ -53,8 +53,8 @@ def native_fakes() -> NativeTools:
         export=exporting,
         locate=lambda requested: str(requested or "test-soffice"),
         validator=lambda requested: str(requested or "test-verapdf"),
-        identify=lambda _: ToolIdentity("LibreOffice", "26.8.0.3"),
-        identify_validator=lambda *_args: ToolIdentity("veraPDF", "test"),
+        identify=lambda _, **_options: ToolIdentity("LibreOffice", "26.8.0.3"),
+        identify_validator=lambda *_args, **_options: ToolIdentity("veraPDF", "test"),
     )
 
 

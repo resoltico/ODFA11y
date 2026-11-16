@@ -16,7 +16,7 @@ from odfa11y.run.profiles import profile_named
 from tests.fixtures.declarations import declaration
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 
 @pytest.mark.parametrize("kind", ["fill", "bullet", "symbol", "font", "form-image"])

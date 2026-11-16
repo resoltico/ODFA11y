@@ -18,7 +18,7 @@ from tests.fixtures.native import refusing
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.writer import make_minimal_odt
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 
 def test_core_comparison_preflights_both_inputs_before_export(

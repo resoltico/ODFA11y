@@ -16,7 +16,7 @@ from odfa11y.odf.export_context import native_export_limitations, require_native
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import TABLE_BODY, Variant, make_package
 from tests.fixtures.measurements import measured, measurement
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 TEXT_FIELDS = ["display", "name", "next", "row-number", "row-select"]
 TABLE_SOURCES = {"sql": "sql-statement", "table": "database-table-name", "query": "query-name"}

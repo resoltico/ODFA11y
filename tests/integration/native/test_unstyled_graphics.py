@@ -6,7 +6,7 @@ lazy from pathlib import Path
 
 from odfa11y.concepts import graphics_fingerprint
 from odfa11y.decisions.edit import Status
-from odfa11y.native.export import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination

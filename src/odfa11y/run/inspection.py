@@ -7,11 +7,10 @@ lazy from collections.abc import Iterator
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
 from odfa11y.audit.validation import check_pdfua
-from odfa11y.native.export import DEFAULT_TIMEOUT_SECONDS
-from odfa11y.native.process import validate_timeout
 from odfa11y.pdf import audit_pdfua
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run.comparison import is_pdf
+from odfa11y.tool_timeout import Timeout
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.report import Report
 
@@ -22,7 +21,7 @@ def audit_document(
     schema: bool = False,
     verapdf: bool = False,
     verapdf_path: str | Path | None = None,
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    timeout: float = Timeout.DEFAULT,
     on_progress: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> Iterator[Report]:
@@ -40,7 +39,7 @@ def audit_document(
 
     """
     native_tools = native_tools or NativeTools()
-    validate_timeout(timeout)
+    timeout = Timeout(timeout)
     source = Path(source)
     if on_progress is not None:
         on_progress(ProgressEvent(Step.AUDIT_DOCUMENT, StepState.RUNNING))

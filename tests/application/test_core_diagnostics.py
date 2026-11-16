@@ -17,17 +17,17 @@ from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.native import validation_result
 from tests.fixtures.probes import fake_export
 from tests.fixtures.schema import assert_record_schema
-lazy from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 
 def identities(native_tools: NativeTools) -> NativeTools:
     native_tools = replace(native_tools, locate=lambda requested: requested or "soffice")
     native_tools = replace(native_tools, validator=lambda _requested=None: "verapdf")
     native_tools = replace(
-        native_tools, identify=lambda _executable: ToolIdentity("LibreOffice", "26.8")
+        native_tools, identify=lambda _executable, **_options: ToolIdentity("LibreOffice", "26.8")
     )
     native_tools = replace(
-        native_tools, identify_validator=lambda *_args: ToolIdentity("veraPDF", "1.28")
+        native_tools, identify_validator=lambda *_args, **_options: ToolIdentity("veraPDF", "1.28")
     )
     return native_tools
 

@@ -7,19 +7,36 @@ from pathlib import Path
 from typing import Protocol
 
 from odfa11y.audit.validation import validate_pdfua
-from odfa11y.native.export import ExportSettings, export_pdfua, find_soffice, identify_soffice
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua, find_soffice, identify_soffice
 from odfa11y.native.process import identify as identify_tool
 from odfa11y.native.verapdf import find_verapdf
 from odfa11y.pdf.fidelity.compare import Rasterizer, render_pages
 from odfa11y.pdf.validation import PdfValidator
 from odfa11y.tool_identity import ToolIdentity
+from odfa11y.tool_timeout import Timeout
 
 
 class ValidatorIdentity(Protocol):
     """Identify a selected veraPDF executable."""
 
-    def __call__(self, name: str, executable: str, arguments: tuple[str, ...], /) -> ToolIdentity:
+    def __call__(
+        self,
+        name: str,
+        executable: str,
+        arguments: tuple[str, ...],
+        /,
+        *,
+        timeout: float = Timeout.DEFAULT,
+    ) -> ToolIdentity:
         """Return the identity measured from the executable."""
+        ...
+
+
+class OfficeIdentity(Protocol):
+    """Identify the selected LibreOffice within the requested native-call duration."""
+
+    def __call__(self, executable: str, /, *, timeout: float = Timeout.DEFAULT) -> ToolIdentity:
+        """Return the executable's reported identity."""
         ...
 
 
@@ -33,7 +50,7 @@ class NativeTools:
 
     export: Exporter = export_pdfua
     validate: PdfValidator = validate_pdfua
-    identify: Callable[[str], ToolIdentity] = identify_soffice
+    identify: OfficeIdentity = identify_soffice
     render: Rasterizer = render_pages
     locate: Locator = find_soffice
     validator: Locator = find_verapdf
