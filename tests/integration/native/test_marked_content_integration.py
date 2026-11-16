@@ -11,6 +11,7 @@ from pypdf.generic import ContentStream, DecodedStreamObject
 
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.rules import registry as rules
 from tests.fixtures.writer import make_minimal_odt
 
 SEQUENCE = re.compile(rb"/[A-Za-z0-9]+\s*<<\s*/MCID\s+(\d+)\s*>>\s*BDC")
@@ -46,7 +47,11 @@ def test_content_errors_agree_with_verapdf_on_a_damaged_real_export(
     writer.write(path)
     report = audit_pdfua(path)
     content_rules = {f.rule_id for f in report.findings if f.rule_id.startswith("PDF02")}
-    expected = {"PDF021", "PDF022"} if defect == "unreferenced" else {"PDF022", "PDF024"}
+    expected = (
+        {rules.PDF021.id, rules.PDF022.id}
+        if defect == "unreferenced"
+        else {rules.PDF022.id, rules.PDF024.id}
+    )
     assert content_rules == expected
     assert report.error_count != 0
     result = validate_pdfua(path, executable=verapdf)

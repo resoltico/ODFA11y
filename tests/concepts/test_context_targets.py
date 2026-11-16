@@ -13,6 +13,7 @@ from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.registry import registered_kinds
+from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 from tests.fixtures.answers import (
     address_input,
@@ -61,12 +62,12 @@ def test_context_qualified_graphic_and_table_decisions_edit_only_reviewed_note(
     note_graphic = next(
         f
         for f in report.findings
-        if f.rule_id == "GRAPHIC001" and f.location and "/note[1]/" in f.location.path
+        if f.rule_id == rules.GRAPHIC001.id and f.location and "/note[1]/" in f.location.path
     )
     note_table = next(
         f
         for f in report.findings
-        if f.rule_id == "TABLE003" and f.location and "/note[1]/" in f.location.path
+        if f.rule_id == rules.TABLE003.id and f.location and "/note[1]/" in f.location.path
     )
     assert note_graphic.location is not None
     assert note_table.location is not None
@@ -120,7 +121,7 @@ def test_legal_id_link_plan_composes_with_address_linkification(tmp_path: Path) 
     assert apply_answers(source, output, plan).changed
     assert not apply_answers(output, tmp_path / "again.fodt", plan).changed
     report = audit_odf(output)
-    assert not any(f.rule_id == "LINK001" for f in report.findings)
+    assert not any(f.rule_id == rules.LINK001.id for f in report.findings)
     edited = select_elements(OdfDocument.open(output).tree(Part.CONTENT), "//draw:a")[0]
     assert edited.get(qn("office", "title")) == "Read the guide"
     assert edited.get(qn("xlink", "href")) == "https://guide.example"
@@ -160,7 +161,7 @@ def test_unnamed_table_target_requires_reviewed_fingerprint(tmp_path: Path) -> N
         ),
     )
     report = audit_odf(source)
-    finding = next(f for f in report.findings if f.rule_id == "TABLE003")
+    finding = next(f for f in report.findings if f.rule_id == rules.TABLE003.id)
     assert finding.location is not None
     document = OdfDocument.open(source)
     values = {

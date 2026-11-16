@@ -18,6 +18,7 @@ from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -140,11 +141,15 @@ def test_libreoffice_authored_packages_are_recognised_and_audited(
     assert document.kind.family.value == "spreadsheet"
     report = audit_odf(source, schema=True)
     spreadsheet_rules = {f.rule_id for f in report.findings if f.rule_id.startswith("SHEET")}
-    assert spreadsheet_rules == {"SHEET002", "SHEET003"}
-    assert {"TABLE004", "TABLE005", "GRAPHIC001", "LINK002", "ORDER003"} <= {
-        finding.rule_id for finding in report.findings
-    }
-    hidden = next(f for f in report.findings if f.rule_id == "ORDER003")
+    assert spreadsheet_rules == {rules.SHEET002.id, rules.SHEET003.id}
+    assert {
+        rules.TABLE004.id,
+        rules.TABLE005.id,
+        rules.GRAPHIC001.id,
+        rules.LINK002.id,
+        rules.ORDER003.id,
+    } <= {finding.rule_id for finding in report.findings}
+    hidden = next(f for f in report.findings if f.rule_id == rules.ORDER003.id)
     assert hidden.details == {"sheets": ["Data"], "rows": 1, "columns": 0}
     assert measured(measurement(report, PackageMeasurements).family) == "spreadsheet"
     assert measured(measurement(report, SpreadsheetMeasurements).count) == 3
@@ -172,7 +177,7 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
         namespaces={"config": "urn:oasis:names:tc:opendocument:xmlns:config:1.0"},
     ) == ["Fruit prices", "Data", "Spare"]
     after = {f.rule_id for f in audit_odf(output, schema=True).findings}
-    assert not {"SHEET002", "GRAPHIC001"} & after
+    assert not {rules.SHEET002.id, rules.GRAPHIC001.id} & after
     export = ExportSettings("calc_pdf_Export", soffice, profile_dir=tmp_path / "profile")
     before_text = pdf_text(export_pdfua(source, tmp_path / "source.pdf", export))
     after_text = pdf_text(export_pdfua(output, tmp_path / "remediated.pdf", export))
@@ -214,7 +219,7 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
     assert pdf_stage.report is not None
     pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
-    assert pdf_rules == {"PDF009", "PDF016"}, record.as_dict()
+    assert pdf_rules == {rules.PDF009.id, rules.PDF016.id}, record.as_dict()
     assert validation_failures(tmp_path / "out" / "remediated.pdf", external_tool("verapdf")) == {
         ("7.2", "43")
     }
@@ -242,7 +247,7 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
     report = compare_pdfs(
         tmp_path / "out" / "source.pdf", tmp_path / "out" / "remediated.pdf", Pagination.SAME()
     )
-    assert "FIDELITY003" in {f.rule_id for f in report.findings}
+    assert rules.FIDELITY003.id in {f.rule_id for f in report.findings}
     assert record.failed_stage == "fidelity", record.as_dict()
 
 
@@ -267,7 +272,7 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
     assert pdf_stage.report is not None
     pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
-    assert pdf_rules == {"PDF009", "PDF016"}, record.as_dict()
+    assert pdf_rules == {rules.PDF009.id, rules.PDF016.id}, record.as_dict()
     assert failures == {("7.2", "43")}
     assert record.failed_stage == "audit-pdf", record.as_dict()
     assert reached["validate-pdf"] == reached["fidelity"] == "skipped"
@@ -279,7 +284,7 @@ def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(
     source = author(
         tmp_path, external_tool("soffice", "libreoffice"), data_sheet("Prices", header_rows=1)
     )
-    assert "TABLE004" not in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.TABLE004.id not in {f.rule_id for f in audit_odf(source).findings}
 
 
 def validation_failures(pdf: Path, verapdf: str) -> set[tuple[str, str]]:

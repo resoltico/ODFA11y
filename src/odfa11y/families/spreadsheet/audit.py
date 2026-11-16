@@ -23,6 +23,7 @@ from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.spreadsheet.domains import SHEETS
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
 from odfa11y.families.spreadsheet.kinds import SHEET_NAME
 from odfa11y.families.spreadsheet.sheets import (
     cell_text,
@@ -30,7 +31,6 @@ from odfa11y.families.spreadsheet.sheets import (
     is_empty,
     sheet_name,
 )
-from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import NS, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location

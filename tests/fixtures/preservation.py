@@ -26,8 +26,8 @@ from odfa11y.families.database.descriptions import fingerprint as database_finge
 from odfa11y.families.database.descriptions import targets as database_targets
 from odfa11y.families.formula.expression import expression
 from odfa11y.families.formula.expression import fingerprint as formula_fingerprint
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
 from odfa11y.families.spreadsheet.sheets import sheets
-from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.families.text.contexts import context_location, text_nodes
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.families.text.language.effective import language_targets

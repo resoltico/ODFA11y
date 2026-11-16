@@ -18,6 +18,7 @@ from pypdf.generic import (
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.reading.content import scan_content
+from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.pdf import set_page_content, tagged_writer
 lazy from odfa11y.report import Report
@@ -53,7 +54,7 @@ def test_empty_unpainted_artifact_invalid_resource_and_malformed_path_do_not_cou
     tmp_path: Path, content: str
 ) -> None:
     report = _audit(tmp_path, f"/Figure <</MCID 0>> BDC {content} EMC")
-    assert "PDF011" in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id in {finding.rule_id for finding in report.findings}
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 0
 
 
@@ -69,13 +70,13 @@ def test_graphical_content_without_an_alternative_keeps_both_errors(
     tmp_path: Path, alternative: str | None
 ) -> None:
     report = _audit(tmp_path, f"/Figure <</MCID 0>> BDC {DRAW} EMC", alternative=alternative)
-    assert {"PDF008", "PDF011"} <= {finding.rule_id for finding in report.findings}
+    assert {rules.PDF008.id, rules.PDF011.id} <= {finding.rule_id for finding in report.findings}
 
 
 def test_drawing_outside_the_figure_sequence_does_not_count(tmp_path: Path) -> None:
     report = _audit(tmp_path, f"/Figure <</MCID 0>> BDC EMC {DRAW}")
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 0
-    assert "PDF011" in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id in {finding.rule_id for finding in report.findings}
 
 
 def test_graphics_on_another_page_with_the_same_mcid_do_not_count(tmp_path: Path) -> None:
@@ -87,7 +88,7 @@ def test_graphics_on_another_page_with_the_same_mcid_do_not_count(tmp_path: Path
     writer.write(path)
     report = audit_pdfua(path)
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 0
-    assert "PDF011" in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id in {finding.rule_id for finding in report.findings}
 
 
 def test_an_unreachable_described_figure_does_not_count(tmp_path: Path) -> None:
@@ -100,7 +101,7 @@ def test_an_unreachable_described_figure_does_not_count(tmp_path: Path) -> None:
     writer.write(path)
     report = audit_pdfua(path)
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 0
-    assert "PDF011" in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id in {finding.rule_id for finding in report.findings}
 
 
 def test_child_content_references_can_supply_the_figures_graphic_content(tmp_path: Path) -> None:
@@ -110,7 +111,7 @@ def test_child_content_references_can_supply_the_figures_graphic_content(tmp_pat
     writer.write(path)
     report = audit_pdfua(path)
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 1
-    assert "PDF011" not in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id not in {finding.rule_id for finding in report.findings}
 
 
 @pytest.mark.parametrize("invoked", [False, True])
@@ -123,7 +124,7 @@ def test_image_resources_count_only_when_invoked_in_matching_content(
     report = _image_report(tmp_path, image, invoked=invoked)
     expected = invoked and bool(payload)
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == int(expected)
-    assert ("PDF011" in {finding.rule_id for finding in report.findings}) is (not expected)
+    assert (rules.PDF011.id in {finding.rule_id for finding in report.findings}) is (not expected)
 
 
 def _image_report(tmp_path: Path, image: StreamObject, *, invoked: bool = True) -> Report:
@@ -163,7 +164,7 @@ def test_encoded_image_presence_never_invokes_a_decompressor(
     monkeypatch.setattr(EncodedStreamObject, "get_data", refuse_decompression)
     report = _image_report(tmp_path, image)
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 1
-    assert "PDF011" not in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id not in {finding.rule_id for finding in report.findings}
 
 
 def test_empty_encoded_image_stream_cannot_supply_graphical_presence(tmp_path: Path) -> None:
@@ -173,7 +174,7 @@ def test_empty_encoded_image_stream_cannot_supply_graphical_presence(tmp_path: P
     image[NameObject("/Length")] = NumberObject(999)
     report = _image_report(tmp_path, image)
     assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 0
-    assert "PDF011" in {finding.rule_id for finding in report.findings}
+    assert rules.PDF011.id in {finding.rule_id for finding in report.findings}
 
 
 def test_nested_artifacts_cannot_supply_graphics_to_outer_content() -> None:

@@ -11,6 +11,7 @@ from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.compare import FidelityMeasurements
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
+from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import refusing
 from tests.fixtures.pdf import text_pdf
@@ -59,7 +60,9 @@ def test_changed_text_is_located_precisely(tmp_path: Path) -> None:
     right = text_pdf(
         tmp_path / "b.pdf", [[LINES[0], "A paragraph of BODY text on the page.", LINES[2]]]
     )
-    finding = next(f for f in compare(tmp_path, left, right).findings if f.rule_id == "FIDELITY003")
+    finding = next(
+        f for f in compare(tmp_path, left, right).findings if f.rule_id == rules.FIDELITY003.id
+    )
     source_text, candidate_text = finding.details["source"], finding.details["candidate"]
     assert isinstance(source_text, str)
     assert isinstance(candidate_text, str)
@@ -71,7 +74,7 @@ def test_a_layout_shift_with_identical_text_fails_the_raster_gate(tmp_path: Path
     left = text_pdf(tmp_path / "a.pdf", [LINES], top=180)
     right = text_pdf(tmp_path / "b.pdf", [LINES], top=140)
     report = compare(tmp_path, left, right)
-    assert ids(report) == {"FIDELITY005"}
+    assert ids(report) == {rules.FIDELITY005.id}
     finding = report.findings[0]
     assert finding.details["page"] == 1
     changed_ratio, diff_image = finding.details["changed_ratio"], finding.details["diff_image"]
@@ -88,7 +91,7 @@ def test_a_loose_tolerance_accepts_a_shift_and_a_tight_one_rejects_tiny_changes(
     right = text_pdf(tmp_path / "b.pdf", [LINES], top=140)
     assert compare(tmp_path, left, right, Pagination.SAME(raster_tolerance=5.0)).findings == []
     nudged = text_pdf(tmp_path / "c.pdf", [LINES], top=179)
-    assert "FIDELITY005" in ids(
+    assert rules.FIDELITY005.id in ids(
         compare(tmp_path, left, nudged, Pagination.SAME(raster_tolerance=0.0))
     )
 
@@ -98,9 +101,9 @@ def test_page_count_and_size_differences_are_reported_when_pagination_must_match
 ) -> None:
     one = text_pdf(tmp_path / "one.pdf", [LINES])
     two = text_pdf(tmp_path / "two.pdf", [LINES, ["Second page"]])
-    assert "FIDELITY001" in ids(compare(tmp_path, one, two))
+    assert rules.FIDELITY001.id in ids(compare(tmp_path, one, two))
     wide = text_pdf(tmp_path / "wide.pdf", [LINES], size=(300, 200))
-    assert "FIDELITY002" in ids(compare(tmp_path, one, wide))
+    assert rules.FIDELITY002.id in ids(compare(tmp_path, one, wide))
 
 
 def test_may_change_pagination_skips_page_and_raster_checks_but_still_gates_text(
@@ -112,15 +115,15 @@ def test_may_change_pagination_skips_page_and_raster_checks_but_still_gates_text
     shifted = text_pdf(tmp_path / "shifted.pdf", [["First part."]], top=100)
     assert compare(tmp_path, one, shifted, Pagination.MAY_CHANGE).findings == []
     other = text_pdf(tmp_path / "other.pdf", [["Other part."]])
-    assert ids(compare(tmp_path, one, other, Pagination.MAY_CHANGE)) == {"FIDELITY003"}
+    assert ids(compare(tmp_path, one, other, Pagination.MAY_CHANGE)) == {rules.FIDELITY003.id}
 
 
 def test_lost_links_fail_and_added_links_are_informational(tmp_path: Path) -> None:
     with_link = text_pdf(tmp_path / "a.pdf", [LINES], links=["https://example.test/a"])
     without = text_pdf(tmp_path / "b.pdf", [LINES])
-    assert "FIDELITY004" in ids(compare(tmp_path, with_link, without))
+    assert rules.FIDELITY004.id in ids(compare(tmp_path, with_link, without))
     added = compare(tmp_path, without, with_link, Pagination.SAME(raster_tolerance=1.0))
-    assert ids(added) == {"FIDELITY006"}
+    assert ids(added) == {rules.FIDELITY006.id}
     assert added.error_count == 0
 
 
@@ -128,13 +131,13 @@ def test_changed_link_targets_count_as_lost(tmp_path: Path) -> None:
     left = text_pdf(tmp_path / "a.pdf", [LINES], links=["https://example.test/a"])
     right = text_pdf(tmp_path / "b.pdf", [LINES], links=["https://example.test/b"])
     report = compare(tmp_path, left, right, Pagination.SAME(raster_tolerance=1.0))
-    assert ids(report) == {"FIDELITY004", "FIDELITY006"}
+    assert ids(report) == {rules.FIDELITY004.id, rules.FIDELITY006.id}
 
 
 def test_oversized_pages_are_not_rendered(tmp_path: Path) -> None:
     huge = text_pdf(tmp_path / "huge.pdf", [LINES], size=(14400, 14400))
     report = compare(tmp_path, huge, huge)
-    assert ids(report) == {"FIDELITY007"}
+    assert ids(report) == {rules.FIDELITY007.id}
 
 
 def test_unreadable_pdfs_raise_a_tool_error(tmp_path: Path) -> None:
@@ -155,7 +158,7 @@ def test_oversized_page_is_controlled_before_rendering(
     report = compare_pdfs(
         pdf, pdf, Pagination.SAME(), diff_dir=tmp_path / "diff", render=native_tools.render
     )
-    assert ids(report) == {"FIDELITY007"}
+    assert ids(report) == {rules.FIDELITY007.id}
     assert not rendered
     assert not (tmp_path / "diff").exists()
     assert pdf.read_bytes() == before
@@ -165,4 +168,4 @@ def test_oversized_page_is_controlled_before_rendering(
 def test_fixed_resolution_retains_the_existing_pixel_limit(tmp_path: Path, width: int) -> None:
     pdf = text_pdf(tmp_path / "sized.pdf", [LINES], size=(width, width))
     report = compare_pdfs(pdf, pdf, Pagination.SAME())
-    assert ids(report) == ({"FIDELITY007"} if width == 5000 else set())
+    assert ids(report) == ({rules.FIDELITY007.id} if width == 5000 else set())

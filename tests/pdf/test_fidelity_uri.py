@@ -13,6 +13,7 @@ from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from tests.fixtures.pdf import register, text_pdf
 
 
@@ -38,7 +39,10 @@ def test_base_change_and_equivalent_absolute_destinations(tmp_path: Path) -> Non
         tmp_path / "right.pdf", ["file.pdf"] * 2, TextStringObject("https://example.test/two/")
     )
     report = compare_pdfs(left, right, Pagination.SAME())
-    assert {f.rule_id for f in report.findings} == {"FIDELITY004", "FIDELITY006"}
+    assert {f.rule_id for f in report.findings} == {
+        rules.FIDELITY004.id,
+        rules.FIDELITY006.id,
+    }
     absolute = _with_base(
         tmp_path / "absolute.pdf",
         ["https://example.test/one/file.pdf"] * 2,

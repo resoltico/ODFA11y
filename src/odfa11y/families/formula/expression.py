@@ -39,18 +39,6 @@ def fingerprint(root: etree._Element) -> Fingerprint:
     return Fingerprint.from_digest(protected_xml(root, omitted_root_attributes=EDITABLE))
 
 
-def snapshot(document: OdfDocument) -> tuple[str, ...]:
-    """Protect mathematical structure, annotations, references and every other attribute.
-
-    Returns
-    -------
-    tuple[str, ...]
-        The complete protected expression digest.
-
-    """
-    return (protected_xml(document.tree(Part.CONTENT).getroot(), omitted_root_attributes=EDITABLE),)
-
-
 def language(document: OdfDocument) -> str | None:
     """Read the formula's explicit root language.
 

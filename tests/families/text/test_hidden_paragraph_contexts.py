@@ -12,6 +12,7 @@ from odfa11y.errors import PlanError
 from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.families.text.tables.audit import TableMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     address_input,
     graphic_answer,
@@ -51,9 +52,11 @@ Conditional heading https://hidden.example
     report, template = prepare_plan(source)
     assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
     assert measured(measurement(report, TableMeasurements).table_count) == 0
-    assert "ORDER003" in {finding.rule_id for finding in report.findings}
+    assert rules.ORDER003.id in {finding.rule_id for finding in report.findings}
     addresses = [
-        finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
+        finding.details["text"]
+        for finding in report.findings
+        if finding.rule_id == rules.LINK001.id
     ]
     assert addresses == ["https://visible.example"]
     assert len(document_links(document)) == 1
@@ -77,7 +80,7 @@ Conditional heading https://hidden.example
     assert etree.tostring(retained) == before
     after = audit_odf(destination)
     assert measured(measurement(after, TextContentMeasurements).heading_count) == 1
-    assert "ORDER003" in {finding.rule_id for finding in after.findings}
+    assert rules.ORDER003.id in {finding.rule_id for finding in after.findings}
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
@@ -94,9 +97,11 @@ def test_span_marker_excludes_its_whole_paragraph_including_sibling_prose(
     document = OdfDocument.open(source)
     assert validate(document).count == 0
     report = audit_odf(source)
-    assert "ORDER003" in {finding.rule_id for finding in report.findings}
+    assert rules.ORDER003.id in {finding.rule_id for finding in report.findings}
     assert [
-        finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
+        finding.details["text"]
+        for finding in report.findings
+        if finding.rule_id == rules.LINK001.id
     ] == ["https://visible.example"]
     conditional = select_elements(
         document.tree(Part.CONTENT), "//text:hidden-paragraph/ancestor::text:p"

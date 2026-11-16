@@ -6,15 +6,16 @@ from typing import ClassVar, override
 lazy from pathlib import Path
 
 import pytest
+from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PlanError
-from odfa11y.families import require_spec
 from odfa11y.families.formula.expression import fingerprint
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.registry import load_plan
 from odfa11y.remediate.compile import compile_decisions
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     Authored,
     FaultEdit,
@@ -58,32 +59,33 @@ def test_native_formula_validates_and_missing_alternative_requests_an_answer() -
     assert result.version == "1.4"
     assert result.count == 0
     report = audit_odf(SOURCE, schema=True)
-    finding = next(f for f in report.findings if f.rule_id == "MATH003")
+    finding = next(f for f in report.findings if f.rule_id == rules.MATH003.id)
     question = next(d for d in report.decisions if d.kind.id == "formula.alternative")
     assert question.target is not None
     assert question.target.path == "content/formula"
     assert question.target.fingerprint == fingerprint(document.tree(Part.CONTENT).getroot())
     assert finding.location is not None
     assert finding.location.path == "content/formula"
-    assert "MATH003" in question.rule_ids
+    assert rules.MATH003.id in question.rule_ids
 
 
 def test_explicit_alternative_keeps_the_expression_and_native_annotation_and_is_idempotent(
     tmp_path: Path,
 ) -> None:
     before = OdfDocument.open(SOURCE)
-    adapter = require_spec(before.kind)
     once, twice = tmp_path / "once.odf", tmp_path / "twice.odf"
     assert apply_answers(SOURCE, once, _plan()).changed
     assert not apply_answers(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
-    assert adapter.snapshot(before) == adapter.snapshot(after)
+    assert tuple(etree.tostring(child) for child in before.tree(Part.CONTENT).getroot()) == tuple(
+        etree.tostring(child) for child in after.tree(Part.CONTENT).getroot()
+    )
     root = after.tree(Part.CONTENT).getroot()
     assert root.get("alttext") == "a plus b equals c"
     assert root.get("{http://www.w3.org/XML/1998/namespace}lang") == "en-US"
     assert select_elements(root, ".//math:annotation")[0].text == "a + b = c"
     assert validate(after).count == 0
-    assert "MATH003" not in {f.rule_id for f in audit_odf(twice).findings}
+    assert rules.MATH003.id not in {f.rule_id for f in audit_odf(twice).findings}
     assert once.read_bytes() == twice.read_bytes()
 
 
@@ -120,7 +122,7 @@ def test_flat_office_formula_wrapper_is_rejected_as_an_unsupported_representatio
     source = make_flat(
         tmp_path, "text", Variant(media_type="application/vnd.oasis.opendocument.formula")
     )
-    assert "MATH001" in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.MATH001.id in {f.rule_id for f in audit_odf(source).findings}
     document = OdfDocument.open(source)
     with pytest.raises(PlanError, match="exactly one"):
         apply_in_memory(document, formula_input("A formula"))

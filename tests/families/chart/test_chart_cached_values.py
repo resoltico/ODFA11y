@@ -8,6 +8,7 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.families.chart.ranges import resolve_range
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.rules import registry as rules
 from tests.fixtures.paths import TESTS
 
 SOURCE = TESTS / "family_corpus/fruit-chart.odc"
@@ -30,7 +31,7 @@ def test_intentional_series_gaps_do_not_imply_type_or_cardinality_mismatch(
         if gap == "covered":
             cell.tag = qn("table", "covered-table-cell")
     report = audit_odf(document.save(tmp_path / "gap.odc"))
-    assert "CHART011" not in {finding.rule_id for finding in report.findings}
+    assert rules.CHART011.id not in {finding.rule_id for finding in report.findings}
 
 
 def test_billion_value_series_is_checked_without_materializing_repeats(tmp_path: Path) -> None:
@@ -48,11 +49,11 @@ def test_billion_value_series_is_checked_without_materializing_repeats(tmp_path:
     assert resolved.shape == (1000000000, 1)
     assert len(list(resolved.cells())) == 1
     report = audit_odf(document.save(tmp_path / "repeated.odc"))
-    assert "CHART011" not in {finding.rule_id for finding in report.findings}
+    assert rules.CHART011.id not in {finding.rule_id for finding in report.findings}
     row[1].set(qn("office", "value-type"), "string")
     row[1].attrib.pop(qn("office", "value"))
     report = audit_odf(document.save(tmp_path / "nonnumeric.odc"))
-    assert "CHART011" in {finding.rule_id for finding in report.findings}
+    assert rules.CHART011.id in {finding.rule_id for finding in report.findings}
 
 
 def test_invalid_interior_row_cell_repeat_produces_range_finding_instead_of_crashing(
@@ -66,4 +67,4 @@ def test_invalid_interior_row_cell_repeat_produces_range_finding_instead_of_cras
     series = select_elements(tree, "//chart:series")[0]
     series.set(qn("chart", "values-cell-range-address"), "local-table.$B$1:.$B$4")
     report = audit_odf(document.save(tmp_path / "invalid.odc"))
-    assert "CHART005" in {finding.rule_id for finding in report.findings}
+    assert rules.CHART005.id in {finding.rule_id for finding in report.findings}

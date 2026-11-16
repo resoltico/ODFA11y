@@ -3,8 +3,7 @@
 
 from functools import partial
 
-from odfa11y.concepts import page_snapshot, set_style_language, style_language
-from odfa11y.concepts.preservation import PreservationSnapshot
+from odfa11y.concepts import set_style_language, style_language
 from odfa11y.families.pages.audit import audit_document
 from odfa11y.families.pages.kinds import DECISION_KINDS
 from odfa11y.families.pages.profiles import DRAWING_PROFILE, PRESENTATION_PROFILE
@@ -22,17 +21,12 @@ def _set_language(document: OdfDocument, tag: str) -> XmlChange:
     return set_style_language(document, tag, "paragraph")
 
 
-def _preservation(document: OdfDocument) -> PreservationSnapshot:
-    return PreservationSnapshot(page_snapshot(document))
-
-
 def _spec(profile: PageProfile) -> FamilySpec:
     return FamilySpec(
         profile.family,
         partial(audit_document, profile=profile),
         DECISION_KINDS,
         PdfExport(profile.pdf_filter),
-        _preservation,
         language=LanguageTargets(_language, _set_language),
         review_items=profile.review_items,
     )

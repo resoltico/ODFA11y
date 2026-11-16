@@ -62,7 +62,11 @@ def test_registered_rule_levels_and_logical_locations(tmp_path: Path) -> None:
     report.raise_(rules.HEADING005)
     run = _render([report], tmp_path)["runs"][0]
     descriptors = run["tool"]["driver"]["rules"]
-    assert [entry["id"] for entry in descriptors] == ["HEADING005", "META001", "TABLE003"]
+    assert [entry["id"] for entry in descriptors] == [
+        rules.HEADING005.id,
+        rules.META001.id,
+        rules.TABLE003.id,
+    ]
     assert [item["level"] for item in run["results"]] == ["error", "warning", "note"]
     for result in run["results"]:
         assert descriptors[result["ruleIndex"]]["id"] == result["ruleId"]
@@ -115,7 +119,7 @@ def test_package_and_flat_findings_have_equivalent_logical_locations(tmp_path: P
         assert report.sources == (source,)
         reports.append(report)
     results = _render(reports, tmp_path)["runs"][0]["results"]
-    graphics = [result for result in results if result["ruleId"] == "GRAPHIC001"]
+    graphics = [result for result in results if result["ruleId"] == rules.GRAPHIC001.id]
     assert len(graphics) == 2
     assert (
         graphics[0]["locations"][0]["logicalLocations"]
@@ -197,7 +201,7 @@ def test_verapdf_report_keeps_pdf_identity_independent_of_display_subject(tmp_pa
     assert report.sources == (source,)
     run = _render([report], tmp_path)["runs"][0]
     assert run["artifacts"] == [{"location": {"uri": "actual.pdf"}}]
-    assert run["results"][0]["ruleId"] == "PDFUA001"
+    assert run["results"][0]["ruleId"] == rules.PDFUA001.id
 
 
 def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Path) -> None:
@@ -218,7 +222,9 @@ def test_root_must_be_directory_and_in_root_aliases_share_identity(tmp_path: Pat
 
 def test_sarif_refuses_a_rule_impostor_with_a_registered_id(tmp_path: Path) -> None:
     source = _source(tmp_path, "source.odt")
-    impostor = Rule("META001", Severity.INFO, "Impostor", mapping_contract("ImpostorDetails", {}))
+    impostor = Rule(
+        rules.META001.id, Severity.INFO, "Impostor", mapping_contract("ImpostorDetails", {})
+    )
     report = Report(kind=ReportKind.ODF, subject=source.name, _sources=(source,))
     report.findings.append(Finding(impostor, "Untrusted severity"))
     with pytest.raises(InvalidOption, match="registered rules"):

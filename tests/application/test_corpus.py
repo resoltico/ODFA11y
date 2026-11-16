@@ -9,18 +9,19 @@ import pytest
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import visible_words
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.corpus import CORPUS, DOCUMENT_IDS, DOCUMENT_SUFFIXES, DOCUMENTS
 lazy from tests.fixtures.corpus import CorpusDocument
 
 EVERY_DOCUMENT = pytest.mark.parametrize("document", DOCUMENTS, ids=DOCUMENT_IDS)
 CORPUS_RULES = {
-    "HEADING003",
-    "NOTE001",
-    "ORDER002",
-    "GRAPHIC001",
-    "TABLE001",
-    "LINK001",
-    "STYLE002",
+    rules.HEADING003.id,
+    rules.NOTE001.id,
+    rules.ORDER002.id,
+    rules.GRAPHIC001.id,
+    rules.TABLE001.id,
+    rules.LINK001.id,
+    rules.STYLE002.id,
 }
 
 

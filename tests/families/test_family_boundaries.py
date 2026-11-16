@@ -41,26 +41,26 @@ def ids(report: Report) -> set[str]:
 def test_an_unrecognised_media_type_stops_the_audit_with_one_finding(tmp_path: Path) -> None:
     path = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
     report = audit_odf(path)
-    assert "ODF006" in ids(report)
+    assert rules.ODF006.id in ids(report)
     assert measurement(report, PackageMeasurements).family is None
 
 
 def test_a_body_that_contradicts_the_media_type_is_an_error(tmp_path: Path) -> None:
     body = "<office:spreadsheet><table:table table:name='A'/></office:spreadsheet>"
     report = audit_odf(make_package(tmp_path, "text", Variant(body=body)))
-    finding = next(f for f in report.findings if f.rule_id == "ODF007")
+    finding = next(f for f in report.findings if f.rule_id == rules.ODF007.id)
     assert finding.severity is Severity.ERROR
     assert finding.details == {"body": "office:spreadsheet", "expected": "office:text"}
 
 
 def test_a_manifest_that_disagrees_with_the_mimetype_is_reported(tmp_path: Path) -> None:
     path = make_package(tmp_path, "text", Variant(manifest_media_type=OASIS + "spreadsheet"))
-    assert "ODF005" in ids(audit_odf(path))
+    assert rules.ODF005.id in ids(audit_odf(path))
 
 
 def test_a_misleading_extension_is_only_a_warning(tmp_path: Path) -> None:
     report = audit_odf(make_package(tmp_path, "text", Variant(extension=".ods")))
-    finding = next(f for f in report.findings if f.rule_id == "ODF008")
+    finding = next(f for f in report.findings if f.rule_id == rules.ODF008.id)
     assert finding.severity is Severity.WARNING
     assert (
         measured(measurement(report, PackageMeasurements).kind) == "text"
@@ -72,7 +72,7 @@ def test_a_package_without_mimetype_falls_back_to_the_manifest(tmp_path: Path) -
     assert document.kind is not None
     assert document.detection.declared_by == "manifest"
     report = audit_odf(document.storage.source)
-    assert "PKG003" in ids(report)
+    assert rules.PKG003.id in ids(report)
     assert report.error_count == 0
 
 
@@ -82,25 +82,25 @@ def test_a_package_without_mimetype_falls_back_to_the_manifest(tmp_path: Path) -
 def test_retired_database_media_types_are_rejected(tmp_path: Path, media: str) -> None:
     path = make_package(tmp_path, "database", Variant(media_type=media))
     report = audit_odf(path)
-    assert "ODF006" in ids(report)
+    assert rules.ODF006.id in ids(report)
     assert OdfDocument.open(path).kind is None
 
 
 def test_deprecated_image_documents_are_flagged(tmp_path: Path) -> None:
-    assert "ODF009" in ids(audit_odf(make_package(tmp_path, "image")))
+    assert rules.ODF009.id in ids(audit_odf(make_package(tmp_path, "image")))
 
 
 def test_a_flat_document_with_the_wrong_root_is_an_error(tmp_path: Path) -> None:
     path = tmp_path / "wrong.fodt"
     path.write_text('<?xml version="1.0"?><root/>', encoding="utf-8")
-    assert "ODF011" in ids(audit_odf(path))
+    assert rules.ODF011.id in ids(audit_odf(path))
 
 
 def test_a_flat_document_without_a_declared_media_type_is_unrecognised(tmp_path: Path) -> None:
     path = make_flat(tmp_path, "text")
     path.write_text(path.read_text().replace(f' office:mimetype="{OASIS}text"', ""))
     report = audit_odf(path)
-    assert {"PKG002", "ODF006"} <= ids(report)
+    assert {rules.PKG002.id, rules.ODF006.id} <= ids(report)
 
 
 @pytest.mark.parametrize("make", [make_package, make_flat])
@@ -153,7 +153,7 @@ def test_setting_the_language_on_a_flat_text_document_edits_its_default_style(
     apply_answers(source, destination, [metadata_input(language="fr-FR")])
     report = audit_odf(destination)
     assert measurement(report, DocumentMetadata).language == "fr-FR"
-    assert "META003" not in ids(report)
+    assert rules.META003.id not in ids(report)
 
 
 def test_the_template_refuses_a_source_it_cannot_read(
@@ -165,7 +165,7 @@ def test_the_template_refuses_a_source_it_cannot_read(
     captured = capsys.readouterr()
     assert status != 0
     assert not captured.out
-    assert "PKG001" in captured.err
+    assert rules.PKG001.id in captured.err
     status = main(["plan", str(tmp_path / "missing.odt")])
     assert status != 0
     assert "No plan" in capsys.readouterr().err
@@ -245,7 +245,7 @@ def test_a_missing_version_is_not_reported_as_an_unbundled_one(tmp_path: Path) -
     source = make_flat(tmp_path, "text")
     source.write_text(source.read_text().replace(' office:version="1.4"', ""), encoding="utf-8")
     report = audit_odf(source, schema=True)
-    finding = next(f for f in report.findings if f.rule_id == "SCHEMA002")
+    finding = next(f for f in report.findings if f.rule_id == rules.SCHEMA002.id)
     assert "declares no ODF version" in finding.message
 
 

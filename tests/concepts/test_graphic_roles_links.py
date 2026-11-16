@@ -18,6 +18,7 @@ from odfa11y.concepts.links import link_fingerprint, link_has_description, link_
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     RawDecisions,
     apply_in_memory,
@@ -172,8 +173,8 @@ def test_authored_style_drift_invalidates_review_and_payload_remains_checked(
     image.set(qn("xlink", "href"), "https://example.test/missing.svg")
     document.save(tmp_path / "external.odt")
     report = audit_odf(tmp_path / "external.odt")
-    assert "GRAPHIC001" not in {f.rule_id for f in report.findings}
-    assert "NATIVE001" in {f.rule_id for f in report.findings}
+    assert rules.GRAPHIC001.id not in {f.rule_id for f in report.findings}
+    assert rules.NATIVE001.id in {f.rule_id for f in report.findings}
 
 
 def test_blank_alternatives_and_overlapping_roles_preflight_together(tmp_path: Path) -> None:
@@ -240,7 +241,7 @@ def test_group_role_refuses_and_does_not_hide_child_findings(tmp_path: Path, dec
         apply_in_memory(document, _decision(document, group, decorative=True))
     source = document.save(tmp_path / "group.odt")
     ids = {finding.rule_id for finding in audit_odf(source).findings}
-    assert {"GRAPHIC003", "GRAPHIC001"} <= ids
+    assert {rules.GRAPHIC003.id, rules.GRAPHIC001.id} <= ids
 
 
 def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> None:
@@ -254,7 +255,7 @@ def test_decorative_authored_alternatives_remain_and_warn(tmp_path: Path) -> Non
         == Status.APPLIED
     )
     source = document.save(tmp_path / "conflict.odt")
-    assert {"GRAPHIC004"} <= {finding.rule_id for finding in audit_odf(source).findings}
+    assert {rules.GRAPHIC004.id} <= {finding.rule_id for finding in audit_odf(source).findings}
     assert title.text == "Authored title"
 
 

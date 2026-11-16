@@ -17,6 +17,7 @@ from odfa11y.native.probes import ProbeId
 from odfa11y.odf import OdfDocument, PackageStorage, validate
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from tests.application.test_link_capability import LINK_BODY, WRITER
@@ -38,7 +39,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     linked = tmp_path / "linked.odt"
     package.save(linked)
     pdf = export_pdfua(linked, tmp_path / "linked.pdf", ExportSettings(WRITER, soffice=soffice))
-    assert "PDF020" in {f.rule_id for f in audit_pdfua(pdf).findings}
+    assert rules.PDF020.id in {f.rule_id for f in audit_pdfua(pdf).findings}
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))
     link_failures = {("7.18.1", "2"), ("7.18.5", "2")}
     assert {(f.clause, f.test_number) for f in result.failures} == link_failures
@@ -57,7 +58,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     )
     expected_support = (
         "unsupported"
-        if "PDF020" in {f.rule_id for f in audit_pdfua(probe_pdf).findings}
+        if rules.PDF020.id in {f.rule_id for f in audit_pdfua(probe_pdf).findings}
         else "supported"
     )
     assert reported == expected_support
@@ -128,7 +129,7 @@ def test_the_one_link_reproduction_and_explicit_name_control(
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))
     failures = {(f.clause, f.test_number) for f in result.failures}
     assert failures == (set() if named else {("7.18.1", "2"), ("7.18.5", "2")}), failures
-    assert ("PDF020" in {f.rule_id for f in report.findings}) == (not named)
+    assert (rules.PDF020.id in {f.rule_id for f in report.findings}) == (not named)
     if named:
         assert report.error_count == 0
         assert result.compliant

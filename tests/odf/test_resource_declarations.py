@@ -10,6 +10,7 @@ from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
+from odfa11y.rules import registry as rules
 from tests.fixtures.declarations import declaration
 from tests.fixtures.measurements import measured, measurement
 
@@ -25,7 +26,7 @@ def test_schema_valid_declarations_are_reported_and_refused(
     document = OdfDocument.open(source)
     assert validate(document).count == 0
     report = audit_odf(source)
-    assert "NATIVE001" in {f.rule_id for f in report.findings}
+    assert rules.NATIVE001.id in {f.rule_id for f in report.findings}
     assert (
         measured(measurement(report, ExportContextMeasurements).limitations)[
             "rendering_dependencies"

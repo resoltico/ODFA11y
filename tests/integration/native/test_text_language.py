@@ -12,6 +12,7 @@ from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.language.audit import LanguageMeasurements, MeasuredLanguages
 from odfa11y.odf import OdfDocument, validate
+from odfa11y.rules import registry as rules
 from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
 from tests.fixtures.measurements import measured, measurement
@@ -25,7 +26,9 @@ def test_writer_language_source_decision_and_pdf_tags(
 ) -> None:
     source = TESTS / "text_corpus" / f"language-{case}.odt"
     report = audit_odf(source)
-    assert ("LANG001" in {finding.rule_id for finding in report.findings}) is (case == "negative")
+    assert (rules.LANG001.id in {finding.rule_id for finding in report.findings}) is (
+        case == "negative"
+    )
     if case == "negative":
         question = next(q for q in plan(source).report.decisions if q.kind.id == "language.target")
         assert question.target is not None

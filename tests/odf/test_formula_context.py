@@ -22,6 +22,7 @@ from odfa11y.odf.formula import (
     FormulaAnalysis,
     classify_formula,
 )
+from odfa11y.rules import registry as rules
 from odfa11y.run.native import export_document
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import refusing
@@ -133,7 +134,7 @@ def test_every_standard_formula_attribute_reaches_the_native_guard(
     assert calls == []
     assert not (tmp_path / "destination.pdf").exists()
     report = audit_odf(source)
-    assert "NATIVE001" in {f.rule_id for f in report.findings}
+    assert rules.NATIVE001.id in {f.rule_id for f in report.findings}
     assert "credentials" not in str(report.facts)
     assert (
         measured(measurement(report, ExportContextMeasurements).limitations)["formula_declarations"]
@@ -148,7 +149,7 @@ def test_captured_identity_and_original_export_are_separate(tmp_path: Path) -> N
     require_native_context(document)
     with pytest.raises(DocumentRefusal, match="filename/path fields"):
         require_native_context(document, captured_identity=True)
-    assert "NATIVE002" in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.NATIVE002.id in {f.rule_id for f in audit_odf(source).findings}
 
 
 @pytest.mark.parametrize("expression", ["of:=LocalTotal", "of:=Missing", "of:=Cycle"])

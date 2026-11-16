@@ -18,6 +18,7 @@ from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.pdf.fidelity import compare as compare_module
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.status import StageStatus
@@ -66,7 +67,7 @@ def test_malformed_optional_members_do_not_abort_the_audit_or_remediation(tmp_pa
     broken = tmp_path / "broken.odt"
     package.save(broken)
     report = audit_odf(broken, schema=True)
-    assert "XML001" in {f.rule_id for f in report.findings}
+    assert rules.XML001.id in {f.rule_id for f in report.findings}
     result = apply_answers(broken, tmp_path / "out.odt", [metadata_input(title="Still works")])
     assert result.changed
 
@@ -81,7 +82,7 @@ def test_zip_encrypted_members_are_an_invalid_package_not_a_crash(tmp_path: Path
     encrypted.write_bytes(bytes(data))
     with pytest.raises(PackageError):
         PackageStorage(encrypted)
-    assert {f.rule_id for f in audit_odf(encrypted).findings} == {"PKG001"}
+    assert {f.rule_id for f in audit_odf(encrypted).findings} == {rules.PKG001.id}
 
 
 ANNOTATED = (
@@ -97,7 +98,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
     tmp_path: Path,
 ) -> None:
     source = with_body(tmp_path, ANNOTATED)
-    audited = [f for f in audit_odf(source).findings if f.rule_id == "LINK001"]
+    audited = [f for f in audit_odf(source).findings if f.rule_id == rules.LINK001.id]
     texts = []
     for finding in audited:
         value = finding.details["text"]
@@ -150,7 +151,7 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
         b'<text:list><text:list-item><text:p text:style-name="Body"/></text:list-item></text:list>'
     )
     source = with_body(tmp_path, listed)
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "STYLE002")
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == rules.STYLE002.id)
     (outcome,) = apply_in_memory(OdfDocument.open(source), spacer_input())
     assert finding.details["count"] == outcome.count == 1  # the list item's paragraph is neither
 

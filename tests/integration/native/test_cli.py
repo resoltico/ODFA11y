@@ -24,7 +24,9 @@ def test_export_compare_and_pipeline_with_real_libreoffice(
     assert (
         main(["compare", str(source), str(source), "--soffice", soffice, "--format", "json"]) == 0
     )
-    assert json.loads(capsys.readouterr().out)["facts"]["fidelity.raster_max_changed_ratio"] == 0.0
+    comparison = json.loads(capsys.readouterr().out)
+    fidelity = next(row for row in comparison["facts"] if row["producer"] == "pdf-fidelity")
+    assert fidelity["raster_max_changed_ratio"] == 0.0
     assert main(["audit", str(pdf)]) == 0
     capsys.readouterr()
     arguments = ["pipeline", str(source), "--plan", str(config(tmp_path)), "--soffice", soffice]

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Alt text on spreadsheet frames, and the snapshot that guards what a sheet shows."""
+"""Alt text on spreadsheet frames, and the fingerprint that guards what a sheet shows."""
 
 from pathlib import Path
 
@@ -7,10 +7,14 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
+from odfa11y.concepts.preservation import ProtectedPackage
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
-from odfa11y.families.spreadsheet import sheet_snapshot, sheets_preserved
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
+from odfa11y.families.spreadsheet.sheets import sheets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.odf.allowance import Allowance, Attributes
+from odfa11y.rules import registry as rules
 from odfa11y.targets import TargetPath, require_target
 from tests.fixtures.answers import (
     Authored,
@@ -129,7 +133,9 @@ def test_a_fingerprint_binds_the_entry_to_the_frame_that_was_reviewed(
 def _audited_fingerprint(directory: Path, layout: str, frame: str) -> str:
     report = audit_odf(make_spreadsheet(directory, layout, *SHEETS))
     [finding] = [
-        f for f in report.findings if f.rule_id == "GRAPHIC001" and f.details["frame"] == frame
+        f
+        for f in report.findings
+        if f.rule_id == rules.GRAPHIC001.id and f.details["frame"] == frame
     ]
     return str(require_target(question_for(report, finding).target).fingerprint)
 
@@ -175,7 +181,7 @@ def test_two_selectors_setting_different_text_on_one_frame_both_fail(
 
 
 @by_layout
-def test_the_snapshot_binds_sheet_data_and_repeated_cell_positions(
+def test_the_fingerprint_binds_sheet_data_and_repeated_cell_positions(
     tmp_path: Path, layout: str
 ) -> None:
     repeated = row(
@@ -185,21 +191,29 @@ def test_the_snapshot_binds_sheet_data_and_repeated_cell_positions(
         attributes="table:number-rows-repeated='2'",
     )
     document = open_sheets(tmp_path, layout, sheet("Budget", repeated, row(text_cell("c"))))
-    before = sheet_snapshot(document)
-    assert before[0] == "sheet\tBudget"
-    assert len(before) == 2
-    assert before[1].startswith("content\t")
+    before = tuple(
+        sheet_fingerprint(document, node) for node in sheets(document.tree(Part.CONTENT))
+    )
+    assert len(before) == 1
     cells = select_elements(document.tree(Part.CONTENT), "//table:table-cell")
     cells[1].set(qn("table", "number-columns-repeated"), "4")
-    assert sheet_snapshot(document) != before
+    assert (
+        tuple(sheet_fingerprint(document, node) for node in sheets(document.tree(Part.CONTENT)))
+        != before
+    )
 
 
 @by_layout
-def test_alt_text_never_changes_the_snapshot(tmp_path: Path, layout: str) -> None:
+def test_alt_text_never_changes_the_fingerprint(tmp_path: Path, layout: str) -> None:
     document = open_sheets(tmp_path, layout, *SHEETS)
-    before = sheet_snapshot(document)
+    before = tuple(
+        sheet_fingerprint(document, node) for node in sheets(document.tree(Part.CONTENT))
+    )
     apply_in_memory(document, graphic_inputs({"Logo": graphic_answer("Title", "Description")}))
-    assert sheet_snapshot(document) == before
+    assert (
+        tuple(sheet_fingerprint(document, node) for node in sheets(document.tree(Part.CONTENT)))
+        == before
+    )
 
 
 @by_layout
@@ -212,26 +226,44 @@ def test_alt_text_never_changes_the_snapshot(tmp_path: Path, layout: str) -> Non
         ("xlink", "href"),
     ],
 )
-def test_the_snapshot_detects_data_and_reference_changes_without_changed_words(
+def test_the_fingerprint_detects_data_and_reference_changes_without_changed_words(
     tmp_path: Path, layout: str, attribute: tuple[str, str]
 ) -> None:
     document = open_sheets(tmp_path, layout, sheet("Values", row(text_cell("Same words"))))
-    before = sheet_snapshot(document)
+    before = tuple(
+        sheet_fingerprint(document, node) for node in sheets(document.tree(Part.CONTENT))
+    )
     cell = select_elements(document.tree(Part.CONTENT), "//table:table-cell")[0]
     cell.set(qn(*attribute), "changed")
-    assert not sheets_preserved(before, sheet_snapshot(document))
+    assert (
+        tuple(sheet_fingerprint(document, node) for node in sheets(document.tree(Part.CONTENT)))
+        != before
+    )
 
 
-def test_only_sheet_names_may_differ_between_snapshots() -> None:
-    before = ("sheet\tA", "cell\t1,1\tx", "sheet\tB", "cell\t1,1\ty")
-    renamed = ("sheet\tC", "cell\t1,1\tx", "sheet\tD", "cell\t1,1\ty")
-    assert sheets_preserved(before, before)
-    assert sheets_preserved(before, renamed)
-    edited = ("sheet\tA", "cell\t1,1\tchanged", "sheet\tB", "cell\t1,1\ty")
-    assert not sheets_preserved(before, edited)
-    assert not sheets_preserved(before, before[:2])
-    assert not sheets_preserved(before, (*before, "sheet\tC"))
-    moved = ("sheet\tA", "cell\t2,1\tx", "sheet\tB", "cell\t1,1\ty")
-    assert not sheets_preserved(before, moved)
-    swapped = ("sheet\tA", "sheet\tB", "cell\t1,1\tx", "cell\t1,1\ty")
-    assert not sheets_preserved(before, swapped)
+@pytest.mark.parametrize("damage", ["rename", "other-name", "cell", "remove", "add", "reorder"])
+def test_only_selected_sheet_name_is_allowed(tmp_path: Path, damage: str) -> None:
+    document = open_sheets(
+        tmp_path, "package", sheet("A", row(text_cell("x"))), sheet("B", row(text_cell("y")))
+    )
+    original = ProtectedPackage.capture(document)
+    first, second = sheets(document.tree(Part.CONTENT))
+    allowance = Allowance((Attributes(Part.CONTENT, first, frozenset({qn("table", "name")})),))
+    assert original.preserved(ProtectedPackage.capture(document), Allowance())
+    parent = first.getparent()
+    assert parent is not None
+    match damage:
+        case "rename":
+            first.set(qn("table", "name"), "C")
+        case "other-name":
+            second.set(qn("table", "name"), "C")
+        case "cell":
+            select_elements(first, ".//text:p")[0].text = "changed"
+        case "remove":
+            parent.remove(second)
+        case "add":
+            etree.SubElement(parent, qn("table", "table")).set(qn("table", "name"), "C")
+        case "reorder":
+            parent.remove(second)
+            parent.insert(0, second)
+    assert original.preserved(ProtectedPackage.capture(document), allowance) is (damage == "rename")

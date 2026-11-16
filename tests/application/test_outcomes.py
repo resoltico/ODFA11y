@@ -75,5 +75,5 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
         sources.reverse()
     assert main(["audit", *sources, "--format", "json"]) == (3 if execution_failure else 4)
     captured = capsys.readouterr()
-    assert "META001" in captured.out
+    assert rules.META001.id in captured.out
     assert "Invalid plan or policy" in captured.err

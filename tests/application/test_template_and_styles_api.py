@@ -44,7 +44,7 @@ def test_template_api_returns_readability_failure_without_preparing_decisions(
     assert template is None
     blockers = plan_blockers(report)
     assert blockers is not None
-    assert [finding.rule_id for finding in blockers.findings] == ["PKG001"]
+    assert [finding.rule_id for finding in blockers.findings] == [rules.PKG001.id]
     assert blockers.sources == (source,)
 
 
@@ -55,7 +55,7 @@ def test_fixable_errors_leave_template_planning_available(tmp_path: Path) -> Non
     assert plan_blockers(report) is None
     assert template is not None
     assert '[decisions."document.metadata"]' in template
-    assert "META001" in template
+    assert rules.META001.id in template
 
 
 def test_blocker_projection_preserves_original_full_report() -> None:
@@ -66,7 +66,7 @@ def test_blocker_projection_preserves_original_full_report() -> None:
     blockers = plan_blockers(report)
     assert blockers is not None
     assert report.as_dict() == before
-    assert [finding.rule_id for finding in blockers.findings] == ["PKG001"]
+    assert [finding.rule_id for finding in blockers.findings] == [rules.PKG001.id]
     blockers.findings.clear()
     assert report.as_dict() == before
 

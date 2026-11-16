@@ -12,6 +12,7 @@ from odfa11y.concepts import axis_count, header_count, table_fingerprint
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     apply_in_memory,
     header_answer,
@@ -153,6 +154,6 @@ def test_repeat_splitting_rejects_duplicate_structural_identity(
 def test_audit_reports_unresolvable_repeat_counts(tmp_path: Path, repeat: str) -> None:
     body = REPEATED.replace('number-rows-repeated="5"', f'number-rows-repeated="{repeat}"')
     source = make_package(tmp_path, "text", Variant(body=body))
-    findings = [f for f in audit_odf(source).findings if f.rule_id == "TABLE002"]
+    findings = [f for f in audit_odf(source).findings if f.rule_id == rules.TABLE002.id]
     assert len(findings) == 1
     assert findings[0].severity.value == "error"

@@ -11,15 +11,16 @@ from hypothesis import example, given
 from hypothesis import strategies as st
 from lxml import etree
 
+from odfa11y.concepts.preservation import ProtectedPackage
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families.text import (
     URI_RE,
     linkify_plain_addresses,
     split_trailing_punctuation,
-    text_is_preserved,
 )
-from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
+from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, is_unsafe_member_name, qn, validate
+from odfa11y.odf.allowance import Allowance, Removed
 from odfa11y.plans.registry import load_plan
 from odfa11y.report import RULES, Report
 from odfa11y.report.model import ReportKind
@@ -80,15 +81,30 @@ def test_linkification_preserves_visible_text_and_is_idempotent(fragments: list[
 
 
 @given(st.lists(st.text(alphabet="ab ", max_size=4), max_size=8), st.data())
-def test_text_preservation_accepts_exactly_the_removed_empty_blocks(
+def test_masked_proof_requires_every_removed_empty_block(
     after: list[str], data: st.DataObject
 ) -> None:
-    blocks = list(after)
-    removed = data.draw(st.integers(min_value=0, max_value=4))
-    for _ in range(removed):
-        blocks.insert(data.draw(st.integers(min_value=0, max_value=len(blocks))), "")
-    assert text_is_preserved(tuple(blocks), tuple(after), removed_empty_blocks=removed)
-    assert not text_is_preserved(tuple(blocks), tuple(after), removed_empty_blocks=removed + 1)
+    with tempfile.TemporaryDirectory() as directory:
+        source = make_minimal_odt(Path(directory) / "source.odt")
+        document = OdfDocument.open(source)
+        body = document.tree(Part.CONTENT).find("office:body/office:text", namespaces=NS)
+        assert body is not None
+        for child in list(body):
+            body.remove(child)
+        for text in after:
+            etree.SubElement(body, qn("text", "p")).text = text
+        removed = []
+        for _ in range(data.draw(st.integers(min_value=1, max_value=4))):
+            node = etree.Element(qn("text", "p"))
+            body.insert(data.draw(st.integers(min_value=0, max_value=len(body))), node)
+            removed.append(node)
+        before = ProtectedPackage.capture(document)
+        for node in removed:
+            body.remove(node)
+        candidate = ProtectedPackage.capture(document)
+        permissions = tuple(Removed(Part.CONTENT, node) for node in removed)
+        assert before.preserved(candidate, Allowance(permissions))
+        assert not before.preserved(candidate, Allowance(permissions[:-1]))
 
 
 @given(MEMBERS)

@@ -1,31 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Chart source assurance, using standard document metadata for its alternative."""
 
-from odfa11y.concepts import protected_xml
-from odfa11y.concepts.preservation import PreservationSnapshot
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.families.chart.audit import audit_chart
 from odfa11y.families.spec import FamilySpec, ReviewItem, Unsupported
-from odfa11y.odf import Family, Part, select_elements
-lazy from odfa11y.odf import OdfDocument
-
-
-def _snapshot(document: OdfDocument) -> tuple[str, ...]:
-    bodies = select_elements(document.tree(Part.CONTENT), "//office:body")
-    return tuple(protected_xml(body) for body in bodies)
-
-
-def _preservation(document: OdfDocument) -> PreservationSnapshot:
-    """Capture protected meaning.
-
-    Returns
-    -------
-    PreservationSnapshot
-        The family-owned protected facts.
-
-    """
-    return PreservationSnapshot(_snapshot(document))
-
+from odfa11y.odf import Family
 
 SPEC = FamilySpec(
     family=Family.CHART,
@@ -35,7 +14,6 @@ SPEC = FamilySpec(
         "Native PDF export is unsupported for standalone chart documents; "
         "use the source application."
     ),
-    snapshot=_preservation,
     language=None,
     review_items=(
         ReviewItem(

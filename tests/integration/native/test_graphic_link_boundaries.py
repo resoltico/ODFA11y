@@ -18,6 +18,7 @@ from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.link_structure import PdfLinkMeasurements
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     apply_in_memory,
     graphic_answer,
@@ -78,10 +79,10 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     document = OdfDocument.open(source)
     decoration = _mixed_graphics(document)
     control = document.save(tmp_path / "missing-role.fodt")
-    assert "GRAPHIC001" in {finding.rule_id for finding in audit_odf(control).findings}
+    assert rules.GRAPHIC001.id in {finding.rule_id for finding in audit_odf(control).findings}
     settings = ExportSettings("writer_pdf_Export", soffice)
     control_pdf = export_pdfua(control, tmp_path / "missing-role.pdf", settings)
-    assert "PDF008" in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
+    assert rules.PDF008.id in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
     assert not validate_pdfua(control_pdf, executable=verapdf).compliant
     operation = graphic_inputs({
         "Decoration": graphic_answer(
@@ -91,7 +92,7 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     assert apply_in_memory(document, operation)[0].status == Status.APPLIED
     edited = document.save(tmp_path / "decorative-role.fodt")
     assert validate(document).count == 0
-    assert "GRAPHIC001" not in {finding.rule_id for finding in audit_odf(edited).findings}
+    assert rules.GRAPHIC001.id not in {finding.rule_id for finding in audit_odf(edited).findings}
     assert apply_in_memory(document, operation)[0].status == Status.UNCHANGED
     pdf = export_pdfua(edited, tmp_path / "decorative-role.pdf", settings)
     report = audit_pdfua(pdf)
@@ -103,7 +104,7 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:
         # Standard draw:decorative is ignored by LibreOffice 26.8.1.1. No extension is authored.
-        assert errors == {"PDF008"}
+        assert errors == {rules.PDF008.id}
         assert report.error_count != 0
         assert not validator.compliant
     else:
@@ -125,7 +126,7 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     missing = document.save(tmp_path / "missing-title.fodt")
     settings = ExportSettings("writer_pdf_Export", soffice)
     control_pdf = export_pdfua(missing, tmp_path / "missing-title.pdf", settings)
-    assert "PDF020" in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
+    assert rules.PDF020.id in {finding.rule_id for finding in audit_pdfua(control_pdf).findings}
     assert not validate_pdfua(control_pdf, executable=verapdf).compliant
     operation = link_inputs({
         link_location(link, 1).path: link_answer("Read the guide", link_fingerprint(document, link))
@@ -143,7 +144,7 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     errors = {finding.rule_id for finding in report.findings if finding.severity == "error"}
     if errors:
         # Writer 26.8.1.1 does not export the normative office:title to PDF /Alt.
-        assert errors == {"PDF020"}
+        assert errors == {rules.PDF020.id}
         assert report.error_count != 0
         assert not validator.compliant
     else:
@@ -177,7 +178,7 @@ def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
     etree.SubElement(style, qn("style", "graphic-properties"), {qn("draw", "decorative"): "true"})
     source = document.save(tmp_path / "nested-group.fodt")
     assert validate(document).count == 0
-    assert {"GRAPHIC003", "GRAPHIC001"} <= {
+    assert {rules.GRAPHIC003.id, rules.GRAPHIC001.id} <= {
         finding.rule_id for finding in audit_odf(source).findings
     }
     operation = graphic_inputs({
@@ -191,5 +192,5 @@ def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
     pdf = export_pdfua(
         source, tmp_path / "nested-group.pdf", ExportSettings("writer_pdf_Export", soffice)
     )
-    assert "PDF008" in {finding.rule_id for finding in audit_pdfua(pdf).findings}
+    assert rules.PDF008.id in {finding.rule_id for finding in audit_pdfua(pdf).findings}
     assert not validate_pdfua(pdf, executable=verapdf).compliant

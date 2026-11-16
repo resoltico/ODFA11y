@@ -10,6 +10,7 @@ from lxml import etree
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.odf import NS, OdfDocument, Part, qn
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.measurements import measurement
 from tests.fixtures.writer import make_minimal_odt
@@ -47,11 +48,11 @@ def test_audit_reports_unresolved_language_without_configuration_guess(
     destination = document.save(tmp_path / "unresolved.odt")
     original = destination.read_bytes()
     report, template = prepare_plan(destination)
-    findings = [finding for finding in report.findings if finding.rule_id == "META004"]
+    findings = [finding for finding in report.findings if finding.rule_id == rules.META004.id]
     assert len(findings) == 1
     assert not any(findings[0].rule_id in d.rule_ids for d in report.decisions)
     assert findings[0].details
-    assert "META002" not in {finding.rule_id for finding in report.findings}
+    assert rules.META002.id not in {finding.rule_id for finding in report.findings}
     assert template is not None
     assert "# language =" not in template
     assert destination.read_bytes() == original
@@ -71,7 +72,7 @@ def test_foreign_metadata_never_becomes_document_metadata(tmp_path: Path) -> Non
     tree.getroot().remove(meta)
     tree.write(source, encoding="utf-8", xml_declaration=True)
     report = audit_odf(source)
-    assert {"META001", "META002"} <= {finding.rule_id for finding in report.findings}
+    assert {rules.META001.id, rules.META002.id} <= {finding.rule_id for finding in report.findings}
     metadata = measurement(report, DocumentMetadata)
     assert metadata.title is None
     assert metadata.description is None

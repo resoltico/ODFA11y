@@ -8,6 +8,7 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.paths import TESTS
 from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet
 
@@ -58,7 +59,7 @@ def test_graphic_text_criteria_are_identical_across_families(
     candidate = document.save(tmp_path / ("candidate" + source.suffix))
     before = candidate.read_bytes()
     report = audit_odf(candidate)
-    assert any(f.rule_id == "GRAPHIC001" for f in report.findings) is missing
+    assert any(f.rule_id == rules.GRAPHIC001.id for f in report.findings) is missing
     assert candidate.read_bytes() == before
     assert validate(OdfDocument.open(candidate)).count == baseline.count
     report.as_dict()

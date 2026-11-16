@@ -42,4 +42,7 @@ def test_source_replacement_uses_captured_bytes(
     assert result.document.sha256 == digest
     assert (target / "remediated.odt").read_bytes() == original
     assert b"Body paragraph" in PackageStorage(target / "remediated.odt").read("content.xml")
+    remediation = next(stage.remediation for stage in result.stages if stage.remediation)
+    assert remediation.candidate is not None
+    assert remediation.candidate.subject == "remediated.odt"
     assert not list(tmp_path.glob(".odfa11y-source-*"))

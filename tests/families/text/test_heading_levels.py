@@ -15,6 +15,7 @@ from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.plans import parse_tables
 from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.remediate.compile import compile_decisions
+from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 from tests.fixtures.answers import (
     apply_in_memory,
@@ -38,7 +39,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
 ) -> None:
     source = make(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
-    finding = next(f for f in report.findings if f.rule_id == "HEADING003")
+    finding = next(f for f in report.findings if f.rule_id == rules.HEADING003.id)
     assert finding.location is not None
     target = finding.location.path
     assert target == "content/heading[2]"
@@ -47,7 +48,7 @@ def test_outline_decisions_repair_findings_preserve_words_and_are_idempotent(
     operation = heading_inputs({target: level_answer(2, reviewed_fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
     apply_answers(source, once, [operation])
-    assert "HEADING003" not in {f.rule_id for f in audit_odf(once).findings}
+    assert rules.HEADING003.id not in {f.rule_id for f in audit_odf(once).findings}
     assert not apply_answers(once, twice, [operation]).changed
     before = OdfDocument.open(source).tree(Part.CONTENT)
     after = OdfDocument.open(twice).tree(Part.CONTENT)
@@ -149,4 +150,4 @@ def test_toml_uses_the_exact_report_target(tmp_path: Path) -> None:
 
 def test_audit_rejects_levels_above_the_supported_range(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(body=BODY.replace('level="4"', 'level="11"')))
-    assert "HEADING001" in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.HEADING001.id in {f.rule_id for f in audit_odf(source).findings}

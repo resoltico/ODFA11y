@@ -12,6 +12,7 @@ from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.visibility.revisions import RevisionMeasurements
 from odfa11y.odf import OdfDocument, Part
+from odfa11y.rules import registry as rules
 from odfa11y.run.native import export_document
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.measurements import measured, measurement
@@ -26,10 +27,17 @@ def test_writer_revision_visibility_and_reading_order_scope(
     source = TESTS / "text_corpus" / f"visibility-{case}.odt"
     report = audit_odf(source)
     findings = {finding.rule_id for finding in report.findings}
-    assert not {"REVISION001", "REVISION004", "ORDER001"} & findings
-    assert ("REVISION006" in findings) is (case == "negative")
-    assert ("ORDER003" in findings) is (case == "negative")
-    assert ("ORDER002" in findings) is (case == "negative")
+    assert (
+        not {
+            rules.REVISION001.id,
+            rules.REVISION004.id,
+            rules.ORDER001.id,
+        }
+        & findings
+    )
+    assert (rules.REVISION006.id in findings) is (case == "negative")
+    assert (rules.ORDER003.id in findings) is (case == "negative")
+    assert (rules.ORDER002.id in findings) is (case == "negative")
     facts = measured(measurement(report, RevisionMeasurements).revision_relationships)
     assert facts["declarations"] == facts["markers"] == (1 if case == "negative" else 0)
     edited = tmp_path / "reviewed.odt"

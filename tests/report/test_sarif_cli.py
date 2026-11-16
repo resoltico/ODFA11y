@@ -11,6 +11,7 @@ from jsonschema import Draft7Validator
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailure
+from odfa11y.rules import registry as rules
 from tests.fixtures.native import native_fakes, validation_result
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
@@ -63,10 +64,16 @@ def test_audit_sarif_mixes_odf_pdf_and_validation_reports_without_local_paths(
     ]
     by_rule = {result["ruleId"]: result for result in run["results"]}
     assert (
-        by_rule["GRAPHIC001"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 0
+        by_rule[rules.GRAPHIC001.id]["locations"][0]["physicalLocation"]["artifactLocation"][
+            "index"
+        ]
+        == 0
     )
-    assert by_rule["PDFUA001"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 1
-    assert by_rule["PDFUA001"]["level"] == "error"
+    assert (
+        by_rule[rules.PDFUA001.id]["locations"][0]["physicalLocation"]["artifactLocation"]["index"]
+        == 1
+    )
+    assert by_rule[rules.PDFUA001.id]["level"] == "error"
 
 
 def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_deleted(
@@ -111,7 +118,7 @@ def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_de
         {"location": {"uri": "candidate.odt"}},
         {"location": {"uri": "source.odt"}},
     ]
-    finding = next(result for result in run["results"] if result["ruleId"] == "FIDELITY003")
+    finding = next(result for result in run["results"] if result["ruleId"] == rules.FIDELITY003.id)
     assert [
         loc["physicalLocation"]["artifactLocation"]["index"] for loc in finding["locations"]
     ] == [0, 1]
@@ -138,7 +145,7 @@ def test_compare_real_pdfs_has_candidate_then_source_artifact_identity(
     run = _run_log(capsys.readouterr().out)
     assert run["artifacts"][0]["location"]["uri"] == "candidate.pdf"
     assert run["artifacts"][1]["location"]["uri"] == "source.pdf"
-    assert any(result["ruleId"] == "FIDELITY003" for result in run["results"])
+    assert any(result["ruleId"] == rules.FIDELITY003.id for result in run["results"])
 
 
 @pytest.mark.parametrize("suffix", ["odt", "pdf"])
@@ -162,7 +169,10 @@ def test_malformed_existing_inputs_still_produce_valid_private_sarif(
     run = _run_log(output.out)
     assert run["results"]
     assert str(tmp_path) not in output.out
-    assert {item["ruleId"] for item in run["results"]} <= {"PDF001", "PKG001"}
+    assert {item["ruleId"] for item in run["results"]} <= {
+        rules.PDF001.id,
+        rules.PKG001.id,
+    }
 
 
 def test_missing_explicit_root_and_outside_sources_fail_without_emitting_partial_log(

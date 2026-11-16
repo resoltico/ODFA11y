@@ -18,6 +18,7 @@ from odfa11y.native.process import ToolIdentity
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from tests.fixtures.pdf import register, tagged_writer
 from tests.fixtures.plans import plan_header
@@ -52,7 +53,7 @@ def test_invalid_predictor_refuses_and_retains_mixed_audits(
     bad = predictor_pdf(tmp_path / "bad.pdf", NameObject("/Bad"))
     before = bad.read_bytes()
     report = audit_pdfua(bad)
-    assert [f.rule_id for f in report.findings] == ["PDF001"]
+    assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
     assert "Malformed PDF stream decoding parameters" in report.findings[0].message
     with pytest.raises(ToolFailure, match="Malformed PDF stream decoding parameters"):
         compare_pdfs(good, bad, Pagination.SAME())
@@ -61,8 +62,10 @@ def test_invalid_predictor_refuses_and_retains_mixed_audits(
     assert not output.err
     reports = json.loads(output.out)
     assert len(reports) == 3
-    assert all(f["rule_id"] != "PDF001" for r in (reports[0], reports[2]) for f in r["findings"])
-    assert [f["rule_id"] for f in reports[1]["findings"]] == ["PDF001"]
+    assert all(
+        f["rule_id"] != rules.PDF001.id for r in (reports[0], reports[2]) for f in r["findings"]
+    )
+    assert [f["rule_id"] for f in reports[1]["findings"]] == [rules.PDF001.id]
     assert main(["compare", str(good), str(bad)]) == 3
     output = capsys.readouterr()
     assert "Traceback" not in output.err
@@ -73,7 +76,7 @@ def test_invalid_predictor_refuses_and_retains_mixed_audits(
 @pytest.mark.parametrize("predictor", [1, 10])
 def test_supported_flate_predictors_remain_inspectable(tmp_path: Path, predictor: int) -> None:
     path = predictor_pdf(tmp_path / "flate.pdf", NumberObject(predictor))
-    assert not any(f.rule_id == "PDF001" for f in audit_pdfua(path).findings)
+    assert not any(f.rule_id == rules.PDF001.id for f in audit_pdfua(path).findings)
 
 
 def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
@@ -111,7 +114,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
     bundle = tmp_path / "out" / "refused"
     record = json.loads((bundle / "run.json").read_text())
     audit = next(stage for stage in record["stages"] if stage["name"] == "audit-pdf")
-    assert [f["rule_id"] for f in audit["report"]["findings"]] == ["PDF001"]
+    assert [f["rule_id"] for f in audit["report"]["findings"]] == [rules.PDF001.id]
     assert all(
         stage["status"] == "skipped"
         for stage in record["stages"]

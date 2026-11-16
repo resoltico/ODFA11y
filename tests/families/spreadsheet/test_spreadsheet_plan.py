@@ -19,6 +19,7 @@ from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.remediate.compile import compile_decisions
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.status import StageStatus
@@ -141,13 +142,13 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         graphic_inputs({"Logo": graphic_answer("Logo", "The company logo")}),
     ]
-    assert {"SHEET002", "GRAPHIC001"} <= ids(source)
+    assert {rules.SHEET002.id, rules.GRAPHIC001.id} <= ids(source)
     output = tmp_path / f"out{source.suffix}"
     result = apply_answers(source, output, plan)
     assert result.changed
     assert result.schema.status == StageStatus.PASSED
     assert result.schema.new_count == 0
-    assert not {"SHEET002", "GRAPHIC001"} & ids(output)
+    assert not {rules.SHEET002.id, rules.GRAPHIC001.id} & ids(output)
     again = apply_answers(output, tmp_path / f"again{source.suffix}", plan)
     assert not again.changed
     assert {o.status for o in again.outcomes} == {Status.UNCHANGED}
@@ -160,8 +161,8 @@ def test_the_language_reaches_the_default_cell_style(tmp_path: Path, layout: str
     apply_answers(source, output, [metadata_input(language="fr-FR")])
     report = audit_odf(output, schema=True)
     assert measurement(report, DocumentMetadata).language == "fr-FR"
-    assert "META003" not in {f.rule_id for f in report.findings}
-    assert "SCHEMA001" not in {f.rule_id for f in report.findings}
+    assert rules.META003.id not in {f.rule_id for f in report.findings}
+    assert rules.SCHEMA001.id not in {f.rule_id for f in report.findings}
     again = apply_answers(
         output, tmp_path / f"again{source.suffix}", [metadata_input(language="fr-FR")]
     )

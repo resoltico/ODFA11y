@@ -15,6 +15,7 @@ from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions.edit import EditResult
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
+from odfa11y.rules import registry as rules
 from odfa11y.run.native import export_document
 from tests.fixtures.answers import fault_input, metadata_input
 from tests.fixtures.operations import apply_answers
@@ -34,8 +35,10 @@ def test_declared_signature_is_unverified_and_all_remediation_refuses(
     storage.save(source)
     original = source.read_bytes()
     report = audit_odf(source, schema=True)
-    assert "PKG011" in {finding.rule_id for finding in report.findings}
-    assert "cryptography" in next(f.message for f in report.findings if f.rule_id == "PKG011")
+    assert rules.PKG011.id in {finding.rule_id for finding in report.findings}
+    assert "cryptography" in next(
+        f.message for f in report.findings if f.rule_id == rules.PKG011.id
+    )
 
     def forbidden(*_args: object) -> EditResult:
         pytest.fail("operation executed for signed input")
@@ -140,7 +143,7 @@ def test_manifest_encryption_stops_inspection_planning_edits_and_native_tools(
 
     native_tools = replace(native_tools, export=forbidden)
     report, template = prepare_plan(source)
-    assert [finding.rule_id for finding in report.findings] == ["PKG012"]
+    assert [finding.rule_id for finding in report.findings] == [rules.PKG012.id]
     assert template is None
     destination = tmp_path / "out.odt"
     destination.write_bytes(b"existing destination")
@@ -166,7 +169,7 @@ def test_malformed_manifest_is_not_protection_absence(tmp_path: Path) -> None:
     storage.write_member("META-INF/manifest.xml", b"<broken")
     storage.save(source)
     report = audit_odf(source)
-    assert [finding.rule_id for finding in report.findings] == ["XML001"]
+    assert [finding.rule_id for finding in report.findings] == [rules.XML001.id]
     with pytest.raises(PackageError, match="malformed"):
         apply_answers(source, tmp_path / "out.odt", [])
 
@@ -186,6 +189,6 @@ def test_well_formed_non_manifest_root_is_not_protection_absence(tmp_path: Path)
     storage.write_member("META-INF/manifest.xml", b"<not-a-manifest/>")
     storage.save(source)
     report = audit_odf(source)
-    assert [finding.rule_id for finding in report.findings] == ["XML001"]
+    assert [finding.rule_id for finding in report.findings] == [rules.XML001.id]
     with pytest.raises(PackageError, match="malformed"):
         apply_answers(source, tmp_path / "out.odt", [])

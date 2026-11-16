@@ -13,6 +13,7 @@ from odfa11y.errors import PlanError
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate import remediate
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.odf import OdfDocument
@@ -66,7 +67,7 @@ def test_plan_header_binds_audited_bytes_when_original_source_changes(
     assert report.sources == (source,)
     plan = parse_tables(tomllib.loads(text), registered_kinds())
     assert plan.header.source.sha256 == hashlib.sha256(audited_bytes).hexdigest()
-    assert any(f.rule_id == "META001" for f in report.findings)
+    assert any(f.rule_id == rules.META001.id for f in report.findings)
     with pytest.raises(PlanError, match="digest mismatch"):
         remediate(source, tmp_path / "out.odt", plan)
     assert source.read_bytes() == replacement_bytes

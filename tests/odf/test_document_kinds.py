@@ -12,6 +12,7 @@ from odfa11y.families import require_spec, spec_for
 from odfa11y.odf import KINDS, OdfDocument, validate
 from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.report import RULES
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import KIND_SPECS, make_flat, make_package
 from tests.fixtures.measurements import measured, measurement
 lazy from odfa11y.report import Report
@@ -45,7 +46,7 @@ def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
     family = KIND_SPECS[name].family
     assert measured(measurement(report, PackageMeasurements).family) == family
     assert measured(measurement(report, PackageMeasurements).family) == family
-    assert "ODF010" not in ids(report)
+    assert rules.ODF010.id not in ids(report)
     assert all(finding.rule is RULES[finding.rule_id] for finding in report.findings)
     document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
     assert document.kind is not None
@@ -89,8 +90,8 @@ def test_a_damaged_mimetype_member_is_reported_and_the_audit_continues(
             data = original.read(member.filename)
             copy.writestr(member, data + damage if member.filename == "mimetype" else data)
     report = audit_odf(damaged)
-    assert "PKG004" in {f.rule_id for f in report.findings}
-    assert "ODF006" not in {f.rule_id for f in report.findings}
+    assert rules.PKG004.id in {f.rule_id for f in report.findings}
+    assert rules.ODF006.id not in {f.rule_id for f in report.findings}
     assert measured(measurement(report, PackageMeasurements).kind) == "text"
 
 
@@ -101,5 +102,5 @@ def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path)
         for member in original.infolist():
             data = original.read(member.filename)
             copy.writestr(member, b"<foo/>" if member.filename == "content.xml" else data)
-    assert "ODF012" in {f.rule_id for f in audit_odf(wrong).findings}
-    assert "ODF012" not in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.ODF012.id in {f.rule_id for f in audit_odf(wrong).findings}
+    assert rules.ODF012.id not in {f.rule_id for f in audit_odf(source).findings}

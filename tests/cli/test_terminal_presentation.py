@@ -31,7 +31,7 @@ def test_text_report_prioritizes_findings_and_wraps_without_breaking_tokens() ->
     )
     text = render_reports([report])
     assert "Check: no errors" in text
-    assert text.index("WARNING LINK001") < text.index("Facts:")
+    assert text.index(f"WARNING {rules.LINK001.id}") < text.index("Facts:")
     assert "location: content/paragraph[1]" in text
     assert token in text
     assert all(len(line) <= 80 for line in text.splitlines() if token not in line)

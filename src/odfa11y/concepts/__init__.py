@@ -27,7 +27,6 @@ from odfa11y.concepts.pages import (
     navigation_problem,
     page_fingerprint,
     page_shapes,
-    page_snapshot,
     pages,
     shape_identity,
 )
@@ -71,7 +70,6 @@ __all__ = [
     "page_fingerprint",
     "page_location",
     "page_shapes",
-    "page_snapshot",
     "pages",
     "protected_xml",
     "reading_context_path",

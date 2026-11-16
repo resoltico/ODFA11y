@@ -14,6 +14,7 @@ from odfa11y.errors import PackageError
 from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.native import export_document
@@ -54,7 +55,7 @@ def test_duplicate_members_refuse_every_guard_before_kind_or_native_access(
         archive.writestr(member, pair[0])
         with pytest.warns(UserWarning, match="Duplicate name"):
             archive.writestr(member, pair[1])
-    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG009")
+    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, rules.PKG009.id)
 
 
 def test_unsafe_member_names_refuse_before_kind_or_native_access(
@@ -67,7 +68,7 @@ def test_unsafe_member_names_refuse_before_kind_or_native_access(
         for name in storage.order:
             archive.writestr(name, storage.read(name))
         archive.writestr("../outside.xml", b"unestablished bytes")
-    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, "PKG010")
+    _assert_guarded_refusal(native_tools, source, tmp_path, monkeypatch, rules.PKG010.id)
 
 
 def _assert_guarded_refusal(

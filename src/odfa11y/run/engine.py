@@ -98,6 +98,8 @@ class _Run:
 
     def remediate(self) -> StageResult:
         result = remediate(self.captured or self.source, self.remediated, self.plan)
+        if result.candidate is not None:
+            result.candidate.subject = self.remediated.name
         return StageResult(
             Stage.REMEDIATE,
             StageStatus.PASSED if result.published else StageStatus.FAILED,

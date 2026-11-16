@@ -12,6 +12,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     FaultEdit,
     RawDecisions,
@@ -143,8 +144,8 @@ def test_revision_audit_outline_and_metadata_only_edit(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY))
     report = audit_odf(source)
     assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
-    assert {"REVISION006", "ORDER003"} <= {f.rule_id for f in report.findings}
-    plain = [f.details["text"] for f in report.findings if f.rule_id == "LINK001"]
+    assert {rules.REVISION006.id, rules.ORDER003.id} <= {f.rule_id for f in report.findings}
+    plain = [f.details["text"] for f in report.findings if f.rule_id == rules.LINK001.id]
     assert plain == ["https://note.example"]
     destination = tmp_path / "out.fodt"
     result = apply_answers(source, destination, [metadata_input(title="Reviewed title")])
@@ -178,7 +179,7 @@ def test_inline_hidden_content_and_fields_never_enter_address_prose(tmp_path: Pa
 <text:span>https://visible.example</text:span></text:p></office:text>"""
     source = make_flat(tmp_path, "text", Variant(body=body))
     report = audit_odf(source)
-    assert [f.details["text"] for f in report.findings if f.rule_id == "LINK001"] == [
+    assert [f.details["text"] for f in report.findings if f.rule_id == rules.LINK001.id] == [
         "https://visible.example"
     ]
     destination = tmp_path / "out.fodt"
@@ -201,7 +202,7 @@ def test_foreign_authored_payload_is_not_current_flow(tmp_path: Path) -> None:
     source = make_flat(tmp_path, "text", Variant(body=body))
     destination = tmp_path / "out.fodt"
     report = audit_odf(source)
-    assert [f.details["text"] for f in report.findings if f.rule_id == "LINK001"] == [
+    assert [f.details["text"] for f in report.findings if f.rule_id == rules.LINK001.id] == [
         "https://current.example"
     ]
     apply_answers(source, destination, [address_input()])

@@ -16,6 +16,7 @@ from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError, PlanError
 from odfa11y.families import require_spec
 from odfa11y.odf import OdfDocument, Use, regressions, validate
+from odfa11y.odf.allowance import Allowance
 from odfa11y.plans import Plan
 from odfa11y.plans.registry import load_plan
 from odfa11y.records import SchemaCheck
@@ -30,8 +31,6 @@ from odfa11y.remediate.result import (
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import Finding, Report
 from odfa11y.status import StageStatus
-lazy from odfa11y.concepts.preservation import PreservationSnapshot
-lazy from odfa11y.families.spec import FamilySpec
 lazy from odfa11y.odf import SchemaResult
 
 
@@ -81,6 +80,7 @@ class _Execution:
     outcomes: list[Outcome] = field(default_factory=list)
     violations: list[Violation] = field(default_factory=list)
     usable: bool = True
+    allowance: Allowance = field(default_factory=Allowance)
 
 
 def _execute(
@@ -92,14 +92,14 @@ def _execute(
     dry_run: bool,
     plan: Plan | None = None,
 ) -> RemediationResult:
-    adapter = require_spec(document.kind)
-    before = adapter.snapshot(document)
+    require_spec(document.kind)
+    before = ProtectedPackage.capture(document)
     opaque_before = opaque_payloads(document)
     schema_before = validate(document)
     audit_before = audit_document(document, subject=source.name)
     unanswered = _unanswered(document, plan) if plan else ()
-    state = _run_decisions(document, adapter, decisions)
-    schema = _postconditions(document, adapter, before, opaque_before, schema_before, state=state)
+    state = _run_decisions(document, decisions)
+    schema = _postconditions(document, before, opaque_before, schema_before, state=state)
     candidate = audit_document(document, subject=source.name)
     predictions = (
         tuple(_predict(decision, audit_before, candidate) for decision in plan.decisions)
@@ -166,13 +166,10 @@ def _predict(decision: Decision, before: Report, after: Report) -> DecisionPredi
     )
 
 
-def _run_decisions(
-    document: OdfDocument, adapter: FamilySpec, decisions: Sequence[Decision]
-) -> _Execution:
+def _run_decisions(document: OdfDocument, decisions: Sequence[Decision]) -> _Execution:
     state = _Execution()
     try:
         check_plan(document, decisions)
-        adapter.preflight(document, decisions)
     except DocumentRefusal as exc:
         state.violations.append(Violation(ViolationKind.FOREIGN_OPERATION, str(exc)))
         state.outcomes.extend(
@@ -181,7 +178,7 @@ def _run_decisions(
         )
         return state
     for index, decision in enumerate(decisions):
-        _run_decision(document, adapter, decision, state)
+        _run_decision(document, decision, state)
         if not state.usable:
             state.outcomes.extend(
                 Outcome(
@@ -195,15 +192,11 @@ def _run_decisions(
     return state
 
 
-def _run_decision(
-    document: OdfDocument, adapter: FamilySpec, decision: Decision, state: _Execution
-) -> None:
+def _run_decision(document: OdfDocument, decision: Decision, state: _Execution) -> None:
     before = document.checkpoint()
     xml_before = ProtectedPackage.capture(document)
-    allowance = None
-    protected = None
+    allowance = Allowance()
     try:
-        protected = adapter.protect_edit(document, decision)
         result = decision.kind.edit(document, decision)
         produced = result.outcomes
         allowance = result.allowance
@@ -225,17 +218,8 @@ def _run_decision(
         return
     if problem := _check_edit_accounting(decision, produced, changed):
         state.violations.append(Violation(ViolationKind.EDIT_ACCOUNTING, problem, decision.kind.id))
-    if allowance is not None and not xml_before.preserved(
-        ProtectedPackage.capture(document), allowance
-    ):
-        state.violations.append(
-            Violation(
-                ViolationKind.PROTECTED_CONTENT,
-                "Protected document content changed during remediation",
-                decision.kind.id,
-            )
-        )
-    if protected is not None and not protected():
+    state.allowance |= allowance
+    if not xml_before.preserved(ProtectedPackage.capture(document), allowance):
         state.violations.append(
             Violation(
                 ViolationKind.PROTECTED_CONTENT,
@@ -247,8 +231,7 @@ def _run_decision(
 
 def _postconditions(
     document: OdfDocument,
-    adapter: FamilySpec,
-    before: PreservationSnapshot,
+    before: ProtectedPackage,
     opaque_before: tuple[tuple[str, str], ...],
     schema_before: SchemaResult,
     *,
@@ -263,11 +246,11 @@ def _postconditions(
             None,
             None,
         )
-    if not adapter.preserved(before, adapter.snapshot(document), state.outcomes):
+    if not before.preserved(ProtectedPackage.capture(document), state.allowance):
         state.violations.append(
             Violation(
                 ViolationKind.PROTECTED_CONTENT,
-                "Visible document content changed during remediation",
+                "Protected document content changed during remediation",
             )
         )
     if opaque_payloads(document) != opaque_before:

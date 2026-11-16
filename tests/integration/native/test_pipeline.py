@@ -113,6 +113,7 @@ def test_repeated_runs_have_equal_logical_results_and_identical_documents(
     ]
     first, second = (json.loads((tmp_path / f"r{i}" / "run.json").read_text()) for i in range(2))
     assert first["stages"] == second["stages"]
-    assert first["operations"] == second["operations"]
+    assert "operations" not in first
+    assert first["decisions"] == second["decisions"]
     assert first["outputs"]["remediated.odt"] == second["outputs"]["remediated.odt"]
     assert runs[0].passed

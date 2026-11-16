@@ -104,28 +104,6 @@ def page_fingerprint(page: etree._Element, document: OdfDocument) -> Fingerprint
     return Fingerprint.of(json.dumps(facts, sort_keys=True).encode())
 
 
-def page_snapshot(document: OdfDocument) -> tuple[str, ...]:
-    """Protect page count, ordering and all page data outside editable metadata.
-
-    Returns
-    -------
-    tuple[str, ...]
-        One protected digest per page.
-
-    """
-    body = select_elements(document.tree(Part.CONTENT), "//office:body")[0]
-    return (
-        protected_xml(
-            normalize_generated(body, graphic_normalization(document)),
-            omitted_elements=DESCRIPTIONS,
-            omitted_element_attributes={
-                xml_names.DRAW_PAGE: (xml_names.DRAW_NAV_ORDER,),
-                **{qn(ns, "a"): (xml_names.OFFICE_TITLE,) for ns in ("draw", "text")},
-            },
-        ),
-    )
-
-
 def navigation_problem(
     page: etree._Element, order: tuple[str, ...], counts: Counter[str]
 ) -> str | None:

@@ -15,6 +15,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -36,7 +37,7 @@ from tests.fixtures.writer import make_minimal_odt
 def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, href: str) -> None:
     source = writer_resource(tmp_path, href)
     report = audit_odf(source)
-    assert "NATIVE001" in {finding.rule_id for finding in report.findings}
+    assert rules.NATIVE001.id in {finding.rule_id for finding in report.findings}
     assert (
         measured(measurement(report, ExportContextMeasurements).limitations)[
             "rendering_dependencies"
@@ -92,7 +93,7 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
     field.set(qn("text", "display"), "full")
     field.text = "Authored cached field"
     document.save(source)
-    assert "NATIVE002" in {finding.rule_id for finding in audit_odf(source).findings}
+    assert rules.NATIVE002.id in {finding.rule_id for finding in audit_odf(source).findings}
     require_native_context(OdfDocument.open(source))  # Direct original export is distinct.
     with pytest.raises(DocumentRefusal, match="filename/path fields"):
         require_native_context(OdfDocument.open(source), captured_identity=True)

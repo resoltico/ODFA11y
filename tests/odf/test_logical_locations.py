@@ -10,6 +10,7 @@ import pytest
 
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat, make_package
 
 BODY = (
@@ -41,14 +42,14 @@ BODY = (
 )
 
 EXPECTED = {
-    ("HEADING002", "content/heading[1]"),
-    ("HEADING003", "content/heading[2]"),
-    ("HEADING004", "content/heading[1]"),
-    ("GRAPHIC001", "content/frame[name=Logo]"),
-    ("TABLE003", "content/table[name=Data]"),
-    ("TABLE003", "content/table[2]"),
-    ("LINK001", "content/paragraph[1]"),
-    ("LINK001", "content/paragraph[3]"),
+    (rules.HEADING002.id, "content/heading[1]"),
+    (rules.HEADING003.id, "content/heading[2]"),
+    (rules.HEADING004.id, "content/heading[1]"),
+    (rules.GRAPHIC001.id, "content/frame[name=Logo]"),
+    (rules.TABLE003.id, "content/table[name=Data]"),
+    (rules.TABLE003.id, "content/table[2]"),
+    (rules.LINK001.id, "content/paragraph[1]"),
+    (rules.LINK001.id, "content/paragraph[3]"),
 }
 
 
@@ -96,7 +97,10 @@ def test_metadata_findings_are_located_by_field_in_both_layouts(tmp_path: Path) 
         source = make(tmp_path, "text", Variant())
         _without_metadata(source, "<dc:title>Synthetic document</dc:title>")
         _without_metadata(source, "<dc:language>en-GB</dc:language>")
-        assert _logical(source) >= {("META001", "meta/title"), ("META002", "meta/language")}
+        assert _logical(source) >= {
+            (rules.META001.id, "meta/title"),
+            (rules.META002.id, "meta/language"),
+        }
 
 
 def test_a_physical_member_name_is_never_the_logical_path(tmp_path: Path) -> None:
@@ -111,7 +115,7 @@ def test_a_physical_member_name_is_never_the_logical_path(tmp_path: Path) -> Non
 
 def test_package_level_findings_keep_the_member_beside_the_logical_path(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(manifest_media_type="text/plain"))
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "ODF005")
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == rules.ODF005.id)
     assert finding.location is not None
     assert (finding.location.path, finding.location.member) == ("manifest", "META-INF/manifest.xml")
 
@@ -124,5 +128,8 @@ def test_json_report_serializes_the_path_and_the_member(
     report = json.loads(capsys.readouterr().out)
     locations = {f["rule_id"]: f["location"] for f in reversed(report["findings"])}
     assert report["schema_version"] == 1
-    assert locations["LINK001"] == {"path": "content/paragraph[1]", "member": None}
-    assert locations["ODF005"] == {"path": "manifest", "member": "META-INF/manifest.xml"}
+    assert locations[rules.LINK001.id] == {"path": "content/paragraph[1]", "member": None}
+    assert locations[rules.ODF005.id] == {
+        "path": "manifest",
+        "member": "META-INF/manifest.xml",
+    }

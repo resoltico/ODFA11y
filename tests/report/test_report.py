@@ -55,7 +55,7 @@ def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
     ]
     assert "  odf-metadata.title: T" in lines
     assert "  pdf-fidelity.raster_changed_ratios: 2 record(s)" in lines
-    assert "  WARNING LINK001: Needs review" in lines
+    assert f"  WARNING {rules.LINK001.id}: Needs review" in lines
     assert "    location: content/paragraph[2]" in lines
     assert any("text.linkify_addresses" in line for line in lines)
     assert any(line.strip() == "text: Two addresses" for line in lines)
@@ -69,7 +69,7 @@ def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]
     assert (finding["rule_id"], finding["severity"], finding["category"]) == (
-        "LINK001",
+        rules.LINK001.id,
         "warning",
         "link",
     )
@@ -156,7 +156,7 @@ def test_finding_references_one_rule_without_serializing_its_implementation() ->
     assert isinstance(findings, list)
     [payload] = findings
     assert isinstance(payload, dict)
-    assert payload["rule_id"] == "HEADING005"
+    assert payload["rule_id"] == rules.HEADING005.id
     assert payload["severity"] == "info"
     assert payload["category"] == "heading"
     assert payload["message"] == "A source-specific observation"

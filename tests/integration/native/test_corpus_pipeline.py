@@ -11,6 +11,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.pdf import validate_pdfua
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from tests.fixtures.answers import (
@@ -56,7 +57,7 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
         )
         failures = {(failure.clause, failure.test_number) for failure in result.failures}
         assert failures == {("7.18.1", "2"), ("7.18.5", "2")}, failures
-        assert pdf_rules == {"PDF020"}, diagnostics
+        assert pdf_rules == {rules.PDF020.id}, diagnostics
         assert record.failed_stage == "audit-pdf", diagnostics
         assert record.exit_status == 2
         assert stages["fidelity"] == "skipped", diagnostics

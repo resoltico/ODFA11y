@@ -14,6 +14,7 @@ from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.odf.styles import styles_of
+from odfa11y.rules import registry as rules
 from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     apply_in_memory,
@@ -125,7 +126,7 @@ def test_unresolved_spacer_styles_fail_before_removing_any_candidate(
     assert_refused(apply_answers(source, destination, [spacer_input()]))
     assert not destination.exists()
     report = audit_odf(source)
-    assert "STYLE001" in {finding.rule_id for finding in report.findings}
+    assert rules.STYLE001.id in {finding.rule_id for finding in report.findings}
     assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
     if problem not in {"default", "containers"}:
         assert any(
@@ -250,4 +251,4 @@ def test_optional_styles_absence_is_distinct_from_an_unrecognized_styles_root(
     else:
         assert_refused(apply_answers(source, output, [spacer_input()]), match="unsupported root")
         assert not output.exists()
-        assert "STYLE001" in {finding.rule_id for finding in audit_odf(source).findings}
+        assert rules.STYLE001.id in {finding.rule_id for finding in audit_odf(source).findings}

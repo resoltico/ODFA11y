@@ -9,6 +9,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.families.text.tables.audit import MeasuredTable, TableMeasurements
 from odfa11y.families.text.tables.classification import TableKind, classify
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import header_answer, header_inputs
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.measurements import measured, measurement
@@ -41,7 +42,8 @@ def test_valid_merged_grid_with_semantic_bands_is_complex_data(tmp_path: Path) -
     assert classified.header_rows == 2
     report = audit_odf(source)
     assert not any(
-        finding.rule_id in {"TABLE001", "TABLE002", "TABLE003"} for finding in report.findings
+        finding.rule_id in {rules.TABLE001.id, rules.TABLE002.id, rules.TABLE003.id}
+        for finding in report.findings
     )
 
 
@@ -60,7 +62,7 @@ def test_untyped_visual_labels_do_not_establish_data_intent(tmp_path: Path, colu
     row = measured(measurement(report, TableMeasurements).table_classifications)[0]
     assert isinstance(row, MeasuredTable)
     assert row.classification == expected
-    assert "TABLE001" in {finding.rule_id for finding in report.findings}
+    assert rules.TABLE001.id in {finding.rule_id for finding in report.findings}
     assert not any(question.kind.id == "table.headers" for question in report.decisions)
     output = tmp_path / "refused.fodt"
     assert_refused(
@@ -80,7 +82,7 @@ def test_untyped_visual_labels_do_not_establish_data_intent(tmp_path: Path, colu
 )
 def test_missing_or_orphan_coverage_is_a_relationship_error(tmp_path: Path, body: str) -> None:
     source = make_flat(tmp_path, "text", Variant(body=f"<office:text>{body}</office:text>"))
-    assert "TABLE002" in {finding.rule_id for finding in audit_odf(source).findings}
+    assert rules.TABLE002.id in {finding.rule_id for finding in audit_odf(source).findings}
 
 
 def test_merged_origin_crossing_actual_header_band_requires_native_review(tmp_path: Path) -> None:
@@ -94,8 +96,8 @@ def test_merged_origin_crossing_actual_header_band_requires_native_review(tmp_pa
     report = audit_odf(
         make_flat(tmp_path, "text", Variant(body=f"<office:text>{body}</office:text>"))
     )
-    assert "TABLE001" in {finding.rule_id for finding in report.findings}
-    assert "TABLE002" not in {finding.rule_id for finding in report.findings}
+    assert rules.TABLE001.id in {finding.rule_id for finding in report.findings}
+    assert rules.TABLE002.id not in {finding.rule_id for finding in report.findings}
 
 
 def test_grouped_headers_are_valid_complex_relationships(tmp_path: Path) -> None:
@@ -118,7 +120,7 @@ def test_grouped_headers_are_valid_complex_relationships(tmp_path: Path) -> None
     assert classify(select_elements(document.tree(Part.CONTENT), "//table:table")[0]).kind is (
         TableKind.COMPLEX_DATA
     )
-    assert "TABLE002" not in {finding.rule_id for finding in audit_odf(source).findings}
+    assert rules.TABLE002.id not in {finding.rule_id for finding in audit_odf(source).findings}
 
 
 def test_ambiguous_historical_writer_table_refuses_header_inference(tmp_path: Path) -> None:
@@ -145,7 +147,7 @@ def test_large_simple_repeats_stay_arithmetic_and_complex_expansion_is_bounded(
     row = measured(measurement(report, TableMeasurements).table_classifications)[0]
     assert isinstance(row, MeasuredTable)
     assert row.rows == 1000000000000
-    assert "TABLE003" in {finding.rule_id for finding in report.findings}
+    assert rules.TABLE003.id in {finding.rule_id for finding in report.findings}
     complex_grid = (
         '<table:table table:name="Large"><table:table-column table:number-columns-repeated="2"/>'
         '<table:table-row table:number-rows-repeated="100001">'
@@ -153,5 +155,5 @@ def test_large_simple_repeats_stay_arithmetic_and_complex_expansion_is_bounded(
         "</table:table-cell><table:covered-table-cell/></table:table-row></table:table>"
     )
     second = make_flat(tmp_path, "text", Variant(body=f"<office:text>{complex_grid}</office:text>"))
-    finding = next(f for f in audit_odf(second).findings if f.rule_id == "TABLE002")
+    finding = next(f for f in audit_odf(second).findings if f.rule_id == rules.TABLE002.id)
     assert "bounded inspection" in finding.message

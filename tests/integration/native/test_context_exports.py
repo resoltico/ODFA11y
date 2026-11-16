@@ -107,7 +107,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
             RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
         )
         assert result.failed_stage == "export-source"
-        assert result.exit_status == 3
+        assert result.exit_status == 2
         assert not (output / str(repeat) / "source.pdf").exists()
         assert check_bundle(output / str(repeat)) == []
     inspected = tmp_path / "inspected"

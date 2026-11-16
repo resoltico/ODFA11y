@@ -70,26 +70,3 @@ def visible_text_snapshot(
             text = visible_words(node)
             blocks.append(" ".join(text.split()))
     return tuple(blocks)
-
-
-def text_is_preserved(
-    before: tuple[str, ...], after: tuple[str, ...], *, removed_empty_blocks: int = 0
-) -> bool:
-    """Allow only the specified number of empty-block removals in a text sequence.
-
-    Returns
-    -------
-    bool
-        Whether all remaining block text and its order are unchanged.
-
-    """
-    position = 0
-    remaining = removed_empty_blocks
-    for block in before:
-        if position < len(after) and block == after[position]:
-            position += 1
-        elif not block and remaining > 0:
-            remaining -= 1
-        else:
-            return False
-    return position == len(after) and remaining == 0

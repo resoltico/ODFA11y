@@ -11,6 +11,7 @@ from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.tables.audit import MeasuredTable, TableMeasurements
 from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.rules import registry as rules
 from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
 from tests.fixtures.answers import header_answer, header_inputs
@@ -31,7 +32,7 @@ def test_writer_table_classification_and_pdf_scope(
     assert row.classification == expected[case]
     findings = {finding.rule_id for finding in report.findings}
     if case == "negative":
-        assert "TABLE001" in findings
+        assert rules.TABLE001.id in findings
         assert not any(question.kind.id == "table.headers" for question in report.decisions)
         refused = tmp_path / "refused.odt"
         assert_refused(
@@ -40,7 +41,7 @@ def test_writer_table_classification_and_pdf_scope(
         )
         assert not refused.exists()
     elif case == "data-no-headers":
-        assert "TABLE003" in findings
+        assert rules.TABLE003.id in findings
         question = next(q for q in report.decisions if q.kind.id == "table.headers")
         assert question.target is not None
         edited = tmp_path / "headers.odt"
@@ -57,13 +58,13 @@ def test_writer_table_classification_and_pdf_scope(
         )
         assert result.published, result.as_dict()
         source = edited
-        assert "TABLE003" not in {f.rule_id for f in audit_odf(source).findings}
+        assert rules.TABLE003.id not in {f.rule_id for f in audit_odf(source).findings}
     else:
-        assert not {"TABLE001", "TABLE002", "TABLE003"} & findings
+        assert not {rules.TABLE001.id, rules.TABLE002.id, rules.TABLE003.id} & findings
     output = tmp_path / "table.pdf"
     export_document(source, output, Tools(soffice=external_tool("soffice", "libreoffice")))
     assert {finding.rule_id for finding in audit_pdfua(output).findings} == (
-        {"PDF009", "PDF016"} if case == "negative" else {"PDF009"}
+        {rules.PDF009.id, rules.PDF016.id} if case == "negative" else {rules.PDF009.id}
     )
     assert validate_pdfua(output, executable=external_tool("verapdf")).compliant
     reader = PdfReader(output)

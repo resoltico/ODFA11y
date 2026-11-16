@@ -6,8 +6,8 @@ from collections.abc import Iterator
 from lxml import etree
 
 from odfa11y.decisions.domain import TargetDomain
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
 from odfa11y.families.spreadsheet.sheets import sheets
-from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.targets import TargetPath
 

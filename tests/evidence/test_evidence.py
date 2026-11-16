@@ -9,6 +9,7 @@ import pytest
 from odfa11y.errors import OutputOccupied
 from odfa11y.evidence import Redactor, render_review, require_free_directory, write_bundle
 from odfa11y.families.text import SPEC
+from odfa11y.rules import registry as rules
 from odfa11y.status import StageStatus
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.records import record
@@ -61,7 +62,7 @@ def test_review_separates_facts_from_decisions_and_never_overclaims() -> None:
     text = render_review(record())
     assert "## Machine-established facts" in text
     assert "- `audit-pdf` pdf-document.page_count: 2" in text
-    assert "PDF006: No title display." in text
+    assert f"{rules.PDF006.id}: No title display." in text
     assert "not PDF/UA validation" in text
     for item in REVIEW_ITEMS:
         assert f"- [ ] {item.text}" in text

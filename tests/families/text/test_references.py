@@ -9,6 +9,7 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.references import audit_references
 from odfa11y.odf import OdfDocument, Part
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import apply_answers
@@ -26,13 +27,13 @@ from tests.fixtures.paths import TESTS
             ),
             [],
         ),
-        ('<text:p><text:a xlink:href="#missing">Go</text:a></text:p>', ["REF001"]),
+        ('<text:p><text:a xlink:href="#missing">Go</text:a></text:p>', [rules.REF001.id]),
         (
             (
                 '<text:p><text:a office:name="a">One</text:a><text:a office:name="a">Two</text:a>'
                 '<text:a xlink:href="#a">Go</text:a></text:p>'
             ),
-            ["REF002"],
+            [rules.REF002.id],
         ),
         (
             (
@@ -47,14 +48,14 @@ from tests.fixtures.paths import TESTS
                 '<text:p><text:bookmark-end text:name="a"/>A'
                 '<text:bookmark-start text:name="a"/></text:p>'
             ),
-            ["REF003"],
+            [rules.REF003.id],
         ),
         (
             (
                 '<text:p><text:reference-mark text:name="a"/>'
                 '<text:bookmark-ref text:ref-name="a" text:reference-format="text"/></text:p>'
             ),
-            ["REF001"],
+            [rules.REF001.id],
         ),
         (
             (
@@ -77,7 +78,7 @@ from tests.fixtures.paths import TESTS
                 '<text:p><text:note text:id="a" text:note-class="footnote">'
                 "<text:note-citation>1</text:note-citation><text:note-body/></text:note></text:p>"
             ),
-            ["NOTE003"],
+            [rules.NOTE003.id],
         ),
     ],
 )
@@ -87,7 +88,8 @@ def test_relationship_controls(tmp_path: Path, body: str, expected: list[str]) -
     observed = [
         f.rule_id
         for f in report.findings
-        if f.rule_id.startswith("REF") or f.rule_id in {"NOTE002", "NOTE003", "NOTE004"}
+        if f.rule_id.startswith("REF")
+        or f.rule_id in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
     ]
     assert observed == expected
     document = OdfDocument.open(source)
@@ -100,7 +102,7 @@ def test_relationship_controls(tmp_path: Path, body: str, expected: list[str]) -
 def test_writer_relationship_fixtures(case: str) -> None:
     report = audit_odf(TESTS / "text_corpus" / f"references-{case}.odt")
     findings = [f.rule_id for f in report.findings if f.rule_id.startswith("REF")]
-    assert findings == ([] if case == "positive" else ["REF001"])
+    assert findings == ([] if case == "positive" else [rules.REF001.id])
 
 
 @pytest.mark.parametrize(
@@ -120,7 +122,7 @@ def test_excluded_and_producer_specific_targets_remain_explicit_review(
     report = audit_odf(
         make_flat(tmp_path, "text", Variant(body=f"<office:text>{body}</office:text>"))
     )
-    assert [f.rule_id for f in report.findings if f.rule_id.startswith("REF")] == ["REF004"]
+    assert [f.rule_id for f in report.findings if f.rule_id.startswith("REF")] == [rules.REF004.id]
 
 
 def test_range_cannot_cross_note_reading_context(tmp_path: Path) -> None:
@@ -131,7 +133,7 @@ def test_range_cannot_cross_note_reading_context(tmp_path: Path) -> None:
         "</text:p></text:note-body></text:note></text:p></office:text>"
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    finding = next(f for f in report.findings if f.rule_id == "REF003")
+    finding = next(f for f in report.findings if f.rule_id == rules.REF003.id)
     assert finding.location is not None
     assert finding.location.path.startswith("content/reference[")
 
@@ -149,9 +151,16 @@ def test_duplicate_note_identities_are_reported_without_reference_fields(tmp_pat
             Variant(body=f"<office:text><text:p>{note}{note}</text:p></office:text>"),
         )
     )
-    assert len([f for f in report.findings if f.rule_id in {"NOTE002", "NOTE003", "NOTE004"}]) == 2
+    assert (
+        len([
+            f
+            for f in report.findings
+            if f.rule_id in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
+        ])
+        == 2
+    )
     assert not any(
-        rule.startswith("REF") or rule in {"NOTE002", "NOTE003", "NOTE004"}
+        rule.startswith("REF") or rule in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
         for question in report.decisions
         for rule in question.rule_ids
     )
@@ -166,7 +175,7 @@ def test_review_metadata_does_not_repair_or_retarget_references(tmp_path: Path, 
     assert etree.tostring(OdfDocument.open(output).tree(Part.CONTENT)) == before
     report = audit_odf(output)
     assert not any(
-        rule.startswith("REF") or rule in {"NOTE002", "NOTE003", "NOTE004"}
+        rule.startswith("REF") or rule in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
         for question in report.decisions
         for rule in question.rule_ids
     )

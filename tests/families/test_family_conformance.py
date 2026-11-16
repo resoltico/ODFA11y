@@ -3,19 +3,21 @@
 
 import hashlib
 import tomllib
+from copy import deepcopy
 lazy from pathlib import Path
 
 import pytest
+from lxml import etree
 
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
-from odfa11y.families import require_spec
-from odfa11y.odf import NS, OdfDocument, PackageStorage, Part
+from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, qn
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate import remediate
 from odfa11y.report import Location
+from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target, TargetPath, require_target
 from tests.fixtures.paths import TESTS
 from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet, text_cell
@@ -39,16 +41,16 @@ def test_family_question_roundtrip_preservation_and_rebinding(tmp_path: Path, fi
     source = family_source(tmp_path, fixture)
     document = OdfDocument.open(source)
     original_bytes = source.read_bytes()
-    before = require_spec(document.kind).snapshot(document)
+    before = _xml_outside_document_title(document)
     plan = reviewed_title_plan(source)
     destination = tmp_path / ("reviewed" + source.suffix)
     result = remediate(source, destination, plan)
     assert result.published, result.as_dict()
     assert result.changed
     assert result.exit_status == 0
-    assert "META001" not in {f.rule_id for f in audit_odf(destination).findings}
+    assert rules.META001.id not in {f.rule_id for f in audit_odf(destination).findings}
     after = OdfDocument.open(destination)
-    assert require_spec(after.kind).snapshot(after) == before
+    assert _xml_outside_document_title(after) == before
     assert source.read_bytes() == original_bytes
     second = tmp_path / ("second" + source.suffix)
     with pytest.raises(PlanError, match="digest mismatch"):
@@ -152,7 +154,9 @@ def test_sheet_and_graphic_questions_compose_and_rebind(tmp_path: Path) -> None:
     first, second = tmp_path / "first.ods", tmp_path / "second.ods"
     result = remediate(source, first, plan)
     assert result.published, result.as_dict()
-    assert not {"SHEET002", "GRAPHIC001"} & {f.rule_id for f in audit_odf(first).findings}
+    assert not {rules.SHEET002.id, rules.GRAPHIC001.id} & {
+        f.rule_id for f in audit_odf(first).findings
+    }
     result = remediate(first, second, rebound_plan(first, plan))
     assert result.published, result.as_dict()
     assert not result.changed
@@ -171,7 +175,7 @@ def reviewed_title_plan(source: Path) -> Plan:
     report, template = prepare_plan(source)
     assert source.read_bytes() == original_bytes
     assert template is not None
-    assert any(f.rule_id == "META001" for f in report.findings)
+    assert any(f.rule_id == rules.META001.id for f in report.findings)
     question = next(d for d in report.decisions if d.kind.id == "document.metadata")
     # Enable only the reviewed table printed by the real plan renderer.
     preceding, marker, following = template.partition('[decisions."document.metadata"]')
@@ -257,3 +261,26 @@ def rebound_plan(source: Path, previous: Plan) -> Plan:
     _, template = prepare_plan(source, previous=previous)
     assert template is not None
     return parse_tables(tomllib.loads(template), registered_kinds())
+
+
+def _xml_outside_document_title(document: OdfDocument) -> tuple[bytes, ...]:
+    parts = []
+    for tree in document.distinct_trees(*Part):
+        root = deepcopy(tree.getroot())
+        for meta in root.findall("office:meta", NS):
+            for title in meta.findall("dc:title", NS):
+                meta.remove(title)
+            if not len(meta) and not meta.attrib:
+                root.remove(meta)
+        # Authoring a title may create the optional standard metadata part and entry.
+        if root.tag == qn("office", "document-meta") and not len(root):
+            assert set(root.attrib) <= {qn("office", "version")}
+            continue
+        for entry in root.findall("manifest:file-entry", NS):
+            if dict(entry.attrib) == {
+                qn("manifest", "full-path"): "meta.xml",
+                qn("manifest", "media-type"): "text/xml",
+            }:
+                root.remove(entry)
+        parts.append(etree.tostring(root, method="c14n", exclusive=True))
+    return tuple(parts)

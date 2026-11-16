@@ -12,6 +12,7 @@ from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.link_structure import PdfLinkMeasurements
 from odfa11y.pdf.marked_content import MarkedContentMeasurements
+from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.writer import make_minimal_odt
 from tests.native.test_pdfua import LINK_DESCRIPTION_RULES, RICH_BODY, WRITER
@@ -48,7 +49,12 @@ def test_libreoffice_export_content_is_fully_tagged(
     rich = package.save(tmp_path / "rich-doc.odt")
     pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
-    assert not {f.rule_id for f in report.findings} & {"PDF021", "PDF022", "PDF023", "PDF024"}
+    assert not {f.rule_id for f in report.findings} & {
+        rules.PDF021.id,
+        rules.PDF022.id,
+        rules.PDF023.id,
+        rules.PDF024.id,
+    }
     assert measured(measurement(report, MarkedContentMeasurements).marked_content_id_count) >= 1
 
 
@@ -85,17 +91,17 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
     pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
     assert not {f.rule_id for f in report.findings} & {
-        "PDF013",
-        "PDF014",
-        "PDF015",
-        "PDF017",
-        "PDF018",
-        "PDF019",
+        rules.PDF013.id,
+        rules.PDF014.id,
+        rules.PDF015.id,
+        rules.PDF017.id,
+        rules.PDF018.id,
+        rules.PDF019.id,
     }
     assert measured(measurement(report, PdfLinkMeasurements).link_structure_element_count) >= 1
     result = validate_pdfua(pdf, executable=verapdf)
     failed = {(f.clause, f.test_number) for f in result.failures}
-    assert "PDF020" in {f.rule_id for f in report.findings}
+    assert rules.PDF020.id in {f.rule_id for f in report.findings}
     assert failed == LINK_DESCRIPTION_RULES, failed
 
 
@@ -119,7 +125,11 @@ def test_a_hyperlink_wrapped_over_several_lines_is_one_correct_link(
     assert (
         measured(measurement(report, PdfLinkMeasurements).link_annotation_count) >= 2
     )  # one annotation per wrapped line
-    assert not {f.rule_id for f in report.findings} & {"PDF017", "PDF018", "PDF019"}
+    assert not {f.rule_id for f in report.findings} & {
+        rules.PDF017.id,
+        rules.PDF018.id,
+        rules.PDF019.id,
+    }
 
 
 def test_real_verapdf_reports_the_failed_rules_of_an_untagged_pdf(

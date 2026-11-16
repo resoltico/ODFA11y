@@ -5,8 +5,8 @@ import tomllib
 from dataclasses import dataclass
 lazy from pathlib import Path
 
-from odfa11y.families.text import SPEC
-from odfa11y.odf import OdfDocument
+from odfa11y.families.text.flow import visible_text_snapshot
+from odfa11y.odf import OdfDocument, Part
 from tests.fixtures.paths import TESTS
 
 CORPUS = TESTS / "corpus"
@@ -72,7 +72,10 @@ def visible_text(path: Path) -> tuple[str, ...]:
         The non-empty text blocks, each with all whitespace removed.
 
     """
-    blocks = (_squeezed(block) for block in SPEC.snapshot(OdfDocument.open(path)).content)
+    blocks = (
+        _squeezed(block)
+        for block in visible_text_snapshot(OdfDocument.open(path).tree(Part.CONTENT))
+    )
     return tuple(block for block in blocks if block)
 
 

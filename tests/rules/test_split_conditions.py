@@ -12,6 +12,7 @@ from odfa11y.families.text.lists import audit_lists
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.odf.names import XML_ID
 from odfa11y.report import Report, ReportKind
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.paths import TESTS
 
@@ -32,12 +33,12 @@ MARK = '<text:p><text:change text:change-id="r"/></text:p>'
     ("rule", "broken", "repaired"),
     [
         (
-            "HEADING002",
+            rules.HEADING002.id,
             '<text:h text:outline-level="2">Title</text:h>',
             '<text:h text:outline-level="1">Title</text:h>',
         ),
         (
-            "HEADING003",
+            rules.HEADING003.id,
             (
                 '<text:h text:outline-level="1">Title</text:h>'
                 '<text:h text:outline-level="3">Sub</text:h>'
@@ -47,17 +48,29 @@ MARK = '<text:p><text:change text:change-id="r"/></text:p>'
                 '<text:h text:outline-level="2">Sub</text:h>'
             ),
         ),
-        ("LIST002", "<text:list><text:p>Not an item</text:p></text:list>", LIST),
+        (rules.LIST002.id, "<text:list><text:p>Not an item</text:p></text:list>", LIST),
         (
-            "LIST003",
+            rules.LIST003.id,
             f"<text:list>{LIST}</text:list>",
             f"<text:list><text:list-item>{LIST}</text:list-item></text:list>",
         ),
-        ("LIST004", f'<text:list text:continue-numbering="yes">{ITEM}</text:list>', LIST),
-        ("LIST005", f'<text:list xml:id="a" text:continue-list="a">{ITEM}</text:list>', LIST),
-        ("LIST006", f'<text:list text:continue-list="missing">{ITEM}</text:list>', LIST),
         (
-            "LIST007",
+            rules.LIST004.id,
+            f'<text:list text:continue-numbering="yes">{ITEM}</text:list>',
+            LIST,
+        ),
+        (
+            rules.LIST005.id,
+            f'<text:list xml:id="a" text:continue-list="a">{ITEM}</text:list>',
+            LIST,
+        ),
+        (
+            rules.LIST006.id,
+            f'<text:list text:continue-list="missing">{ITEM}</text:list>',
+            LIST,
+        ),
+        (
+            rules.LIST007.id,
             (
                 "<table:table><table:table-row><table:table-cell>"
                 f"{LIST}</table:table-cell><table:table-cell>"
@@ -67,7 +80,7 @@ MARK = '<text:p><text:change text:change-id="r"/></text:p>'
             LIST + f'<text:list text:continue-list="a">{ITEM}</text:list>',
         ),
         (
-            "LIST008",
+            rules.LIST008.id,
             f'<text:list text:continue-numbering="true">{ITEM}</text:list>',
             LIST
             + (
@@ -76,26 +89,26 @@ MARK = '<text:p><text:change text:change-id="r"/></text:p>'
             ),
         ),
         (
-            "NOTE002",
+            rules.NOTE002.id,
             f'<text:p>{NOTE}<text:note-ref text:ref-name="n" text:note-class="endnote"/></text:p>',
             f'<text:p>{NOTE}<text:note-ref text:ref-name="n" text:note-class="footnote"/></text:p>',
         ),
         (
-            "NOTE003",
+            rules.NOTE003.id,
             '<text:p><text:note text:id="n" text:note-class="footnote"/></text:p>',
             f"<text:p>{NOTE}</text:p>",
         ),
-        ("NOTE004", f"<text:p>{NOTE}{NOTE}</text:p>", f"<text:p>{NOTE}</text:p>"),
+        (rules.NOTE004.id, f"<text:p>{NOTE}{NOTE}</text:p>", f"<text:p>{NOTE}</text:p>"),
         (
-            "REVISION001",
+            rules.REVISION001.id,
             REGION.replace('xml:id="r"', 'xml:id="r" text:id="other"') + MARK,
             REGION + MARK,
         ),
-        ("REVISION002", REGION + MARK + MARK, REGION + MARK),
-        ("REVISION003", MARK, REGION + MARK),
-        ("REVISION004", REGION, REGION + MARK),
+        (rules.REVISION002.id, REGION + MARK + MARK, REGION + MARK),
+        (rules.REVISION003.id, MARK, REGION + MARK),
+        (rules.REVISION004.id, REGION, REGION + MARK),
         (
-            "REVISION005",
+            rules.REVISION005.id,
             REGION + f'<text:section text:name="Hidden" text:display="none">{MARK}</text:section>',
             REGION + MARK,
         ),
@@ -110,9 +123,13 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
 @pytest.mark.parametrize(
     ("rule", "broken", "repaired"),
     [
-        ("DATABASE001", "<office:database/><office:database/>", "<office:database/>"),
         (
-            "DATABASE002",
+            rules.DATABASE001.id,
+            "<office:database/><office:database/>",
+            "<office:database/>",
+        ),
+        (
+            rules.DATABASE002.id,
             "<office:database/>",
             (
                 "<office:database>"
@@ -121,7 +138,7 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
             ),
         ),
         (
-            "DATABASE003",
+            rules.DATABASE003.id,
             (
                 "<office:database>"
                 '<db:connection-resource xlink:href="sdbc:embedded:hsqldb"/>'
@@ -134,12 +151,12 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
             ),
         ),
         (
-            "DATABASE005",
+            rules.DATABASE005.id,
             '<office:database><db:login db:user-name="user"/></office:database>',
             "<office:database><db:login/></office:database>",
         ),
         (
-            "DATABASE006",
+            rules.DATABASE006.id,
             (
                 "<office:database>"
                 '<db:connection-resource xlink:href="sdbc:external?user=private"/>'
@@ -152,7 +169,7 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
             ),
         ),
         (
-            "DATABASE007",
+            rules.DATABASE007.id,
             (
                 "<office:database>"
                 '<db:data-source-setting db:data-source-setting-name="password" '
@@ -164,12 +181,12 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
             "<office:database/>",
         ),
         (
-            "DATABASE008",
+            rules.DATABASE008.id,
             ('<office:database><db:query db:name="Q"/><db:query db:name="Q"/></office:database>'),
             '<office:database><db:query db:name="Q"/></office:database>',
         ),
         (
-            "DATABASE009",
+            rules.DATABASE009.id,
             '<office:database><db:query db:name="Q"/></office:database>',
             (
                 "<office:database>"
@@ -178,27 +195,27 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
             ),
         ),
         (
-            "DATABASE011",
+            rules.DATABASE011.id,
             '<office:database><db:query db:name="Q"/></office:database>',
             "<office:database/>",
         ),
         (
-            "DATABASE012",
+            rules.DATABASE012.id,
             '<office:database><db:component db:name="Form"/></office:database>',
             "<office:database/>",
         ),
         (
-            "PAGE001",
+            rules.PAGE001.id,
             "<office:presentation/>",
             '<office:presentation><draw:page draw:name="Page"/></office:presentation>',
         ),
         (
-            "PAGE002",
+            rules.PAGE002.id,
             "<office:presentation><draw:page/></office:presentation>",
             '<office:presentation><draw:page draw:name="Page"/></office:presentation>',
         ),
         (
-            "IMAGE003",
+            rules.IMAGE003.id,
             "<office:image/>",
             (
                 '<office:image><draw:frame draw:name="Picture"><draw:image/>'
@@ -206,7 +223,7 @@ def test_text_conditions(tmp_path: Path, rule: str, broken: str, repaired: str) 
             ),
         ),
         (
-            "IMAGE004",
+            rules.IMAGE004.id,
             '<office:image><draw:frame draw:name="Picture"/></office:image>',
             (
                 '<office:image><draw:frame draw:name="Picture"><draw:image/>'
@@ -262,14 +279,14 @@ def _chart_change(document: OdfDocument, condition: str) -> None:
 @pytest.mark.parametrize(
     ("rule", "condition"),
     [
-        ("CHART001", "body"),
-        ("CHART002", "series"),
-        ("CHART006", "provider"),
-        ("CHART007", "cache"),
-        ("CHART008", "labels"),
-        ("CHART009", "dimensions"),
-        ("CHART010", "length"),
-        ("CHART011", "numeric"),
+        (rules.CHART001.id, "body"),
+        (rules.CHART002.id, "series"),
+        (rules.CHART006.id, "provider"),
+        (rules.CHART007.id, "cache"),
+        (rules.CHART008.id, "labels"),
+        (rules.CHART009.id, "dimensions"),
+        (rules.CHART010.id, "length"),
+        (rules.CHART011.id, "numeric"),
     ],
 )
 def test_chart_conditions(tmp_path: Path, rule: str, condition: str) -> None:
@@ -285,8 +302,8 @@ def test_chart_conditions(tmp_path: Path, rule: str, condition: str) -> None:
 @pytest.mark.parametrize(
     ("rule", "member", "xpath"),
     [
-        ("ODF003", Part.MANIFEST, "."),
-        ("ODF004", Part.MANIFEST, "./manifest:file-entry"),
+        (rules.ODF003.id, Part.MANIFEST, "."),
+        (rules.ODF004.id, Part.MANIFEST, "./manifest:file-entry"),
     ],
 )
 def test_version_conditions(tmp_path: Path, rule: str, member: Part, xpath: str) -> None:
@@ -300,13 +317,13 @@ def test_version_conditions(tmp_path: Path, rule: str, member: Part, xpath: str)
     assert rule in {finding.rule_id for finding in report.findings}
 
 
-@pytest.mark.parametrize("rule", ["MATH001", "MATH002"])
+@pytest.mark.parametrize("rule", [rules.MATH001.id, rules.MATH002.id])
 def test_formula_conditions(tmp_path: Path, rule: str) -> None:
     source = TESTS / "family_corpus/sum-formula.odf"
     assert rule not in {finding.rule_id for finding in audit_odf(source).findings}
     document = OdfDocument.open(source)
     root = document.tree(Part.CONTENT).getroot()
-    if rule == "MATH001":
+    if rule == rules.MATH001.id:
         root.tag = qn("office", "document-content")
     else:
         for child in list(root):
@@ -324,7 +341,7 @@ def test_unknown_schema_member_has_no_invented_part(tmp_path: Path) -> None:
 @pytest.mark.parametrize("extension", [".fodt", ".xml", ".foo", ".fods"])
 def test_flat_extension_matches_kind(tmp_path: Path, extension: str) -> None:
     report = audit_odf(make_flat(tmp_path, "text", Variant(extension=extension)))
-    assert ("ODF008" in {finding.rule_id for finding in report.findings}) is (
+    assert (rules.ODF008.id in {finding.rule_id for finding in report.findings}) is (
         extension not in {".fodt", ".xml"}
     )
 
@@ -335,27 +352,27 @@ def test_duplicate_list_identity_is_measured_in_memory(tmp_path: Path) -> None:
     )
     report = Report(kind=ReportKind.ODF, subject="synthetic")
     audit_lists(document, report)
-    assert "LIST001" not in {finding.rule_id for finding in report.findings}
+    assert rules.LIST001.id not in {finding.rule_id for finding in report.findings}
     original = select_elements(document.tree(Part.CONTENT), "//text:list")[0]
     parent = original.getparent()
     assert parent is not None
     duplicate = etree.SubElement(parent, qn("text", "p"))
     duplicate.set(XML_ID, "a")
     audit_lists(document, report)
-    assert "LIST001" in {finding.rule_id for finding in report.findings}
+    assert rules.LIST001.id in {finding.rule_id for finding in report.findings}
 
 
-@pytest.mark.parametrize("rule", ["PKG002", "PKG003", "PKG004"])
+@pytest.mark.parametrize("rule", [rules.PKG002.id, rules.PKG003.id, rules.PKG004.id])
 def test_media_type_conditions(tmp_path: Path, rule: str) -> None:
-    source = (make_flat if rule == "PKG002" else make_package)(tmp_path, "text")
+    source = (make_flat if rule == rules.PKG002.id else make_package)(tmp_path, "text")
     document = OdfDocument.open(source)
     report = Report(kind=ReportKind.ODF, subject="synthetic")
     audit_structure(document, report)
     assert rule not in {finding.rule_id for finding in report.findings}
-    if rule == "PKG002":
+    if rule == rules.PKG002.id:
         document.tree(Part.CONTENT).getroot().attrib.pop(qn("office", "mimetype"))
         document = OdfDocument.open(document.save(tmp_path / "missing.fodt"))
-    elif rule == "PKG003":
+    elif rule == rules.PKG003.id:
         document = OdfDocument.open(make_package(tmp_path, "text", Variant(mimetype=False)))
     else:
         document.storage.write_member("mimetype", document.storage.read("mimetype") + b" ")

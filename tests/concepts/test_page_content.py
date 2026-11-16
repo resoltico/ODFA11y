@@ -9,9 +9,10 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.concepts import page_fingerprint, page_shapes, page_snapshot, pages
+from odfa11y.concepts import page_fingerprint, page_shapes, pages
 from odfa11y.decisions.edit import Status
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (
     apply_in_memory,
     graphic_answer,
@@ -46,7 +47,7 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
     doc = OdfDocument.open(make(tmp_path, family, Variant(body=_body(family))))
     page = pages(doc)[0]
     fingerprint = page_fingerprint(page, doc)
-    before = page_snapshot(doc)
+    before = tuple(page_fingerprint(page, doc) for page in pages(doc))
     editor = page_inputs({
         "Overview": page_answer(
             "Fruit overview", "Invented fruit counts", ("title", "counts"), fingerprint
@@ -57,7 +58,7 @@ def test_page_and_shape_descriptions_and_navigation_are_schema_valid_and_idempot
     graphics = graphic_inputs({"Counts": graphic_answer("Counts", "Three apples and four pears")})
     assert apply_in_memory(doc, graphics)[0].status is Status.APPLIED
     assert apply_in_memory(doc, graphics)[0].status is Status.UNCHANGED
-    assert page_snapshot(doc) == before
+    assert tuple(page_fingerprint(page, doc) for page in pages(doc)) == before
     assert page_fingerprint(page, doc) == fingerprint
     assert validate(doc).count == 0
     assert [shape.get(qn("draw", "name")) for shape in page_shapes(page)] == ["Title", "Counts"]
@@ -112,10 +113,10 @@ def test_protected_snapshot_detects_geometry_identity_and_reference_damage(
     tmp_path: Path, attribute: tuple[str, str]
 ) -> None:
     doc = OdfDocument.open(make_package(tmp_path, "drawing", Variant(body=_body("drawing"))))
-    before = page_snapshot(doc)
+    before = tuple(page_fingerprint(page, doc) for page in pages(doc))
     shape = select_elements(doc.tree(Part.CONTENT), "//draw:rect")[0]
     shape.set(qn(*attribute), "changed")
-    assert page_snapshot(doc) != before
+    assert tuple(page_fingerprint(page, doc) for page in pages(doc)) != before
 
 
 @pytest.mark.parametrize("make", [make_package, make_flat])
@@ -136,7 +137,7 @@ def test_hidden_layer_declarations_are_counted_once_across_logical_views(
     )
     source = document.save(tmp_path / ("layers" + document.storage.source.suffix))
     assert validate(OdfDocument.open(source)).count == 0
-    findings = [f for f in audit_odf(source).findings if f.rule_id == "ORDER003"]
+    findings = [f for f in audit_odf(source).findings if f.rule_id == rules.ORDER003.id]
     if display == "always":
         assert findings == []
     else:

@@ -5,8 +5,8 @@ from pathlib import Path
 
 from lxml import etree
 
+from odfa11y.concepts.preservation import ProtectedPackage
 from odfa11y.decisions.edit import Status
-from odfa11y.families.text.protection import ProtectedEdit
 from odfa11y.families.text.spacing.edit import derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from tests.fixtures.answers import materialize, spacing_input
@@ -23,11 +23,13 @@ def test_proven_spacing_derivation_does_not_mask_annotation_style_change(tmp_pat
     authored.set(qn("text", "style-name"), "Body")
     authored.text = "Protected annotation"
     operation = spacing_input("Synthetic heading", ("Body",))
-    guard = ProtectedEdit(document, materialize(document, [operation])[0])
-    assert apply_in_memory(document, operation)[0].status is Status.APPLIED
-    assert guard.intact()
+    guard = ProtectedPackage.capture(document)
+    decision = materialize(document, [operation])[0]
+    result = decision.kind.edit(document, decision)
+    assert result.outcomes[0].status is Status.APPLIED
+    assert guard.preserved(ProtectedPackage.capture(document), result.allowance)
     authored.set(qn("text", "style-name"), derived_style_name("Body"))
-    assert not guard.intact()
+    assert not guard.preserved(ProtectedPackage.capture(document), result.allowance)
 
 
 def test_spacing_refuses_shared_generated_style_in_excluded_content(tmp_path: Path) -> None:

@@ -12,13 +12,13 @@ from odfa11y.audit import audit_odf
 from odfa11y.concepts.metadata import read_metadata
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, PlanError
-from odfa11y.families import require_spec
 from odfa11y.families.chart.audit import ChartMeasurements, audit_chart
 from odfa11y.families.chart.ranges import range_shape
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.report import Report, ReportKind
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -55,12 +55,11 @@ class ChangeChartData(FaultEdit):
 def test_chart_native_source_and_metadata_preserve_all_chart_xml(tmp_path: Path) -> None:
     before = OdfDocument.open(SOURCE)
     assert validate(before).count == 0
-    assert {"CHART003", "CHART004"} <= {f.rule_id for f in audit_odf(SOURCE).findings}
+    assert {rules.CHART003.id, rules.CHART004.id} <= {f.rule_id for f in audit_odf(SOURCE).findings}
     once, twice = tmp_path / "once.odc", tmp_path / "twice.odc"
     assert apply_answers(SOURCE, once, _plan()).changed
     assert not apply_answers(once, twice, _plan()).changed
     after = OdfDocument.open(twice)
-    assert require_spec(before.kind).snapshot(before) == require_spec(after.kind).snapshot(after)
     assert before.storage.read("content.xml") == after.storage.read("content.xml")
     assert once.read_bytes() == twice.read_bytes()
     assert validate(after).count == 0
@@ -132,7 +131,7 @@ def test_chart_external_provider_is_not_fetched_or_echoed(tmp_path: Path) -> Non
     chart.set(qn("xlink", "href"), resource)
     source = document.save(tmp_path / "external.odc")
     report = audit_odf(source)
-    assert "CHART006" in {f.rule_id for f in report.findings}
+    assert rules.CHART006.id in {f.rule_id for f in report.findings}
     assert resource not in str(report.as_dict())
 
 
@@ -156,7 +155,7 @@ def test_chart_series_category_and_value_consistency_requires_review(
         series = select_elements(tree, "//chart:series")[0]
         series.set(qn("chart", "values-cell-range-address"), "local-table.$B$1:.$B$3")
     report = audit_odf(document.save(tmp_path / "inconsistent.odc"))
-    assert ("CHART010" if defect == "categories" else "CHART011") in {
+    assert (rules.CHART010.id if defect == "categories" else rules.CHART011.id) in {
         f.rule_id for f in report.findings
     }
 

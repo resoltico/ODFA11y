@@ -4,8 +4,8 @@
 lazy from collections.abc import Mapping
 lazy from pathlib import Path
 
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
-from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import OdfDocument, Part
 from tests.fixtures.answers import RawDecisions, sheet_answer, sheet_inputs
 from tests.fixtures.documents import Variant, make_flat, make_package

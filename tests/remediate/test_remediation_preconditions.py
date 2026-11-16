@@ -11,6 +11,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.errors import DocumentRefusal, PackageError, PlanError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
 from tests.fixtures.measurements import measured, measurement
@@ -111,7 +112,7 @@ def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path
     destination = tmp_path / "out.fodt"
     apply_answers(source, destination, [metadata_input(title="Added")])
     assert measured(measurement(audit_odf(destination), DocumentMetadata).title) == "Added"
-    assert "SCHEMA001" not in ids(audit_odf(destination, schema=True))
+    assert rules.SCHEMA001.id not in ids(audit_odf(destination, schema=True))
 
 
 def test_a_blank_title_is_refused_rather_than_written_empty(tmp_path: Path) -> None:

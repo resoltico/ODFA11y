@@ -15,6 +15,7 @@ from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -147,7 +148,7 @@ def test_external_authentication_findings_do_not_disclose_values(tmp_path: Path)
     output = tmp_path / "external.odb"
     document.save(output)
     report = audit_odf(output)
-    assert {"DATABASE004", "DATABASE006"} <= {f.rule_id for f in report.findings}
+    assert {rules.DATABASE004.id, rules.DATABASE006.id} <= {f.rule_id for f in report.findings}
     assert "private-secret" not in str(report.as_dict())
     assert "alice" not in str(report.as_dict())
 

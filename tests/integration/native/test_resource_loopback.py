@@ -53,7 +53,7 @@ def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
             source = declaration(tmp_path, kind, f"http://127.0.0.1:{server.server_port}/asset.png")
             assert (
                 main(["export", str(source), str(tmp_path / "native.pdf"), "--soffice", soffice])
-                == 3
+                == 2
             )
             output = tmp_path / kind
             record = execute(
@@ -63,7 +63,7 @@ def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
                 RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
             )
             assert record.failed_stage == "export-source"
-            assert record.exit_status == 3
+            assert record.exit_status == 2
             assert check_bundle(output) == []
         assert requests == []  # Preflight refusal, not OS network isolation.
     finally:

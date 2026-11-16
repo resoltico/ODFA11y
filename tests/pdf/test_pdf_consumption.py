@@ -13,6 +13,7 @@ from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.pdf.reading import consumption
 from odfa11y.pdf.reading.consumption import check_consumption
+from odfa11y.rules import registry as rules
 from tests.fixtures.pdf import register, tagged_writer
 
 
@@ -62,7 +63,7 @@ def test_endpoints_refuse_resource_overflow(
     path = tmp_path / "limited.pdf"
     writer.write(path)
     monkeypatch.setattr(consumption, "MAX_CONTENT_BYTES", 10)
-    assert "PDF001" in {f.rule_id for f in audit_pdfua(path).findings}
+    assert rules.PDF001.id in {f.rule_id for f in audit_pdfua(path).findings}
     with pytest.raises((ToolFailure, PyPdfError)):
         read_snapshot(path)
 
@@ -74,7 +75,7 @@ def test_extraction_depth_is_a_controlled_failure(tmp_path: Path) -> None:
     writer.pages[0][NameObject("/Contents")] = register(writer, stream)
     path = tmp_path / "deep.pdf"
     writer.write(path)
-    assert "PDF001" in {f.rule_id for f in audit_pdfua(path).findings}
+    assert rules.PDF001.id in {f.rule_id for f in audit_pdfua(path).findings}
     with pytest.raises(ToolFailure, match="recursion"):
         read_snapshot(path)
 

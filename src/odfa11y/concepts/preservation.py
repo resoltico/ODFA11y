@@ -49,13 +49,6 @@ def opaque_payloads(document: OdfDocument) -> tuple[tuple[str, str], ...]:
 
 
 @dataclass(frozen=True, slots=True)
-class PreservationSnapshot:
-    """The family's immutable protected-content representation."""
-
-    content: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
 class _Tree:
     root: etree._Element
     nodes: tuple[etree._Element, ...]
@@ -161,7 +154,7 @@ def _coalesce(parent: etree._Element, repeats: dict[str, str]) -> None:
         if attribute is None:
             previous = None
             continue
-        count = child.attrib.pop(attribute, "1")
+        count = str(int(child.attrib.pop(attribute, "1")))
         if child.tail and not child.tail.strip():
             child.tail = None
         if previous is not None and previous.tag == child.tag:

@@ -12,6 +12,7 @@ from odfa11y.pdf import add_verapdf_findings, find_verapdf, validate_pdfua
 from odfa11y.pdf.validate import ValidationMeasurements
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rule_catalogue
 from tests.fixtures.measurements import measured, measurement
 
 REPORT = """<?xml version="1.0" encoding="utf-8"?>
@@ -104,7 +105,7 @@ def test_failed_rules_keep_their_standard_identity_and_sample_contexts(tmp_path:
     report = Report(kind=ReportKind.PDF_VALIDATION, subject="in.pdf")
     add_verapdf_findings(report, result)
     finding = report.findings[0]
-    assert finding.rule_id == "PDFUA001"
+    assert finding.rule_id == rule_catalogue.PDFUA001.id
     assert "clause 7.1 test 10" in finding.message
     assert finding.details["failed_checks"] == 4
     assert measured(measurement(report, ValidationMeasurements).identity).compliant is False

@@ -17,12 +17,28 @@ class RevisionPolicy(Enum):
     FORBID = auto()
     TITLE_DESCRIPTION = auto()
 
+    @property
+    def meaning(self) -> str:
+        return {
+            self.FORBID: "Tracked revisions must be absent for this edit.",
+            self.TITLE_DESCRIPTION: "Only title and description may change with tracked revisions.",
+        }[self]
+
 
 class StructurePolicy(Enum):
     INDEPENDENT = auto()
     CHANGES = auto()
     STABLE = auto()
     STABLE_IF_ORDINAL = auto()
+
+    @property
+    def meaning(self) -> str:
+        return {
+            self.INDEPENDENT: "The edit does not require a stable ordinal structure.",
+            self.CHANGES: "The edit can change structural target positions.",
+            self.STABLE: "The edit requires a separate plan from structural edits.",
+            self.STABLE_IF_ORDINAL: "An ordinal target cannot share a plan with structural edits.",
+        }[self]
 
 
 @dataclass(frozen=True, slots=True)

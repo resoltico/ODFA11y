@@ -13,6 +13,7 @@ from odfa11y.cli import main
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import TABLE_BODY, Variant, make_package
 from tests.fixtures.measurements import measured, measurement
 lazy from odfa11y.native.export import ExportSettings
@@ -100,7 +101,7 @@ def _assert_binding(
     count = 1 if expected else 0
     assert native_export_limitations(document)["rendering_dependencies"] == count
     report = audit_odf(source)
-    assert ("NATIVE001" in {f.rule_id for f in report.findings}) == expected
+    assert (rules.NATIVE001.id in {f.rule_id for f in report.findings}) == expected
     assert (
         measured(measurement(report, ExportContextMeasurements).limitations)[
             "rendering_dependencies"

@@ -7,6 +7,7 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.cli import main
+from odfa11y.rules import registry as rules
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
@@ -216,7 +217,7 @@ def test_compare_pdfs_directly_gates_on_the_policy(
     capsys.readouterr()
     diff = tmp_path / "diff"
     assert main(["compare", str(left), str(right), "--diff-dir", str(diff)]) == FINDINGS
-    assert "FIDELITY005" in capsys.readouterr().out
+    assert rules.FIDELITY005.id in capsys.readouterr().out
     assert any(diff.iterdir())
     relaxed = config(tmp_path, "[fidelity]\nraster_tolerance = 5.0\n")
     assert main(["compare", str(left), str(right), "--plan", str(relaxed)]) == 0

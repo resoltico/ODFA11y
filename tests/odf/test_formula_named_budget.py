@@ -16,6 +16,7 @@ from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.native import export_document
@@ -56,7 +57,7 @@ def test_valid_named_chains_do_not_multiply_lexical_parser_stack(
 ) -> None:
     source = named_chain(tmp_path, count, wrappers)
     report = audit_odf(source)
-    assert "NATIVE001" not in {finding.rule_id for finding in report.findings}
+    assert rules.NATIVE001.id not in {finding.rule_id for finding in report.findings}
     calls = []
     native_tools = replace(native_tools, export=recording(calls))
     export_document(source, tmp_path / "output.pdf", native_tools=native_tools)
@@ -69,7 +70,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     source = named_chain(tmp_path, 80, 8)
     original = source.read_bytes()
     report = audit_odf(source)
-    assert "NATIVE001" in {finding.rule_id for finding in report.findings}
+    assert rules.NATIVE001.id in {finding.rule_id for finding in report.findings}
     assert (
         measured(measurement(report, ExportContextMeasurements).limitations)["formula_incomplete"]
         > 0
@@ -95,7 +96,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     assert "RecursionError" not in completed.stderr
     assert completed.returncode in {0, 1, 2}
     payload = json.loads(completed.stdout)
-    assert "NATIVE001" in {finding["rule_id"] for finding in payload["findings"]}
+    assert rules.NATIVE001.id in {finding["rule_id"] for finding in payload["findings"]}
 
 
 def test_remaining_python_stack_exhaustion_is_explicitly_incomplete() -> None:

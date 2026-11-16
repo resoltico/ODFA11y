@@ -8,6 +8,7 @@ from odfa11y.application.tools import Tools
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.pdf import audit_pdfua, validate_pdfua
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
@@ -28,7 +29,7 @@ def test_native_math_export_retains_the_real_pdf_assurance_failure(
     )
     report = audit_pdfua(pdf)
     assert report.error_count != 0
-    assert "PDF005" in {f.rule_id for f in report.findings}
+    assert rules.PDF005.id in {f.rule_id for f in report.findings}
     assert not validate_pdfua(pdf, executable=verapdf).compliant
     record = execute(
         SOURCE,

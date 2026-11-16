@@ -11,6 +11,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.families.text import derived_style_name
 from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from odfa11y.rules import registry as rules
 from tests.fixtures.answers import spacer_input, spacing_input
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.measurements import measured, measurement
@@ -49,7 +50,7 @@ def test_overlay_on_reference_or_target_refuses_before_mutation(
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"retain destination")
     report = audit_odf(source)
-    assert "STYLE001" in {finding.rule_id for finding in report.findings}
+    assert rules.STYLE001.id in {finding.rule_id for finding in report.findings}
     rows = measured(measurement(report, TextStyleMeasurements).paragraph_styles)
     total = 0
     for row in rows:
@@ -57,7 +58,7 @@ def test_overlay_on_reference_or_target_refuses_before_mutation(
         assert isinstance(count, int)
         total += count
     assert total == 1
-    problem = next(f for f in report.findings if f.rule_id == "STYLE001")
+    problem = next(f for f in report.findings if f.rule_id == rules.STYLE001.id)
     assert "class overlays" in str(problem.details)
     assert_refused(
         apply_answers(source, destination, [spacing_input("Reference", ("Base",))]),
