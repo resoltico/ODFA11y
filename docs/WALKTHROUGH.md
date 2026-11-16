@@ -17,13 +17,12 @@ uv run --no-sync odfa11y audit "$odfa11y_work/report-source.odt" --format json
 uv run --no-sync odfa11y plan "$odfa11y_work/report-source.odt" > "$odfa11y_work/plan.toml"
 ```
 
-On the measured LibreOffice 26.8.3.1/macOS run this produced **3 blocks, 30 lines**, compared
-with the design-pass baseline of 23 blocks and 184 lines. Source audit exited 2; plan exited 0.
-The questions concern the first structural heading, an undescribed graphic and a plain URL.
-No speculative language-answer blocks appear. Native output and bindings can differ with
-other producers: always generate your own plan rather than copying these fingerprints.
+The source contains a first structural heading at level 3, an undescribed graphic and a plain
+URL. Audit reports those defects; planning succeeds and supplies their review questions.
+Native output and bindings depend on the producer: generate your own plan rather than
+copying illustrative fingerprints or assuming a particular template size.
 
-The real template contains live identities and inert answers, for example:
+A generated block contains a live identity and inert answers, for example:
 
 ```toml
 # HEADING002 error: "Heading hierarchy starts at level 3; expected level 1."
@@ -36,8 +35,8 @@ fingerprint = "339911db36884cc9"
 
 ## Review answers and inspect the prediction
 
-Save a separate `reviewed.toml`, retaining its generated source hash/fingerprints. The field
-experiment supplied the original reviewed example's three answers:
+Save a separate `reviewed.toml`, retaining its generated source hash/fingerprints. This
+example deliberately supplies the following three answers:
 
 ```toml
 # In the existing heading block:
@@ -57,7 +56,7 @@ uv run --no-sync odfa11y remediate "$odfa11y_work/report-source.odt" \
   "$odfa11y_work/reviewed.odt" --plan "$odfa11y_work/reviewed.toml" --dry-run --format json
 ```
 
-The measured preview exited 0, published nothing and predicted:
+The preview publishes nothing. Changing only the first heading to level 2 leaves this finding:
 
 ```text
 heading.level: remaining HEADING002
@@ -65,8 +64,8 @@ heading.level: remaining HEADING002
 
 Changing the first heading from level 3 to level 2 does not supply a preceding level 1.
 Inspect the source hierarchy and decide the correct fix; an applied edit is not proof that
-its finding disappeared. Other predictions resolved the undescribed-graphic and plain-URL
-findings. The [plan reference](PLAN.md) explains bindings and unanswered/stale blocks.
+its finding disappeared. The graphic description and enabled linkification address their
+source findings. The [plan reference](PLAN.md) explains bindings and unanswered/stale blocks.
 
 ## Publish the guarded candidate and retain evidence
 
@@ -79,11 +78,11 @@ uv run --no-sync odfa11y run "$odfa11y_work/report-source.odt" \
 uv run --no-sync odfa11y verify-evidence "$odfa11y_work/evidence-pdf" --format json
 ```
 
-Remediation exited 0 and published the candidate after guards. The PDF run exited 2:
-its candidate re-audit retained `HEADING002`; source/candidate export both refused the
-unembedded chart resource. Dependent PDF/fidelity stages were skipped for missing inputs.
-Integrity verification exited 0. Those outcomes distinguish successful guarded source edits,
-remaining accessibility errors, refused native work and intact evidence.
+Remediation can publish a guarded candidate while its audit retains `HEADING002`. Native
+export refuses the unavailable chart resource; dependent PDF/fidelity stages have no inputs.
+A run can retain a verifiable evidence bundle despite those failures. Inspect the actual
+status and stage reasons; integrity verification establishes recorded bytes, not passing
+accessibility or native gates.
 
 Open `REVIEW.md`: outstanding human work comes first, the checklist reflects observed
 source topics, and facts appear once as source → candidate. Embed/review the actual chart
@@ -97,6 +96,6 @@ uv run --no-sync odfa11y run "$odfa11y_work/report-source.odt" \
   --profile production
 ```
 
-It exited **3**, reported that veraPDF was not on PATH and created no production directory.
+With veraPDF unavailable, preparation exits **3** and creates no production directory.
 A selected executable does not make independent validation optional. See
 [profiles](WORKFLOW.md#retain-evidence) and [evidence semantics](EVIDENCE.md).

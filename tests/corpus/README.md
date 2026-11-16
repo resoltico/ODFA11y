@@ -24,7 +24,7 @@ before deliberately replacing an artifact and updating this manifest.
 
 Small, invented LibreOffice Writer documents exercise ODFA11y against native producer
 output alongside the synthetic documents in `tests/fixtures/documents.py`. Their content is
-released with the project under MPL-2.0.
+released with the project under AGPL-3.0-only.
 
 [manifest.toml](manifest.toml) identifies the producer and records each stored document's
 expected audit rule IDs (`rules`), remaining rule IDs after the standard remediation plan

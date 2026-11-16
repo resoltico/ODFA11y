@@ -10,9 +10,9 @@ tests and real exports establish the separate behavioral properties below.
 
 - `fruit-presentation.odp` and `fruit-drawing.odg` contain a title, fruit counts, an
   embedded SVG illustration and explicit native navigation order. The illustration lacks
-  an alternative. Their native negative controls require `PDF007` and veraPDF clause 7.3
+  an alternative. Their native negative controls require `PDF008` and veraPDF clause 7.3
   test 1. The supplied library plan adds the description, page metadata and language;
-  production-pipeline tests then require passing PDF checks, veraPDF, fidelity and bundle
+  production run tests then require passing PDF checks, veraPDF, fidelity and bundle
   verification.
 - `sum-formula.odf` contains native MathML and its StarMath annotation. Supplying a spoken
   alternative preserves the expression and annotation. Native Math export fails

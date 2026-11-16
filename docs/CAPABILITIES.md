@@ -1,22 +1,21 @@
-# Measured native capabilities
+# Native capability probes
 
-Recorded with ODFA11y 0.8.0 on `macOS-27.2.1-arm64-arm-64bit-Mach-O`.
-LibreOffice 26.8.3.1; veraPDF unavailable.
-[Doctor record](measurements/doctor.json) is the measurement authority.
+Run `odfa11y doctor --format json` to measure the installed tools and retain their
+identities, observed capabilities and reasons for unmeasured results.
 
-| Probe | Meaning | Rules | Result | Reason |
+| Probe | Family | Meaning | Related rules | Requires veraPDF |
 | --- | --- | --- | --- | --- |
-| `link-descriptions` | Measure whether accessible link descriptions survive export. | `LINK003` | unsupported | — |
-| `decorative-graphic-role` | Measure whether decorative graphics retain their nonsemantic role. | `GRAPHIC001`, `GRAPHIC003` | unsupported | — |
-| `writer-header-columns` | Measure whether Writer column headers survive PDF export. | `TABLE003` | unsupported | — |
-| `math-tagging` | Measure whether exported mathematics has usable tagged structure. | `MATH003`, `PDF004` | unsupported | — |
-| `calc-pdfua` | Measure whether a semantic Calc table passes PDF inspection and PDF/UA validation. | `TABLE004`, `PDFUA001` | not-tested | veraPDF unavailable |
+| `link-descriptions` | text | Measure whether accessible link descriptions survive export. | `LINK003` | no |
+| `decorative-graphic-role` | text | Measure whether decorative graphics retain their nonsemantic role. | `GRAPHIC001`, `GRAPHIC003` | no |
+| `writer-header-columns` | text | Measure whether Writer column headers survive PDF export. | `TABLE003` | no |
+| `math-tagging` | formula | Measure whether exported mathematics has usable tagged structure. | `MATH003`, `PDF004` | no |
+| `calc-pdfua` | spreadsheet | Measure whether a semantic Calc table passes PDF inspection and PDF/UA validation. | `TABLE004`, `PDFUA001` | yes |
 
-These verdicts apply to each probe's authored input and exporter identity.
-Unsupported results do not waive document-level PDF gates. Execution failures are
-reported separately. Doctor measures applicable experiments; an unavailable required
-tool leaves a probe unmeasured with its reason. Runs and batches never conduct probes.
+A verdict applies to that probe's authored input, tool identity and environment.
+It does not establish behavior for every document or platform. Unsupported results
+never waive document-level PDF gates. Execution failures remain separate from
+supported/unsupported observations; unavailable prerequisites leave explicit
+not-tested results. Runs and batches do not conduct these experiments.
 
-The [text-structure measurements](measurements/text-exports.json) additionally
-record fixture-specific roles and independent validator outcomes. Read the
-[accessibility boundaries](ACCESSIBILITY.md) before interpreting a machine pass.
+Complete the [document workflow](WORKFLOW.md) and
+[human acceptance checks](ACCESSIBILITY.md#human-acceptance) for the actual publication.

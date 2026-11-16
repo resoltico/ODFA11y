@@ -30,7 +30,7 @@ metadata, schema results and native test outcomes before replacing the stored fi
 ## Link descriptions
 
 `unnamed-link.odt` is a schema-valid document with one hyperlink and no `office:name`.
-The native regression requires `PDF019` and failed veraPDF link-description checks.
+The native regression requires `PDF020` and failed veraPDF link-description checks.
 Its independent positive control adds `office:name="Example site"`, then requires passing
-PDF checks, veraPDF and the evidence pipeline. The controls measure Writer's behavior;
+PDF checks, veraPDF and the evidence run. The controls measure Writer's behavior;
 automatic remediation does not repurpose target names as descriptions.

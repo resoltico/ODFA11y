@@ -7,7 +7,7 @@ unanswered in previews. Supply only reviewed answers; blank alternative text is 
 
 Plans bind to source bytes. Use `plan NEW_SOURCE --from OLD_PLAN` after changes: matching
 kind/path/fingerprint answers carry live; nonmatching answers remain comments with reasons.
-Old plan formats refuse with a regeneration remedy. Answered stale fingerprints are errors;
+Unsupported plan formats refuse with a regeneration remedy. Answered stale fingerprints are errors;
 stale unanswered blocks warn without editing anything. Independent load problems are
 reported together. Content answers remain bound to the reviewed target identity.
 
@@ -30,7 +30,7 @@ the `plan` command; the value below is illustrative.
 ```toml
 [plan]
 schema_version = 1
-generator = "0.8.0"
+generator = "0.9.0"
 source.sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 [decisions."document.metadata"]

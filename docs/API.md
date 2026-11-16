@@ -21,7 +21,7 @@ integrity = api.verify_evidence("evidence")
 | `plan` | `PlanResult`: source report and an optional bound unanswered template. |
 | `remediate` | `RemediationResult`: outcomes, predictions, violations, schema and publication state. |
 | `export` | `ExportResult`: published PDF; validation remains a separate request. |
-| `compare` | `ComparisonResult`: fidelity report and acceptance policy. |
+| `compare` | `ComparisonResult`: fidelity report, strict flag and effective acceptance. |
 | `run` | `RunRecord`: profile, typed stage outcomes, decisions and established facts. |
 | `batch` | `BatchRecord`: recorded profile, item outcomes, pending IDs and evidence references. |
 | `verify_evidence` | `VerificationResult`: file-integrity problems, independent of accessibility. |

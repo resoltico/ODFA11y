@@ -29,7 +29,7 @@ uv run --no-sync python -m tools.check build release audit
 With both native applications installed, `python -m tools.check all` runs the full set.
 The dependency `audit` stage restores no packages: it audits the locked hashed inputs
 using the already-restored audit group. Local native checks require the real tools;
-CI treats a missing prerequisite or skipped native test as a failure.
+CI requires the native prerequisites; platform-specific skips are reported explicitly.
 
 Use focused pytest selections while changing an owner, then run its required gates. Unit
 tests use automatic workers and retain the 88% coverage gate; integration is selected by
@@ -47,10 +47,10 @@ uv run --no-sync python -m tools.generate_reference
 uv run --no-sync python -m tools.check reference
 ```
 
-One generator derives CLI/options, rules and their historical mapping, plan fields, schemas,
-glossary and measured capabilities. The [doctor measurement](measurements/doctor.json)
-is the observation authority for capabilities. Refresh it only from an actual native run;
-generation itself never runs native tools.
+One generator derives CLI/options, rules, plan fields, schemas, glossary and the
+[native capability probe catalogue](CAPABILITIES.md) from their code owners. Generation
+does not run native tools. Use `odfa11y doctor --format json` to measure the actual installed
+tools; retain the result with the document qualification evidence.
 
 ## Native document fixtures
 
@@ -64,7 +64,7 @@ output directory. It uses ordinary conversion where available and trusted reposi
 modules in private disposable profiles where native application services are required.
 It never updates the manifest or preservation expectations. Inspect native output, XML,
 schema results and relevant controls before deliberately replacing a fixture. Retain unrelated
-fixture bytes and the historical preservation outcomes.
+fixture bytes and the preservation inventory.
 
 Shared constructors live in `tests/fixtures`; tests follow their source owners. Record tests
 call `assert_record_schema` explicitly. Hypothesis' deterministic required profile is the
@@ -79,10 +79,11 @@ isolated installed wheel with locked hashed runtime dependencies. The
 [root-only examples](../tools/core_examples.py) run outside the checkout under that installed
 interpreter, with import and normative-schema provenance checks.
 
-The sdist contains `pyproject.toml`, `README.md`, `LICENSE`, `src/` and its notices, plus
-required generated package metadata. Contributor tests, tools, CI files, locks and docs
-are checkout inputs and do not ship in it. Stage intended additions/deletions before Git
-inventory checks. `[project].version` is authoritative; changing it is a separately
+The sdist contains build metadata, README, project/commercial/third-party notices and
+runtime source/resources. Contributor tests, tools, CI files, locks and docs are checkout
+inputs and do not ship in it. For the exact release's full source and build inputs, use its
+tagged repository archive; see [source availability](../PROJECT-NOTICE.md#source-for-a-release).
+Stage intended additions/deletions before Git inventory checks. `[project].version` is authoritative; changing it is a separately
 authorized release action. See [Releasing](RELEASING.md).
 
 ## Audit hygiene

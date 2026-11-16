@@ -17,5 +17,5 @@ Regenerate a selected feature with
 
 Positive/negative refer to the feature under test. Short fixtures still have an informational PDF heading
 finding; source-valid reference relationships can have failing exported annotations.
-See [measured PDF results](../../../docs/measurements/text-exports.json) and
-[accessibility boundaries](../../../docs/ACCESSIBILITY.md). No fixture is an accessibility certificate.
+Use the actual native integration results and [accessibility boundaries](../../../docs/ACCESSIBILITY.md)
+to interpret these fixtures. No fixture is an accessibility certificate.

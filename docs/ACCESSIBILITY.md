@@ -11,7 +11,7 @@ are separate conclusions. A clean automated report is not an accessibility certi
 | Text | Headings, lists, references/notes, language, tables, graphics, links, visibility and spacing. | Writer; actual PDF and human gates still apply. |
 | Spreadsheet | Sheet names, alternatives/roles, supplied link descriptions; data/header/merge/hidden checks. | Calc; header/validator limitations can block production. |
 | Presentation / Drawing | Shared page metadata, graphic decisions and complete navigation order. | Impress/Draw; hidden layers, notes and actual navigation require review. |
-| Formula | Supplied spoken alternative and language on packaged native MathML. | Tested Math export lacks required tagging. |
+| Formula | Supplied spoken alternative and language on packaged native MathML. | Inspect exported math tagging; source alternatives do not establish it. |
 | Chart | Metadata, series/labels and local cached-data/range consistency. | Source assurance only. |
 | Image | Frame/payload integrity and supplied alternatives/roles. | Source assurance only; ODF deprecates image media types. |
 | Database | Offline connection/privacy and supplied declared-object descriptions. | Source assurance only; no SQL, connection or macro execution. |
@@ -35,9 +35,8 @@ relationships require native editing; no retargeting is inferred.
 Effective language resolves paragraph and nested inline styles through named, automatic
 and direct formatting, separately for western/Asian/complex channels. Target decisions
 create isolated verifiable styles and retain wording/unrelated overrides. No registry
-lookup, alias rewriting or language guessing occurs. Native reload can normalize tags:
-26.8.1.1 retained tested `sr-Latn-RS`, `es-419`, `de-1996`, `en-u-ca-buddhist` and private use,
-but normalized tested Chinese/grandfathered forms. Inspect actual PDF language separately.
+lookup, alias rewriting or language guessing occurs. Native reload can normalize language tags. Inspect actual PDF language separately; source
+preservation does not establish exact language-tag retention by the exporter.
 
 Target-language ordinals require a separate reviewed plan from linkification, spacer
 removal or table-header edits. Identical objects can otherwise occupy shifted ordinals.
@@ -52,26 +51,24 @@ replace blanket merge warnings. Valid complex/grouped headers are retained. Comp
 inspection is bounded to 100,000 cells; simple repeats remain arithmetic. The leading-band
 API cannot rewrite unsupported group-level choices.
 
-Row/column header markup is separate from PDF roles. Tested Writer header-column edits
-retain valid source but export no `TH`: built-in `PDF016` blocks strict production although
-veraPDF accepts that PDF. Valid merged row headers pass the measured validator case;
-that alone does not establish correct human header associations.
+Row/column header markup is separate from PDF roles. Source header edits do not establish
+exported `TH` roles: built-in `PDF016` can block production independently of veraPDF.
+Validator compliance alone does not establish correct human header associations.
 
 ## Spreadsheet PDF exports
 
-Calc's measured data export lacks `TH` (`PDF016`) and has inconsistent column counts
-(veraPDF 7.2-43). Production retains these failures. A sheet rename can also change its
+Inspect Calc output for header roles (`PDF016`) and validator table relationships;
+production retains actual failures. A sheet rename can also change its
 printed header and fail text fidelity (`FIDELITY003`); review/edit that header in Calc first.
 Source changes never rewrite cell values/formulas, headers, merges or hidden state.
 
 ## Link descriptions
 
 Readable labels, graphic alternatives or `office:title` can establish source purpose.
-Supplied descriptions preserve visible text and target names. The measured Writer
-`office:title` probe remains unsupported on 26.8.1.1; source success does not clear `PDF020`.
-Its internal-bookmark fixture has a real destination/readable label but exported annotation
-Contents/Alt is absent (`PDF020`, veraPDF 7.18.1-2/7.18.5-2). Conversely the broken-target
-control triggers built-in `PDF018` while veraPDF accepts it. Never rely on one layer alone.
+Supplied descriptions preserve visible text and target names. Source `office:title` does
+not establish PDF annotation Contents/Alt: inspect `PDF020` and veraPDF
+7.18.1-2/7.18.5-2. Built-in internal-target checks (`PDF018`) remain independent of validator
+acceptance. Never rely on one layer alone.
 
 ## Graphic roles
 
@@ -79,12 +76,12 @@ Roles resolve legal defaults/common/automatic inheritance and ordered class over
 Explicit ODF 1.4 `draw:decorative` changes derive isolated styles; ambiguous contexts refuse.
 A role never hides invalid payloads, external resources, scripts or navigation failures.
 Groups retain child checks; authored alternatives on decorative objects still need review.
-The measured standard decorative property exports an undescribed Figure on 26.8.1.1,
-retaining `PDF008`/veraPDF failures. An all-decorative image cannot establish meaningful content.
+Inspect whether the exporter actually retains the nonsemantic role; undescribed Figure
+output retains `PDF008`/veraPDF failures. An all-decorative image cannot establish meaningful content.
 
-[Generated capabilities](CAPABILITIES.md) link exact tool identities/probe observations;
-[text fixture measurements](measurements/text-exports.json) retain narrower results.
-Neither implies support for every document or runtime combination.
+The [probe catalogue](CAPABILITIES.md) describes the experiments run by doctor. Actual
+results include tool identities and apply only to their authored inputs/environment.
+They never imply support for every document or runtime combination.
 
 ## ODF schema validation
 
@@ -121,9 +118,8 @@ revision history and hidden/conditional branches stay excluded. Main outline/spa
 edits have narrower main-flow scope. Spacer removal also excludes lists/tables/fields,
 identities/RDF, breaks/page semantics, unknown attributes and non-inert inline content.
 
-Writer 26.8.1.1 painted tracked deleted words in the measured current view while excluding
-its hidden section. Inspection neither accepts revisions nor predicts that deleted text
-will be absent. Columns, floating frames, sections and notes retain reading-order review;
+Inspection neither accepts revisions nor predicts that tracked deleted text will be absent
+from native output. Review the native revision/visibility state. Columns, floating frames, sections and notes retain reading-order review;
 declared layout alone does not prove native use/order.
 
 ## Native document context and declared dependencies

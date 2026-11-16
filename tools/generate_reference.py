@@ -12,6 +12,7 @@ from odfa11y.contracts import JsonObject
 from odfa11y.decisions import DecisionScope
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import RemedyAction
+from odfa11y.families import REGISTRY
 from odfa11y.families.probes import CapabilityStatus, ProbeId
 from odfa11y.families.text.tables.classification import TableKind
 from odfa11y.glossary import TERMS
@@ -101,20 +102,6 @@ def rule_reference() -> str:
         lines.append(
             f"| `{rule.id}` | {rule.severity.value.title()} | {rule.title} | {decisions} |"
         )
-    mapping = json.loads(
-        (Path(__file__).resolve().parents[1] / "src/odfa11y/rules/renamed.json").read_text()
-    )
-    lines += [
-        "",
-        "## Renamed in the next release",
-        "",
-        "| Previous ID | Current IDs |",
-        "| --- | --- |",
-    ]
-    lines.extend(
-        "| `" + row["old"] + "` | " + ", ".join("`" + value + "`" for value in row["new"]) + " |"
-        for row in mapping
-    )
     return "\n".join(lines) + "\n\n"
 
 
@@ -224,9 +211,11 @@ def schema_reference() -> str:
         )
     lines += [
         "",
-        "CLI audit/comparison JSON contains report objects (or an array of them).",
-        "The `audit` schema describes the root application's per-input result record.",
-        "The `plan` schema describes the parsed TOML structure; its header owns `schema_version`.",
+        "CLI JSON is the corresponding application result record, including its schema version.",
+        "The `audit` result always contains an `inputs` array; each input retains its reports.",
+        "The `comparison` result contains its report, strict flag and effective exit status.",
+        "The `plan` result contains the source report and optional unanswered TOML template.",
+        "The `plan-file` schema describes parsed TOML; its header owns `schema_version`.",
         "See [application API](API.md) and [evidence](EVIDENCE.md).",
         "",
     ]
@@ -234,49 +223,33 @@ def schema_reference() -> str:
 
 
 def capability_reference() -> str:
-    """Render scoped native capabilities from the committed doctor measurement.
-
-    Returns
-    -------
-    str
-        A measured capability matrix, without running native tools during generation.
-
-    """
-    record = json.loads((SCHEMA_DIRECTORY.parents[2] / "docs/measurements/doctor.json").read_text())
-    toolchain = record["toolchain"]
-    versions = "; ".join(
-        f"{name} {identity['version']}" if identity else f"{name} unavailable"
-        for name, identity in (
-            ("LibreOffice", toolchain["libreoffice"]),
-            ("veraPDF", toolchain["verapdf"]),
-        )
-    )
+    """Describe current doctor experiments without presenting cached tool verdicts."""
     lines = [
-        "# Measured native capabilities",
+        "# Native capability probes",
         "",
-        f"Recorded with ODFA11y {record['odfa11y']} on `{record['platform']}`.",
-        versions + ".",
-        "[Doctor record](measurements/doctor.json) is the measurement authority.",
+        "Run `odfa11y doctor --format json` to measure the installed tools and retain their",
+        "identities, observed capabilities and reasons for unmeasured results.",
         "",
-        "| Probe | Meaning | Rules | Result | Reason |",
+        "| Probe | Family | Meaning | Related rules | Requires veraPDF |",
         "| --- | --- | --- | --- | --- |",
     ]
-    lines.extend(
-        f"| `{result['id']}` | {result['meaning']} | "
-        + ", ".join(f"`{rule}`" for rule in result["related_rules"])
-        + f" | {result['status']} | {result['reason'] or '—'} |"
-        for result in record["capabilities"]
-    )
+    for spec in REGISTRY.values():
+        for probe in spec.probes:
+            rules = ", ".join(f"`{rule.id}`" for rule in probe.rules)
+            lines.append(
+                f"| `{probe.id}` | {probe.family.value} | {probe.id.meaning} | "
+                f"{rules} | {'yes' if probe.requires_validator else 'no'} |"
+            )
     lines += [
         "",
-        "These verdicts apply to each probe's authored input and exporter identity.",
-        "Unsupported results do not waive document-level PDF gates. Execution failures are",
-        "reported separately. Doctor measures applicable experiments; an unavailable required",
-        "tool leaves a probe unmeasured with its reason. Runs and batches never conduct probes.",
+        "A verdict applies to that probe's authored input, tool identity and environment.",
+        "It does not establish behavior for every document or platform. Unsupported results",
+        "never waive document-level PDF gates. Execution failures remain separate from",
+        "supported/unsupported observations; unavailable prerequisites leave explicit",
+        "not-tested results. Runs and batches do not conduct these experiments.",
         "",
-        "The [text-structure measurements](measurements/text-exports.json) additionally",
-        "record fixture-specific roles and independent validator outcomes. Read the",
-        "[accessibility boundaries](ACCESSIBILITY.md) before interpreting a machine pass.",
+        "Complete the [document workflow](WORKFLOW.md) and",
+        "[human acceptance checks](ACCESSIBILITY.md#human-acceptance) for the actual publication.",
         "",
     ]
     return "\n".join(lines)

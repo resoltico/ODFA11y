@@ -165,136 +165,6 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `TABLE005` | Warning | Data sheet merges cells. |  |
 | `XML001` | Error | A required XML member cannot be parsed. |  |
 
-## Renamed in the next release
-
-| Previous ID | Current IDs |
-| --- | --- |
-| `PKG000` | `PKG001` |
-| `PKG001` | `PKG002`, `PKG003`, `PKG004` |
-| `PKG002` | `PKG005` |
-| `PKG003` | `PKG006` |
-| `PKG004` | `PKG007` |
-| `PKG005` | `PKG008` |
-| `PKG006` | `PKG009` |
-| `PKG007` | `PKG010` |
-| `PKG008` | `PKG011` |
-| `PKG009` | `PKG012` |
-| `XML001` | `XML001` |
-| `ODF001` | `ODF001` |
-| `ODF002` | `ODF002` |
-| `ODF003` | `ODF003`, `ODF004` |
-| `ODF004` | `ODF005` |
-| `ODF005` | `ODF006` |
-| `ODF006` | `ODF007` |
-| `ODF007` | `ODF008` |
-| `ODF008` | `ODF009` |
-| `ODF009` | `ODF010` |
-| `ODF010` | `ODF011` |
-| `ODF011` | `ODF012` |
-| `SCHEMA001` | `SCHEMA001` |
-| `SCHEMA002` | `SCHEMA002` |
-| `NATIVE001` | `NATIVE001` |
-| `NATIVE002` | `NATIVE002` |
-| `META001` | `META001` |
-| `META002` | `META002` |
-| `META003` | `META003` |
-| `META004` | `META004` |
-| `HEADING001` | `HEADING001` |
-| `HEADING002` | `HEADING002`, `HEADING003` |
-| `HEADING003` | `HEADING004` |
-| `HEADING004` | `HEADING005` |
-| `NOTE001` | `NOTE001` |
-| `REVISION002` | `REVISION001`, `REVISION002`, `REVISION003` |
-| `REVISION003` | `REVISION004`, `REVISION005` |
-| `HIDDEN002` | `ORDER001` |
-| `ORDER001` | `ORDER002` |
-| `REVISION001` | `REVISION006` |
-| `HIDDEN001` | `ORDER003` |
-| `STYLE001` | `STYLE001` |
-| `GRAPHIC003` | `GRAPHIC001` |
-| `TABLE001` | `TABLE001` |
-| `TABLE002` | `TABLE002` |
-| `TABLE003` | `TABLE003` |
-| `LANG004` | `LANG001` |
-| `LANG005` | `LANG002` |
-| `REFERENCE001` | `REF001` |
-| `REFERENCE002` | `REF002` |
-| `REFERENCE003` | `REF003` |
-| `REFERENCE004` | `REF004` |
-| `NOTE002` | `NOTE002`, `NOTE003`, `NOTE004` |
-| `LINK001` | `LINK001` |
-| `LAYOUT001` | `STYLE002` |
-| `STYLE002` | `STYLE003` |
-| `SHEET001` | `SHEET001` |
-| `SHEET002` | `SHEET002` |
-| `TABLE004` | `TABLE004` |
-| `TABLE005` | `TABLE005` |
-| `LINK002` | `LINK002` |
-| `SHEET007` | `SHEET003` |
-| `PAGE001` | `PAGE001`, `PAGE002` |
-| `PAGE002` | `PAGE003` |
-| `GRAPHIC005` | `GRAPHIC002` |
-| `PAGE003` | `PAGE004` |
-| `PAGE004` | `PAGE005` |
-| `LINK003` | `LINK003` |
-| `MATH001` | `MATH001`, `MATH002` |
-| `MATH002` | `MATH003` |
-| `MATH003` | `MATH004` |
-| `CHART001` | `CHART001`, `CHART002` |
-| `CHART002` | `CHART003` |
-| `CHART003` | `CHART004` |
-| `CHART004` | `CHART005` |
-| `CHART005` | `CHART006`, `CHART007` |
-| `CHART006` | `CHART008`, `CHART009`, `CHART010`, `CHART011` |
-| `IMAGE005` | `IMAGE001` |
-| `IMAGE004` | `IMAGE002` |
-| `IMAGE001` | `IMAGE003`, `IMAGE004` |
-| `IMAGE003` | `IMAGE005` |
-| `BASE001` | `DATABASE001`, `DATABASE002`, `DATABASE003` |
-| `BASE002` | `DATABASE004` |
-| `BASE003` | `DATABASE005`, `DATABASE006`, `DATABASE007` |
-| `BASE004` | `DATABASE008`, `DATABASE009` |
-| `BASE005` | `DATABASE010` |
-| `BASE006` | `DATABASE011`, `DATABASE012` |
-| `PDF000` | `PDF001` |
-| `PDF001` | `PDF002` |
-| `PDF002` | `PDF003` |
-| `PDF003` | `PDF004` |
-| `PDF004` | `PDF005` |
-| `PDF005` | `PDF006` |
-| `PDF006` | `PDF007` |
-| `PDF007` | `PDF008` |
-| `PDF008` | `PDF009` |
-| `PDF009` | `PDF010` |
-| `PDF010` | `PDF011` |
-| `PDF011` | `PDF012` |
-| `PDF012` | `PDF013`, `PDF025` |
-| `PDF013` | `PDF014` |
-| `PDF014` | `PDF015` |
-| `PDF015` | `PDF016` |
-| `PDF016` | `PDF017` |
-| `PDF017` | `PDF018` |
-| `PDF018` | `PDF019` |
-| `PDF019` | `PDF020` |
-| `PDF020` | `PDF021` |
-| `PDF021` | `PDF022` |
-| `PDF022` | `PDF023` |
-| `PDF023` | `PDF024` |
-| `VERA001` | `PDFUA001` |
-| `FID001` | `FIDELITY001` |
-| `FID002` | `FIDELITY002` |
-| `FID003` | `FIDELITY003` |
-| `FID004` | `FIDELITY004` |
-| `FID005` | `FIDELITY005` |
-| `FID006` | `FIDELITY006` |
-| `FID007` | `FIDELITY007` |
-| `GRAPHIC001` | `GRAPHIC003` |
-| `GRAPHIC002` | `GRAPHIC004` |
-| `LIST001` | `LIST001`, `LIST002`, `LIST003`, `LIST004` |
-| `LIST002` | `LIST005`, `LIST006` |
-| `LIST003` | `LIST007`, `LIST008` |
-| `LIST004` | `LIST009` |
-
 ## Reading findings
 
 Errors fail checks; warnings fail strict gates. A registered rule can identify decision
@@ -305,7 +175,7 @@ remain separate; [accessibility boundaries](ACCESSIBILITY.md) explain measured l
 `SCHEMA001` is a producer/differential-assurance warning, not a conformance certificate.
 Text table classification uses declared data and actual grid/header relationships;
 ambiguous cases require native editing. Spreadsheet data-sheet/default-name heuristics
-remain scoped observations; they do not establish intended meaning. `VERA001` retains the
+remain scoped observations; they do not establish intended meaning. `PDFUA001` retains the
 independent standard clause/test. The built-in PDF audit is a bounded smoke test.
 
 ## Locations

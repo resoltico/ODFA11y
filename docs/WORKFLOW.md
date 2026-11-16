@@ -43,8 +43,8 @@ uv run --no-sync odfa11y compare original.odt reviewed.odt --diff-dir difference
 ```
 
 Export requests tagging/PDF/UA-1. Check the actual PDF, the independent validator and
-[fidelity](FIDELITY.md). [Measured capabilities](CAPABILITIES.md) describe selected
-exporter behavior; they never waive a document-level failure.
+[fidelity](FIDELITY.md). [Native capability probes](CAPABILITIES.md) measure selected exporter behavior on the
+installed tools; their results never waive a document-level failure.
 
 ## Retain evidence
 

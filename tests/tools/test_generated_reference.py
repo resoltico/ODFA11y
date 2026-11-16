@@ -16,8 +16,8 @@ def test_stale_interface_reference_is_rejected(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:
     docs = tmp_path / "docs"
-    (docs / "measurements").mkdir(parents=True)
-    for source in ("PLAN.md", "RULES.md", "measurements/doctor.json"):
+    docs.mkdir(parents=True)
+    for source in ("PLAN.md", "RULES.md"):
         shutil.copyfile(REPOSITORY / "docs" / source, docs / source)
     schemas = tmp_path / "src/odfa11y/schemas"
     schemas.mkdir(parents=True)

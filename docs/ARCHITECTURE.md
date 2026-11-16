@@ -17,7 +17,7 @@ down or through declared same-layer edges; [tach.toml](../tach.toml) is the enfo
 
 The CLI imports only the root API, stdlib and itself. Families never import one another;
 concepts never import families. PDF and native packages never import each other. Lower
-layers never import application. No cycles or temporary layer exceptions remain.
+layers never import application. The graph rejects dependency cycles and undeclared edges.
 
 ## Source and decisions
 
