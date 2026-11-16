@@ -10,6 +10,7 @@ lazy from lxml import etree
 from odfa11y.concepts import document_links, link_decision, link_has_description, link_location
 from odfa11y.concepts.kinds import LINK_DESCRIPTION
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
@@ -48,6 +49,8 @@ class TextStyleMeasurements:
 def audit_text(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Report the accessibility findings that belong to text documents."""
     content = document.tree(Part.CONTENT)
+    if text_nodes(content, xml_names.TEXT_P, xml_names.TEXT_H):
+        report.observe_review(Topic.LANGUAGE, Topic.READING_ORDER, Topic.LAYOUT)
     audit_visibility(document, report)
     audit_languages(document, report)
     audit_lists(document, report)
@@ -57,6 +60,7 @@ def audit_text(document: OdfDocument, report: Report, metadata: DocumentMetadata
     audit_tables(document, report)
     _audit_links(content, report)
     for index, link in enumerate(document_links(document), 1):
+        report.observe_review(Topic.LINK_PURPOSE)
         if not link_has_description(link):
             report.raise_(
                 rules.LINK003,
@@ -77,6 +81,7 @@ def _audit_links(tree: etree._ElementTree, report: Report) -> None:
         for owner, attr in prose_slots(block):
             for match in URI_RE.finditer(getattr(owner, attr)):
                 token, _suffix = split_trailing_punctuation(match.group(0))
+                report.observe_review(Topic.LINK_PURPOSE)
                 report.raise_(
                     rules.LINK001,
                     "Visible URL/email address is not represented by a hyperlink element.",

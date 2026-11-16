@@ -20,6 +20,7 @@ from odfa11y.concepts import (
 from odfa11y.concepts.domains import GRAPHICS
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.spreadsheet.domains import SHEETS
@@ -63,14 +64,16 @@ class SpreadsheetMeasurements:
 
 def audit_spreadsheet(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Report the accessibility findings that belong to spreadsheets."""
-    content = document.tree(Part.CONTENT)
     all_sheets = [node for _, node in SHEETS.enumerate(document)]
+    if all_sheets:
+        report.observe_review(Topic.SHEET_NAMES, Topic.READING_ORDER, Topic.LAYOUT)
     report.measure(SpreadsheetMeasurements(count=len(all_sheets)))
     _audit_names(document, all_sheets, report)
     _audit_data_sheets(all_sheets, report)
     _audit_graphics(document, report)
     _audit_links(all_sheets, report)
     for index, link in enumerate(document_links(document), 1):
+        report.observe_review(Topic.LINK_PURPOSE)
         if not link_has_description(link):
             report.raise_(
                 rules.LINK003,
@@ -78,7 +81,7 @@ def audit_spreadsheet(document: OdfDocument, report: Report, metadata: DocumentM
                 decision=link_decision(document, link, index, LINK_DESCRIPTION),
             )
     _audit_trailing_empty_sheets(all_sheets, report)
-    _audit_hidden(content, all_sheets, report)
+    _audit_hidden(document, all_sheets, report)
 
 
 def _location(index: int, sheet: etree._Element) -> Location:
@@ -125,6 +128,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
     for index, sheet in enumerate(all_sheets, start=1):
         if not is_data_sheet(sheet):
             continue
+        report.observe_review(Topic.HEADER_CELLS)
         if not select_elements(sheet, ".//table:table-header-rows"):
             report.raise_(
                 rules.TABLE004,
@@ -144,6 +148,8 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
 
 def _audit_graphics(document: OdfDocument, report: Report) -> None:
     frames = [node for _, node in GRAPHICS.enumerate(document)]
+    if frames:
+        report.observe_review(Topic.ALT_TEXT, Topic.COLOUR)
     report.measure(SpreadsheetMeasurements(graphic_count=len(frames)))
     identity = GraphicIdentity(document, frames)
     for frame in frames:
@@ -198,11 +204,12 @@ def _audit_trailing_empty_sheets(all_sheets: list[etree._Element], report: Repor
             )
 
 
-def _audit_hidden(
-    content: etree._ElementTree, all_sheets: list[etree._Element], report: Report
-) -> None:
+def _audit_hidden(document: OdfDocument, all_sheets: list[etree._Element], report: Report) -> None:
+    content = document.tree(Part.CONTENT)
     hidden_styles = {
-        style.get(xml_names.STYLE_NAME) for style in select_elements(content, HIDDEN_SHEET_STYLES)
+        style.get(xml_names.STYLE_NAME)
+        for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
+        for style in select_elements(tree, HIDDEN_SHEET_STYLES)
     } - {None}
     sheet_names = [
         sheet_name(sheet)
@@ -212,6 +219,7 @@ def _audit_hidden(
     rows = len(select_elements(content, HIDDEN_ROWS))
     columns = len(select_elements(content, HIDDEN_COLUMNS))
     if sheet_names or rows or columns:
+        report.observe_review(Topic.HIDDEN_CONTENT)
         report.raise_(
             rules.ORDER003,
             "Hidden sheets, rows or columns hold content that not every reader is told about.",

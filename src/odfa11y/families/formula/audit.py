@@ -7,6 +7,7 @@ lazy from dataclasses import dataclass, field
 from lxml import etree
 
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.formula.domain import FORMULA
@@ -83,6 +84,9 @@ def audit_formula(document: OdfDocument, report: Report, metadata: DocumentMetad
         )
         return
     nodes = [node for node in root.iter() if isinstance(node.tag, str)]
+    report.observe_review(Topic.MATHEMATICS, Topic.EXPORT_BOUNDARY)
+    if root.get(xml_names.XML_LANG) or any(_meaningful(node) for node in nodes):
+        report.observe_review(Topic.LANGUAGE)
     report.measure(FormulaMeasurements(element_count=len(nodes)))
     if not any(_meaningful(node) for node in nodes):
         report.raise_(rules.MATH002, "The mathematical expression is empty.", location=location)

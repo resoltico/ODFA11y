@@ -29,7 +29,8 @@ tree refuse. The [model](../src/odfa11y/odf/document.py) owns this lifetime.
 `FamilySpec` supplies its audit, kinds, export contract, language access and doctor probes.
 A single style resolver takes explicit scope/family; [XML names](../src/odfa11y/odf/names.py)
 have one owner. `DecisionKind[A]` owns the answer, direct edit, target domain and resolved
-rules. Questions are created with raised findings. Target domains own enumeration,
+rules. Questions are created with raised findings. Concept/family analyses compose observed review topics;
+the orchestrator does not replace them with a tag-only selection. Target domains own enumeration,
 resolution and fingerprints; content answers remain target-bound.
 `remediate/catalogue.py` composes family/common kinds and loads plans against that catalogue;
 `plans/` contains the model, codec and fidelity contract without workflow imports.

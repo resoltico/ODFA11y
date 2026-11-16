@@ -8,6 +8,7 @@ from lxml import etree
 
 from odfa11y.concepts import visible_words
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.chart.ranges import range_shape, resolve_range
@@ -38,6 +39,7 @@ def audit_chart(document: OdfDocument, report: Report, metadata: DocumentMetadat
         report.raise_(rules.CHART001, location=location)
         return
     chart = charts[0]
+    report.observe_review(Topic.CHART_MEANING, Topic.SOURCE_ASSURANCE)
     if not metadata.title and not any(
         visible_words(node) for node in select_elements(chart, "./chart:title")
     ):
@@ -46,6 +48,8 @@ def audit_chart(document: OdfDocument, report: Report, metadata: DocumentMetadat
         report.raise_(rules.CHART004, location=Location("meta/description"))
     series = select_elements(chart, "./chart:plot-area/chart:series")
     report.measure(ChartMeasurements(series_count=len(series)))
+    if series:
+        report.observe_review(Topic.LABELS_AND_RANGES)
     if not series:
         report.raise_(rules.CHART002, "The chart declares no data series.", location=location)
     _ranges(chart, report)

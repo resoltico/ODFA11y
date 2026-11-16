@@ -19,6 +19,7 @@ from odfa11y.concepts import (
     page_fingerprint,
     page_location,
     page_shapes,
+    pages,
     visible_words,
 )
 from odfa11y.concepts.domains import GRAPHICS, PAGES
@@ -29,9 +30,10 @@ from odfa11y.concepts.kinds import (
     PAGE_NAVIGATION,
 )
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
-from odfa11y.odf import NS, Part, select_elements
+from odfa11y.odf import NS, Family, Part, select_elements
 from odfa11y.odf import names as xml_names
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
@@ -67,6 +69,8 @@ def audit_document(
         if (identity := node.get(XML_ID) or node.get(xml_names.DRAW_ID))
     )
     report.measure(PageMeasurements(count=len(available)))
+    if available:
+        report.observe_review(Topic.PAGE_TITLES, Topic.READING_ORDER, Topic.COLOUR_AND_LAYOUT)
     if not available:
         report.raise_(rules.PAGE001, location=Location(Part.CONTENT))
     for index, page in enumerate(available, 1):
@@ -140,6 +144,8 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
         if node.tag in SHAPE_TAGS
     ]
     shapes = [node for _, node in GRAPHICS.enumerate(document)]
+    if shapes:
+        report.observe_review(Topic.ALT_TEXT)
     for group in all_shapes:
         if group.tag == xml_names.DRAW_G:
             audit_graphic_role(document, group, report)
@@ -173,6 +179,8 @@ def _graphics(document: OdfDocument, report: Report, profile: PageProfile) -> No
 
 def _links(document: OdfDocument, report: Report) -> None:
     links = document_links(document)
+    if links:
+        report.observe_review(Topic.LINK_PURPOSE)
     report.measure(PageMeasurements(link_count=len(links)))
     for index, link in enumerate(links, 1):
         if not link_has_description(link):
@@ -189,12 +197,22 @@ def _review_content(document: OdfDocument, report: Report, profile: PageProfile)
         "//office:body//presentation:notes | //office:body//office:annotation",
     )
     if any(visible_words(note) for note in notes):
+        report.observe_review(Topic.SLIDES_AND_NOTES, Topic.LAYERS_AND_ANNOTATIONS)
         report.raise_(
             rules.NOTE001,
             details={"content_count": sum(bool(visible_words(note)) for note in notes)},
         )
+    layers = any(
+        select_elements(tree, "//draw:layer")
+        for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
+    )
+    if layers:
+        report.observe_review(Topic.LAYERS_AND_ANNOTATIONS)
+    if profile.family is Family.PRESENTATION and pages(document):
+        report.observe_review(Topic.SLIDES_AND_NOTES)
     hidden = profile.hidden_content(document)
     if hidden:
+        report.observe_review(Topic.HIDDEN_CONTENT)
         report.raise_(rules.ORDER003, details=hidden)
 
 

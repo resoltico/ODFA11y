@@ -9,6 +9,7 @@ from typing import Annotated, Literal
 lazy from lxml import etree
 
 from odfa11y.concepts import reading_context_path, visible_words
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.odf import Part
@@ -70,6 +71,8 @@ def audit_lists(document: OdfDocument, report: Report) -> None:
     """Report relationships without performing typography-based rewrites."""
     tree = document.tree(Part.CONTENT)
     available = text_nodes(tree, LIST)
+    if available:
+        report.observe_review(Topic.LISTS)
     locations = {}
     counters: Counter[str] = Counter()
     by_id: dict[str, list[etree._Element]] = defaultdict(list)
@@ -98,6 +101,7 @@ def audit_lists(document: OdfDocument, report: Report) -> None:
             visible_words(node)
         ):
             simulated += 1
+            report.observe_review(Topic.LISTS)
             report.raise_(
                 rules.LIST009,
                 location=Location.indexed(reading_context_path(node), "paragraph", index),

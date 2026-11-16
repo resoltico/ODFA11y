@@ -103,6 +103,12 @@ class Report[F = object]:
     _sources: tuple[Path, ...] = field(default=())
     _question_for: Callable[[Rule], OpenDecision | None] | None = field(default=None, repr=False)
 
+    def observe_review(self, *topics: ReviewTopic) -> None:
+        """Compose bounded topics established by content producers in canonical order."""
+        validate(topics, tuple[ReviewTopic, ...])
+        observed = frozenset((*self.review_topics, *topics))
+        self.review_topics = tuple(topic for topic in ReviewTopic if topic in observed)
+
     def measure(self, record: F) -> None:
         """Retain producer-owned typed measurements, merging measured fragment fields."""
         if not is_dataclass(record) or isinstance(record, type):

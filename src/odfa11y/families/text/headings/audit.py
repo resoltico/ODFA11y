@@ -12,6 +12,7 @@ from odfa11y.concepts import (
 )
 from odfa11y.concepts.domains import GRAPHICS
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.text.answers import MAX_HEADING_LEVEL
@@ -51,6 +52,8 @@ def audit_headings(document: OdfDocument, report: Report) -> None:
     """Report heading structure over the canonical heading domain."""
     entries = tuple(HEADINGS.enumerate(document))
     headings = [node for _, node in entries]
+    if headings:
+        report.observe_review(Topic.HEADINGS)
     report.measure(TextContentMeasurements(heading_count=len(headings)))
     previous_level: int | None = None
     for path, heading in entries:
@@ -121,6 +124,8 @@ def audit_headings(document: OdfDocument, report: Report) -> None:
 def audit_images(document: OdfDocument, report: Report) -> None:
     """Report graphics and embedded objects that lack alternative text."""
     frames = [node for _, node in GRAPHICS.enumerate(document)]
+    if frames:
+        report.observe_review(Topic.ALT_TEXT, Topic.COLOUR, Topic.READING_ORDER, Topic.LAYOUT)
     for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
         audit_graphic_role(document, group, report)
     identity = GraphicIdentity(document, frames)

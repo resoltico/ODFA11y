@@ -7,6 +7,7 @@ lazy from dataclasses import dataclass, field
 from lxml import etree
 
 from odfa11y.concepts import reading_context_path
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.families.text.visibility.reading_order import audit_reading_order
 from odfa11y.families.text.visibility.revisions import audit_revisions
@@ -78,6 +79,7 @@ def audit_visibility(document: OdfDocument, report: Report) -> None:
                 },
             )
     if rows:
+        report.observe_review(Topic.HIDDEN_CONTENT)
         report.raise_(rules.ORDER003, details={"contexts": len(rows)})
     report.measure(VisibilityMeasurements(visibility_contexts=rows))
     audit_reading_order(document, report)

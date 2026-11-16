@@ -8,6 +8,7 @@ from odfa11y.concepts import GraphicIdentity, audit_graphic_role
 from odfa11y.concepts.domains import GRAPHICS
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.families.image.payload import inspect_payload
 from odfa11y.odf import NS, Part, select_elements
@@ -35,6 +36,7 @@ def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadat
         report.raise_(rules.IMAGE003, location=Location(f"{Part.CONTENT}/image"))
         return
     frame = frames[0]
+    report.observe_review(Topic.IMAGE_MEANING, Topic.SOURCE_BOUNDARY)
     name = frame.get(xml_names.DRAW_NAME)
     location = (
         Location.named(Part.CONTENT, "frame", name)

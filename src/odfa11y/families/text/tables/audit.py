@@ -4,6 +4,7 @@
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.errors import DocumentRefusal
@@ -55,6 +56,8 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
     """Audit actual grid and band relationships, preserving ambiguous table intent."""
     entries = tuple(TABLES.enumerate(document))
     tables = [node for _, node in entries]
+    if tables:
+        report.observe_review(Topic.TABLE_HEADERS)
     report.measure(TableMeasurements(table_count=len(tables)))
     rows: list[MeasuredTable | UnresolvedTable] = []
     for path, table in entries:

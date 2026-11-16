@@ -8,6 +8,7 @@ lazy from dataclasses import dataclass, field
 from lxml import etree
 
 from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
 from odfa11y.families.database.descriptions import description_attribute, fingerprint
@@ -64,6 +65,7 @@ def audit_database(document: OdfDocument, report: Report, metadata: DocumentMeta
     if len(databases) != 1:
         report.raise_(rules.DATABASE001, location=Location("content/database"))
         return
+    report.observe_review(Topic.SOURCE_BOUNDARY)
     resources = select_elements(
         databases[0],
         ".//db:connection-resource | .//db:file-based-database | .//db:server-database",
@@ -80,8 +82,12 @@ def audit_database(document: OdfDocument, report: Report, metadata: DocumentMeta
         if isinstance(document.storage, PackageStorage)
         else ()
     )
+    if resources or any(name.startswith("database/") for name in names):
+        report.observe_review(Topic.PRIVACY_AND_EXECUTION)
     _connections(resources, names, report)
     logins = select_elements(databases[0], ".//db:login")
+    if logins:
+        report.observe_review(Topic.PRIVACY_AND_EXECUTION)
     if any(node.get(xml_names.DB_USER_NAME) for node in logins):
         report.raise_(
             rules.DATABASE005, "Database stores a login identity; its value is not reported."
@@ -126,6 +132,7 @@ def _sensitive_settings(document: OdfDocument, report: Report) -> None:
                 and identity in AUTHENTICATION_SETTINGS
                 and any("".join(value.itertext()).strip() for value in values)
             ):
+                report.observe_review(Topic.PRIVACY_AND_EXECUTION)
                 report.raise_(
                     rules.DATABASE007,
                     "Database stores authentication settings; values are not reported.",
@@ -135,6 +142,8 @@ def _sensitive_settings(document: OdfDocument, report: Report) -> None:
 
 def _objects(document: OdfDocument, report: Report) -> None:
     declarations = OBJECTS.inspect(document).nodes
+    if declarations:
+        report.observe_review(Topic.DATABASE_MEANING)
     for path, matches in declarations.items():
         if len(matches) != 1:
             report.raise_(
@@ -156,6 +165,7 @@ def _executable_content(document: OdfDocument, database: etree._Element, report:
     queries = select_elements(database, ".//db:query")
     report.measure(DatabaseMeasurements(query_declaration_count=len(queries)))
     if queries:
+        report.observe_review(Topic.PRIVACY_AND_EXECUTION)
         report.raise_(rules.DATABASE011, details={"query_count": len(queries)})
     scripts = select_elements(document.tree(Part.CONTENT), "//office:scripts/*")
     names = (
@@ -164,9 +174,11 @@ def _executable_content(document: OdfDocument, database: etree._Element, report:
         else ()
     )
     if scripts or any(name.startswith(("Basic/", "Scripts/")) for name in names):
+        report.observe_review(Topic.PRIVACY_AND_EXECUTION)
         report.raise_(rules.DATABASE010)
     components = select_elements(database, ".//db:component")
     if components:
+        report.observe_review(Topic.PRIVACY_AND_EXECUTION)
         report.raise_(
             rules.DATABASE012,
             "Forms and reports require native review; their payloads remain opaque.",

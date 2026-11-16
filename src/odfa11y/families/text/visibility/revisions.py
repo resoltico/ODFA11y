@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 lazy from lxml import etree
 
 from odfa11y.concepts import eligible_text_node, reading_context_path
+from odfa11y.concepts.review import ReviewTopic as Topic
 from odfa11y.contracts import Description
 from odfa11y.families.text.contexts import has_revisions
 from odfa11y.odf import names as xml_names
@@ -54,6 +55,8 @@ def audit_revisions(tree: etree._ElementTree, report: Report) -> None:
         if _authored_mark(node):
             positions[node] = index
             markers[node.get(xml_names.TEXT_CHANGE_ID) or ""].append(node)
+    if regions or positions:
+        report.observe_review(Topic.HIDDEN_CONTENT)
     unresolved += _audit_missing_declarations(declarations, markers, report)
     unanchored = 0
     for identity, owners in declarations.items():
