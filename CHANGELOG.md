@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-17
+
+- Owner-authored code is AGPL-3.0-only; standards keep their terms. Contributions require the commercial-licensing grant in [PROJECT-NOTICE.md](PROJECT-NOTICE.md).
 - Use `run`, `verify-evidence`, Python `batch()` and profile `pdf`; retired command/API aliases and the `verify` profile are refused.
 - Regenerate old plans and record consumers: `schema_version` replaces `format`, audit JSON always has `inputs`, and run records no longer contain `outputs` or capabilities.
 - Run records carry typed document detection; captured identity uses `source_name` and `source_sha256`. Update readers of the former flat document identity.
@@ -18,7 +21,7 @@
 - `REVIEW.md` starts with human work, limits its checklist to observed topics and shows source → candidate facts. The manifest alone owns file hashes.
 - Review sheets escape authored names, metadata and diagnostics as literal text after path redaction, preventing active HTML, images and links.
 - Doctor alone measures exporter capabilities, reporting meanings, related rules and unmeasured reasons; document runs and batches no longer probe or cache experiments.
-- Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs now use one condition per concept; see the [mapping](docs/RULES.md#renamed-in-the-next-release).
+- Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs use one condition per concept; update integrations against the [rule catalogue](docs/RULES.md).
 - Schema regression checks keep existing defects stable through in-memory metadata edits and still reject equal-message defects introduced on other nodes.
 - One style resolver and allowance-based preservation proof replace family-specific mechanisms; protected XML, opaque content and schema-regression guards remain independent.
 - Built-in PDF audits report malformed annotation collections/entries as incomplete inspection instead of measuring zero links.
@@ -28,7 +31,8 @@
 - Interactive batch progress identifies each item; scalar contract errors use plain expected types, and timeout guidance follows the shared policy.
 - CLI text renders core facts before one verdict, with terminal escaping and one output writer. SIGTERM handling belongs to the CLI; library interruption propagates.
 - Run and batch text retain recorded refusal/preparation problems and typed recovery remedies.
-- Requires pypdf 6.21.4 or newer for security fixes; restore the refreshed lockfile, including the patched audit dependency set.
+- Requires pypdf 7.1.0 or newer for security fixes; restore the refreshed runtime, development and audit lockfile, including pypdfium2 5.15.2.
+- CI pins veraPDF 1.30.4 and updated build/analysis tools; restore the declared toolchain before running contributor commands.
 - Use `python -m tools.check` for checks and dependency audits. CI verifies all stages with LibreOffice and veraPDF on Linux, macOS and Windows.
 - Source archives now contain only build metadata, README/license and runtime source/notices; clean rebuilds and installed-wheel examples qualify distributions.
 - The invented corpus has one family/purpose manifest and builder; fixture bytes and preservation expectations remain intact. See the [walkthrough](docs/WALKTHROUGH.md).

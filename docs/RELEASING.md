@@ -36,9 +36,10 @@ credentials. Repository settings changes require corresponding authorization.
 
 Inspect intended files, including hidden paths, for private documents, reports, environment
 files, credentials, virtual environments and build outputs. `.gitignore` limits accidental
-staging; it does not sanitize committed content. Run [required development checks](DEVELOPING.md#required-checks)
-and [audit hygiene scans](DEVELOPING.md#audit-hygiene), then require hosted checks on the
-exact release commit. Local results do not establish hosted-platform behavior.
+staging; it does not sanitize committed content. The release workflow runs the
+[required development checks](DEVELOPING.md#required-checks) and
+[audit hygiene scans](DEVELOPING.md#audit-hygiene) on the exact release commit.
+Local results do not establish hosted-platform behavior.
 
 Dependency/tool constraints and the lockfile define Python inputs. Native installer pins,
 checksums, runner selection and cache policy are declared in
@@ -47,8 +48,12 @@ current distributions; a Python lockfile does not freeze the complete toolchain.
 
 ## Start a release
 
-Commit the intended package version and matching dated changelog section to `main`, wait
-for its checks, then manually dispatch:
+Merge the intended package version and matching dated changelog section to `main`, then
+dispatch the release workflow once. It qualifies that exact commit before creating a draft;
+there is no separate manual preflight gate run. Automatic pull-request/main checks may also
+run, but their build outputs are not substituted for the release workflow's tested assets.
+
+Dispatch:
 
 ```bash
 gh workflow run checks.yml --ref main -f release=true
