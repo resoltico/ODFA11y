@@ -17,6 +17,7 @@
 - `REVIEW.md` starts with human work, limits its checklist to observed topics and shows source → candidate facts. The manifest alone owns file hashes.
 - Doctor alone measures exporter capabilities, reporting meanings, related rules and unmeasured reasons; document runs and batches no longer probe or cache experiments.
 - Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs now use one condition per concept; see the [mapping](docs/RULES.md#renamed-in-the-next-release).
+- Schema regression checks keep existing defects stable through in-memory metadata edits and still reject equal-message defects introduced on other nodes.
 - One style resolver and allowance-based preservation proof replace family-specific mechanisms; protected XML, opaque content and schema-regression guards remain independent.
 - Built-in PDF audits report malformed annotation collections/entries as incomplete inspection instead of measuring zero links.
 - PDF checks share one bounded reader/Form walk and typed inspection data. URI issues retain other comparison checks; bitmap-size mismatches are geometry changes.

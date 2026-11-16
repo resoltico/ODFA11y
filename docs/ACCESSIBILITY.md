@@ -91,9 +91,10 @@ Neither implies support for every document or runtime combination.
 Unmodified OASIS 1.3/1.4 and W3C MathML 3 grammars ship with notices/provenance. Offline
 `audit --schema` validates recognized parts against the declared version, not arbitrary
 members. Unsupported versions report `SCHEMA002`; producer violations are `SCHEMA001` warnings.
-Remediation compares message/element fingerprints as a multiset, including attributes,
-parent and neighboring tags. A fix cannot hide an equal newly located violation.
-Unlocated violations compare by count. libxml2 can expose only one error inside an already
+Within one live document, remediation compares diagnostic messages and stable reported
+node/context identities as a multiset. Unrelated metadata does not create a new defect;
+an equal diagnostic on another node remains new. Independent document snapshots retain
+structural fingerprints; unlocated diagnostics compare by count. libxml2 can expose only one error inside an already
 failing model: a passing differential gate means no introduced violation was detected,
 not complete conformance. `document.odf_version` relabels; it does not convert markup.
 

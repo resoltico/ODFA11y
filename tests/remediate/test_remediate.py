@@ -11,7 +11,7 @@ import pytest
 from odfa11y.decisions import Decision
 from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import OutputOccupied, PlanError
-from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
+from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements, validate
 from odfa11y.odf.allowance import Allowance, Attributes
 from tests.fixtures.answers import (
     FaultEdit,
@@ -25,6 +25,7 @@ from tests.fixtures.answers import (
     spacer_input,
     version_input,
 )
+from tests.fixtures.documents import make_package
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
@@ -255,3 +256,35 @@ def test_saved_archive_keeps_the_mimetype_invariant(tmp_path: Path) -> None:
         OdfDocument.open(destination).tree(Part.CONTENT).getroot().get(qn("office", "version"))
         == "1.3"
     )
+
+
+def test_image_alternative_keeps_preexisting_schema_defects_stable(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "image")
+    document = OdfDocument.open(source)
+    frame = select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
+    for tag in (qn("svg", "title"), qn("svg", "desc")):
+        for child in frame.findall(tag):
+            frame.remove(child)
+    image = select_elements(frame, "./draw:image")[0]
+    image.set(qn("xlink", "type"), "bad")
+    document.save(source)
+    original_count = validate(OdfDocument.open(source)).count
+    assert original_count > 0
+    output = tmp_path / "reviewed.odi"
+    result = apply_answers(
+        source,
+        output,
+        [
+            graphic_inputs({
+                "Picture": graphic_answer(
+                    title="Observed series", description="Independent invented values"
+                )
+            })
+        ],
+    )
+    assert result.published
+    assert result.schema.before_count == result.schema.after_count == original_count
+    assert result.schema.new_count == 0
+    candidate = OdfDocument.open(output)
+    assert validate(candidate).count == original_count
+    assert select_elements(candidate.tree(Part.CONTENT), "//svg:title")[0].text == "Observed series"
