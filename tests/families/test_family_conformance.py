@@ -9,13 +9,13 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
+from odfa11y.application.remediate import remediate
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, qn
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.registry import registered_kinds
-from odfa11y.remediate import remediate
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target, TargetPath, require_target

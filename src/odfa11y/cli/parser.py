@@ -114,6 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("destination", type=Path)
     p.add_argument("--plan", type=Path, required=True, help="Source-bound TOML plan.")
     p.add_argument("--dry-run", action="store_true", help="Report outcomes without writing.")
+    p.add_argument(
+        "--replace", action="store_true", help="Atomically replace an existing regular file."
+    )
     p.add_argument("--format", choices=("text", "json"), default="text")
 
     p = _command(

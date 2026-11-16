@@ -2,6 +2,7 @@
 """What a remediation run reports back."""
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Literal
 lazy from pathlib import Path
 
@@ -46,6 +47,20 @@ class DecisionPrediction:
     remaining: tuple[Finding, ...]
 
 
+class PublicationState(StrEnum):
+    PUBLISHED = "published"
+    PREVIEW = "preview"
+    REFUSED = "refused"
+
+    @property
+    def meaning(self) -> str:
+        return {
+            self.PUBLISHED: "The verified candidate was published to the selected output.",
+            self.PREVIEW: "The verified candidate is a preview and was not published.",
+            self.REFUSED: "A required guard refused the candidate before publication.",
+        }[self]
+
+
 @dataclass(frozen=True, slots=True)
 class RemediationResult:
     """The outcome of a remediation run; ``destination`` is None for a dry run."""
@@ -55,13 +70,20 @@ class RemediationResult:
     outcomes: tuple[Outcome, ...]
     schema: SchemaCheck
     schema_version: Literal[1] = field(default=1, init=False)
-    published: bool = False
+    publication: PublicationState = PublicationState.REFUSED
     violations: tuple[Violation, ...] = ()
-    dry_run: bool = False
     decisions: tuple[Decision, ...] = ()
     predictions: tuple[DecisionPrediction, ...] = ()
     candidate: Report | None = None
     unanswered: tuple[UnansweredReview, ...] = ()
+
+    @property
+    def published(self) -> bool:
+        return self.publication is PublicationState.PUBLISHED
+
+    @property
+    def dry_run(self) -> bool:
+        return self.publication is PublicationState.PREVIEW
 
     @JsonProperty
     def changed(self) -> bool:

@@ -14,7 +14,7 @@ from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate.compile import compile_decisions
-from odfa11y.remediate.execute import _execute
+from odfa11y.remediate.execute import execute_decisions
 from odfa11y.targets import Fingerprint, Target, TargetPath
 
 
@@ -304,6 +304,4 @@ def apply_in_memory(document: OdfDocument, inputs: Authored) -> tuple[Outcome, .
     decisions = materialize(document, (inputs,))
     plan = Plan(PlanHeader(1, SourceBinding("0" * 64), "test"), decisions, Pagination.SAME())
     ordered = compile_decisions(document, plan)
-    return _execute(
-        document, Path("fixture.odf"), Path("candidate.odf"), ordered, dry_run=True, plan=plan
-    ).outcomes
+    return execute_decisions(document, Path("fixture.odf"), ordered, plan=plan).result.outcomes

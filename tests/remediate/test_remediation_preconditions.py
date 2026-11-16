@@ -27,7 +27,7 @@ def ids(report: Report) -> set[str]:
 def test_remediation_refuses_an_unrecognised_document(tmp_path: Path) -> None:
     source = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
     destination = tmp_path / "out.odt"
-    with pytest.raises(PackageError, match="not a recognised OpenDocument"):
+    with pytest.raises(DocumentRefusal, match="No supported source family"):
         apply_answers(source, destination, [metadata_input(title="x")])
     assert not destination.exists()
 

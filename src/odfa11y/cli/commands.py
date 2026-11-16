@@ -102,7 +102,9 @@ def _plan(args: argparse.Namespace) -> int:
 
 
 def _remediate(args: argparse.Namespace) -> int:
-    result = api.remediate(args.source, args.destination, args.plan, dry_run=args.dry_run)
+    result = api.remediate(
+        args.source, args.destination, args.plan, dry_run=args.dry_run, replace=args.replace
+    )
     if args.format == "json":
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))  # noqa: T201  CLI output is the command interface.
         return result.exit_status

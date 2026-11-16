@@ -1,7 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Run explicit, content-preserving operations on an ODF document under one executor."""
+"""Guarded in-memory candidates and typed remediation evidence."""
 
-lazy from odfa11y.remediate.execute import remediate
-lazy from odfa11y.remediate.result import RemediationResult, Violation
+lazy from odfa11y.remediate.candidate import Candidate, RefusedCandidate
+lazy from odfa11y.remediate.execute import execute_decisions, require_remediable
+lazy from odfa11y.remediate.result import PublicationState, RemediationResult, Violation
 
-__all__ = ["RemediationResult", "Violation", "remediate"]
+__all__ = [
+    "Candidate",
+    "PublicationState",
+    "RefusedCandidate",
+    "RemediationResult",
+    "Violation",
+    "execute_decisions",
+    "require_remediable",
+]

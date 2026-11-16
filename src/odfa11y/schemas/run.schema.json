@@ -17244,9 +17244,6 @@
                       }
                     ]
                   },
-                  "dry_run": {
-                    "type": "boolean"
-                  },
                   "exit_status": {
                     "enum": [
                       0,
@@ -40639,8 +40636,12 @@
                     },
                     "type": "array"
                   },
-                  "published": {
-                    "type": "boolean"
+                  "publication": {
+                    "enum": [
+                      "published",
+                      "preview",
+                      "refused"
+                    ]
                   },
                   "schema": {
                     "additionalProperties": false,
@@ -40817,9 +40818,8 @@
                   "outcomes",
                   "schema",
                   "schema_version",
-                  "published",
+                  "publication",
                   "violations",
-                  "dry_run",
                   "decisions",
                   "predictions",
                   "candidate",

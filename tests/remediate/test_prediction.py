@@ -3,12 +3,12 @@
 
 from pathlib import Path
 
+from odfa11y.application.remediate import remediate
 from odfa11y.audit import audit_odf
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.odf import names as xml_names
 from odfa11y.plans import Plan
-from odfa11y.remediate import remediate
 from odfa11y.rules import registry as rules
 from tests.fixtures.writer import make_minimal_odt
 

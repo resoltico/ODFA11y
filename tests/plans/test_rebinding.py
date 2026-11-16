@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import odfa11y as api
+from odfa11y.application.remediate import remediate
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PlanError
@@ -16,7 +17,6 @@ from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.model import UnansweredDecision
 from odfa11y.plans.registry import registered_kinds
-from odfa11y.remediate import remediate
 from tests.fixtures.writer import make_minimal_odt
 
 

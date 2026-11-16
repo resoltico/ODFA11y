@@ -100,3 +100,11 @@ def _sync_directory(directory: Path) -> None:
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
+
+
+def require_distinct(source: Path, destination: Path) -> None:
+    if source.resolve() == destination.resolve() or (
+        source.exists() and destination.exists() and source.samefile(destination)
+    ):
+        message = f"Destination must differ from the source: {destination.name}"
+        raise OutputOccupied(message)

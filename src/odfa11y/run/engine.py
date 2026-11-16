@@ -20,7 +20,9 @@ from odfa11y.pdf.audit import inspect_pdf
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.progress import PIPELINE_STAGES, ProgressEvent, Stage, Step, StepState
 from odfa11y.records import DocumentIdentity
-from odfa11y.remediate import remediate
+from odfa11y.remediate import Candidate, execute_decisions
+from odfa11y.remediate.compile import compile_decisions
+from odfa11y.remediate.result import PublicationState
 from odfa11y.report import exit_status
 from odfa11y.run.context import RunSettings
 from odfa11y.run.native import native_export_settings
@@ -42,6 +44,7 @@ class _Run:
     options: RunSettings
     lifetime: ExitStack
     captured: Path | None = None
+    document: OdfDocument | None = None
     adapter: FamilySpec | None = None
     executable: str | None = None
     native_tools: NativeTools = field(default_factory=NativeTools)
@@ -69,6 +72,7 @@ class _Run:
             return StageResult(
                 Stage.IDENTIFY_SOURCE, StageStatus.PASSED, _gate=False
             )  # audit-source explains
+        self.document = document
         detection = document.detection
         self.adapter = spec_for(detection.kind)
         self.record.document = DocumentIdentity(
@@ -97,15 +101,27 @@ class _Run:
         )
 
     def remediate(self) -> StageResult:
-        result = remediate(self.captured or self.source, self.remediated, self.plan)
+        if self.document is None:
+            message = "The source document is unavailable for remediation"
+            raise PackageError(message)
+        ordered = compile_decisions(
+            self.document, self.plan, source_sha256=self.record.document.sha256
+        )
+        candidate = execute_decisions(self.document, self.source, ordered, plan=self.plan)
+        result = candidate.result
         if result.candidate is not None:
             result.candidate.subject = self.remediated.name
+        if isinstance(candidate, Candidate):
+            candidate.materialize(self.remediated)
+            result = replace(
+                result, _destination=self.remediated, publication=PublicationState.PUBLISHED
+            )
         return StageResult(
             Stage.REMEDIATE,
-            StageStatus.PASSED if result.published else StageStatus.FAILED,
+            StageStatus.PASSED if isinstance(candidate, Candidate) else StageStatus.FAILED,
             reason="; ".join(item.message for item in result.violations) or None,
-            remediation=replace(result, _source=self.source),
-            _gate=not result.published,
+            remediation=result,
+            _gate=not isinstance(candidate, Candidate),
         )
 
     def audit_remediated(self) -> StageResult:

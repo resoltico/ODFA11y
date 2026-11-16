@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import cast
 
+from odfa11y.application.remediate import remediate
 from odfa11y.concepts import (
     SHAPE_TAGS,
     GraphicIdentity,
@@ -36,7 +37,6 @@ from odfa11y.odf import Family, OdfDocument, Part
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.styles import NO_STYLE
 from odfa11y.plans import Plan
-from odfa11y.remediate import remediate
 from odfa11y.targets import Fingerprint, Target, TargetPath
 
 

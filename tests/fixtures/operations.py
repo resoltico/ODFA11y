@@ -5,8 +5,10 @@ import re
 from collections.abc import Sequence
 from pathlib import Path
 
-from odfa11y.remediate import RemediationResult, remediate
-from odfa11y.remediate.execute import _document, _execute
+from odfa11y.application.remediate import finish_candidate, remediate
+from odfa11y.odf import OdfDocument
+from odfa11y.remediate import RemediationResult
+from odfa11y.remediate.execute import execute_decisions, require_remediable
 from tests.fixtures.answers import Authored, contains_fault, materialize
 from tests.fixtures.plans import reviewed_plan
 
@@ -21,11 +23,15 @@ def apply_answers(
     """Use the application path except for explicitly injected unregistered fault callbacks."""
     source, destination = Path(source), Path(destination)
     if contains_fault(inputs):
-        document = _document(source, destination)
-        return _execute(
-            document, source, destination, materialize(document, inputs), dry_run=dry_run
+        document = OdfDocument.open(source)
+        require_remediable(document, source)
+        candidate = execute_decisions(document, source, materialize(document, inputs))
+        return finish_candidate(
+            candidate, source, destination, dry_run=dry_run, replace_existing=True
         )
-    return remediate(source, destination, reviewed_plan(source, inputs), dry_run=dry_run)
+    return remediate(
+        source, destination, reviewed_plan(source, inputs), dry_run=dry_run, replace=True
+    )
 
 
 def assert_refused(result: RemediationResult, *, match: str | None = None) -> str:

@@ -10,6 +10,7 @@ lazy from collections.abc import Callable, Sequence
 from odfa11y.application.doctor import DoctorResult as DoctorResult
 from odfa11y.application.doctor import doctor as doctor
 from odfa11y.application.native import NativeTools
+from odfa11y.application.remediate import remediate as remediate
 from odfa11y.application.tools import Tools
 from odfa11y.audit import prepare_plan
 from odfa11y.batch import run_batch as execute_batch
@@ -20,7 +21,6 @@ from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import FidelityPolicy as FidelityPolicy
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
-from odfa11y.remediate import remediate as apply_plan
 from odfa11y.report import exit_status, render_reports
 from odfa11y.run.comparison import compare_documents
 from odfa11y.run.context import RunSettings
@@ -32,7 +32,7 @@ from odfa11y.status import ExitStatus, combine_statuses, failure_status
 lazy from odfa11y.batch.record import BatchRecord
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import ProgressObserver
-lazy from odfa11y.remediate import RemediationResult
+lazy from odfa11y.remediate import RemediationResult as RemediationResult
 lazy from odfa11y.report import Report
 lazy from odfa11y.run.profiles import Profile
 lazy from odfa11y.run.record import RunRecord
@@ -287,25 +287,6 @@ def plan(
     previous = _selected_plan(from_plan) if from_plan is not None else None
     report, template = prepare_plan(source, previous=previous, include_all=include_all)
     return PlanResult(report, template)
-
-
-@_filesystem_boundary
-def remediate(
-    source: str | Path,
-    destination: str | Path,
-    plan: Plan | str | Path,
-    *,
-    dry_run: bool = False,
-) -> RemediationResult:
-    """Apply reviewed answers under source, preservation and publication guards.
-
-    Returns
-    -------
-    RemediationResult
-        Every operation outcome and the physical publication result.
-
-    """
-    return apply_plan(source, destination, plan, dry_run=dry_run)
 
 
 @_filesystem_boundary

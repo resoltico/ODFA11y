@@ -8,11 +8,11 @@ lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.remediate import remediate
 from odfa11y.audit import prepare_plan
 from odfa11y.errors import PlanError
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.registry import registered_kinds
-from odfa11y.remediate import remediate
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.writer import make_minimal_odt
@@ -29,15 +29,14 @@ def test_remediation_refuses_unreviewed_loaded_bytes_after_source_exchange(
         tmp_path, "text", Variant(body="<office:text><text:p>Unreviewed</text:p></office:text>")
     )
     plan = Plan.for_source(reviewed)
-    module = importlib.import_module("odfa11y.remediate.execute")
-    original = module._document
+    module = importlib.import_module("odfa11y.application.remediate")
+    original = module.require_remediable
 
-    def exchange(path: Path, destination: Path) -> OdfDocument:
-        document = original(path, destination)
+    def exchange(document: OdfDocument, selected: Path) -> None:
+        original(document, selected)
         source.write_bytes(reviewed_bytes)
-        return document
 
-    monkeypatch.setattr(module, "_document", exchange)
+    monkeypatch.setattr(module, "require_remediable", exchange)
     destination = tmp_path / "out.fodt"
     with pytest.raises(PlanError, match="digest mismatch"):
         remediate(source, destination, plan)

@@ -1,29 +1,27 @@
 # SPDX-License-Identifier: MPL-2.0
 """Execute reviewed decisions and return every outcome and publication guard violation."""
 
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 lazy from collections.abc import Sequence
 
 from odfa11y.audit.engine import audit_document
-from odfa11y.capture import capture_source
 from odfa11y.concepts import opaque_payloads
 from odfa11y.concepts.preservation import ProtectedPackage
 from odfa11y.decisions import Decision
 from odfa11y.decisions.constraints import check_plan
 from odfa11y.decisions.edit import Outcome, Status
-from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError, PlanError
+from odfa11y.errors import DocumentRefusal, PackageError, PlanError
 from odfa11y.families import require_spec
 from odfa11y.odf import OdfDocument, Use, regressions, validate
 from odfa11y.odf.allowance import Allowance
 from odfa11y.plans import Plan
-from odfa11y.plans.registry import load_plan
 from odfa11y.records import SchemaCheck
-from odfa11y.remediate.compile import compile_decisions
+from odfa11y.remediate.candidate import Candidate, RefusedCandidate
 from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.remediate.result import (
     DecisionPrediction,
+    PublicationState,
     RemediationResult,
     UnansweredReview,
     Violation,
@@ -34,45 +32,10 @@ from odfa11y.status import StageStatus
 lazy from odfa11y.odf import SchemaResult
 
 
-def remediate(
-    source: str | Path,
-    destination: str | Path,
-    plan: Plan | str | Path,
-    *,
-    dry_run: bool = False,
-) -> RemediationResult:
-    """Apply a bound plan under source, family, preservation and schema guards.
-
-    Returns
-    -------
-    RemediationResult
-        All outcomes and violations; published is true only after an actual write.
-
-    """
-    source = Path(source)
-    destination = Path(destination)
-    _require_distinct(source, destination)
-    with (
-        tempfile.TemporaryDirectory(prefix="odfa11y-remediate-") as directory,
-        capture_source(source, directory=Path(directory)) as captured,
-    ):
-        document = _document(captured.path, destination)
-        digest = captured.digest
-        if not isinstance(plan, Plan):
-            plan = load_plan(plan, document=document, source_sha256=digest)
-        decisions = compile_decisions(document, plan, source_sha256=digest)
-        return _execute(document, source, destination, decisions, dry_run=dry_run, plan=plan)
-
-
-def _document(source: Path, destination: Path) -> OdfDocument:
-    _require_distinct(source, destination)
-    document = OdfDocument.open(source)
+def require_remediable(document: OdfDocument, source: Path) -> None:
     document.require(Use.REMEDIATE)
-    if document.kind is None:
-        msg = "Source is not a recognised OpenDocument document"
-        raise PackageError(msg)
+    require_spec(document.kind)
     _require_consistent_kind(document, source)
-    return document
 
 
 @dataclass(slots=True)
@@ -83,15 +46,13 @@ class _Execution:
     allowance: Allowance = field(default_factory=Allowance)
 
 
-def _execute(
+def execute_decisions(
     document: OdfDocument,
     source: Path,
-    destination: Path,
     decisions: Sequence[Decision],
     *,
-    dry_run: bool,
     plan: Plan | None = None,
-) -> RemediationResult:
+) -> Candidate | RefusedCandidate:
     require_spec(document.kind)
     before = ProtectedPackage.capture(document)
     opaque_before = opaque_payloads(document)
@@ -106,22 +67,21 @@ def _execute(
         if plan is not None
         else ()
     )
-    published = not dry_run and not state.violations
-    if published:
-        document.save(destination)
-    return RemediationResult(
+    result = RemediationResult(
         _source=source,
-        _destination=destination if published else None,
+        _destination=None,
         outcomes=tuple(state.outcomes),
         schema=schema,
-        published=published,
+        publication=PublicationState.REFUSED if state.violations else PublicationState.PREVIEW,
         violations=tuple(state.violations),
-        dry_run=dry_run,
         decisions=tuple(decisions),
         predictions=predictions,
         candidate=candidate,
         unanswered=unanswered,
     )
+    if state.violations:
+        return RefusedCandidate(result)
+    return Candidate(document, document.checkpoint(), result)
 
 
 def _unanswered(document: OdfDocument, plan: Plan) -> tuple[UnansweredReview, ...]:
@@ -318,15 +278,6 @@ def _require_consistent_kind(document: OdfDocument, source: Path) -> None:
             f"{kind.body_element!r} its media type promises; nothing was written."
         )
         raise PackageError(msg)
-
-
-def _require_distinct(source: Path, destination: Path) -> None:
-    same = source.resolve() == destination.resolve() or (
-        destination.exists() and source.exists() and Path(source).samefile(destination)
-    )
-    if same:
-        msg = f"Destination must differ from the source: {destination.name}"
-        raise OutputOccupied(msg)
 
 
 def _check_edit_accounting(

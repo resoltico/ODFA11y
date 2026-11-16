@@ -17,7 +17,7 @@ from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 
 
-@pytest.mark.parametrize("boundary", ["capture_source", "audit_odf", "remediate"])
+@pytest.mark.parametrize("boundary", ["capture_source", "audit_odf", "execute_decisions"])
 def test_source_replacement_uses_captured_bytes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, boundary: str
 ) -> None:
