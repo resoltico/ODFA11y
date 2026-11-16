@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
 from odfa11y.errors import OutputOccupied, Remedy, RemedyAction, ToolFailure, ToolUnavailable
 from odfa11y.native.process import (
@@ -15,7 +16,7 @@ from odfa11y.native.process import (
     run_bounded,
     validate_timeout,
 )
-from odfa11y.staging import staging_sibling
+from odfa11y.publish import publish_file
 from odfa11y.tool_identity import ToolIdentity
 
 DEFAULT_TIMEOUT_SECONDS = 120
@@ -116,12 +117,11 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
     """
     validate_timeout(settings.timeout)
     source = Path(source).resolve()
-    destination = Path(destination_pdf).resolve()
-    if source == destination:
+    destination = Path(destination_pdf).absolute()
+    if source == destination.resolve():
         msg = f"Destination must differ from the source: {destination.name}"
         raise OutputOccupied(msg)
     executable = find_soffice(settings.soffice)
-    destination.parent.mkdir(parents=True, exist_ok=True)
     options = f"pdf:{settings.pdf_filter}:" + json.dumps(EXPORT_OPTIONS, separators=(",", ":"))
     with (
         tempfile.TemporaryDirectory(prefix="odfa11y-lo-profile-") as temporary_profile,
@@ -162,9 +162,8 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
 
 
 def _publish(produced: Path, destination: Path) -> None:
-    temporary = staging_sibling(destination)
-    try:
-        shutil.copyfile(produced, temporary)
-        temporary.replace(destination)
-    finally:
-        temporary.unlink(missing_ok=True)
+    def write(stream: BinaryIO) -> None:
+        with produced.open("rb") as source:
+            shutil.copyfileobj(source, stream)
+
+    publish_file(destination, write, replace=True)

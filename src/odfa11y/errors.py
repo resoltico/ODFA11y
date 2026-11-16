@@ -74,9 +74,9 @@ class OdfA11yError(Exception):
         details: str = "",
         problems: tuple[str, ...] = (),
     ) -> None:
-        self.message = message
-        self.problems = problems
-        super().__init__(message + ("\n" + "\n".join(problems) if problems else ""))
+        self.message = message[:DIAGNOSTIC_CHARACTERS]
+        self.problems = tuple(problem[:DIAGNOSTIC_CHARACTERS] for problem in problems)
+        super().__init__(self.message + ("\n" + "\n".join(self.problems) if self.problems else ""))
         self.remedy = remedy if remedy is not None else self.default_remedy
         self.details = details[:DIAGNOSTIC_CHARACTERS]
 
@@ -157,4 +157,5 @@ class IoFailure(OdfA11yError):
 
     @classmethod
     def from_oserror(cls, error: OSError) -> IoFailure:
-        return cls(f"{type(error).__name__}: {error.strerror or 'operating-system error'}")
+        reason = error.strerror or str(error) or "operating-system error"
+        return cls(f"{type(error).__name__}: {reason}")

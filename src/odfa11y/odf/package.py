@@ -6,6 +6,7 @@ import zipfile
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 lazy import os
 lazy from collections.abc import Iterable
 
@@ -18,7 +19,7 @@ from odfa11y.odf.archive import (
     validate_archive,
 )
 from odfa11y.odf.storage import Layout, OdfStorage, Part
-from odfa11y.staging import staging_sibling
+from odfa11y.publish import publish_file
 
 # Errors raised while reading malformed or unsupported ZIP structure or damaged member data.
 UNREADABLE_ARCHIVE_ERRORS = (
@@ -189,7 +190,6 @@ class PackageStorage(OdfStorage):
 
         """
         destination = Path(destination)
-        destination.parent.mkdir(parents=True, exist_ok=True)
         if len(self.order) != len(set(self.order)):
             msg = "Cannot rewrite an ODF package with duplicate ZIP member names"
             raise PackageError(msg)
@@ -198,15 +198,11 @@ class PackageStorage(OdfStorage):
             msg = f"Cannot rewrite an ODF package with unsafe member names: {unsafe}"
             raise PackageError(msg)
 
-        tmp = staging_sibling(destination)
-        try:
-            self._write_archive(tmp)
-            validate_archive(tmp, self._declared_mimetype())
-            tmp.replace(destination)
-        finally:
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
-        return destination
+        def write(stream: BinaryIO) -> None:
+            self._write_archive(stream)
+            validate_archive(stream, self._declared_mimetype())
+
+        return publish_file(destination, write, replace=True)
 
     def _declared_mimetype(self) -> str | None:
         member = self.members.get(MIMETYPE_MEMBER)
@@ -218,7 +214,7 @@ class PackageStorage(OdfStorage):
             msg = "Cannot rewrite an ODF package whose mimetype is not ASCII"
             raise PackageError(msg) from exc
 
-    def _write_archive(self, tmp: Path) -> None:
+    def _write_archive(self, tmp: BinaryIO) -> None:
         with zipfile.ZipFile(tmp, "w") as zf:
             if MIMETYPE_MEMBER in self.members:
                 # ODF package requirement: first member, uncompressed.

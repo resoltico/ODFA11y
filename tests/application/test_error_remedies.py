@@ -46,3 +46,12 @@ def test_old_plan_header_has_a_regeneration_remedy() -> None:
     assert caught.value.remedy is not None
     assert caught.value.remedy.action is RemedyAction.REGENERATE_PLAN
     assert "schema_version" in str(caught.value)
+
+
+def test_error_envelopes_bound_each_diagnostic_without_dropping_plan_problems() -> None:
+    error = PlanError("m" * 5000, problems=("a" * 5000, "b" * 5000, "c" * 5000), details="d" * 5000)
+    record = error.as_record()
+    assert record.message == "m" * 4096
+    assert record.problems == ("a" * 4096, "b" * 4096, "c" * 4096)
+    assert record.details == "d" * 4096
+    assert str(error).count("\n") == 3

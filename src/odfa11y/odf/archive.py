@@ -4,6 +4,7 @@
 import zipfile
 from pathlib import PurePosixPath, PureWindowsPath
 lazy from pathlib import Path
+lazy from typing import BinaryIO
 
 from odfa11y.errors import PackageError
 from odfa11y.odf import names as xml_names
@@ -32,7 +33,7 @@ def clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return clone
 
 
-def validate_archive(tmp: Path, expected_mimetype: str | None) -> None:
+def validate_archive(tmp: Path | BinaryIO, expected_mimetype: str | None) -> None:
     """Check a written archive's integrity and first-member mimetype invariant.
 
     Raises

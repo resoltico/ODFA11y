@@ -7,7 +7,7 @@ from typing import Literal
 lazy from pathlib import Path
 
 from odfa11y.contracts import JsonProperty, record_dict
-from odfa11y.staging import staging_sibling
+from odfa11y.publish import publish_file
 from odfa11y.status import BatchStatus, ExitStatus, combine_statuses
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import Stage
@@ -63,12 +63,5 @@ class BatchRecord:
 
     def publish(self, output: Path) -> None:
         """Replace batch.json atomically, retaining the previous valid record on failure."""
-        destination = output / "batch.json"
-        temporary = staging_sibling(destination)
-        try:
-            temporary.write_text(
-                json.dumps(self.as_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
-            )
-            temporary.replace(destination)
-        finally:
-            temporary.unlink(missing_ok=True)
+        payload = (json.dumps(self.as_dict(), indent=2, sort_keys=True) + "\n").encode("utf-8")
+        publish_file(output / "batch.json", lambda stream: stream.write(payload), replace=True)

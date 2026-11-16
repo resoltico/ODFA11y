@@ -7,7 +7,7 @@ lazy import os
 from odfa11y.errors import MissingMemberError, PackageError
 from odfa11y.odf.archive import MAX_UNCOMPRESSED_BYTES
 from odfa11y.odf.storage import Layout, OdfStorage, Part
-from odfa11y.staging import staging_sibling
+from odfa11y.publish import publish_file
 
 FLAT_MEMBER = "document"
 
@@ -100,12 +100,4 @@ class FlatXmlStorage(OdfStorage):
             The saved destination.
 
         """
-        destination = Path(destination)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        staged = staging_sibling(destination)
-        try:
-            staged.write_bytes(self._data)
-            staged.replace(destination)
-        finally:
-            staged.unlink(missing_ok=True)
-        return destination
+        return publish_file(destination, lambda stream: stream.write(self._data), replace=True)

@@ -13,8 +13,8 @@ from odfa11y.errors import OutputOccupied
 from odfa11y.evidence.manifest import write_manifest
 from odfa11y.evidence.paths import is_reserved_bundle_file, unsafe_reason
 from odfa11y.evidence.review import render_review
+from odfa11y.publish import publish_directory, require_empty_directory, staging_sibling
 from odfa11y.safe_xml import parse_secure
-from odfa11y.staging import staging_sibling
 lazy from odfa11y.evidence.redact import Redactor
 lazy from odfa11y.run.record import RunRecord
 
@@ -28,9 +28,7 @@ def require_free_directory(directory: Path) -> None:
         The path exists and is not an empty directory.
 
     """
-    if directory.exists() and not (directory.is_dir() and not any(directory.iterdir())):
-        msg = f"Evidence directory must not exist or must be empty: {directory}"
-        raise OutputOccupied(msg)
+    require_empty_directory(directory)
 
 
 def write_bundle(
@@ -87,9 +85,7 @@ def write_bundle(
             redactor.text(render_review(record, redactor=redactor)), encoding="utf-8"
         )
         write_manifest(staging)
-        if target.exists():
-            target.rmdir()
-        staging.replace(target)
+        publish_directory(staging, target)
         return outputs
     finally:
         if staging.exists():

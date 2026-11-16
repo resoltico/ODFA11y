@@ -13,7 +13,7 @@ from odfa11y.application.native import NativeTools
 from odfa11y.batch import load_manifest, run_batch
 from odfa11y.batch.batch_file import preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
-from odfa11y.errors import OutputOccupied, PlanError
+from odfa11y.errors import IoFailure, OutputOccupied, PlanError
 from odfa11y.evidence import check_bundle
 from odfa11y.run.context import RunSettings
 from odfa11y.run.profiles import profile_named
@@ -224,7 +224,7 @@ def test_aggregate_precedence_and_atomic_summary_failure(
     record.items.append(BatchItemResult("three", BatchStatus.FAILED, ExitStatus.EXECUTION_FAILURE))
     assert record.exit_status == 3
     monkeypatch.setattr(Path, "replace", failed_replace)
-    with pytest.raises(OSError, match="publication"):
+    with pytest.raises(IoFailure, match="publication"):
         record.publish(tmp_path)
     assert (tmp_path / "batch.json").read_bytes() == previous
     assert [path.name for path in tmp_path.iterdir()] == ["batch.json"]
