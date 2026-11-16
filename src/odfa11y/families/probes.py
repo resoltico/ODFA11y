@@ -5,14 +5,15 @@ import tempfile
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-lazy from collections.abc import Callable, Sequence
+lazy from collections.abc import Callable
 
-from odfa11y.errors import OdfA11yError, ToolFailure
+from odfa11y.contracts import JsonProperty
+from odfa11y.errors import IoFailure, OdfA11yError
 from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.pdf.validation import PdfValidator
 from odfa11y.progress import ProgressEvent, Step, StepState
+from odfa11y.rules.registry import Rule
 from odfa11y.tool_identity import ToolIdentity
-lazy from odfa11y.decisions import Decision
 lazy from odfa11y.odf import Family
 lazy from odfa11y.progress import ProgressObserver
 
@@ -72,22 +73,9 @@ class CapabilityProbe:
     source_writer: SourceWriter
     export_filter: str
     evaluate: Evaluation
-    decision_kinds: frozenset[str]
+    rules: tuple[Rule, ...]
     description: str
-
-    def relevant(self, family: Family | None, decisions: Sequence[Decision]) -> bool:
-        """Select the declared family and decision scope.
-
-        Returns
-        -------
-        bool
-            Whether this experiment informs the selected native workflow.
-
-        """
-        return self.family == family and (
-            not self.decision_kinds
-            or bool(self.decision_kinds & {decision.kind.id for decision in decisions})
-        )
+    requires_validator: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +87,23 @@ class CapabilityResult:
     status: CapabilityStatus
     tool: ToolIdentity | None
     reason: str | None = None
+    related_rules: tuple[str, ...] = ()
+
+    @JsonProperty
+    def meaning(self) -> str:
+        return self.id.meaning
+
+    @classmethod
+    def for_probe(
+        cls,
+        probe: CapabilityProbe,
+        status: CapabilityStatus,
+        tool: ToolIdentity | None,
+        reason: str | None = None,
+    ) -> CapabilityResult:
+        return cls(
+            probe.id, probe.family, status, tool, reason, tuple(rule.id for rule in probe.rules)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,73 +114,43 @@ class ProbeExecution:
     error: OdfA11yError | None = None
 
 
-class ProbeCache:
-    """Reuse conclusive observations only within the caller-owned workflow lifetime."""
-
-    def __init__(self) -> None:
-        """Start with no observations from any executable identity."""
-        self._results: dict[tuple[Path, ToolIdentity, CapabilityProbe], CapabilityResult] = {}
-
-    def run(
-        self,
-        probe: CapabilityProbe,
-        identity: ToolIdentity,
-        settings: ExportSettings,
-        *,
-        verapdf_path: str | Path | None = None,
-        observer: ProgressObserver | None = None,
-        export: Exporter | None = None,
-        validate: PdfValidator | None = None,
-    ) -> ProbeExecution:
-        """Export the synthetic case once per executable identity and probe.
-
-        Returns
-        -------
-        ProbeExecution
-            A conclusive result, or not-tested plus its controlled error.
-
-        """
-        executable = Path(settings.soffice or "soffice").resolve()
-        key = (executable, identity, probe)
-        if key in self._results:
-            return ProbeExecution(self._results[key])
-        if observer:
-            observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.RUNNING))
-        try:
-            supported = _conduct(
-                probe, settings, verapdf_path, export or export_pdfua, validate=validate
-            )
-        except OSError as exc:
-            error = ToolFailure("Capability probe I/O failed", details=str(exc))
-            return self._not_tested(probe, identity, error, observer)
-        except OdfA11yError as exc:
-            return self._not_tested(probe, identity, exc, observer)
-        result = CapabilityResult(
-            probe.id,
-            probe.family,
-            CapabilityStatus.SUPPORTED if supported else CapabilityStatus.UNSUPPORTED,
-            identity,
+def measure_probe(
+    probe: CapabilityProbe,
+    identity: ToolIdentity,
+    settings: ExportSettings,
+    *,
+    verapdf_path: str | Path | None = None,
+    observer: ProgressObserver | None = None,
+    export: Exporter | None = None,
+    validate: PdfValidator | None = None,
+) -> ProbeExecution:
+    if observer:
+        observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.RUNNING))
+    try:
+        supported = _conduct(
+            probe, settings, verapdf_path, export or export_pdfua, validate=validate
         )
-        self._results[key] = result
-        if observer:
-            observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.PASSED))
-        return ProbeExecution(result)
+    except OSError as error:
+        return _probe_failure(probe, identity, IoFailure.from_oserror(error), observer)
+    except OdfA11yError as error:
+        return _probe_failure(probe, identity, error, observer)
+    result = CapabilityResult.for_probe(
+        probe,
+        CapabilityStatus.SUPPORTED if supported else CapabilityStatus.UNSUPPORTED,
+        identity,
+    )
+    if observer:
+        observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.PASSED))
+    return ProbeExecution(result)
 
-    @staticmethod
-    def _not_tested(
-        probe: CapabilityProbe,
-        identity: ToolIdentity,
-        error: OdfA11yError,
-        observer: ProgressObserver | None,
-    ) -> ProbeExecution:
-        if observer:
-            observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.FAILED))
-        return ProbeExecution(
-            CapabilityResult(
-                probe.id, probe.family, CapabilityStatus.NOT_TESTED, identity, str(error)
-            ),
-            error,
-        )
+
+def _probe_failure(probe, identity, error: OdfA11yError, observer) -> ProbeExecution:
+    if observer:
+        observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.FAILED))
+    return ProbeExecution(
+        CapabilityResult.for_probe(probe, CapabilityStatus.NOT_TESTED, identity, error.message),
+        error,
+    )
 
 
 def _conduct(

@@ -3,6 +3,94 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "capabilities": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "family": {
+            "enum": [
+              "text",
+              "spreadsheet",
+              "presentation",
+              "drawing",
+              "formula",
+              "chart",
+              "image",
+              "database"
+            ]
+          },
+          "id": {
+            "enum": [
+              "link-descriptions",
+              "decorative-graphic-role",
+              "writer-header-columns",
+              "math-tagging",
+              "calc-pdfua"
+            ]
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "related_rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "unsupported",
+              "not-tested"
+            ]
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "version"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "family",
+          "status",
+          "tool",
+          "reason",
+          "related_rules",
+          "meaning"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "exit_status": {
       "enum": [
         0,
@@ -132,83 +220,6 @@
     "toolchain": {
       "additionalProperties": false,
       "properties": {
-        "capabilities": {
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "family": {
-                "enum": [
-                  "text",
-                  "spreadsheet",
-                  "presentation",
-                  "drawing",
-                  "formula",
-                  "chart",
-                  "image",
-                  "database"
-                ]
-              },
-              "id": {
-                "enum": [
-                  "link-descriptions",
-                  "decorative-graphic-role",
-                  "writer-header-columns",
-                  "math-tagging",
-                  "calc-pdfua"
-                ]
-              },
-              "reason": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "status": {
-                "enum": [
-                  "supported",
-                  "unsupported",
-                  "not-tested"
-                ]
-              },
-              "tool": {
-                "anyOf": [
-                  {
-                    "additionalProperties": false,
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "version": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name",
-                      "version"
-                    ],
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "id",
-              "family",
-              "status",
-              "tool",
-              "reason"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
         "libreoffice": {
           "anyOf": [
             {
@@ -258,8 +269,7 @@
       },
       "required": [
         "libreoffice",
-        "verapdf",
-        "capabilities"
+        "verapdf"
       ],
       "type": "object"
     }
@@ -271,6 +281,7 @@
     "libraries",
     "schema_versions",
     "toolchain",
+    "capabilities",
     "schema_version",
     "exit_status",
     "failure"

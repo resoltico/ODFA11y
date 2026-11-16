@@ -8,7 +8,6 @@ from odfa11y.batch.batch_file import load_manifest, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
-from odfa11y.families.probes import ProbeCache
 from odfa11y.native.process import termination_interrupt
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
@@ -56,7 +55,6 @@ def run_batch(
                 output,
                 options,
                 on_progress,
-                probe_cache=ProbeCache(),
                 native_tools=native_tools or NativeTools(),
             )
         except KeyboardInterrupt:
@@ -80,7 +78,6 @@ def _run_items(
     options: RunSettings,
     on_progress: ProgressObserver | None,
     *,
-    probe_cache: ProbeCache,
     native_tools: NativeTools,
 ) -> None:
     for item, progress in zip(items, record.items, strict=True):
@@ -93,7 +90,6 @@ def _run_items(
             progress,
             output / item.id,
             options,
-            probe_cache=probe_cache,
             native_tools=native_tools,
         )
         record.publish(output)
@@ -114,13 +110,10 @@ def _advance_item(
     target: Path,
     options: RunSettings,
     *,
-    probe_cache: ProbeCache,
     native_tools: NativeTools,
 ) -> None:
     try:
-        result = _run_item(
-            item, target, options, probe_cache=probe_cache, native_tools=native_tools
-        )
+        result = _run_item(item, target, options, native_tools=native_tools)
     except (OdfA11yError, OSError) as exc:
         progress.status = BatchStatus.FAILED
         progress.exit_status = failure_status(exc)
@@ -137,7 +130,6 @@ def _run_item(
     target: Path,
     options: RunSettings,
     *,
-    probe_cache: ProbeCache,
     native_tools: NativeTools,
 ) -> RunRecord:
     try:
@@ -150,7 +142,6 @@ def _run_item(
             plan,
             target,
             options,
-            probe_cache=probe_cache,
             native_tools=native_tools,
         )
     except (OdfA11yError, OSError) as exc:

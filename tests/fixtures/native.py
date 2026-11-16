@@ -51,6 +51,7 @@ def exporting(source: Path, destination: Path, settings: ExportSettings) -> Path
 def native_fakes() -> NativeTools:
     return NativeTools(
         export=exporting,
+        validate=lambda *_args, **_kwargs: validation_result(True),
         locate=lambda requested: str(requested or "test-soffice"),
         validator=lambda requested: str(requested or "test-verapdf"),
         identify=lambda _, **_options: ToolIdentity("LibreOffice", "26.8.0.3"),

@@ -7,6 +7,7 @@ from odfa11y.families.probe_pdf import math_tagging
 from odfa11y.families.probe_sources import write_probe_package
 from odfa11y.families.probes import CapabilityProbe, ProbeId
 from odfa11y.odf import NS, Family
+from odfa11y.rules import registry as rules
 
 
 def write_math_probe(directory: Path) -> Path:
@@ -39,7 +40,7 @@ PROBES = (
         write_math_probe,
         "math_pdf_Export",
         math_tagging,
-        frozenset({"formula.alternative"}),
+        (rules.MATH003, rules.PDF004),
         (
             "The expression-only Math export has tagged, reconciled content under "
             "basic PDF inspection."

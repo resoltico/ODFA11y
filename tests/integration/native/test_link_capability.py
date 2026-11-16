@@ -12,7 +12,6 @@ from odfa11y.audit.validation import validate_pdfua
 from odfa11y.cli import main
 from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.evidence import check_bundle
-from odfa11y.families.probes import ProbeId
 from odfa11y.families.text.probes import LINK_PURPOSE, write_link_probe
 from odfa11y.native.libreoffice import ExportSettings, export_pdfua, identify_soffice
 from odfa11y.odf import OdfDocument, PackageStorage, validate
@@ -49,9 +48,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     doctor = json.loads(capsys.readouterr().out)
     assert doctor["toolchain"]["libreoffice"]["version"] == identify_soffice(soffice).version
     reported = next(
-        item["status"]
-        for item in doctor["toolchain"]["capabilities"]
-        if item["id"] == "link-descriptions"
+        item["status"] for item in doctor["capabilities"] if item["id"] == "link-descriptions"
     )
     titled_probe = write_link_probe(tmp_path)
     probe_pdf = export_pdfua(
@@ -81,25 +78,10 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
         tmp_path / "evidence",
         RunSettings(tools=Tools(soffice=soffice)),
     )
-    assert (
-        next(
-            item.status.value
-            for item in record.toolchain.capabilities
-            if item.id == ProbeId.LINK_DESCRIPTIONS
-        )
-        == reported
-    )
     assert record.toolchain.libreoffice is not None
     assert record.toolchain.libreoffice.version == doctor["toolchain"]["libreoffice"]["version"]
     evidence = json.loads((tmp_path / "evidence" / "run.json").read_text())
-    assert (
-        next(
-            item["status"]
-            for item in evidence["toolchain"]["capabilities"]
-            if item["id"] == "link-descriptions"
-        )
-        == reported
-    )
+    assert "capabilities" not in evidence["toolchain"]
     assert not any("probe" in name for name in evidence["outputs"])
     assert check_bundle(tmp_path / "evidence") == []
 

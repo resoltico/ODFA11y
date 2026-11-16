@@ -146,8 +146,8 @@ depends_on = ["odfa11y.odf", "odfa11y.evidence.redact", "odfa11y.rules", "odfa11
 
 [[modules]]
 path = "odfa11y.records"
-# Temporary until WP9: separate doctor capabilities from run tool identities before dissolving records.
-depends_on = ["odfa11y.tool_identity", "odfa11y.contracts", "odfa11y.errors", "odfa11y.families.probes", "odfa11y.native.process", "odfa11y.status"]
+layer = "model"
+depends_on = ["odfa11y.tool_identity", "odfa11y.contracts", "odfa11y.errors", "odfa11y.tool_identity", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.concepts"

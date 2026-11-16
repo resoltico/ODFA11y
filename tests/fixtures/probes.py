@@ -26,14 +26,13 @@ from tests.fixtures.pdf import (
     set_page_content,
     tagged_writer,
 )
-lazy from odfa11y.families.probes import CapabilityProbe, ProbeCache
+lazy from odfa11y.families.probes import CapabilityProbe
 lazy from odfa11y.native.libreoffice import ExportSettings
 
 PURPOSE = "ODFA11y reviewed link purpose."
 
 
 def conclusive_probe(
-    _cache: ProbeCache,
     probe: CapabilityProbe,
     identity: ToolIdentity,
     _settings: ExportSettings,

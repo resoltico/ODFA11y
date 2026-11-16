@@ -13,6 +13,7 @@ from odfa11y.application import (
     PlanResult,
     VerificationResult,
 )
+from odfa11y.application.doctor import DoctorResult
 from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.audit.package import PackageMeasurements
 from odfa11y.batch.record import BatchRecord
@@ -44,7 +45,6 @@ from odfa11y.pdf.validation import ValidationMeasurements
 from odfa11y.plans import PlanHeader
 from odfa11y.plans.contracts import decision_contract, file_contract
 from odfa11y.plans.registry import registered_kinds
-from odfa11y.records import DoctorRecord
 from odfa11y.remediate import RemediationResult
 from odfa11y.report import Finding, Report
 from odfa11y.rules.registry import RULES
@@ -83,7 +83,7 @@ def registered_contracts() -> tuple[RecordContract, ...]:
         RecordContract("run", RunRecord),
         RecordContract("batch", BatchRecord),
         RecordContract("evidence-verification", VerificationResult),
-        RecordContract("doctor", DoctorRecord),
+        RecordContract("doctor", DoctorResult),
         RecordContract("report", Report),
         RecordContract("plan-file", file_contract(registered_kinds()), PlanHeader),
     )

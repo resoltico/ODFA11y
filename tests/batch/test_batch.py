@@ -21,7 +21,6 @@ from odfa11y.status import BatchStatus, ExitStatus
 from tests.fixtures.plans import plan_header
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
-lazy from odfa11y.families.probes import ProbeCache
 lazy from odfa11y.plans import Plan
 lazy from odfa11y.run.record import RunRecord
 
@@ -180,7 +179,6 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
         output_dir: str | Path,
         options: RunSettings | None = None,
         *,
-        probe_cache: ProbeCache | None = None,
         native_tools: NativeTools | None = None,
     ) -> RunRecord:
         if str(output_dir).endswith("broken"):
@@ -191,7 +189,6 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
             plan,
             output_dir,
             options,
-            probe_cache=probe_cache,
             native_tools=native_tools,
         )
 

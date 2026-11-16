@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Frozen family capabilities and preservation contracts."""
+"""Frozen source-family audits, decisions and optional native capabilities."""
 
 from collections.abc import Callable
 from dataclasses import dataclass

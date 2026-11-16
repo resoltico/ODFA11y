@@ -5,7 +5,7 @@ lazy from collections.abc import Callable
 
 import pytest
 
-from odfa11y.families.probes import CapabilityStatus, ProbeCache, ProbeId
+from odfa11y.families.probes import CapabilityStatus, ProbeId, measure_probe
 from odfa11y.native.libreoffice import ExportSettings, find_soffice, identify_soffice
 from tests.families.test_capability_probes import PROBES
 
@@ -16,7 +16,7 @@ def test_each_native_probe_produces_a_scoped_observation(
 ) -> None:
     executable = find_soffice(external_tool("soffice", "libreoffice"))
     identity = identify_soffice(executable)
-    execution = ProbeCache().run(
+    execution = measure_probe(
         PROBES[probe_id],
         identity,
         ExportSettings(PROBES[probe_id].export_filter, executable),

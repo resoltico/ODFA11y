@@ -24,6 +24,7 @@ from odfa11y.application import (
 from odfa11y.application import (
     run as _run,
 )
+from odfa11y.application.doctor import DoctorResult
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.audit import plan_blockers
@@ -44,7 +45,6 @@ from odfa11y.errors import (
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
-from odfa11y.records import DoctorRecord
 from odfa11y.remediate import RemediationResult
 from odfa11y.report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
 from odfa11y.run.profiles import DEFAULT_PROFILE, PROFILES, Profile, profile_named
@@ -64,7 +64,7 @@ __all__ = [
     "Decision",
     "DecisionKind",
     "DecisionScope",
-    "DoctorRecord",
+    "DoctorResult",
     "DocumentRefusal",
     "ExitStatus",
     "ExportResult",

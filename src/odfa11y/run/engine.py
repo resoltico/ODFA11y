@@ -14,7 +14,6 @@ from odfa11y.capture import capture_source
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory
 from odfa11y.families import spec_for
-from odfa11y.families.probes import ProbeCache
 from odfa11y.families.spec import PdfExport
 from odfa11y.odf import OdfDocument, Use, declared_version
 from odfa11y.pdf.audit import inspect_pdf
@@ -42,7 +41,6 @@ class _Run:
     record: RunRecord
     options: RunSettings
     lifetime: ExitStack
-    probe_cache: ProbeCache = field(default_factory=ProbeCache)
     captured: Path | None = None
     adapter: FamilySpec | None = None
     executable: str | None = None
@@ -158,7 +156,7 @@ class _Run:
             locate=self.native_tools.validator,
         )
         (self.work / "verapdf.xml").write_text(result.raw_xml, encoding="utf-8")
-        self.record.toolchain.verapdf = result.identity
+        self.record.toolchain = replace(self.record.toolchain, verapdf=result.identity)
         return self._gate(Stage.VALIDATE_PDF, report)
 
     def fidelity(self) -> StageResult:
@@ -208,22 +206,9 @@ class _Run:
         )
         if self.executable is None:
             self.executable = self.native_tools.locate(self.options.tools.soffice)
-            self.record.toolchain.libreoffice = self.native_tools.identify(self.executable)
-            for probe in self.adapter.probes:
-                if not probe.relevant(self.adapter.family, self.plan.decisions):
-                    continue
-                execution = self.probe_cache.run(
-                    probe,
-                    self.record.toolchain.libreoffice,
-                    replace(settings, soffice=self.executable),
-                    verapdf_path=self.options.tools.verapdf,
-                    observer=self.options.on_progress,
-                    export=self.native_tools.export,
-                    validate=self.native_tools.validate,
-                )
-                self.record.toolchain.capabilities += (execution.result,)
-                if execution.error is not None:
-                    raise execution.error
+            self.record.toolchain = replace(
+                self.record.toolchain, libreoffice=self.native_tools.identify(self.executable)
+            )
         self.native_tools.export(
             document,
             self.work / pdf_name,
@@ -238,7 +223,6 @@ def execute(
     output_dir: str | Path,
     options: RunSettings | None = None,
     *,
-    probe_cache: ProbeCache | None = None,
     native_tools: NativeTools | None = None,
 ) -> RunRecord:
     """Identify, audit, remediate, export, validate and compare, then publish evidence.
@@ -277,7 +261,6 @@ def execute(
             record,
             options,
             lifetime,
-            probe_cache=probe_cache or ProbeCache(),
             native_tools=native_tools or NativeTools(),
         )
         steps: dict[Stage, Callable[[], StageResult]] = {

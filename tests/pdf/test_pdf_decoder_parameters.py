@@ -13,7 +13,7 @@ from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailure
 from odfa11y.evidence import check_bundle
-from odfa11y.families.probes import ProbeCache
+from odfa11y.families import probes as probe_operations
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
@@ -107,7 +107,7 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
     native_tools = replace(
         native_tools, identify=lambda _, **_options: ToolIdentity("LibreOffice", "26.8.0.3")
     )
-    monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
+    monkeypatch.setattr(probe_operations, "measure_probe", conclusive_probe)
     native_tools = replace(native_tools, export=export)
     result = run_batch(manifest, tmp_path / "out", RunSettings(), native_tools=native_tools)
     assert [item.exit_status for item in result.items] == [2, 0]

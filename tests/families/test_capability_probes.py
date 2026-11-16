@@ -8,8 +8,9 @@ import pytest
 from pypdf.generic import NameObject
 
 from odfa11y.application.native import NativeTools
+from odfa11y.errors import ToolFailure
 from odfa11y.families import REGISTRY
-from odfa11y.families.probes import CapabilityStatus, ProbeCache, ProbeId
+from odfa11y.families.probes import CapabilityStatus, ProbeId, measure_probe
 from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.tool_identity import ToolIdentity
@@ -38,7 +39,7 @@ def test_positive_and_negative_exporter_controls(
 ) -> None:
 
     native_tools = replace(native_tools, validate=lambda *_args, **_kwargs: validation_result(True))
-    execution = ProbeCache().run(
+    execution = measure_probe(
         PROBES[probe_id],
         ToolIdentity("LibreOffice", "26.8.1.1"),
         ExportSettings(PROBES[probe_id].export_filter),
@@ -61,7 +62,7 @@ def test_untagged_link_export_cannot_report_support() -> None:
         writer.write(destination)
         return destination
 
-    result = ProbeCache().run(
+    result = measure_probe(
         PROBES[ProbeId.LINK_DESCRIPTIONS],
         ToolIdentity("LibreOffice", "26.8.1.1"),
         ExportSettings("writer_pdf_Export"),
@@ -78,7 +79,7 @@ def test_calc_support_requires_independent_validator_acceptance(
     native_tools = replace(
         native_tools, validate=lambda *_args, **_kwargs: validation_result(False)
     )
-    execution = ProbeCache().run(
+    execution = measure_probe(
         PROBES[ProbeId.CALC_PDFUA],
         ToolIdentity("LibreOffice", "26.8.1.1"),
         ExportSettings("calc_pdf_Export"),
@@ -87,3 +88,26 @@ def test_calc_support_requires_independent_validator_acceptance(
     )
     assert execution.error is None
     assert execution.result.status == CapabilityStatus.UNSUPPORTED
+
+
+def test_repeating_an_experiment_after_failure_measures_again() -> None:
+    calls = []
+    probe = PROBES[ProbeId.LINK_DESCRIPTIONS]
+    control = fake_export(probe.id, supported=True)
+
+    def transient(source, destination, settings):
+        calls.append(source)
+        if len(calls) == 1:
+            message = "Transient controlled export failure"
+            raise ToolFailure(message)
+        return control(source, destination, settings)
+
+    identity = ToolIdentity("LibreOffice", "26.8.0.3")
+    settings = ExportSettings(probe.export_filter, "selected-office")
+    failed = measure_probe(probe, identity, settings, export=transient)
+    repeated = measure_probe(probe, identity, settings, export=transient)
+    assert failed.result.status is CapabilityStatus.NOT_TESTED
+    assert failed.error is not None
+    assert repeated.result.status is CapabilityStatus.SUPPORTED
+    assert repeated.error is None
+    assert len(calls) == 2

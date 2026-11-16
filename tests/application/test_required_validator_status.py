@@ -11,7 +11,7 @@ from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.families.probes import ProbeCache
+from odfa11y.families import probes as probe_operations
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -30,7 +30,7 @@ def successful_exports(native_tools: NativeTools, monkeypatch: pytest.MonkeyPatc
     native_tools = replace(
         native_tools, identify=lambda _path, **_options: ToolIdentity("LibreOffice", "26.8.0.3")
     )
-    monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
+    monkeypatch.setattr(probe_operations, "measure_probe", conclusive_probe)
 
     def export(_source: Path, destination: Path, _settings: object) -> Path:
         tagged_writer(["H1"]).write(destination)

@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 """Application use cases own input policy, continuation and effective result statuses."""
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from functools import wraps
 from pathlib import Path
 from typing import Literal
 lazy from collections.abc import Callable, Sequence
 
+from odfa11y.application.doctor import DoctorResult as DoctorResult
+from odfa11y.application.doctor import doctor as doctor
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.audit import prepare_plan
@@ -23,7 +25,6 @@ from odfa11y.remediate import remediate as apply_plan
 from odfa11y.report import exit_status, render_reports
 from odfa11y.run.comparison import compare_documents
 from odfa11y.run.context import RunSettings
-from odfa11y.run.diagnostics import inspect_tools
 from odfa11y.run.engine import execute
 from odfa11y.run.inspection import audit_document
 from odfa11y.run.native import export_document
@@ -32,7 +33,6 @@ from odfa11y.status import ExitStatus, combine_statuses, failure_status
 lazy from odfa11y.batch.record import BatchRecord
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import ProgressObserver
-lazy from odfa11y.records import DoctorRecord
 lazy from odfa11y.remediate import RemediationResult
 lazy from odfa11y.report import Report
 lazy from odfa11y.run.profiles import Profile
@@ -422,25 +422,6 @@ def run_batch(
         on_progress=observer,
         native_tools=native_tools,
     )
-
-
-@_interruptible
-def doctor(
-    *,
-    tools: Tools | None = None,
-    observer: ProgressObserver | None = None,
-    native_tools: NativeTools | None = None,
-) -> DoctorRecord:
-    """Measure dependency identities and every declared native capability.
-
-    Returns
-    -------
-    DoctorRecord
-        All observations, any controlled error and the effective execution status.
-
-    """
-    record, error = inspect_tools(tools or Tools(), on_progress=observer, native_tools=native_tools)
-    return replace(record, _error=error)
 
 
 @_interruptible

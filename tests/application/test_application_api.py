@@ -3,6 +3,7 @@
 
 import ast
 import json
+from dataclasses import replace
 lazy from collections.abc import Iterator
 lazy from pathlib import Path
 
@@ -10,9 +11,9 @@ import pytest
 
 import odfa11y as api
 from odfa11y.errors import IoFailure, ToolFailure
-from odfa11y.records import DoctorRecord, Toolchain
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
+from tests.fixtures.native import native_fakes
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.schema import assert_record_schema
@@ -119,13 +120,13 @@ def test_doctor_retains_controlled_error_and_uses_shared_tools(
     selected = api.Tools("office", "validator", 7)
     visited = []
 
-    def inspect(tools: api.Tools, **_options: object) -> tuple[DoctorRecord, ToolFailure]:
-        visited.append(tools)
-        return DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain()), failure
+    def unavailable(requested: str | Path | None) -> str:
+        visited.append(requested)
+        raise failure
 
-    monkeypatch.setattr("odfa11y.application.inspect_tools", inspect)
-    result = api.doctor(tools=selected)
-    assert visited == [selected]
+    native = replace(native_fakes(), locate=unavailable)
+    result = api.doctor(tools=selected, native_tools=native)
+    assert visited == ["office"]
     assert result.error is failure
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
     assert result.as_dict()["exit_status"] == 3

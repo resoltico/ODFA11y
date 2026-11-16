@@ -232,7 +232,7 @@ def _doctor(args: argparse.Namespace) -> int:
             "veraPDF": info.toolchain.verapdf.version if info.toolchain.verapdf else "not found",
             **{
                 f"{result.family.value}.{result.id.value}": result.status.value
-                for result in info.toolchain.capabilities
+                for result in info.capabilities
             },
         }
         for key, value in values.items():

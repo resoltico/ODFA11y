@@ -16,12 +16,13 @@ from odfa11y import __version__
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailure, ToolUnavailable
+from odfa11y.families import probes as probe_operations
 from odfa11y.families.probes import (
     CapabilityResult,
     CapabilityStatus,
-    ProbeCache,
     ProbeExecution,
     ProbeId,
+    measure_probe,
 )
 from odfa11y.families.text.probes import PROBES, write_link_probe
 from odfa11y.native.libreoffice import ExportSettings
@@ -123,7 +124,7 @@ def test_a_pdf_without_a_hyperlink_is_not_a_supported_verdict() -> None:
 
 
 def test_a_missing_libreoffice_propagates(tmp_path: Path) -> None:
-    execution = ProbeCache().run(
+    execution = measure_probe(
         PROBES[0],
         ToolIdentity("LibreOffice", "26.8.1.1"),
         ExportSettings(WRITER, soffice=tmp_path / "absent"),
@@ -145,7 +146,6 @@ def test_doctor_reports_the_capability(
     native_tools = reported_tools
 
     def verdict(
-        _cache: ProbeCache,
         descriptor: CapabilityProbe,
         identity: ToolIdentity,
         _settings: ExportSettings,
@@ -160,12 +160,12 @@ def test_doctor_reports_the_capability(
             )
         )
 
-    monkeypatch.setattr(ProbeCache, "run", verdict)
+    monkeypatch.setattr(probe_operations, "measure_probe", verdict)
     assert main(["doctor", "--format", "json"], native_tools=native_tools) == 0
     assert (
         next(
             item["status"]
-            for item in json.loads(capsys.readouterr().out)["toolchain"]["capabilities"]
+            for item in json.loads(capsys.readouterr().out)["capabilities"]
             if item["id"] == "link-descriptions"
         )
         == expected
@@ -182,8 +182,8 @@ def test_doctor_without_libreoffice_still_reports_and_fails(
     assert "error:" in captured.err
     info = json.loads(captured.out)
     assert info["toolchain"]["libreoffice"] is None
-    assert len(info["toolchain"]["capabilities"]) == len(ProbeId)
-    assert all(result["status"] == "not-tested" for result in info["toolchain"]["capabilities"])
+    assert len(info["capabilities"]) == len(ProbeId)
+    assert all(result["status"] == "not-tested" for result in info["capabilities"])
 
 
 @pytest.mark.usefixtures("reported_tools")
@@ -191,7 +191,7 @@ def test_doctor_reports_selected_tool_versions(
     reported_tools: NativeTools, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     native_tools = reported_tools
-    monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
+    monkeypatch.setattr(probe_operations, "measure_probe", conclusive_probe)
     assert main(["doctor", "--format", "json"], native_tools=native_tools) == 0
     info = json.loads(capsys.readouterr().out)
     assert info["odfa11y"] == __version__
@@ -208,7 +208,7 @@ def test_module_entry_point_runs_the_cli(
     reported_tools: NativeTools, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     native_tools = reported_tools
-    monkeypatch.setattr(ProbeCache, "run", conclusive_probe)
+    monkeypatch.setattr(probe_operations, "measure_probe", conclusive_probe)
     monkeypatch.setattr(sys, "argv", ["odfa11y", "doctor", "--format", "json"])
     monkeypatch.setattr("odfa11y.cli.main", lambda: main(native_tools=native_tools))
     with pytest.raises(SystemExit) as exit_info:
@@ -226,6 +226,6 @@ def probe_result(export: Callable[[Path, Path, ExportSettings], Path]) -> ProbeE
         The measured result and any controlled error.
 
     """
-    return ProbeCache().run(
+    return measure_probe(
         PROBES[0], ToolIdentity("LibreOffice", "26.8.1.1"), SETTINGS, export=export
     )

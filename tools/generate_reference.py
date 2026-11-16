@@ -265,7 +265,7 @@ def capability_reference() -> str:
     ]
     lines.extend(
         f"| `{result['id']}` | {result['family']} | {result['status']} |"
-        for result in toolchain["capabilities"]
+        for result in record["capabilities"]
     )
     lines += [
         "",
