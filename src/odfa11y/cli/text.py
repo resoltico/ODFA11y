@@ -138,6 +138,13 @@ def remedy_hint(remedy: api.Remedy) -> str:
     raise ValueError(message)
 
 
+def _recovery_lines(problems: Iterable[str], remedy: api.Remedy | None) -> list[str]:
+    lines = [line for problem in problems for line in _field("  - ", problem)]
+    if remedy is not None:
+        lines.append("  " + remedy_hint(remedy))
+    return lines
+
+
 def audit_next_step(result: api.AuditResult) -> str | None:
     for item in result.inputs:
         if item.plannable and any(report.decisions for report in item.reports):
@@ -190,7 +197,7 @@ def render_remediation(result: api.RemediationResult) -> str:
 def _stage_detail(stage: api.StageResult) -> str:
     match stage.outcome:
         case api.Refused(error=error) | api.Crashed(error=error):
-            return str(error)
+            return error.message
         case api.Skipped(reason=reason, stage=producer):
             return reason.value + (f": {producer.value}" if producer else "")
         case api.NotApplicable(reason=reason):
@@ -207,6 +214,9 @@ def render_run(record: api.RunRecord, directory) -> str:
     lines = [f"Profile: {record.profile.value}"]
     for stage in record.stages:
         lines += _field(f"- {stage.name.value}: {stage.outcome.status}; ", _stage_detail(stage))
+        if isinstance(stage.outcome, api.Refused | api.Crashed):
+            error = stage.outcome.error
+            lines += _recovery_lines(error.problems, error.remedy)
     lines += _field("Evidence: ", directory)
     lines += _field("Review: ", str(directory) + "/REVIEW.md")
     lines.append(render_verdict(record.exit_status, strict=record.strict))
@@ -222,6 +232,7 @@ def render_batch(record: api.BatchRecord, directory) -> str:
         )
         if item.error:
             lines += _field("  Reason: ", item.error.message)
+            lines += _recovery_lines(item.error.problems, item.error.remedy)
     lines += _field("Evidence: ", directory)
     lines.append(render_verdict(record.exit_status, strict=record.profile.strict))
     return "\n".join(lines)

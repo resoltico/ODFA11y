@@ -9,7 +9,7 @@ import pytest
 
 from odfa11y.cli import commands as cli_pipeline
 from odfa11y.cli import main
-from odfa11y.errors import DocumentRefusal, ToolFailure
+from odfa11y.errors import DocumentRefusal, Remedy, RemedyAction, ToolFailure
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
 from odfa11y.report import Report
@@ -18,6 +18,8 @@ from odfa11y.rules import registry as rules
 from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.run.review import render_review
 from odfa11y.status import Crashed, Passed, Profile, Refused
+from tests.batch.test_batch import write_batch_file
+from tests.fixtures.native import native_fakes
 from tests.fixtures.plans import plan_header
 from tests.fixtures.records import document_detection, record
 from tests.fixtures.writer import make_minimal_odt
@@ -165,3 +167,58 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     assert "native tool failed" in text
     assert "\x1b" not in text
     assert "\nCommand: completed" not in text
+
+
+def test_run_refusal_renders_structured_problems_and_embedding_remedy(tmp_path, capsys) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    plan = tmp_path / "plan.toml"
+    plan.write_text(plan_header(source))
+
+    def refuse(*args, **kwargs):
+        message = "Rendering resource is external"
+        raise DocumentRefusal(
+            message,
+            problems=("External chart\x1b[31m", "Embed the reviewed dependency"),
+            remedy=Remedy(RemedyAction.EMBED_RESOURCE, "Chart", "chart.png"),
+        )
+
+    native = replace(native_fakes(), export=refuse)
+    assert (
+        main(
+            ["run", str(source), "--plan", str(plan), "--output-dir", str(tmp_path / "out")],
+            native_tools=native,
+        )
+        == 2
+    )
+    output = capsys.readouterr().out
+    assert "External chart\\x1b[31m" in output
+    assert "Embed the reviewed dependency" in output
+    assert "Next: embed chart.png for Chart in the source application." in output
+    assert "\x1b" not in output
+
+
+def test_batch_preparation_error_renders_every_problem_and_plan_remedy(tmp_path, capsys) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    (tmp_path / "plan.toml").write_text(
+        plan_header(source) + "[first_unknown]\nvalue = 1\n[second_unknown]\nvalue = 2\n"
+    )
+    batch_file = write_batch_file(tmp_path, [("one", "source.odt", "plan.toml")])
+    assert (
+        main([
+            "batch",
+            str(batch_file),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--profile",
+            "source",
+        ])
+        == 4
+    )
+    output = capsys.readouterr().out
+    assert "first_unknown" in output
+    assert "second_unknown" in output
+    assert "Next: generate a fresh plan for this source and review its answers." in output
+    summary = json.loads((tmp_path / "out/batch.json").read_text())
+    problems = "\n".join(summary["items"][0]["error"]["problems"])
+    assert "first_unknown" in problems
+    assert "second_unknown" in problems

@@ -22,6 +22,7 @@
 - veraPDF parsing refuses incomplete jobs, inconsistent verdicts/rule counts and malformed bytes, including invalid UTF-8; incomplete validation cannot pass production.
 - All nine use cases return frozen contracts with derived exit status. Every command supports JSON; core owns plannability, remedies and SARIF preflight.
 - CLI text renders core facts before one verdict, with terminal escaping and one output writer. SIGTERM handling belongs to the CLI; library interruption propagates.
+- Run and batch text retain recorded refusal/preparation problems and typed recovery remedies.
 - Requires pypdf 6.21.4 or newer for security fixes; restore the refreshed lockfile, including the patched audit dependency set.
 - Use `python -m tools.check` for checks and dependency audits. CI verifies all stages with LibreOffice and veraPDF on Linux, macOS and Windows.
 - Source archives now contain only build metadata, README/license and runtime source/notices; clean rebuilds and installed-wheel examples qualify distributions.
