@@ -9,7 +9,7 @@ from odfa11y.errors import PackageError
 from odfa11y.odf import names as xml_names
 from odfa11y.odf.kinds import OASIS_PREFIX, kind_for_media_type
 from odfa11y.odf.names import NS, is_office_element
-from odfa11y.odf.storage import Part
+from odfa11y.odf.storage import Layout, Part
 from odfa11y.odf.xpath import select_elements
 lazy from odfa11y.odf.document import OdfDocument
 lazy from odfa11y.odf.kinds import DocumentKind
@@ -22,6 +22,8 @@ class Detection:
     """What the document says it is, where it said so, and what its body actually is."""
 
     kind: DocumentKind | None
+    layout: Layout
+    odf_version: str | None
     media_type: str | None
     declared_by: str
     manifest_media_type: str | None
@@ -48,6 +50,8 @@ def detect(document: OdfDocument) -> Detection:
         declared, declared_by = manifest, "manifest"
     return Detection(
         kind=kind_for_media_type(declared),
+        layout=document.layout,
+        odf_version=declared_version(document),
         media_type=declared,
         declared_by=declared_by if declared is not None else "none",
         manifest_media_type=manifest,

@@ -1017,7 +1017,7 @@
     "document": {
       "additionalProperties": false,
       "properties": {
-        "family": {
+        "body_element": {
           "anyOf": [
             {
               "type": "string"
@@ -1027,10 +1027,61 @@
             }
           ]
         },
+        "declared_by": {
+          "type": "string"
+        },
+        "extension": {
+          "type": "string"
+        },
         "kind": {
           "anyOf": [
             {
-              "type": "string"
+              "additionalProperties": false,
+              "properties": {
+                "body_element": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "deprecated": {
+                  "type": "boolean"
+                },
+                "extension": {
+                  "type": "string"
+                },
+                "family": {
+                  "enum": [
+                    "text",
+                    "spreadsheet",
+                    "presentation",
+                    "drawing",
+                    "formula",
+                    "chart",
+                    "image",
+                    "database"
+                  ]
+                },
+                "media_type": {
+                  "type": "string"
+                },
+                "template": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "media_type",
+                "family",
+                "extension",
+                "body_element",
+                "template",
+                "deprecated"
+              ],
+              "type": "object"
             },
             {
               "type": "null"
@@ -1038,6 +1089,12 @@
           ]
         },
         "layout": {
+          "enum": [
+            "package",
+            "flat"
+          ]
+        },
+        "manifest_media_type": {
           "anyOf": [
             {
               "type": "string"
@@ -1057,20 +1114,7 @@
             }
           ]
         },
-        "name": {
-          "type": "string"
-        },
         "odf_version": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "sha256": {
           "anyOf": [
             {
               "type": "string"
@@ -1082,13 +1126,14 @@
         }
       },
       "required": [
-        "name",
-        "sha256",
         "kind",
-        "media_type",
         "layout",
-        "family",
-        "odf_version"
+        "odf_version",
+        "media_type",
+        "declared_by",
+        "manifest_media_type",
+        "body_element",
+        "extension"
       ],
       "type": "object"
     },
@@ -1339,6 +1384,12 @@
         "type": "string"
       },
       "type": "object"
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "source_sha256": {
+      "type": "string"
     },
     "stages": {
       "items": {
@@ -71147,6 +71198,8 @@
   },
   "required": [
     "document",
+    "source_name",
+    "source_sha256",
     "fidelity_policy",
     "profile",
     "stages",

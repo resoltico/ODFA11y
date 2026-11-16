@@ -6,14 +6,30 @@ from dataclasses import replace
 from odfa11y.batch.record import BatchItemResult
 from odfa11y.errors import DocumentRefusal, PlanError, ToolFailure
 from odfa11y.families.text import SPEC
+from odfa11y.odf import Detection, Layout
+from odfa11y.odf.kinds import KINDS
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.run.record import DocumentIdentity, RunRecord, StageResult
+from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.status import GateFailed, Passed, Profile, Refused, Skipped, SkipReason
+
+
+def document_detection() -> Detection:
+    kind = KINDS["application/vnd.oasis.opendocument.text"]
+    return Detection(
+        kind=kind,
+        layout=Layout.PACKAGE,
+        odf_version="1.4",
+        media_type=kind.media_type,
+        declared_by="mimetype",
+        manifest_media_type=kind.media_type,
+        body_element="office:text",
+        extension=".odt",
+    )
 
 
 def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRecord:
@@ -43,7 +59,9 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
                 stages[index], outcome=Refused(DocumentRefusal("Controlled refusal"))
             )
     return RunRecord(
-        document=DocumentIdentity("doc.odt", "0" * 64),
+        document=document_detection(),
+        source_name="doc.odt",
+        source_sha256="0" * 64,
         fidelity_policy=Pagination.SAME(),
         profile=Profile.PDF,
         stages=tuple(stages),

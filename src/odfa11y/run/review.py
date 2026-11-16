@@ -16,7 +16,7 @@ NOT_VALIDATION = (
 
 def render_review(record: RunRecord, *, redactor: Redactor | None = None) -> str:
     """Render outstanding decisions, observed review topics and facts without duplicate audits."""
-    lines = [f"# Review sheet: {_cell(record.document.name)}", "", "## Needs a human", ""]
+    lines = [f"# Review sheet: {_cell(record.source_name)}", "", "## Needs a human", ""]
     lines += _attention(record, redactor) or [
         "- No outstanding machine finding or unanswered decision."
     ]

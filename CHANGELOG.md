@@ -4,6 +4,7 @@
 
 - Use `run`, `verify-evidence`, Python `batch()` and profile `pdf`; retired command/API aliases and the `verify` profile are refused.
 - Regenerate old plans and record consumers: `schema_version` replaces `format`, audit JSON always has `inputs`, and run records no longer contain `outputs` or capabilities.
+- Run records carry typed document detection; captured identity uses `source_name` and `source_sha256`. Update readers of the former flat document identity.
 - Use `plan NEW_SOURCE --from OLD_PLAN` after source changes; only matching kind/path/fingerprint answers carry live. `--rebind` is removed.
 - Plans contain finding-driven questions with context, live headers and inert unanswered blocks; `--all` adds optional overrides. Blank alternative text is refused.
 - Preview resolved and remaining findings with `remediate --dry-run`; successful edits can leave accessibility errors. Decorative intent requires an explicit reviewed role.

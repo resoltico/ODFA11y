@@ -78,3 +78,6 @@ Verify a stable directory whose ancestors cannot be replaced during inspection. 
 able to rewrite the bundle can rewrite its manifest: hashes establish recorded-file
 integrity, not authenticity, accessibility or review quality. Native rendering is compared
 within a run; cross-machine pixel identity is not claimed.
+
+Run records carry the typed ODF detection result in `document`, including its layout and
+structured kind/family. Captured identity is recorded separately as `source_name` and `source_sha256`.

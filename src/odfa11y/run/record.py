@@ -13,7 +13,7 @@ from typing import Literal
 from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.native.libreoffice import EXPORT_OPTIONS
 from odfa11y.native.tools import Toolchain
-from odfa11y.odf import provenance
+from odfa11y.odf import Detection, provenance
 from odfa11y.plans import Plan
 from odfa11y.status import (
     ExitStatus,
@@ -40,19 +40,6 @@ LIBRARIES = ("lxml", "pillow", "pypdf", "pypdfium2")
 
 
 @dataclass(frozen=True, slots=True)
-class DocumentIdentity:
-    """Captured source identity and its established document kind."""
-
-    name: str
-    sha256: str | None = None
-    kind: str | None = None
-    media_type: str | None = None
-    layout: str | None = None
-    family: str | None = None
-    odf_version: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
 class StageResult:
     """One declared stage and its single typed outcome."""
 
@@ -72,7 +59,9 @@ class StageResult:
 class RunRecord:
     """The ordered stage results of a run and the facts that identify it."""
 
-    document: DocumentIdentity
+    document: Detection
+    source_name: str
+    source_sha256: str
     fidelity_policy: FidelityPolicy
     profile: Profile
     stages: tuple[StageResult, ...] = ()

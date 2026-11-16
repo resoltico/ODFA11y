@@ -15,11 +15,11 @@ from odfa11y.progress import Stage
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.run.record import DocumentIdentity, RunRecord, StageResult
+from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.run.review import render_review
 from odfa11y.status import Crashed, Passed, Profile, Refused
 from tests.fixtures.plans import plan_header
-from tests.fixtures.records import record
+from tests.fixtures.records import document_detection, record
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -135,7 +135,9 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     source = Report(kind=ReportKind.ODF, subject="source.odt")
     source.raise_(rules.LINK001)
     data = RunRecord(
-        document=DocumentIdentity("doc.odt"),
+        document=document_detection(),
+        source_name="doc.odt",
+        source_sha256="0" * 64,
         fidelity_policy=Pagination.SAME(),
         profile=Profile.SOURCE,
     )
