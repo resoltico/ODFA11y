@@ -78,7 +78,9 @@ def test_changed_text_is_located_precisely(tmp_path: Path) -> None:
 def test_a_layout_shift_with_identical_text_fails_the_raster_gate(tmp_path: Path) -> None:
     left = text_pdf(tmp_path / "a.pdf", [LINES], top=180)
     right = text_pdf(tmp_path / "b.pdf", [LINES], top=140)
-    report = compare(tmp_path, left, right)
+    result = compare_pdfs(left, right, Pagination.SAME(), diff_dir=tmp_path / "diff")
+    report = result.report
+    assert result.images == (tmp_path / "diff" / "page-001-diff.png",)
     assert ids(report) == {rules.FIDELITY005.id}
     finding = report.findings[0]
     assert finding.details["page"] == 1

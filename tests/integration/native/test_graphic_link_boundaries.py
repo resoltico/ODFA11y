@@ -5,6 +5,7 @@ from copy import deepcopy
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
@@ -71,6 +72,7 @@ def _mixed_graphics(document: OdfDocument) -> etree._Element:
     return decoration
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_support(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -116,6 +118,7 @@ def test_native_mixed_graphic_roles_preserve_content_and_expose_missing_export_s
         assert validator.compliant
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_native_office_title_and_missing_title_control_measure_actual_exporter(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -156,6 +159,7 @@ def test_native_office_title_and_missing_title_control_measure_actual_exporter(
         assert validator.compliant
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

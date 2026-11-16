@@ -131,7 +131,13 @@ NATIVE001 = _rule(
 NATIVE002 = _rule(
     "NATIVE002",
     WARNING,
-    "Pipeline export cannot preserve filename/path fields.",
+    "Private export cannot preserve filename/path fields.",
+    detail_fields={"count": int},
+)
+NATIVE003 = _rule(
+    "NATIVE003",
+    WARNING,
+    "Relative hyperlink destinations are unestablished for private export.",
     detail_fields={"count": int},
 )
 META001 = _rule("META001", ERROR, "Document title metadata is missing.")

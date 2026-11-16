@@ -1,62 +1,67 @@
 # Evidence bundles
 
-Use `pipeline --output-dir DIR` to retain decisions, stage results and human-review needs.
-A failure can produce a valid bundle; integrity does not imply passing gates.
+Use `pipeline --output-dir DIR` to retain decisions, stage outcomes and human-review needs.
+A failed run can produce a valid bundle; integrity does not imply passing gates.
 
 ```text
-manifest.json        SHA-256 of every other published file
-run.json             typed run record
-REVIEW.md            automated outcomes and required human review
-remediated.<ext>     when candidate publication passed
-source.pdf           when baseline export completed
+manifest.json        SHA-256 of every other declared published file
+run.json             immutable run record (schema_version = 1)
+REVIEW.md            outstanding human work, observed checklist topics and facts
+remediated.<ext>     when remediation guards produced a candidate
+source.pdf           when source export completed
 remediated.pdf       when candidate export completed
-verapdf.xml          available validator output, with diagnostic paths redacted
-fidelity/            available rendered differences
+verapdf.xml          parsed validator XML, with diagnostic paths redacted
+diff/                declared rendered difference images
 ```
 
 The destination must be absent or empty. A temporary sibling publishes with one rename.
-Completed artifacts survive later gate failures; unsafe destinations/publication failures
-can prevent evidence publication. [Batch](BATCH.md) requires a new output root.
+Completed artifacts survive later gate failures. Unsafe destinations or publication failures
+can prevent publication. [Batch](BATCH.md) requires a new output root; item preparation errors
+appear only in `batch.json`, without a fabricated run or an item bundle.
 
 ## Consume the record
 
 Use the shipped [JSON Schemas](SCHEMAS.md). `run.json` records source identity, plan header,
-answered decisions, operations, policy/profile, stages, tool identities,
-scoped capability results, schema assurance, fonts, outputs and required human review.
-Unknown identities remain null. Reports carry registered typed facts.
+answered decisions, fidelity policy, profile, typed stage outcomes, tool identities, schema
+assurance, fonts and human-review topics. Unknown measurements remain null. Reports carry
+producer-owned typed facts. Only doctor records contain capability experiments.
 
-`plan_sha256` hashes canonical plan/decisions, operations, fidelity policy and profile,
-independently of TOML formatting. `outputs` identifies stage artifacts; the manifest also
-hashes the generated run/review files, avoiding a self-reference. Published records have
-sorted keys and no timestamps. Native PDFs can still have variable timestamps/IDs.
-Reported tool versions do not authenticate executables.
+`plan_sha256` hashes canonical plan/decisions, fidelity policy and profile independently of
+TOML formatting. The manifest owns all file hashes, including run/review files; there is no
+run-record `outputs` hash map. Records have sorted keys and no timestamps. Native PDFs can
+still have variable timestamps/IDs. Reported tool versions do not authenticate executables.
+
+A stage executes when its declared inputs exist. Candidate findings do not block its PDF
+export; validator failure does not block fidelity. A source audit that cannot establish
+readability supplies no remediation/export input. A refused candidate is never exported.
 
 ## Privacy
 
-Designated diagnostics redact known source/work/output/profile directories and other path
-directories before JSON/XML serialization. Validator XML is a redacted diagnostic report,
-not a byte-raw transcript. In-memory/local diagnostics are not universally path-free.
+Diagnostic artifacts redact known source/capture/work/output/profile locations and other
+local directories before JSON/XML serialization and Markdown escaping. Validator XML is a
+redacted diagnostic report, not a raw-byte transcript. Original report bytes are parsed
+without replacement decoding. In-memory diagnostics are not universally path-free.
 ODF/PDF/image payloads and authored wording/references can retain private content. Treat
 bundles with the source's confidentiality; do not attach private bundles to public issues.
 
 ## Source capture
 
-Planning, remediation and pipeline audits bind to bounded private regular-file captures.
-Pipeline captures beside the resolved source and uses those exact inspected bytes for
-binding and execution. Aliases resolve first; opened descriptor device/inode identity must
-match the selected file. Nonregular/substituted files refuse before reading. POSIX uses
-anti-symlink open where available; Windows also checks descriptor identity.
+Every use case captures each source once in a private temporary directory, never beside
+the user's file. Its digest, original identity and opened document are reused. Aliases
+resolve first; the opened descriptor must match the selected device/inode. Nonregular or
+substituted files refuse before reading. POSIX uses anti-symlink open where available;
+Windows also checks descriptor identity.
 
 Capture permits at most 256 MiB of physical bytes, checked before/during copy, separately
-from ZIP's declared-uncompressed budget. Owned partial files are removed on ordinary
-failure/interruption. Baseline/candidate native copies retain their logical source-directory
-context and are removed afterward; original input bytes are not an evidence artifact.
+from ZIP's declared-uncompressed budget. Changes to size/mtime during capture refuse.
+Owned partial files are removed on failure/interruption. Source directories need no write
+access. Original input bytes are not themselves a declared evidence artifact.
 
-Source, staging and ancestor namespaces must remain stable and writable for private files.
-Leaf identity does not protect parent/resource-directory exchange or concurrent in-place
-writes. Capture does not fetch/rewrite dependencies or isolate the network. Captured
-filename/path-sensitive export refuses; direct original export/comparison can retain
-identity. See [native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies).
+Source and ancestor namespaces must remain stable during selection. Capture does not fetch
+or rewrite dependencies or isolate the network. Private native export refuses filename/path
+fields and relative hyperlink destinations, including XML-base cases. Use absolute link
+destinations or source-only inspection/remediation. See
+[native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies).
 
 ## Verify recorded files
 
@@ -64,13 +69,12 @@ identity. See [native context](ACCESSIBILITY.md#native-document-context-and-decl
 uv run --no-sync odfa11y verify evidence
 ```
 
-The manifest must be exactly `{"format": 1, "files": {…}}`, with normalized relative paths
-and 64-hex digests. Missing, modified, unlisted, unsafe, linked or special files produce
+The manifest has exactly `{"bundle_version": 1, "files": {…}}`, with normalized relative
+paths and 64-hex digests. Missing, modified, unlisted, unsafe, linked or special files produce
 status 2. Only root `manifest.json` is exempt; nested manifests are ordinary data.
 Listed components are traversed without following links outside the bundle.
 
 Verify a stable directory whose ancestors cannot be replaced during inspection. Someone
 able to rewrite the bundle can rewrite its manifest: hashes establish recorded-file
-integrity, not authenticity, accessibility or review quality. `REVIEW.md` keeps human
-acceptance separate from automated checks. Native rendering is compared within a run;
-cross-machine pixel identity is not claimed.
+integrity, not authenticity, accessibility or review quality. Native rendering is compared
+within a run; cross-machine pixel identity is not claimed.

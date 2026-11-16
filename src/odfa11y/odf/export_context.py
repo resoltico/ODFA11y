@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Identify declared rendering dependencies and location-sensitive document fields."""
 
+import re
 from itertools import starmap
 from urllib.parse import urlsplit
 
@@ -15,7 +16,8 @@ lazy from odfa11y.odf import OdfDocument
 
 MAX_EMBEDDED_OBJECTS = 64
 XML_BASE = xml_names.XML_BASE
-# Attribute and addressing contract from ODF Part 3; navigation is deliberately absent.
+URI_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+# Rendering declarations from ODF Part 3; navigation has a separate capture-context check.
 # Unestablished dynamic import/execution declarations are refused even for internal URIs.
 RESOURCE_TARGETS = {
     **dict.fromkeys(
@@ -90,7 +92,7 @@ RESOURCE_TARGETS = {
 
 
 def native_export_limitations(document: OdfDocument) -> dict[str, int]:
-    """Count unresolved/unestablished declared resources and filename/path fields.
+    """Count unestablished resources, identity fields and location-dependent navigation.
 
     Ordinary navigational links are excluded. This is a narrow declaration preflight, not
     a sandbox or a proof that native importers load every embedded payload correctly.
@@ -111,7 +113,7 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
 
 def _analyze_export_context(document: OdfDocument) -> dict[str, int]:
     resources = ResourceIdentity(document.storage)
-    dependencies = fields = 0
+    dependencies = fields = relative_navigation = 0
     formulas = FormulaAnalysis()
     inspected = origins = 0
     trees, incomplete = _reachable_trees(document)
@@ -122,6 +124,7 @@ def _analyze_export_context(document: OdfDocument) -> dict[str, int]:
         origins += bool(context.inspected)
         for node in tree.iter():
             fields += node.tag == xml_names.TEXT_FILE_NAME
+            relative_navigation += _relative_navigation(node)
             target = RESOURCE_TARGETS.get(node.tag)
             if target is not None:
                 attribute, shape = target
@@ -146,6 +149,7 @@ def _analyze_export_context(document: OdfDocument) -> dict[str, int]:
         + formulas.incomplete
         + incomplete,
         "location_fields": fields + formulas.identity,
+        "relative_navigation": relative_navigation,
     }
     if inspected or incomplete:
         limits.update(
@@ -264,6 +268,33 @@ def require_native_context(document: OdfDocument, *, captured_identity: bool = F
                 "Review formula context and rendering dependencies.",
             ),
         )
+
+    if captured_identity and limits["relative_navigation"]:
+        trees, _ = _reachable_trees(document)
+        link = next(node for _, tree in trees for node in tree.iter() if _relative_navigation(node))
+        label = link.get(xml_names.OFFICE_NAME) or link.get(xml_names.DRAW_NAME) or "hyperlink"
+        message = (
+            "Native export cannot preserve relative destination for "
+            f"{label!r} from private staging; "
+            "make the link destination absolute in the authoring application."
+        )
+        raise DocumentRefusal(
+            message,
+            remedy=Remedy(
+                RemedyAction.EDIT_IN_APPLICATION,
+                label,
+                "Set an absolute link destination. "
+                "XML base does not establish native preservation.",
+            ),
+        )
+
+
+def _relative_navigation(node: etree._Element) -> bool:
+    if node.tag not in {xml_names.TEXT_A, xml_names.DRAW_A}:
+        return False
+    href = node.get(xml_names.XLINK_HREF, "")
+    # LibreOffice resolves these against the input location even with an XML base.
+    return bool(href and not href.startswith("#") and not URI_SCHEME.match(href))
 
 
 def _resource_refusal(document: OdfDocument) -> DocumentRefusal | None:

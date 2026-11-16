@@ -4,6 +4,8 @@
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
+
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
@@ -32,6 +34,7 @@ from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -66,6 +69,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     assert validate_pdfua(pdf, executable=verapdf).compliant
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_headers(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -101,8 +105,8 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
         ),
     )
     assert record.failed_stage == "audit-pdf", "\n".join(
-        f"{stage.name}: {stage.reason}\n{stage.details or ''}"
+        f"{stage.name}: {stage.outcome}"
         for stage in record.stages
-        if stage.outcome.status == "failed"
+        if stage.outcome.status in {"gate-failed", "refused", "crashed"}
     )
     assert not record.passed

@@ -6,6 +6,7 @@ import json
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
 from lxml import etree
 
 from odfa11y.application.tools import Tools
@@ -18,6 +19,7 @@ from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_native_published_artifact_syntax_content_and_identity(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

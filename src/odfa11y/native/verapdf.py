@@ -64,10 +64,10 @@ def run_verapdf(
     if completed.stdout_truncated:
         msg = f"veraPDF output exceeded {max_report_bytes} bytes"
         raise ToolFailure(msg)
-    if completed.returncode != 0 and not completed.stdout.strip():
+    if completed.returncode != 0 and not completed.stdout_bytes.strip():
         msg = f"veraPDF failed (exit status {completed.returncode})."
         raise ToolFailure(msg, details=completed.stderr.strip())
-    return ValidationOutput(completed.stdout.encode("utf-8"), completed.stderr, tool.identity)
+    return ValidationOutput(completed.stdout_bytes, completed.stderr, tool.identity)
 
 
 class Validator(Protocol):

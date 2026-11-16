@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """Execute the stage table and derive an immutable record from completed outcomes."""
 
+from dataclasses import replace
 from pathlib import Path
 
 from odfa11y.odf import declared_version
 from odfa11y.records import DocumentIdentity, Toolchain
+from odfa11y.remediate.result import PublicationState
 from odfa11y.run.publication import publish_evidence
 from odfa11y.run.record import RunRecord
 from odfa11y.run.stages import STAGES, run_stage
@@ -27,6 +29,20 @@ def execute(state: RunState, target: Path) -> RunRecord:
     for spec in STAGES:
         state, result = run_stage(spec, state)
         stages.append(result)
+    if state.candidate_path is not None:
+        stages = [
+            replace(
+                stage,
+                remediation=replace(
+                    stage.remediation,
+                    publication=PublicationState.PUBLISHED,
+                    _destination=target / state.candidate_path.name,
+                ),
+            )
+            if stage.remediation is not None
+            else stage
+            for stage in stages
+        ]
     record = RunRecord(
         document=identity,
         fidelity_policy=state.plan.fidelity,

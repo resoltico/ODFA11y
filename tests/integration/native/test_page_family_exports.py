@@ -29,6 +29,7 @@ lazy from tests.fixtures.answers import graphic_inputs, page_inputs
 
 
 @pytest.mark.parametrize("family", FAMILIES)
+@pytest.mark.usefixtures("required_verapdf")
 def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls(
     tmp_path: Path, family: str, external_tool: Callable[..., str]
 ) -> None:
@@ -63,6 +64,7 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
     )
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_described_illustration_only_draw_export_passes_both_content_checks(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

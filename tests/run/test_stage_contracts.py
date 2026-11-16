@@ -2,6 +2,7 @@
 """Negative controls for the delivered artifact-dependent execution mechanism."""
 
 import importlib
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -10,13 +11,17 @@ import pytest
 from odfa11y.application import run
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions.edit import EditResult, Outcome, Status
-from odfa11y.odf import OdfDocument, Part, select_elements
+from odfa11y.evidence import check_bundle
+from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.progress import Stage
 from odfa11y.remediate.execute import execute_decisions
+from odfa11y.remediate.result import PublicationState
+from odfa11y.rules import registry as rules
 from odfa11y.run.record import StageResult
-from odfa11y.status import NotApplicable, Profile, Refused, Skipped, SkipReason
+from odfa11y.status import GateFailed, NotApplicable, Profile, Refused, Skipped, SkipReason
 from tests.fixtures.answers import fault_input, materialize, metadata_input
 from tests.fixtures.native import native_fakes, recording
+from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.records import record
 from tests.fixtures.writer import make_minimal_odt
@@ -138,3 +143,62 @@ def test_undeclared_scratch_file_is_not_published(tmp_path: Path) -> None:
     )
     assert result.exit_status == 0
     assert not (tmp_path / "bundle" / "unrelated.txt").exists()
+
+
+def test_difference_image_is_declared_and_inventoried(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+
+    def export(path, output, settings):
+        return text_pdf(
+            output,
+            [["The same words move vertically."]],
+            top=140 if path.name.startswith("remediated") else 180,
+        )
+
+    result = run(
+        source,
+        reviewed_plan(source),
+        tmp_path / "bundle",
+        native_tools=replace(native_fakes(), export=export),
+    )
+    fidelity = next(stage for stage in result.stages if stage.name == Stage.FIDELITY)
+    assert fidelity.report is not None
+    assert rules.FIDELITY005.id in {finding.rule_id for finding in fidelity.report.findings}
+    manifest = json.loads((tmp_path / "bundle" / "manifest.json").read_text())
+    assert "diff/page-001-diff.png" in manifest["files"]
+    assert check_bundle(tmp_path / "bundle") == []
+
+
+def test_unreadable_source_audit_establishes_no_remediation_or_export_input(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    package = PackageStorage(source)
+    package.write_member("styles.xml", b"<broken")
+    package.save(source)
+    calls = []
+    result = run(
+        source,
+        reviewed_plan(source),
+        tmp_path / "bundle",
+        native_tools=replace(native_fakes(), export=recording(calls)),
+    )
+    outcomes = {stage.name: stage.outcome for stage in result.stages}
+    assert isinstance(outcomes[Stage.AUDIT_SOURCE], GateFailed)
+    assert outcomes[Stage.REMEDIATE] == Skipped(SkipReason.MISSING_INPUT, Stage.AUDIT_SOURCE)
+    assert outcomes[Stage.EXPORT_SOURCE] == Skipped(SkipReason.MISSING_INPUT, Stage.AUDIT_SOURCE)
+    assert not calls
+    assert not (tmp_path / "bundle" / "remediated.odt").exists()
+    assert result.exit_status == 2
+
+
+def test_run_record_describes_the_published_candidate_not_an_internal_preview(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    result = run(source, reviewed_plan(source), tmp_path / "bundle", profile=Profile.SOURCE)
+    remediation = next(
+        stage.remediation for stage in result.stages if stage.name == Stage.REMEDIATE
+    )
+    assert remediation is not None
+    assert remediation.publication is PublicationState.PUBLISHED
+    assert remediation.destination == tmp_path / "bundle" / "remediated.odt"
+    assert remediation.destination.is_file()

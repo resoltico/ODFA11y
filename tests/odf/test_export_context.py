@@ -12,6 +12,7 @@ from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn
+from odfa11y.odf import names as xml_names
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
@@ -71,6 +72,7 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
     assert native_export_limitations(document) == {
         "rendering_dependencies": 0,
         "location_fields": 0,
+        "relative_navigation": 0,
     }
     require_native_context(document, captured_identity=True)
     result = execute(
@@ -130,3 +132,22 @@ def test_navigation_xml_base_is_not_a_render_dependency(tmp_path: Path) -> None:
     document.save(source)
     require_native_context(OdfDocument.open(source), captured_identity=True)
     assert native_export_limitations(OdfDocument.open(source))["rendering_dependencies"] == 0
+
+
+@pytest.mark.parametrize("href", ["assets/guide.html", "../guide.html", "?query"])
+@pytest.mark.parametrize("xml_base", [None, "https://example.test/base/"])
+def test_relative_navigation_is_observed_and_refused_only_for_captured_export(
+    tmp_path: Path, href, xml_base
+) -> None:
+    source = writer_resource(tmp_path, navigation=href)
+    document = OdfDocument.open(source)
+    if xml_base:
+        next(document.tree(Part.CONTENT).iter(xml_names.TEXT_A)).set(xml_names.XML_BASE, xml_base)
+        document.save(source)
+    report = audit_odf(source)
+    assert rules.NATIVE003.id in {finding.rule_id for finding in report.findings}
+    require_native_context(document)
+    with pytest.raises(DocumentRefusal, match="relative destination") as failure:
+        require_native_context(document, captured_identity=True)
+    assert failure.value.remedy is not None
+    assert failure.value.remedy.target == "Read the guide"

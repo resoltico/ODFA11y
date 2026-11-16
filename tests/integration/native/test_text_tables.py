@@ -22,6 +22,7 @@ from tests.fixtures.paths import TESTS
 
 
 @pytest.mark.parametrize("case", ["positive", "negative", "data-no-headers"])
+@pytest.mark.usefixtures("required_verapdf")
 def test_writer_table_classification_and_pdf_scope(
     case: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

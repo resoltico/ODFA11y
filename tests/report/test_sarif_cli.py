@@ -41,6 +41,7 @@ def test_audit_sarif_mixes_odf_pdf_and_validation_reports_without_local_paths(
         "sarif",
         "--source-root",
         str(tmp_path),
+        "--validate",
         "--verapdf",
         str(tmp_path / "missing-validator"),
     ]
@@ -87,9 +88,10 @@ def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_de
     generated: list[Path] = []
 
     def exporter(input_path: Path, destination: Path, _settings: ExportSettings) -> Path:
-        assert input_path in {source, candidate}
+        assert input_path not in {source, candidate}
+        assert input_path.name in {source.name, candidate.name}
         generated.append(destination)
-        line = "Unchanged" if input_path == source else "Changed"
+        line = "Unchanged" if input_path.name == source.name else "Changed"
         return text_pdf(destination, [[line]])
 
     native_tools = replace(native_tools, export=exporter)
@@ -153,7 +155,7 @@ def test_malformed_existing_inputs_still_produce_valid_private_sarif(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], suffix: str
 ) -> None:
     source = tmp_path / f"malformed.{suffix}"
-    source.write_bytes(b"%PDF-invalid" if suffix == "pdf" else b"invalid ZIP document")
+    source.write_bytes(b"%PDF-invalid" if suffix == "pdf" else b"PK\x03\x04invalid ZIP document")
     assert (
         main([
             "audit",

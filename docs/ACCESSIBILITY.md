@@ -125,11 +125,14 @@ declared layout alone does not prove native use/order.
 
 ## Native document context and declared dependencies
 
-Guarded export/comparison/pipeline classify known declarations without fetching resources.
+Guarded export, comparison and runs classify known declarations without fetching resources.
 `NATIVE001` identifies external, unresolved, incorrectly addressed or unestablished loading/
 execution context. Inline/exact package files or subdocuments can pass, but presence does
-not prove decoding/loading. Captured filename/path fields (`NATIVE002`) refuse; original
-export/comparison can retain identity. See [source capture](EVIDENCE.md#source-capture).
+not prove decoding/loading. Private captures cannot preserve filename/path fields (`NATIVE002`)
+or relative hyperlink destinations (`NATIVE003`), so native operations refuse them without
+rewriting authored content. Make hyperlink destinations absolute; XML base alone does not
+establish LibreOffice preservation. Source-only audit and remediation remain available.
+See [source capture](EVIDENCE.md#source-capture).
 
 The [native policy](../src/odfa11y/odf/export_context.py) covers content/styles/meta,
 reachable embedded ODF, reloads, fill/bullet images, chart symbols, SVG definitions/fonts,
@@ -141,7 +144,7 @@ Navigation/template provenance differs from loaded image data. Presentation show
 are navigation; execution/applets/scripts and nonempty form/table/text database, service
 or DDE bindings remain unestablished despite cached values. Empty named bindings identify
 no concrete dependency. Opaque internals/dynamic importer behavior remain outside inspection.
-Raw `native.export.export_pdfua` callers own guard policy/isolation.
+Raw `native.libreoffice.export_pdfua` callers own guard policy/isolation.
 
 ## Formula declarations
 

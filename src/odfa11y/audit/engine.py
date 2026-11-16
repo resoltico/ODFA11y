@@ -163,3 +163,5 @@ def _audit_export_context(document: OdfDocument, report: Report) -> None:
         report.raise_(rules.NATIVE001, details={"count": limits["rendering_dependencies"]})
     if limits["location_fields"]:
         report.raise_(rules.NATIVE002, details={"count": limits["location_fields"]})
+    if limits["relative_navigation"]:
+        report.raise_(rules.NATIVE003, details={"count": limits["relative_navigation"]})

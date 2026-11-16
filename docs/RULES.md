@@ -76,7 +76,8 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `META003` | Warning | Metadata and default style languages disagree. | `document.metadata` |
 | `META004` | Warning | Document language syntax or default-style target is unresolved. |  |
 | `NATIVE001` | Warning | Native resource declarations are unresolved or unestablished. |  |
-| `NATIVE002` | Warning | Pipeline export cannot preserve filename/path fields. |  |
+| `NATIVE002` | Warning | Private export cannot preserve filename/path fields. |  |
+| `NATIVE003` | Warning | Relative hyperlink destinations are unestablished for private export. |  |
 | `NOTE001` | Warning | Notes or annotations need relationship and reading-order review. |  |
 | `NOTE002` | Error | Note reference class differs from its destination. |  |
 | `NOTE003` | Error | Note anchor, citation or body relationship is incomplete. |  |

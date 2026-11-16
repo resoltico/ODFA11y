@@ -7,9 +7,11 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
+from odfa11y.errors import DocumentRefusal, RemedyAction
 from odfa11y.evidence import check_bundle
-from odfa11y.native.libreoffice import export_pdfua
+from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
@@ -25,6 +27,7 @@ from tests.fixtures.writer import make_minimal_odt
 
 
 @pytest.mark.parametrize("layout", ["flat", "native-package", "alias", "navigation-base"])
+@pytest.mark.usefixtures("required_verapdf")
 def test_supported_context_retains_real_pixels_text_and_relative_navigation(
     tmp_path: Path, external_tool: Callable[..., str], layout: str
 ) -> None:
@@ -135,3 +138,35 @@ def _set_navigation_base(source: Path) -> None:
     assert link is not None
     link.set("{http://www.w3.org/XML/1998/namespace}base", "https://example.test/docs/")
     document.save(source)
+
+
+@pytest.mark.parametrize("xml_base", [False, True])
+def test_private_capture_refuses_location_dependent_navigation_before_native_export(
+    tmp_path: Path,
+    external_tool: Callable[..., str],
+    *,
+    xml_base: bool,
+) -> None:
+    source = writer_resource(tmp_path, navigation="assets/nested/guide.html")
+    if xml_base:
+        _set_navigation_base(source)
+    original = source.read_bytes()
+    tools = Tools(soffice=external_tool("soffice", "libreoffice"))
+    office = tools.resolve(libreoffice=True).libreoffice
+    assert office is not None
+    direct = export_pdfua(
+        source, tmp_path / "direct.pdf", ExportSettings("writer_pdf_Export", office)
+    )
+    assert any(uri.startswith("file:") for uri, count in read_snapshot(direct).links)
+    with pytest.raises(DocumentRefusal, match="relative destination") as failure:
+        export_document(source, tmp_path / "captured.pdf", tools)
+    assert failure.value.exit_status == 2
+    assert failure.value.remedy is not None
+    assert failure.value.remedy.action is RemedyAction.EDIT_IN_APPLICATION
+    assert not (tmp_path / "captured.pdf").exists()
+    result = execute(source, reviewed_plan(source), tmp_path / "evidence", RunSettings(tools=tools))
+    assert result.exit_status == 2
+    assert not (tmp_path / "evidence" / "source.pdf").exists()
+    assert not (tmp_path / "evidence" / "remediated.pdf").exists()
+    assert check_bundle(tmp_path / "evidence") == []
+    assert source.read_bytes() == original

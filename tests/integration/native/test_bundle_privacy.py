@@ -5,6 +5,7 @@ import re
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
 from lxml import etree
 
 from odfa11y.application.tools import Tools
@@ -13,6 +14,7 @@ from tests.evidence.test_bundle_privacy import assert_path_free, run, workspace
 from tests.fixtures.runs import RunSettings
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_raw_tool_reports_of_a_real_run_are_not_leaked(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

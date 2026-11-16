@@ -11,7 +11,7 @@ from odfa11y.contracts import JsonProperty
 from odfa11y.errors import IoFailure, OdfA11yError
 from odfa11y.native.libreoffice import ExportSettings, export_pdfua
 from odfa11y.native.tools import VeraPdf
-from odfa11y.native.verapdf import Validator
+from odfa11y.native.verapdf import Validator, run_verapdf
 from odfa11y.progress import Step, StepState, step
 from odfa11y.rules.registry import Rule
 from odfa11y.tool_identity import ToolIdentity
@@ -123,7 +123,7 @@ def measure_probe(
     verapdf: VeraPdf | None = None,
     observer: ProgressObserver | None = None,
     export: Exporter | None = None,
-    validate: Validator | None = None,
+    validate: Validator = run_verapdf,
 ) -> ProbeExecution:
     with step(observer, Step.PROBE_CAPABILITIES) as progress:
         try:

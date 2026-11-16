@@ -19,6 +19,7 @@ SEQUENCE = re.compile(rb"/[A-Za-z0-9]+\s*<<\s*/MCID\s+(\d+)\s*>>\s*BDC")
 
 
 @pytest.mark.parametrize("defect", ["unreferenced", "untagged"])
+@pytest.mark.usefixtures("required_verapdf")
 def test_content_errors_agree_with_verapdf_on_a_damaged_real_export(
     tmp_path: Path, external_tool: Callable[..., str], defect: str
 ) -> None:

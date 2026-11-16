@@ -148,3 +148,18 @@ def test_malformed_compliance_boolean_is_a_tool_failure() -> None:
     xml = report_xml(compliant=True).replace('isCompliant="true"', 'isCompliant="perhaps"')
     with pytest.raises(ToolFailure, match="malformed isCompliant"):
         parse_validation(xml.encode())
+
+
+def test_native_report_bytes_are_not_repaired_before_xml_validation(tmp_path: Path) -> None:
+    body = REPORT.format(status="normal", compliant="true", failed=0, rules="").encode()
+    body = body.replace(b"</report>", b"<unused>\xff</unused></report>")
+    payload = tmp_path / "raw-report.xml"
+    payload.write_bytes(body)
+    executable = stub(tmp_path, "placeholder")
+    executable.write_text(
+        f'@echo off\r\ntype "{payload}"\r\n'
+        if os.name == "nt"
+        else "#!/bin/sh\ncat " + shlex.quote(str(payload)) + "\n"
+    )
+    with pytest.raises(ToolFailure, match="parse the veraPDF report as XML"):
+        validate_pdfua(tmp_path / "input.pdf", executable=executable)

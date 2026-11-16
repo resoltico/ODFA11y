@@ -20,8 +20,8 @@ Audit ODF or PDF files without changing them.
 | `-h, --help` | 0 | no |  | show this help message and exit |
 | `sources` | + | yes |  |  |
 | `--schema` | 0 | no | False | Validate ODF files against the ODF schema. |
-| `--verapdf` | 0 | no | False | Validate PDF files with veraPDF (PDF/UA-1). |
-| `--verapdf-path` | 1 | no |  | veraPDF executable (implies --verapdf); default: PATH. |
+| `--validate` | 0 | no | False | Validate PDFs with veraPDF (PDF/UA-1). |
+| `--verapdf` | 1 | no |  | Select the veraPDF executable; default: PATH. |
 | `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json, sarif |  |
 | `--source-root` | 1 | no |  | Confined source root, required for SARIF. |
@@ -49,6 +49,7 @@ Apply reviewed decisions to a separate ODF document.
 | `destination` | 1 | yes |  |  |
 | `--plan` | 1 | yes |  | Source-bound TOML plan. |
 | `--dry-run` | 0 | no | False | Report outcomes without writing. |
+| `--replace` | 0 | no | False | Atomically replace an existing regular file. |
 | `--format` | 1 | no | text; choices: text, json |  |
 
 ## export
@@ -60,6 +61,7 @@ Export an ODF document to PDF/UA with LibreOffice.
 | `-h, --help` | 0 | no |  | show this help message and exit |
 | `source` | 1 | yes |  |  |
 | `destination` | 1 | yes |  |  |
+| `--replace` | 0 | no | False | Replace an existing regular file. |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
 | `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 
@@ -90,8 +92,8 @@ Remediate, export, validate, compare and keep evidence.
 | `source` | 1 | yes |  |  |
 | `--plan` | 1 | yes |  | Source-bound TOML plan. |
 | `--output-dir` | 1 | yes |  | Evidence directory to create. |
-| `--profile` | 1 | no | verify; choices: source, verify, production | Assurance profile (default: verify): source checks source/remediation; verify adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
-| `--verapdf-path` | 1 | no |  | veraPDF executable for the production profile. |
+| `--profile` | 1 | no | pdf; choices: source, pdf, production | Assurance profile (default: pdf): source checks source/remediation; pdf adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
+| `--verapdf` | 1 | no |  | veraPDF executable for the production profile. |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
 | `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json |  |
@@ -105,8 +107,8 @@ Run independent manifest items and retain aggregate evidence.
 | `-h, --help` | 0 | no |  | show this help message and exit |
 | `manifest` | 1 | yes |  |  |
 | `--output-dir` | 1 | yes |  |  |
-| `--profile` | 1 | no | verify; choices: source, verify, production | Assurance profile (default: verify): source checks source/remediation; verify adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
-| `--verapdf-path` | 1 | no |  |  |
+| `--profile` | 1 | no | pdf; choices: source, pdf, production | Assurance profile (default: pdf): source checks source/remediation; pdf adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
+| `--verapdf` | 1 | no |  |  |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
 | `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
 | `--format` | 1 | no | text; choices: text, json |  |
@@ -129,7 +131,7 @@ Show tool and dependency versions and what the PDF export supports.
 | `-h, --help` | 0 | no |  | show this help message and exit |
 | `--soffice` | 1 | no |  | LibreOffice executable. |
 | `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
-| `--verapdf-path` | 1 | no |  | Selected veraPDF executable. |
+| `--verapdf` | 1 | no |  | Selected veraPDF executable. |
 | `--format` | 1 | no | text; choices: text, json |  |
 
 ## Exit statuses

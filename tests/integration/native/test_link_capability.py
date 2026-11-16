@@ -26,6 +26,7 @@ from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_doctor_agrees_with_the_audit_of_a_real_export(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], external_tool: Callable[..., str]
 ) -> None:
@@ -81,11 +82,15 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     assert record.toolchain.libreoffice.version == doctor["toolchain"]["libreoffice"]["version"]
     evidence = json.loads((tmp_path / "evidence" / "run.json").read_text())
     assert "capabilities" not in evidence["toolchain"]
-    assert not any("probe" in name for name in evidence["outputs"])
+    assert not any(
+        "probe" in name
+        for name in json.loads((tmp_path / "evidence" / "manifest.json").read_text())["files"]
+    )
     assert check_bundle(tmp_path / "evidence") == []
 
 
 @pytest.mark.parametrize("named", [False, True], ids=["unnamed", "explicit-name"])
+@pytest.mark.usefixtures("required_verapdf")
 def test_the_one_link_reproduction_and_explicit_name_control(
     tmp_path: Path, external_tool: Callable[..., str], *, named: bool
 ) -> None:

@@ -31,10 +31,15 @@ class ToolRun:
     """A finished external process: its status and the head of each output stream."""
 
     returncode: int
-    stdout: str
+    stdout_bytes: bytes
     stderr: str
     stdout_truncated: bool
     stderr_truncated: bool
+
+    @property
+    def stdout(self) -> str:
+        """Return diagnostic text; protocol consumers use the original stdout bytes."""
+        return self.stdout_bytes.decode("utf-8", errors="replace")
 
     @property
     def truncated(self) -> bool:
@@ -82,7 +87,7 @@ def run_bounded(
         _join(threads)
     return ToolRun(
         process.returncode,
-        captured[0].text(),
+        bytes(captured[0]._head),
         captured[1].text(),
         captured[0].truncated,
         captured[1].truncated,

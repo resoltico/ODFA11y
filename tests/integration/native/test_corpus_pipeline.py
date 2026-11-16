@@ -31,6 +31,7 @@ PIPELINE_RUNS: dict[str, list[Authored]] = {
 
 
 @pytest.mark.parametrize("name", PIPELINE_RUNS)
+@pytest.mark.usefixtures("required_verapdf")
 def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
     name: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -58,7 +59,7 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
         assert pdf_rules == {rules.PDF020.id}, diagnostics
         assert record.failed_stage == "audit-pdf", diagnostics
         assert record.exit_status == 2
-        assert stages["fidelity"] == "skipped", diagnostics
+        assert stages["fidelity"] == "passed", diagnostics
     else:
         assert record.passed, diagnostics
         assert stages["fidelity"] == "passed", diagnostics

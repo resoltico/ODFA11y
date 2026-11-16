@@ -45,7 +45,6 @@
 
 | Value | Meaning |
 | --- | --- |
-| `identify-source` | Establish the captured source document identity. |
 | `audit-source` | Inspect accessibility conditions in the source document. |
 | `remediate` | Apply the reviewed decisions under preservation guards. |
 | `audit-remediated` | Inspect the candidate after applying reviewed decisions. |
@@ -55,14 +54,12 @@
 | `validate-pdf` | Validate the exported PDF against PDF/UA with veraPDF. |
 | `fidelity` | Compare the source and candidate exports under the fidelity policy. |
 | `publish-evidence` | Publish the declared evidence artifacts and review record. |
-| `load-plan` | Load and validate the reviewed plan. |
-| `pipeline` | Execute the selected assurance workflow. |
 
 ## Step
 
 | Value | Meaning |
 | --- | --- |
-| `identify-source` | Establish the captured source document identity. |
+| `prepare` | Validate inputs, capture source and resolve the required tools. |
 | `audit-source` | Inspect accessibility conditions in the source document. |
 | `remediate` | Apply the reviewed decisions under preservation guards. |
 | `audit-remediated` | Inspect the candidate after applying reviewed decisions. |
@@ -72,14 +69,11 @@
 | `validate-pdf` | Validate the exported PDF against PDF/UA with veraPDF. |
 | `fidelity` | Compare the source and candidate exports under the fidelity policy. |
 | `publish-evidence` | Publish the declared evidence artifacts and review record. |
-| `load-plan` | Load and validate the reviewed plan. |
-| `pipeline` | Execute the selected assurance workflow. |
 | `audit-document` | Inspect one OpenDocument or PDF input. |
 | `export-pdf` | Export an original document to PDF. |
 | `export-candidate` | Render a candidate input for comparison. |
 | `compare-fidelity` | Compare the original input artifacts for fidelity. |
 | `probe-capabilities` | Measure a declared native capability with a synthetic document. |
-| `probe-toolchain` | Identify the native tools and their available capabilities. |
 | `batch-item` | Execute one identified batch item. |
 
 ## StepState
@@ -248,29 +242,3 @@
 | `schema-regression` | An edit introduced an OpenDocument schema violation. |
 | `edit-accounting` | An edit report disagrees with the observed XML changes. |
 | `foreign-operation` | An edit is unsupported by the selected document family. |
-
-## StageStatus
-
-| Value | Meaning |
-| --- | --- |
-| `passed` | The stage completed without a rejected finding. |
-| `failed` | The stage failed its acceptance gate or could not execute. |
-| `skipped` | The stage did not execute. |
-| `not-applicable` | The document family does not support this stage. |
-
-## RunStatus
-
-| Value | Meaning |
-| --- | --- |
-| `passed` | The run completed with no rejected stage outcome. |
-| `failed` | At least one run stage failed its selected policy. |
-
-## BatchStatus
-
-| Value | Meaning |
-| --- | --- |
-| `pending` | The batch item has not started. |
-| `running` | The batch or item is executing. |
-| `completed` | The batch or item completed successfully. |
-| `failed` | The batch or item finished with a rejected outcome. |
-| `interrupted` | An interruption prevented the batch or item from completing. |

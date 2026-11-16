@@ -5,6 +5,8 @@ import json
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
+
 from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
@@ -22,6 +24,7 @@ from tests.fixtures.runs import STAGE_NAMES, RunSettings, execute, stage_statuse
 from tests.fixtures.writer import document_with_spacers, make_minimal_odt
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -45,7 +48,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     why = [
         (
             stage.name,
-            stage.reason,
+            stage.outcome,
             [f.message for f in stage.report.findings] if stage.report else [],
         )
         for stage in record.stages
@@ -58,13 +61,18 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     assert run["toolchain"]["libreoffice"]["version"] != "unknown"
     assert run["toolchain"]["verapdf"]["name"] == "veraPDF"
     assert run["schema_version"] == 1
-    assert run["profile"]["name"] == "production"
+    assert run["profile"] == "production"
     assert run["document"]["kind"] == "text"
     assert run["document"]["layout"] == "package"
     assert run["document"]["adapter"] == "text"
     assert len(run["plan_sha256"]) == 64
     assert {font["name"] for font in run["fonts"]["remediated"]}
-    assert set(run["outputs"]) >= {"remediated.odt", "remediated.pdf", "source.pdf", "verapdf.xml"}
+    assert set(json.loads((tmp_path / "out" / "manifest.json").read_text())["files"]) >= {
+        "remediated.odt",
+        "remediated.pdf",
+        "source.pdf",
+        "verapdf.xml",
+    }
     assert "- [ ]" in (tmp_path / "out" / "REVIEW.md").read_text()
 
 
@@ -80,9 +88,9 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
         tmp_path / "strict",
         options,
     )
-    assert stage_statuses(failed)["fidelity"] == "failed"
+    assert stage_statuses(failed)["fidelity"] == "gate-failed"
     assert failed.exit_status == 2
-    assert (tmp_path / "strict" / "fidelity" / "page-001-diff.png").is_file()
+    assert (tmp_path / "strict" / "diff" / "page-001-diff.png").is_file()
     allowed = Pagination.MAY_CHANGE
     passed = execute(
         source,
@@ -112,5 +120,8 @@ def test_repeated_runs_have_equal_logical_results_and_identical_documents(
     assert first["stages"] == second["stages"]
     assert "operations" not in first
     assert first["decisions"] == second["decisions"]
-    assert first["outputs"]["remediated.odt"] == second["outputs"]["remediated.odt"]
+    manifests = [
+        json.loads((tmp_path / f"r{i}" / "manifest.json").read_text())["files"] for i in range(2)
+    ]
+    assert manifests[0]["remediated.odt"] == manifests[1]["remediated.odt"]
     assert runs[0].passed

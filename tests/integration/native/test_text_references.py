@@ -19,6 +19,7 @@ from tests.fixtures.paths import TESTS
 
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
+@pytest.mark.usefixtures("required_verapdf")
 def test_writer_reference_wording_and_source_scope(
     case: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

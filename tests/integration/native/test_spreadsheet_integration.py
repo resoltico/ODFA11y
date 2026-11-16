@@ -5,6 +5,7 @@ import json
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
 from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
@@ -202,6 +203,7 @@ def test_a_sheet_a_libreoffice_formula_refers_to_is_not_renamed(
     assert not output.exists()
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -224,7 +226,9 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     assert reached["audit-pdf"] == reached["fidelity"] == "passed"
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["document"]["adapter"] == "spreadsheet"
-    assert {"source.pdf", "remediated.pdf", "remediated.ods"} <= set(run["outputs"])
+    assert {"source.pdf", "remediated.pdf", "remediated.ods"} <= set(
+        json.loads((tmp_path / "out" / "manifest.json").read_text())["files"]
+    )
     assert "Apples" in pdf_text(tmp_path / "out" / "remediated.pdf")
     assert "- [ ]" in (tmp_path / "out" / "REVIEW.md").read_text()
 
@@ -249,6 +253,7 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
     assert record.failed_stage == "fidelity", record.as_dict()
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_the_production_profile_rejects_known_invalid_calc_exports(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

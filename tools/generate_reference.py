@@ -244,29 +244,35 @@ def capability_reference() -> str:
     """
     record = json.loads((SCHEMA_DIRECTORY.parents[2] / "docs/measurements/doctor.json").read_text())
     toolchain = record["toolchain"]
+    versions = "; ".join(
+        f"{name} {identity['version']}" if identity else f"{name} unavailable"
+        for name, identity in (
+            ("LibreOffice", toolchain["libreoffice"]),
+            ("veraPDF", toolchain["verapdf"]),
+        )
+    )
     lines = [
         "# Measured native capabilities",
         "",
         f"Recorded with ODFA11y {record['odfa11y']} on `{record['platform']}`.",
-        (
-            f"LibreOffice {toolchain['libreoffice']['version']}; "
-            f"veraPDF {toolchain['verapdf']['version']}."
-        ),
+        versions + ".",
         "[Doctor record](measurements/doctor.json) is the measurement authority.",
         "",
-        "| Probe | Family | Result |",
-        "| --- | --- | --- |",
+        "| Probe | Meaning | Rules | Result | Reason |",
+        "| --- | --- | --- | --- | --- |",
     ]
     lines.extend(
-        f"| `{result['id']}` | {result['family']} | {result['status']} |"
+        f"| `{result['id']}` | {result['meaning']} | "
+        + ", ".join(f"`{rule}`" for rule in result["related_rules"])
+        + f" | {result['status']} | {result['reason'] or '—'} |"
         for result in record["capabilities"]
     )
     lines += [
         "",
         "These verdicts apply to each probe's authored input and exporter identity.",
         "Unsupported results do not waive document-level PDF gates. Execution failures are",
-        "reported separately and retried; only conclusive observations are batch-cached.",
-        "Doctor measures every probe; pipelines select relevant family/decision probes.",
+        "reported separately. Doctor measures applicable experiments; an unavailable required",
+        "tool leaves a probe unmeasured with its reason. Runs and batches never conduct probes.",
         "",
         "The [text-structure measurements](measurements/text-exports.json) additionally",
         "record fixture-specific roles and independent validator outcomes. Read the",

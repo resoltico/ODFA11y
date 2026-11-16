@@ -13,11 +13,9 @@ lazy from multiprocessing.synchronize import Event
 
 import pytest
 
-from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.native import process
 from odfa11y.native.process import ToolRun, identify, run_bounded
-from tests.fixtures.runs import RunSettings, run_batch
 
 PYTHON = sys.executable
 
@@ -127,7 +125,7 @@ def test_windows_identification_reads_the_file_version_instead_of_running_the_to
     def fake(command: list[str], *, timeout: float) -> ToolRun:
         seen.append(command)
         assert timeout > 0
-        return ToolRun(0, "26.2.6.2\r\n", "", stdout_truncated=False, stderr_truncated=False)
+        return ToolRun(0, b"26.2.6.2\r\n", "", stdout_truncated=False, stderr_truncated=False)
 
     monkeypatch.setattr(sys, "platform", "win32")
     identity = process.identify_running_or_by_file(
@@ -144,6 +142,7 @@ def _native_command(
     paths: tuple[str, str], tool: str, marker: str, ready: Event, mode: str
 ) -> None:
     source, output = paths
+    target_name = Path(source).name if mode == "standalone" else "source.odt"
     patch = pytest.MonkeyPatch()
 
     def observe[**P](
@@ -159,7 +158,7 @@ def _native_command(
                 if (
                     timeout is not None
                     and "--convert-to" in command
-                    and "/second-input/" in command[-1]
+                    and Path(command[-1]).name == target_name
                 ):
                     Path(marker).write_text(str(process.pid), encoding="utf-8")
                     ready.set()
@@ -174,8 +173,7 @@ def _native_command(
     try:
         if mode == "standalone":
             sys.exit(main(["export", source, output, "--soffice", tool]))
-        result = run_batch(source, output, RunSettings(tools=Tools(soffice=tool)))
-        sys.exit(result.exit_status)
+        sys.exit(main(["batch", source, "--output-dir", output, "--soffice", tool]))
     finally:
         patch.undo()
 
@@ -198,7 +196,13 @@ def test_interrupted_native_readiness_does_not_reenter_the_event_during_cleanup(
     def export(_arguments: list[str]) -> int:
         with pytest.raises(KeyboardInterrupt):
             run_bounded(
-                [PYTHON, "-c", "import time; time.sleep(60)", "--convert-to", "/second-input/x"],
+                [
+                    PYTHON,
+                    "-c",
+                    "import time; time.sleep(60)",
+                    "--convert-to",
+                    "/second-input/source",
+                ],
                 timeout=30,
             )
         return 3

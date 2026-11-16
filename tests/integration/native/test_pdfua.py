@@ -4,6 +4,7 @@
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
 from pypdf import PdfWriter
 
 from odfa11y.native.libreoffice import export_pdfua
@@ -59,6 +60,7 @@ def test_libreoffice_export_content_is_fully_tagged(
     assert measured(measurement(report, MarkedContentMeasurements).marked_content_id_count) >= 1
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_libreoffice_export_passes_real_verapdf_pdfua_validation(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -74,6 +76,7 @@ def test_libreoffice_export_passes_real_verapdf_pdfua_validation(
     assert result.identity.version != "unknown"
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_and_links(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -133,6 +136,7 @@ def test_a_hyperlink_wrapped_over_several_lines_is_one_correct_link(
     }
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_real_verapdf_reports_the_failed_rules_of_an_untagged_pdf(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

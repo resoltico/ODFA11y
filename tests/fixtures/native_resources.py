@@ -31,7 +31,9 @@ def png_bytes() -> bytes:
     return data.getvalue()
 
 
-def writer_resource(directory: Path, href: str | None = None) -> Path:
+def writer_resource(
+    directory: Path, href: str | None = None, *, navigation: str = "https://example.test/guide"
+) -> Path:
     """Create flat Writer input with an embedded image or one declared render dependency.
 
     Returns
@@ -51,15 +53,19 @@ def writer_resource(directory: Path, href: str | None = None) -> Path:
         '<office:text><text:h text:outline-level="1">Resource controls</text:h>'
         '<text:p><draw:frame draw:name="Asset" text:anchor-type="as-char" '
         'svg:width="2cm" svg:height="2cm">' + image + ALT + "</draw:frame></text:p>"
-        '<text:p><text:a xlink:href="assets/nested/guide.html" xlink:type="simple" '
+        '<text:p><text:a xlink:href="https://example.test/guide" xlink:type="simple" '
         'office:name="Read the guide">Read the guide</text:a></text:p></office:text>'
     )
     path = make_flat(directory, "text", Variant(body=body))
-    if href is not None:
+    if href is not None or navigation != "https://example.test/guide":
         document = OdfDocument.open(path)
+        link = document.tree(Part.CONTENT).find(".//text:a", NS)
+        assert link is not None
+        link.set(qn("xlink", "href"), navigation)
         node = document.tree(Part.CONTENT).find(".//draw:image", NS)
         assert node is not None
-        node.set(qn("xlink", "href"), href)
+        if href is not None:
+            node.set(qn("xlink", "href"), href)
         document.save(path)
     return path
 

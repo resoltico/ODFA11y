@@ -5,6 +5,7 @@ from zipfile import ZipFile
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
@@ -61,6 +62,7 @@ LINK = (
 )
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_writer_nested_headers_graphic_and_named_link(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
@@ -136,6 +138,7 @@ def test_writer_nested_headers_graphic_and_named_link(
     assert etree.tostring(before.tree(Part.CONTENT)) == snapshot
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_calc_formula_graphic_and_printed_header(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

@@ -4,6 +4,8 @@
 lazy from collections.abc import Callable
 lazy from pathlib import Path
 
+import pytest
+
 from odfa11y.application.tools import Tools
 from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.pdf import audit_pdfua
@@ -17,6 +19,7 @@ from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.runs import RunSettings, execute
 
 
+@pytest.mark.usefixtures("required_verapdf")
 def test_native_math_export_retains_the_real_pdf_assurance_failure(
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:

@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from enum import StrEnum
 
+from odfa11y.audit import plan_blockers
 from odfa11y.audit.engine import audit_document
 from odfa11y.audit.export import native_export_settings
 from odfa11y.audit.validation import validate_pdfua
@@ -34,6 +35,7 @@ from odfa11y.status import (
 
 
 class Artifact(StrEnum):
+    AUDITED_SOURCE = "audited_source"
     CANDIDATE = "candidate"
     SOURCE_PDF = "source_pdf"
     CANDIDATE_PDF = "candidate_pdf"
@@ -41,6 +43,9 @@ class Artifact(StrEnum):
     @property
     def meaning(self) -> str:
         return {
+            self.AUDITED_SOURCE: (
+                "The source whose required parts the audit established as readable."
+            ),
             self.CANDIDATE: "The guarded in-memory remediation candidate.",
             self.SOURCE_PDF: "The captured source's native PDF export.",
             self.CANDIDATE_PDF: "The guarded candidate's native PDF export.",
@@ -57,13 +62,20 @@ class StageSpec:
 
 def _audit_source(state: RunState) -> tuple[RunState, StageResult]:
     report = audit_document(state.document, subject=state.source.identity.name, schema=True)
-    return replace(state, source_report=report), StageResult(Stage.AUDIT_SOURCE, Passed(report))
+    blocked = plan_blockers(report) is not None
+    return replace(
+        state, source_report=report, audited_source=None if blocked else state.document
+    ), StageResult(
+        Stage.AUDIT_SOURCE,
+        gate_outcome(report, strict=state.profile.strict) if blocked else Passed(report),
+    )
 
 
 def _remediate(state: RunState) -> tuple[RunState, StageResult]:
-    require_remediable(state.document, state.source.identity.path)
+    document = _input(state.audited_source)
+    require_remediable(document, state.source.identity.path)
     candidate = execute_decisions(
-        state.document, state.source.identity.path, state.decisions, plan=state.plan
+        document, state.source.identity.path, state.decisions, plan=state.plan
     )
     if not isinstance(candidate, Candidate):
         message = "; ".join(item.message for item in candidate.result.violations)
@@ -98,7 +110,9 @@ def _export(state: RunState, *, candidate: bool) -> tuple[RunState, StageResult]
             else NotApplicable(reason)
         )
         return state, StageResult(name, outcome)
-    document = state.candidate.document if candidate and state.candidate else state.document
+    document = (
+        state.candidate.document if candidate and state.candidate else _input(state.audited_source)
+    )
     office = state.tools.libreoffice
     office = _input(office)
     path = state.candidate_path if candidate else state.source.path
@@ -172,8 +186,8 @@ def _fidelity(state: RunState) -> tuple[RunState, StageResult]:
 
 STAGES = (
     StageSpec(Stage.AUDIT_SOURCE, Profile.SOURCE, (), _audit_source),
-    StageSpec(Stage.EXPORT_SOURCE, Profile.PDF, (), _export_source),
-    StageSpec(Stage.REMEDIATE, Profile.SOURCE, (), _remediate),
+    StageSpec(Stage.EXPORT_SOURCE, Profile.PDF, (Artifact.AUDITED_SOURCE,), _export_source),
+    StageSpec(Stage.REMEDIATE, Profile.SOURCE, (Artifact.AUDITED_SOURCE,), _remediate),
     StageSpec(Stage.AUDIT_REMEDIATED, Profile.SOURCE, (Artifact.CANDIDATE,), _audit_candidate),
     StageSpec(Stage.EXPORT_REMEDIATED, Profile.PDF, (Artifact.CANDIDATE,), _export_candidate),
     StageSpec(Stage.AUDIT_PDF, Profile.PDF, (Artifact.CANDIDATE_PDF,), _audit_pdf),
@@ -192,6 +206,7 @@ def run_stage(spec: StageSpec, state: RunState) -> tuple[RunState, StageResult]:
         for artifact in spec.inputs:
             if getattr(state, artifact.value) is None:
                 producer = {
+                    Artifact.AUDITED_SOURCE: Stage.AUDIT_SOURCE,
                     Artifact.CANDIDATE: Stage.REMEDIATE,
                     Artifact.SOURCE_PDF: Stage.EXPORT_SOURCE,
                     Artifact.CANDIDATE_PDF: Stage.EXPORT_REMEDIATED,

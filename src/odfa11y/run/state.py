@@ -50,6 +50,7 @@ class RunState:
     observer: ProgressObserver | None
     work: Path
     source_report: Report | None = None
+    audited_source: OdfDocument | None = None
     candidate: Candidate | None = None
     candidate_path: Path | None = None
     candidate_report: Report | None = None
