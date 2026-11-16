@@ -3,14 +3,8 @@
 
 lazy from pathlib import Path
 
-from pypdf import PdfReader
-from pypdf.generic import ContentStream, StreamObject
-lazy from pypdf.generic import DictionaryObject
-
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.audit import PdfInspection, inspect_pdf
-from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
-from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
 from odfa11y.pdf.validation import PdfValidator
 from odfa11y.report import exit_status
 from odfa11y.rules import registry as rules
@@ -60,59 +54,7 @@ def link_descriptions(
         for f in report.findings
     ):
         return False
-    reader = PdfReader(pdf, strict=True)
-    descriptions = [
-        str(annotation.get_object().get("/Contents", ""))
-        for page in reader.pages
-        for annotation in page.get("/Annots", ())
-    ]
-    descriptions += [
-        str(node.element.get("/Alt", ""))
-        for node in build_tree(
-            pdf_dictionary(pdf_dictionary(reader.trailer.get("/Root")).get("/StructTreeRoot"))
-        ).walk()
-        if node.role == "Link"
-    ]
-    return any(expected in value for value in descriptions)
-
-
-def _images(
-    stream: StreamObject | None,
-    reader: PdfReader,
-    resources: DictionaryObject,
-    *,
-    artifact: bool = False,
-    depth: int = 0,
-) -> tuple[int, int]:
-    if depth > MAX_FORM_DEPTH:
-        msg = "Probe image form traversal is incomplete."
-        raise ToolFailure(msg)
-    total = decorated = 0
-    scopes = []
-    for operands, operator in ContentStream(stream, reader).operations:
-        if operator in {b"BMC", b"BDC"}:
-            scopes.append(bool(operands and operands[0] == "/Artifact"))
-        elif operator == b"EMC" and scopes:
-            scopes.pop()
-        elif operator == b"Do" and operands:
-            objects = pdf_dictionary(resources.get("/XObject"))
-            obj = objects.get(operands[0])
-            obj = obj.get_object() if obj is not None else None
-            hidden = artifact or any(scopes)
-            if isinstance(obj, StreamObject) and obj.get("/Subtype") == "/Image":
-                total += 1
-                decorated += int(hidden)
-            elif isinstance(obj, StreamObject) and obj.get("/Subtype") == "/Form":
-                count, marked = _images(
-                    obj,
-                    reader,
-                    pdf_dictionary(obj.get("/Resources", resources)),
-                    artifact=hidden,
-                    depth=depth + 1,
-                )
-                total += count
-                decorated += marked
-    return total, decorated
+    return any(expected in value for value in inspection.link_descriptions)
 
 
 def decorative_role(
@@ -128,13 +70,7 @@ def decorative_role(
     """
     inspection = _inspect(pdf)
     report = inspection.report
-    reader = PdfReader(pdf, strict=True)
-    check_consumption(reader)
-    counts = [
-        _images(page.get_contents(), reader, pdf_dictionary(page.get("/Resources")))
-        for page in reader.pages
-    ]
-    total, artifacts = sum(c[0] for c in counts), sum(c[1] for c in counts)
+    total, artifacts = inspection.image_operations, inspection.artifact_image_operations
     tags = inspection.structure.tags if inspection.structure is not None else {}
     return (
         total == PROBE_IMAGES

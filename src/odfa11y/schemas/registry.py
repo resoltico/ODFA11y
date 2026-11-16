@@ -37,9 +37,9 @@ from odfa11y.families.text.visibility.reading_order import ReadingOrderMeasureme
 from odfa11y.families.text.visibility.revisions import RevisionMeasurements
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.fidelity.compare import FidelityMeasurements
-from odfa11y.pdf.link_structure import PdfLinkMeasurements
-from odfa11y.pdf.marked_content import MarkedContentMeasurements
-from odfa11y.pdf.structure_checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.links import PdfLinkMeasurements
+from odfa11y.pdf.structure.marked_content import MarkedContentMeasurements
 from odfa11y.pdf.validation import ValidationMeasurements
 from odfa11y.plans import PlanHeader
 from odfa11y.plans.contracts import decision_contract, file_contract

@@ -17,7 +17,7 @@ from odfa11y.families import spec_for
 from odfa11y.families.probes import ProbeCache
 from odfa11y.families.spec import PdfExport
 from odfa11y.odf import OdfDocument, Use, declared_version
-from odfa11y.pdf import audit_pdfua, list_fonts
+from odfa11y.pdf.audit import inspect_pdf
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.progress import PIPELINE_STAGES, ProgressEvent, Stage, Step, StepState
 from odfa11y.records import DocumentIdentity
@@ -134,12 +134,15 @@ class _Run:
     def audit_pdf(self) -> StageResult:
         if not self._exportable:
             return self._no_pdf(Stage.AUDIT_PDF)
+        inspection = inspect_pdf(self.work / "remediated.pdf")
+        source = inspect_pdf(self.work / "source.pdf")
         self.record.fonts = {
-            "source": list_fonts(self.work / "source.pdf"),
-            "remediated": list_fonts(self.work / "remediated.pdf"),
+            "source": source.fonts,
+            "remediated": inspection.fonts,
         }
-        report = audit_pdfua(self.work / "remediated.pdf")
-        report.subject = "remediated.pdf"
+        source_refused = inspection.fonts is not None and source.fonts is None
+        report = source.report if source_refused else inspection.report
+        report.subject = "source.pdf" if source_refused else "remediated.pdf"
         return self._gate(Stage.AUDIT_PDF, report)
 
     def validate_pdfua(self) -> StageResult:

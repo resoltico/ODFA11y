@@ -10,7 +10,7 @@ from odfa11y.contracts import decode
 from odfa11y.errors import InvalidOption
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.fidelity.compare import FidelityMeasurements
-from odfa11y.pdf.structure_checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
 from odfa11y.report import Report, ReportKind
 from tests.fixtures.measurements import measurement
 

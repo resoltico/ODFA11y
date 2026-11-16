@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 """Shared font resources are inspected once without skipping distinct CMap streams."""
 
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
-from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import (
     DecodedStreamObject,
@@ -15,7 +15,7 @@ from pypdf.generic import (
 lazy from pypdf import PdfWriter
 
 from odfa11y.errors import ToolFailure
-from odfa11y.pdf.reading.consumption import check_consumption
+from odfa11y.pdf.reading import default_limits, open_pdf
 from tests.fixtures.pdf import register, set_page_content, tagged_writer
 
 
@@ -56,7 +56,7 @@ def test_repeated_form_calls_do_not_revisit_shared_font_resources(
         return original(stream)
 
     monkeypatch.setattr(EncodedStreamObject, "get_data", decode)
-    check_consumption(PdfReader(path, strict=True), 730)
+    _read_with_limit(path, 730)
     assert len(calls) == 1
 
 
@@ -74,5 +74,11 @@ def test_distinct_form_resources_still_reject_aggregate_cmap_overflow(tmp_path: 
     path = tmp_path / "distinct.pdf"
     writer.write(path)
     with pytest.raises((ToolFailure, PyPdfError), match=r"(limit|Limit|bytes)"):
-        check_consumption(PdfReader(path, strict=True), 100)
-    check_consumption(PdfReader(path, strict=True), 123)
+        _read_with_limit(path, 100)
+    _read_with_limit(path, 123)
+
+
+def _read_with_limit(path: Path, limit: int) -> None:
+    selected = replace(default_limits(), decoded_bytes=limit, invocation_bytes=limit)
+    with open_pdf(path, selected):
+        pass

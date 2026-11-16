@@ -16,8 +16,8 @@ lazy from pypdf import PdfWriter
 
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
-from odfa11y.pdf.link_structure import PdfLinkMeasurements
-from odfa11y.pdf.structure_checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.links import PdfLinkMeasurements
 from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.pdf import (

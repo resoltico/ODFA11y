@@ -11,8 +11,8 @@ from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import PackageStorage
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
-from odfa11y.pdf.link_structure import PdfLinkMeasurements
-from odfa11y.pdf.marked_content import MarkedContentMeasurements
+from odfa11y.pdf.structure.links import PdfLinkMeasurements
+from odfa11y.pdf.structure.marked_content import MarkedContentMeasurements
 from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.writer import make_minimal_odt

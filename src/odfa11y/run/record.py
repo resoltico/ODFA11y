@@ -21,6 +21,7 @@ from odfa11y.version import __version__
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision
 lazy from odfa11y.families.spec import ReviewItem
+lazy from odfa11y.pdf.structure.fonts import Font
 lazy from odfa11y.plans import PlanHeader
 lazy from odfa11y.plans.fidelity import FidelityPolicy
 lazy from odfa11y.progress import Stage
@@ -85,7 +86,7 @@ class RunRecord:
     profile: Profile
     stages: list[StageResult] = field(default_factory=list)
     toolchain: Toolchain = field(default_factory=Toolchain)
-    fonts: dict[str, list[dict[str, object]]] = field(default_factory=dict)
+    fonts: dict[str, tuple[Font, ...] | None] = field(default_factory=dict)
     human_review: tuple[ReviewItem, ...] = ()
     outputs: dict[str, str] = field(default_factory=dict)
     plan: PlanHeader | None = None

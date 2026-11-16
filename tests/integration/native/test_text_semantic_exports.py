@@ -11,7 +11,7 @@ from odfa11y.families.text.headings.edit import heading_fingerprint, heading_loc
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import audit_pdfua
-from odfa11y.pdf.structure_checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings

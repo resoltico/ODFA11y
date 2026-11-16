@@ -1204,11 +1204,30 @@
     },
     "fonts": {
       "additionalProperties": {
-        "items": {
-          "additionalProperties": {},
-          "type": "object"
-        },
-        "type": "array"
+        "anyOf": [
+          {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "embedded": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "embedded"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "type": "object"
     },

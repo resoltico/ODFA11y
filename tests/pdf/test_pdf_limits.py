@@ -7,7 +7,6 @@ import pytest
 
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua, list_fonts
-from odfa11y.pdf import structure_walk as walk
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.reading import limits
 from odfa11y.plans.fidelity import Pagination
@@ -24,7 +23,7 @@ def test_an_oversized_pdf_is_a_finding_not_a_crash(
     def parse(_stream: object, *, strict: bool) -> None:
         pytest.fail(f"PDF parser invoked for an oversized file (strict={strict})")
 
-    monkeypatch.setattr("odfa11y.pdf.audit.PdfReader", parse)
+    monkeypatch.setattr("odfa11y.pdf.reading.reader.PdfReader", parse)
     report = audit_pdfua(path)
     assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
     assert "exceeds" in report.findings[0].message
@@ -47,7 +46,7 @@ def test_a_structure_tree_above_the_limit_is_a_finding(
 ) -> None:
     path = tmp_path / "tagged.pdf"
     tagged_writer(["H1", "P", "P"]).write(path)
-    monkeypatch.setattr(walk, "MAX_STRUCTURE_NODES", 2)
+    monkeypatch.setattr(limits, "MAX_STRUCTURE_NODES", 2)
     report = audit_pdfua(path)
     assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
     assert "more than 2 elements" in report.findings[0].message
@@ -55,8 +54,10 @@ def test_a_structure_tree_above_the_limit_is_a_finding(
 
 def test_fonts_are_listed_with_their_embedding(tmp_path: Path) -> None:
     path = text_pdf(tmp_path / "a.pdf", [["x"]])
-    assert list_fonts(path) == [{"name": "Helvetica", "embedded": False}]
-    assert list_fonts(tmp_path / "absent.pdf") == []
+    assert [(font.name, font.embedded) for font in list_fonts(path)] == [("Helvetica", False)]
+    with pytest.raises(ToolFailure):
+        list_fonts(tmp_path / "absent.pdf")
     broken = tmp_path / "broken.pdf"
     broken.write_bytes(b"not a pdf")
-    assert list_fonts(broken) == []
+    with pytest.raises(ToolFailure):
+        list_fonts(broken)

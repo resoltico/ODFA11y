@@ -6,18 +6,12 @@ from dataclasses import dataclass, field
 from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
-from pypdf.generic import ArrayObject, StreamObject
-lazy from pypdf import PageObject
-
 from odfa11y.contracts import Description
-from odfa11y.errors import ToolFailure
-from odfa11y.pdf.form_content import FormScanner
-from odfa11y.pdf.graphic_presence import described_graphics
-from odfa11y.pdf.link_structure import MAX_LISTED
-from odfa11y.pdf.reading.limits import MAX_CONTENT_BYTES
-from odfa11y.pdf.structure_walk import pdf_dictionary
+from odfa11y.pdf.reading.reader import PageContent
+from odfa11y.pdf.structure.graphics import described_graphics
 from odfa11y.rules import registry as rules
-lazy from odfa11y.pdf.structure_walk import StructureNode
+from odfa11y.rules.details import DETAIL_ITEMS
+lazy from odfa11y.pdf.reading.structure import StructureNode
 lazy from odfa11y.report import Report
 
 
@@ -32,17 +26,13 @@ class MarkedContentMeasurements:
 
 
 def check_marked_content(
-    pages: Iterable[PageObject], nodes: list[StructureNode], report: Report
+    pages: Iterable[PageContent], nodes: list[StructureNode], report: Report
 ) -> int:
     """Report page content that is not tagged, and structure references that match no content.
 
-    Each page's content stream is scanned for marked-content sequences. Findings: MCIDs no
-    structure element refers to (``PDF020``), references to MCIDs the page does not contain
-    (``PDF021``), MCIDs referred to more than once (``PDF022``) and text shown outside tagged
-    content and ``/Artifact`` (``PDF023``). Invoked Forms and their ``/Stm`` references
-    are inspected in independent stream scopes. The check claims only these correspondences;
-    veraPDF remains the validator. Decoded content beyond ``MAX_CONTENT_BYTES`` in all pages
-    raises ``ToolFailure``.
+    The reader supplies page and independent Form scopes from its single bounded walk.
+    This check reconciles unowned MCIDs, missing or multiply owned content references,
+    and text outside tagged content and artifacts. veraPDF remains the validator.
 
     Returns
     -------
@@ -54,20 +44,15 @@ def check_marked_content(
     for node in nodes:
         for reference in node.marked_content:
             references[reference.identity][reference.mcid] += 1
-    budget = MAX_CONTENT_BYTES
     untagged: list[dict[str, int]] = []
     unreferenced: list[dict[str, object]] = []
     page_numbers: dict[tuple[int | None, int | None], int] = {}
     contents: dict[tuple[int | None, int | None], set[int]] = {}
     painted: dict[tuple[int | None, int | None], set[int]] = {}
-    for number, page in enumerate(pages, start=1):
-        data = _decoded_content(page, budget)
-        budget -= len(data)
-        scanner = FormScanner()
-        scan = scanner.scan(data, pdf_dictionary(page.get("/Resources")))
-        scanner.streams[None] = scan
+    for number, content in enumerate(pages, start=1):
+        page = content.page
         xref = page.indirect_reference.idnum if page.indirect_reference else None
-        for stream, scan in scanner.streams.items():
+        for stream, scan in content.scopes:
             identity = (xref if stream is None else None, stream)
             page_numbers[identity] = number
             contents.setdefault(identity, set()).update(scan.mcids)
@@ -78,7 +63,7 @@ def check_marked_content(
                 unreferenced.append({
                     "page": number,
                     "count": len(loose),
-                    "mcids": loose[:MAX_LISTED],
+                    "mcids": loose[:DETAIL_ITEMS],
                 })
             if scan.unmarked_text_operations:
                 untagged.append({
@@ -105,7 +90,7 @@ def check_marked_content(
     ]
     if duplicated:
         report.raise_(
-            rules.PDF023, details={"count": len(duplicated), "mcids": duplicated[:MAX_LISTED]}
+            rules.PDF023, details={"count": len(duplicated), "mcids": duplicated[:DETAIL_ITEMS]}
         )
     return described_graphics(nodes, painted)
 
@@ -117,13 +102,13 @@ def _report(
     dangling: list[dict[str, int | None]],
 ) -> None:
     if unreferenced:
-        report.raise_(rules.PDF021, details={"pages": unreferenced[:MAX_LISTED]})
+        report.raise_(rules.PDF021, details={"pages": unreferenced[:DETAIL_ITEMS]})
     if dangling:
         report.raise_(
-            rules.PDF022, details={"count": len(dangling), "references": dangling[:MAX_LISTED]}
+            rules.PDF022, details={"count": len(dangling), "references": dangling[:DETAIL_ITEMS]}
         )
     if untagged:
-        report.raise_(rules.PDF024, details={"pages": untagged[:MAX_LISTED]})
+        report.raise_(rules.PDF024, details={"pages": untagged[:DETAIL_ITEMS]})
 
 
 def _dangling(
@@ -141,33 +126,3 @@ def _dangling(
         for mcid in sorted(counts)
         if mcid not in contents.get(xref, ())
     ]
-
-
-def _decoded_content(page: PageObject, budget: int) -> bytes:
-    """Concatenate a page's content streams, refusing more than ``budget`` bytes.
-
-    Returns
-    -------
-    bytes
-        The decoded content, streams separated by a newline.
-
-    Raises
-    ------
-    ToolFailure
-        The decoded content exceeds the budget.
-
-    """
-    contents = page.get("/Contents")
-    contents = contents.get_object() if contents is not None else None
-    streams = contents if isinstance(contents, ArrayObject) else [contents]
-    parts: list[bytes] = []
-    for item in streams:
-        stream = item.get_object() if item is not None else None
-        if isinstance(stream, StreamObject):
-            data = stream.get_data()
-            budget -= len(data) + bool(parts)
-            parts.append(data)
-            if budget < 0:
-                msg = f"Page content is larger than the {MAX_CONTENT_BYTES}-byte limit"
-                raise ToolFailure(msg)
-    return b"\n".join(parts)

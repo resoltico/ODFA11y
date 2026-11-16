@@ -6,16 +6,15 @@ from dataclasses import dataclass, field
 from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
-lazy from pypdf import PageObject
-lazy from pypdf.generic import DictionaryObject
-
 from odfa11y.contracts import Description
-from odfa11y.pdf.link_structure import check_link_structure
-from odfa11y.pdf.marked_content import check_marked_content
-from odfa11y.pdf.structure_walk import build_tree, role_map_of
+from odfa11y.pdf.reading.objects import has_text, xref
+from odfa11y.pdf.reading.reader import PageContent
+from odfa11y.pdf.reading.structure import role_map_of
+from odfa11y.pdf.structure.links import check_link_structure
+from odfa11y.pdf.structure.marked_content import check_marked_content
 from odfa11y.rules import registry as rules
-lazy from odfa11y.pdf.link_structure import LinkAnnotation
-lazy from odfa11y.pdf.structure_walk import StructureNode
+lazy from odfa11y.pdf.reading.structure import StructureNode
+lazy from odfa11y.pdf.structure.links import LinkAnnotation
 lazy from odfa11y.report import Report
 
 LIST_CHILDREN = {"LI", "L", "Caption"}
@@ -49,10 +48,10 @@ class StructureAnalysis:
 
 
 def audit_structure(
-    root: DictionaryObject,
+    top: StructureNode,
     report: Report,
     annotations: list[LinkAnnotation],
-    pages: Iterable[PageObject],
+    pages: Iterable[PageContent],
 ) -> StructureAnalysis:
     """Record structure tags and report structure, link and marked-content defects.
 
@@ -64,11 +63,10 @@ def audit_structure(
         Described Figures reconciled with graphical content on actual pages.
 
     """
-    top = build_tree(root)
     nodes = [node for node in top.walk() if node is not top]
     counts = Counter(node.tag for node in nodes)
     report.measure(PdfStructureMeasurements(structure_tags=dict(sorted(counts.items()))))
-    role_map = role_map_of(root)
+    role_map = role_map_of(top.element)
     if role_map:
         report.measure(PdfStructureMeasurements(role_map=dict(sorted(role_map.items()))))
     check_link_structure(annotations, nodes, report)
@@ -95,14 +93,14 @@ def _check_roles(nodes: list[StructureNode], report: Report) -> None:
 
 def _check_figures(nodes: list[StructureNode], report: Report) -> None:
     figures = [node for node in nodes if node.role == "Figure"]
-    missing = [node for node in figures if not _has_text(node.element.get("/Alt"))]
+    missing = [node for node in figures if not has_text(node.element.get("/Alt"))]
     if missing:
         report.raise_(
             rules.PDF008,
             "One or more Figure structure elements have no /Alt text.",
             details={
-                "figure_xrefs": [_xref(node) for node in figures],
-                "missing_alt_xrefs": [_xref(node) for node in missing],
+                "figure_xrefs": [xref(node.element) for node in figures],
+                "missing_alt_xrefs": [xref(node.element) for node in missing],
             },
         )
 
@@ -170,12 +168,3 @@ def _heading_level(node: StructureNode) -> int:
         if role[:1] == "H" and role[1:].isdigit() and len(role) == HEADING_ROLE_LENGTH
         else 0
     )
-
-
-def _has_text(value: object) -> bool:
-    return isinstance(value, str) and bool(value.strip())
-
-
-def _xref(node: StructureNode) -> int:
-    reference = node.element.indirect_reference
-    return reference.idnum if reference is not None else 0

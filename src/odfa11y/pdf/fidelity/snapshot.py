@@ -5,15 +5,14 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-from pypdf import PdfReader
 from pypdf.errors import PdfReadError, PyPdfError
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject
 lazy from pypdf import PageObject
 
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity.uri import effective_uri, uri_base
-from odfa11y.pdf.reading.consumption import check_consumption, resolve
-from odfa11y.pdf.reading.limits import check_file_size, check_limits
+from odfa11y.pdf.reading import BoundedPdf, open_pdf
+from odfa11y.pdf.reading.objects import resolve
 
 SIZE_PRECISION = 1
 
@@ -55,24 +54,20 @@ def read_snapshot(path: str | Path) -> PdfSnapshot:
 
     """
     try:
-        check_file_size(path)
-        with Path(path).open("rb") as stream:
-            reader = PdfReader(stream, strict=True)
-            check_limits(path, len(reader.pages))
-            check_consumption(reader)
+        with open_pdf(path) as reader:
             return _snapshot(reader)
     except (OSError, PyPdfError, ValueError, KeyError, RecursionError) as exc:
         msg = f"Cannot read PDF {path}: {exc}"
         raise ToolFailure(msg) from exc
 
 
-def _snapshot(reader: PdfReader) -> PdfSnapshot:
+def _snapshot(reader: BoundedPdf) -> PdfSnapshot:
     pages = []
     links: Counter[str] = Counter()
-    base = uri_base(reader.root_object)
-    for page in reader.pages:
+    base = uri_base(reader.catalog)
+    for index, page in enumerate(reader.pages):
         box = page.mediabox
-        text = " ".join((page.extract_text() or "").split())
+        text = " ".join((reader.text(index)).split())
         pages.append(
             PageSnapshot(
                 round(float(box.width), SIZE_PRECISION),

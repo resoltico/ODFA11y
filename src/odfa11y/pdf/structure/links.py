@@ -6,17 +6,16 @@ from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
 from pypdf.errors import PdfReadError
-from pypdf.generic import ArrayObject, IndirectObject, PdfObject
-lazy from pypdf import PdfReader
+from pypdf.generic import ArrayObject
 lazy from pypdf.generic import DictionaryObject
 
 from odfa11y.contracts import Description
-from odfa11y.pdf.structure_walk import pdf_dictionary
+from odfa11y.pdf.reading.objects import dictionary, has_text, text, xref
 from odfa11y.rules import registry as rules
-lazy from odfa11y.pdf.structure_walk import StructureNode
+from odfa11y.rules.details import DETAIL_ITEMS
+lazy from odfa11y.pdf.reading import BoundedPdf
+lazy from odfa11y.pdf.reading.structure import StructureNode
 lazy from odfa11y.report import Report
-
-MAX_LISTED = 20
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,7 +36,11 @@ class LinkAnnotation:
     xref: int | None
     page_xref: int | None
     page_number: int
-    has_description: bool
+    description: str | None
+
+    @property
+    def has_description(self) -> bool:
+        return has_text(self.description)
 
     def describe(self) -> dict[str, int | None]:
         """Identify the annotation in a finding.
@@ -51,7 +54,7 @@ class LinkAnnotation:
         return {"page": self.page_number, "xref": self.xref}
 
 
-def link_annotations(reader: PdfReader) -> list[LinkAnnotation]:
+def link_annotations(reader: BoundedPdf) -> list[LinkAnnotation]:
     """List every link annotation of every page.
 
     Returns
@@ -72,10 +75,10 @@ def link_annotations(reader: PdfReader) -> list[LinkAnnotation]:
             if annotation is not None:
                 found.append(
                     LinkAnnotation(
-                        item.idnum if isinstance(item, IndirectObject) else None,
-                        page_ref.idnum if page_ref is not None else None,
+                        xref(item),
+                        xref(page_ref),
                         number,
-                        _has_text(annotation.get("/Contents")),
+                        text(annotation.get("/Contents")),
                     )
                 )
     return found
@@ -83,15 +86,10 @@ def link_annotations(reader: PdfReader) -> list[LinkAnnotation]:
 
 def _link_dictionary(item: object) -> DictionaryObject | None:
     try:
-        annotation = pdf_dictionary(item)
+        annotation = dictionary(item)
     except PdfReadError:
         return None  # a malformed annotation entry is not a link we can correlate
     return annotation if annotation.get("/Subtype") == "/Link" else None
-
-
-def _has_text(value: object) -> bool:
-    resolved = value.get_object() if isinstance(value, PdfObject) else value
-    return isinstance(resolved, str) and bool(resolved.strip())
 
 
 def check_link_structure(
@@ -113,7 +111,7 @@ def check_link_structure(
         for reference in node.object_references:
             if reference.object_xref in known and reference.object_xref is not None:
                 mapped[reference.object_xref].append(reference.page_xref)
-                if _has_text(node.element.get("/Alt")):
+                if has_text(node.element.get("/Alt")):
                     alternates.add(reference.object_xref)
     report.measure(PdfLinkMeasurements(link_annotation_count=len(annotations)))
     report.measure(PdfLinkMeasurements(link_structure_element_count=len(link_nodes)))
@@ -123,7 +121,7 @@ def check_link_structure(
             rules.PDF017,
             details={
                 "count": len(unmatched),
-                "annotations": [a.describe() for a in unmatched[:MAX_LISTED]],
+                "annotations": [a.describe() for a in unmatched[:DETAIL_ITEMS]],
             },
         )
     orphans = [
@@ -134,7 +132,7 @@ def check_link_structure(
             rules.PDF018,
             details={
                 "count": len(orphans),
-                "page_xrefs": [n.page_xref for n in orphans[:MAX_LISTED]],
+                "page_xrefs": [n.page_xref for n in orphans[:DETAIL_ITEMS]],
             },
         )
     conflicts = [
@@ -147,7 +145,7 @@ def check_link_structure(
             rules.PDF019,
             details={
                 "count": len(conflicts),
-                "annotations": [a.describe() for a in conflicts[:MAX_LISTED]],
+                "annotations": [a.describe() for a in conflicts[:DETAIL_ITEMS]],
             },
         )
     undescribed = [a for a in annotations if not a.has_description and a.xref not in alternates]
@@ -156,6 +154,6 @@ def check_link_structure(
             rules.PDF020,
             details={
                 "count": len(undescribed),
-                "annotations": [a.describe() for a in undescribed[:MAX_LISTED]],
+                "annotations": [a.describe() for a in undescribed[:DETAIL_ITEMS]],
             },
         )

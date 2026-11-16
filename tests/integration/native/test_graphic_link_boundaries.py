@@ -17,7 +17,7 @@ from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.fidelity import compare_pdfs
-from odfa11y.pdf.link_structure import PdfLinkMeasurements
+from odfa11y.pdf.structure.links import PdfLinkMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (

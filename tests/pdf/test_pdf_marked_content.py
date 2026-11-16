@@ -11,10 +11,10 @@ lazy from pypdf.generic import IndirectObject
 
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua
-from odfa11y.pdf import marked_content as marked
-from odfa11y.pdf.marked_content import MarkedContentMeasurements
+from odfa11y.pdf.reading import limits
 from odfa11y.pdf.reading.content import scan as content_scan
 from odfa11y.pdf.reading.content import scan_content
+from odfa11y.pdf.structure.marked_content import MarkedContentMeasurements
 from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.pdf import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
@@ -266,25 +266,27 @@ def test_page_content_above_the_size_limit_is_reported_as_uninspectable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     writer = tagged_writer(["H1"])
+    del writer.root_object["/Metadata"]
     path = tmp_path / "large.pdf"
     writer.write(path)
-    monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 10)
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 10)
     report = audit_pdfua(path)
     assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
-    assert "larger than the 10-byte limit" in report.findings[0].message
+    assert "10-byte inspection limit" in report.findings[0].message
 
 
 def test_the_content_limit_covers_all_pages_together(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     writer = tagged_writer(["H1"])
+    del writer.root_object["/Metadata"]
     second = writer.add_blank_page(width=100, height=100)
     set_page_content(writer, second, marked_text(0))
     page_bytes = len(marked_text(0))
-    monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes - 1)
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 2 * page_bytes - 1)
     report = audit(tmp_path, writer)
     assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
-    monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes + 1)
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 2 * page_bytes + 1)
     assert rules.PDF001.id not in {f.rule_id for f in audit(tmp_path, writer).findings}
 
 

@@ -42,6 +42,8 @@ class ContentScan:
     unmarked_text_operations: int = 0
     graphical_mcids: set[int] = field(default_factory=set)
     graphical_content: bool = False
+    image_operations: int = 0
+    artifact_image_operations: int = 0
 
 
 @dataclass(slots=True)
@@ -130,9 +132,12 @@ class _Scanner:
         self.operands.clear()
 
     def _invoke(self, name: str) -> None:
-        if (self.image is not None and self.image(name)) or (
-            self.invoke is not None
-            and self.invoke(name, (bool(self.covered), bool(self.artifacts)))
+        if self.image is not None and self.image(name):
+            self.scan.image_operations += 1
+            self.scan.artifact_image_operations += bool(self.artifacts)
+            self.paint()
+        elif self.invoke is not None and self.invoke(
+            name, (bool(self.covered), bool(self.artifacts))
         ):
             self.paint()
 

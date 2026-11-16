@@ -12,7 +12,7 @@ from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
-from odfa11y.pdf.structure_checks import PdfStructureMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings

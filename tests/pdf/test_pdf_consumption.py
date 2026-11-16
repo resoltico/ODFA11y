@@ -1,18 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Compressed consumption bounds apply independently of accessibility tagging."""
 
+from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
-from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NameObject
 
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
-from odfa11y.pdf.reading import consumption
-from odfa11y.pdf.reading.consumption import check_consumption
+from odfa11y.pdf.reading import default_limits, limits, open_pdf
 from odfa11y.rules import registry as rules
 from tests.fixtures.pdf import register, tagged_writer
 
@@ -29,12 +28,11 @@ def test_real_compressed_content_boundary(tmp_path: Path, limit: int, *, tagged:
     writer.pages[0][NameObject("/Contents")] = register(writer, stream.flate_encode())
     path = tmp_path / "compressed.pdf"
     writer.write(path)
-    reader = PdfReader(path)
     if limit < 100:
         with pytest.raises((ToolFailure, PyPdfError), match=r"(limit|Limit|bytes)"):
-            check_consumption(reader, limit)
+            _read_with_limit(path, limit)
     else:
-        check_consumption(reader, limit)
+        _read_with_limit(path, limit)
 
 
 def test_aggregate_and_auxiliary_streams(tmp_path: Path) -> None:
@@ -49,8 +47,8 @@ def test_aggregate_and_auxiliary_streams(tmp_path: Path) -> None:
     path = tmp_path / "aggregate.pdf"
     writer.write(path)
     with pytest.raises((ToolFailure, PyPdfError), match=r"(limit|Limit|bytes)"):
-        check_consumption(PdfReader(path), 119)
-    check_consumption(PdfReader(path), 120)
+        _read_with_limit(path, 119)
+    _read_with_limit(path, 120)
 
 
 @pytest.mark.parametrize("tagged", [False, True])
@@ -62,7 +60,7 @@ def test_endpoints_refuse_resource_overflow(
         del writer.root_object["/StructTreeRoot"]
     path = tmp_path / "limited.pdf"
     writer.write(path)
-    monkeypatch.setattr(consumption, "MAX_CONTENT_BYTES", 10)
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 10)
     assert rules.PDF001.id in {f.rule_id for f in audit_pdfua(path).findings}
     with pytest.raises((ToolFailure, PyPdfError)):
         read_snapshot(path)
@@ -97,5 +95,11 @@ def test_embedded_type1_fallback_font_counts_toward_budget(tmp_path: Path) -> No
     path = tmp_path / "type1.pdf"
     writer.write(path)
     with pytest.raises((ToolFailure, PyPdfError)):
-        check_consumption(PdfReader(path), 99)
-    check_consumption(PdfReader(path), 200)
+        _read_with_limit(path, 99)
+    _read_with_limit(path, 200)
+
+
+def _read_with_limit(path: Path, limit: int) -> None:
+    selected = replace(default_limits(), decoded_bytes=limit, invocation_bytes=limit)
+    with open_pdf(path, selected):
+        pass

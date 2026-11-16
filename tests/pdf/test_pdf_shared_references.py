@@ -7,7 +7,8 @@ import pytest
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject
 
 from odfa11y.errors import ToolFailure
-from odfa11y.pdf import audit_pdfua, structure_walk
+from odfa11y.pdf import audit_pdfua
+from odfa11y.pdf.reading import structure as structure_walk
 from odfa11y.rules import registry as rules
 from tests.fixtures.pdf import dictionary, register, tagged_writer
 from tests.pdf.test_pdf_marked_content import leaves
@@ -39,10 +40,9 @@ def test_shared_reference_counts_each_owner(tmp_path: Path, *, array: bool) -> N
 
 
 def test_shared_empty_arrays_hit_traversal_work_bound(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(structure_walk, "MAX_STRUCTURE_NODES", 20)
     value = ArrayObject([])
     for _ in range(5):
         value = ArrayObject([value, value])
     root = DictionaryObject({NameObject("/K"): value})
     with pytest.raises(ToolFailure, match="more than 20"):
-        structure_walk.build_tree(root)
+        structure_walk.build_tree(root, 20)
