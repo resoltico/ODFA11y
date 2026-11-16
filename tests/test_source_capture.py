@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Physical capture bounds and descriptor-kind checks precede document parsing."""
 
+import hashlib
+import importlib
 import json
 import multiprocessing
 import os
@@ -14,6 +16,7 @@ from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument
+from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
@@ -45,8 +48,8 @@ def test_valid_document_at_physical_boundary(
             pytest.fail("over-limit input was accepted")
     else:
         with capture.capture_source(source) as path:
-            assert path.read_bytes() == source.read_bytes()
-            OdfDocument.open(path)
+            assert path.path.read_bytes() == source.read_bytes()
+            OdfDocument.open(path.path)
     assert not list(tmp_path.glob(".odfa11y-source-*"))
 
 
@@ -137,8 +140,8 @@ def test_regular_symlink_uses_resolved_directory_and_leaves_assets_unchanged(
     asset = target / "asset"
     asset.write_bytes(b"sentinel")
     with capture.capture_source(alias) as staged:
-        assert staged.parent == target.resolve()
-        assert staged.read_bytes() == source.read_bytes()
+        assert staged.identity.path.parent == target.resolve()
+        assert staged.path.read_bytes() == source.read_bytes()
     assert alias.is_symlink()
     assert asset.read_bytes() == b"sentinel"
     assert not list(target.glob(".odfa11y-source-*"))
@@ -215,7 +218,7 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
     assert not list(tmp_path.glob(".odfa11y-source-*"))
 
 
-def test_unwritable_source_directory_publishes_failure_elsewhere(tmp_path: Path) -> None:
+def test_readonly_source_directory_does_not_need_write_access(tmp_path: Path) -> None:
     directory = tmp_path / "readonly"
     directory.mkdir()
     source = make_flat(directory, "text")
@@ -231,10 +234,30 @@ def test_unwritable_source_directory_publishes_failure_elsewhere(tmp_path: Path)
             output,
             RunSettings(profile=profile_named("source")),
         )
-        assert result.failed_stage == "identify-source"
-        assert result.exit_status == 3
+        assert result.failed_stage is None
+        assert result.exit_status == 0
         assert check_bundle(output) == []
         assert source.read_bytes() == original
         assert not list(directory.glob(".odfa11y-source-*"))
     finally:
         directory.chmod(0o700)
+
+
+def test_capture_returns_one_digest_and_plan_reuses_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = make_flat(tmp_path, "text")
+    expected = source.read_bytes()
+
+    def forbidden(_path: Path) -> str:
+        pytest.fail("An already captured source was hashed again")
+
+    with capture.capture_source(source) as captured:
+        assert captured.digest == hashlib.sha256(expected).hexdigest()
+        assert captured.identity.name == source.name
+        assert captured.path.parent != source.parent
+        monkeypatch.setattr(
+            importlib.import_module("odfa11y.plans.model"), "source_digest", forbidden
+        )
+        assert Plan.for_source(captured).header.source.sha256 == captured.digest
+    assert not captured.path.exists()

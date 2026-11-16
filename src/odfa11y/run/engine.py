@@ -10,7 +10,7 @@ lazy from collections.abc import Callable
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, plan_blockers
 from odfa11y.audit.validation import check_pdfua
-from odfa11y.capture import capture_source, source_digest
+from odfa11y.capture import capture_source
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory
 from odfa11y.families import spec_for
@@ -56,8 +56,9 @@ class _Run:
         return self.work / f"remediated{self.source.suffix}"
 
     def identify_source(self) -> StageResult:
-        self.captured = self.lifetime.enter_context(capture_source(self.source))
-        self.record.document.sha256 = source_digest(self.captured)
+        captured = self.lifetime.enter_context(capture_source(self.source))
+        self.captured = captured.path
+        self.record.document.sha256 = captured.digest
         try:
             document = OdfDocument.open(self.captured)
         except PackageError, OSError:
@@ -129,7 +130,7 @@ class _Run:
         with capture_source(
             self.remediated, directory=(self.captured or self.source).parent
         ) as staged:
-            return self._export(Stage.EXPORT_REMEDIATED, staged, "remediated.pdf")
+            return self._export(Stage.EXPORT_REMEDIATED, staged.path, "remediated.pdf")
 
     def audit_pdf(self) -> StageResult:
         if not self._exportable:

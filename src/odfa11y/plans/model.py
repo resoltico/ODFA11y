@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 lazy from collections.abc import Iterable
 
-from odfa11y.capture import source_digest
+from odfa11y.capture import CapturedSource, source_digest
 from odfa11y.contracts import (
     Description,
     JsonObject,
@@ -122,7 +122,7 @@ class Plan:
     @classmethod
     def for_source(
         cls,
-        source: str | Path,
+        source: CapturedSource | str | Path,
         decisions: Iterable[Decision] = (),
         *,
         fidelity: FidelityPolicy | None = None,
@@ -137,7 +137,13 @@ class Plan:
         """
         return cls(
             PlanHeader(
-                PLAN_SCHEMA_VERSION, SourceBinding(source_digest(Path(source))), version("odfa11y")
+                PLAN_SCHEMA_VERSION,
+                SourceBinding(
+                    source.digest
+                    if isinstance(source, CapturedSource)
+                    else source_digest(Path(source))
+                ),
+                version("odfa11y"),
             ),
             tuple(decisions),
             fidelity or Pagination.SAME(),

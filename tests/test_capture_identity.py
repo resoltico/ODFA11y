@@ -126,14 +126,14 @@ def test_deliberate_aliases_use_the_resolved_parent(tmp_path: Path, alias: str) 
         link.symlink_to(source)
         selected = link
     with capture.capture_source(selected) as staged:
-        assert staged.parent == parent.resolve()
-        assert staged.read_bytes() == source.read_bytes()
-    assert not staged.exists()
+        assert staged.identity.path.parent == parent.resolve()
+        assert staged.path.read_bytes() == source.read_bytes()
+    assert not staged.path.exists()
     assert link.is_symlink()
 
 
 @pytest.mark.parametrize("timing", ["before-open-hardlink", "after-open", "during-copy"])
-def test_parent_namespace_changes_are_outside_the_stable_directory_contract(
+def test_private_capture_survives_parent_namespace_changes_with_the_same_leaf_identity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, timing: str
 ) -> None:
     parent = tmp_path / "parent"
@@ -196,12 +196,9 @@ def _assert_parent_observation(
     moved = source.parent.parent / "moved"
     with capture.capture_source(source) as staged:
         assert os.path.samestat(selected, source.stat())  # Leaf identity is unchanged.
-        if timing == "during-copy":
-            assert not staged.exists()  # Path-based ownership needs stable ancestors.
-        else:
-            assert staged.read_bytes() == expected
-            assert staged.parent.stat().st_ino != moved.stat().st_ino
-    retained = list(moved.glob(".odfa11y-source-*"))
-    assert len(retained) == (1 if timing == "during-copy" else 0)
-    if retained:
-        assert retained[0].read_bytes() == expected
+        assert staged.path.read_bytes() == expected
+        assert staged.path.parent not in {source.parent, moved}
+        assert staged.identity.device == selected.st_dev
+        assert staged.identity.inode == selected.st_ino
+    assert not staged.path.exists()
+    assert not list(moved.glob(".odfa11y-source-*"))

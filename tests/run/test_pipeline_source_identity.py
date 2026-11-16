@@ -2,6 +2,7 @@
 """Replacing the displayed source cannot change captured run input."""
 
 import importlib
+from contextlib import contextmanager
 lazy from pathlib import Path
 
 import pytest
@@ -16,7 +17,7 @@ from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
 
 
-@pytest.mark.parametrize("boundary", ["source_digest", "audit_odf", "remediate"])
+@pytest.mark.parametrize("boundary", ["capture_source", "audit_odf", "remediate"])
 def test_source_replacement_uses_captured_bytes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, boundary: str
 ) -> None:
@@ -26,11 +27,21 @@ def test_source_replacement_uses_captured_bytes(
     digest = source_digest(source)
     method = getattr(runner, boundary)
 
-    def replace(*args: object, **kwargs: object) -> object:
-        source.write_bytes(b"replaced source")
-        return method(*args, **kwargs)
+    if boundary == "capture_source":
 
-    monkeypatch.setattr(runner, boundary, replace)
+        @contextmanager
+        def exchange(*args, **kwargs):
+            with method(*args, **kwargs) as captured:
+                source.write_bytes(b"replaced source")
+                yield captured
+
+    else:
+
+        def exchange(*args, **kwargs):
+            source.write_bytes(b"replaced source")
+            return method(*args, **kwargs)
+
+    monkeypatch.setattr(runner, boundary, exchange)
     target = tmp_path / "bundle"
     result = execute(
         source,

@@ -4,9 +4,9 @@
 import tempfile
 from pathlib import Path
 
-from odfa11y.audit.engine import BLOCKING_RULES, audit_odf
+from odfa11y.audit.engine import BLOCKING_RULES, audit_document
 from odfa11y.audit.questions import available_questions, with_context
-from odfa11y.capture import capture_source
+from odfa11y.capture import CapturedSource, capture_source
 from odfa11y.decisions import Decision, OpenDecision
 from odfa11y.errors import PackageError
 from odfa11y.odf import OdfDocument, Use
@@ -58,13 +58,13 @@ def prepare_plan(
 
 
 def _prepare_captured(
-    source: Path, captured: Path, *, previous: Plan | None, include_all: bool
+    source: Path, captured: CapturedSource, *, previous: Plan | None, include_all: bool
 ) -> tuple[Report, str | None]:
-    report = audit_odf(captured)
+    document = OdfDocument.open(captured.path)
+    report = audit_document(document, subject=str(source), source=source)
     report.subject, report.sources = str(source), (source,)
     if plan_blockers(report) is not None:
         return report, None
-    document = OdfDocument.open(captured)
     document.require(Use.PLAN)
     header = Plan.for_source(captured).header
     available = available_questions(document)

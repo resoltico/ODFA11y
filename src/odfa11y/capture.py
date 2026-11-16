@@ -7,6 +7,7 @@ import os
 import stat
 import tempfile
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 lazy from collections.abc import Generator
 lazy from typing import IO
@@ -27,80 +28,83 @@ def _require_input(info: os.stat_result) -> None:
         raise PackageError(msg)
 
 
-def _copy_bounded(descriptor: int, destination: IO[bytes]) -> None:
+def _copy_bounded(descriptor: int, destination: IO[bytes]) -> str:
     remaining = MAX_SOURCE_BYTES
+    digest = hashlib.sha256()
     while chunk := os.read(descriptor, min(COPY_CHUNK_BYTES, remaining + 1)):
         if len(chunk) > remaining:
             msg = f"Input grew beyond the {MAX_SOURCE_BYTES}-byte physical capture limit"
             raise PackageError(msg)
         destination.write(chunk)
+        digest.update(chunk)
         remaining -= len(chunk)
+    return digest.hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class SourceIdentity:
+    name: str
+    path: Path
+    device: int
+    inode: int
+
+
+@dataclass(frozen=True, slots=True)
+class CapturedSource:
+    path: Path
+    digest: str
+    identity: SourceIdentity
 
 
 @contextmanager
-def capture_source(source: Path, *, directory: Path | None = None) -> Generator[Path]:
-    """Capture one regular input, following file aliases to their actual resource directory.
+def capture_source(source: Path, *, directory: Path | None = None) -> Generator[CapturedSource]:
+    """Acquire a bounded regular file once into a private, caller-owned lifetime.
 
-    Physical input is capped independently of the ODF parser's uncompressed budget. The
-    descriptor is checked again after opening; POSIX nonblocking open prevents a replaced
-    FIFO from waiting for a writer. ``directory`` selects the controlled export base for an
-    already validated candidate. The staging directory must be writable. No dependencies
-    are copied or fetched, and this file's lifetime is owned by the context. The opened
-    device/inode identity must match selection before copying. Caller-controlled ancestor
-    directories must remain stable for the entire context; neither parent exchanges nor
-    concurrent in-place writes are protected by this leaf-file identity check.
-
-    Yields
-    ------
-    Path
-        Closed private copy, safe to reopen on Windows.
-
-    Raises
-    ------
-    PackageError
-        Input kind, physical size or selected file identity is unsupported.
-    OSError
-        The input or staging namespace is unavailable.
-
+    Resolve deliberate aliases before selection, then verify the opened descriptor's
+    identity. Nonblocking, no-follow open retains FIFO and replaced-leaf protections.
+    Capture never writes beside the user's source or copies its rendering dependencies.
     """
+    name = source.name
     source = source.resolve(strict=True)
     selected = source.stat()
     _require_input(selected)
-    captured_path: Path | None = None
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_NONBLOCK", 0)
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
     try:
-        flags = (
-            os.O_RDONLY
-            | getattr(os, "O_NONBLOCK", 0)
-            | getattr(os, "O_BINARY", 0)
-            | getattr(os, "O_NOFOLLOW", 0)
-        )
-        try:
-            descriptor = os.open(source, flags)
-        except OSError as exc:
-            if exc.errno == errno.ELOOP:
-                msg = "Input identity changed after selection"
-                raise PackageError(msg) from exc
-            raise
-        try:
-            opened = os.fstat(descriptor)
-            _require_input(opened)
-            if not os.path.samestat(selected, opened):
-                msg = "Input identity changed after selection"
-                raise PackageError(msg)
-            with tempfile.NamedTemporaryFile(
-                prefix=".odfa11y-source-",
-                suffix=source.suffix,
-                dir=directory or source.parent,
-                delete=False,
-            ) as captured:
-                captured_path = Path(captured.name)
-                _copy_bounded(descriptor, captured.file)
-        finally:
+        descriptor = os.open(source, flags)
+    except OSError as error:
+        if error.errno == errno.ELOOP:
+            message = "Input identity changed after selection"
+            raise PackageError(message) from error
+        raise
+    try:
+        opened = os.fstat(descriptor)
+        _require_input(opened)
+        if not os.path.samestat(selected, opened):
+            message = "Input identity changed after selection"
+            raise PackageError(message)
+        with tempfile.TemporaryDirectory(prefix="odfa11y-source-", dir=directory) as temporary:
+            captured = Path(temporary) / source.name
+            with captured.open("xb") as output:
+                digest = _copy_bounded(descriptor, output)
+            finished = os.fstat(descriptor)
+            if (opened.st_size, opened.st_mtime_ns) != (finished.st_size, finished.st_mtime_ns):
+                message = "Input changed during source capture"
+                raise PackageError(message)
             os.close(descriptor)
-        yield captured_path
+            descriptor = None
+            yield CapturedSource(
+                captured,
+                digest,
+                SourceIdentity(name, source, opened.st_dev, opened.st_ino),
+            )
     finally:
-        if captured_path is not None:
-            captured_path.unlink(missing_ok=True)
+        if descriptor is not None:
+            os.close(descriptor)
 
 
 def source_digest(source: Path) -> str:

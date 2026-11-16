@@ -53,14 +53,17 @@ def test_plan_header_binds_audited_bytes_when_original_source_changes(
     replacement = make_minimal_odt(tmp_path / "replacement.odt", title="Different document")
     replacement_bytes = replacement.read_bytes()
     module = importlib.import_module("odfa11y.audit.plan")
-    original = module.audit_odf
+    original = module.audit_document
+    displayed_source = source
 
-    def exchange(path: Path) -> Report:
-        report = original(path)
-        source.write_bytes(replacement_bytes)
+    def exchange(
+        document: OdfDocument, *, subject: str, source: Path | None = None, schema: bool = False
+    ) -> Report:
+        report = original(document, subject=subject, source=source, schema=schema)
+        displayed_source.write_bytes(replacement_bytes)
         return report
 
-    monkeypatch.setattr(module, "audit_odf", exchange)
+    monkeypatch.setattr(module, "audit_document", exchange)
     report, text = prepare_plan(source)
     assert text is not None
     assert report.subject == str(source)
@@ -71,3 +74,21 @@ def test_plan_header_binds_audited_bytes_when_original_source_changes(
     with pytest.raises(PlanError, match="digest mismatch"):
         remediate(source, tmp_path / "out.odt", plan)
     assert source.read_bytes() == replacement_bytes
+
+
+def test_planning_opens_the_captured_document_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    original = OdfDocument.open
+    opened = []
+
+    def open_document(path: str | Path) -> OdfDocument:
+        opened.append(Path(path))
+        return original(path)
+
+    monkeypatch.setattr(OdfDocument, "open", staticmethod(open_document))
+    _report, template = prepare_plan(source)
+    assert template is not None
+    assert len(opened) == 1
+    assert opened[0].parent != source.parent

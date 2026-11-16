@@ -7,7 +7,7 @@ from pathlib import Path
 lazy from collections.abc import Sequence
 
 from odfa11y.audit.engine import audit_document
-from odfa11y.capture import capture_source, source_digest
+from odfa11y.capture import capture_source
 from odfa11y.concepts import opaque_payloads
 from odfa11y.concepts.preservation import ProtectedPackage
 from odfa11y.decisions import Decision
@@ -56,8 +56,8 @@ def remediate(
         tempfile.TemporaryDirectory(prefix="odfa11y-remediate-") as directory,
         capture_source(source, directory=Path(directory)) as captured,
     ):
-        document = _document(captured, destination)
-        digest = source_digest(captured)
+        document = _document(captured.path, destination)
+        digest = captured.digest
         if not isinstance(plan, Plan):
             plan = load_plan(plan, document=document, source_sha256=digest)
         decisions = compile_decisions(document, plan, source_sha256=digest)
