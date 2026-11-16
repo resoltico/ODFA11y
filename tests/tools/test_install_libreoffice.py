@@ -38,7 +38,7 @@ def test_windows_installer_accepts_only_success_and_reboot_success(
     operations = []
 
     def fetch(url, digest, destination):
-        assert url.startswith("https://downloadarchive.documentfoundation.org/")
+        assert url.startswith("https://download.documentfoundation.org/libreoffice/stable/")
         assert len(digest) == 64
         destination.write_bytes(b"Checked fixture input")
         operations.append("verified")

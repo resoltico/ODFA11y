@@ -11,7 +11,7 @@ from pathlib import Path
 from tools.native_download import download
 
 PINS = Path(__file__).with_name("native_versions.toml")
-ARCHIVE = "https://downloadarchive.documentfoundation.org/libreoffice/old"
+RELEASES = "https://download.documentfoundation.org/libreoffice/stable"
 
 
 def install(destination: Path) -> Path:
@@ -21,7 +21,7 @@ def install(destination: Path) -> Path:
     if sys.platform == "linux":
         archive = destination / "libreoffice.tar.gz"
         filename = f"LibreOffice_{version}_Linux_x86-64_deb.tar.gz"
-        download(f"{ARCHIVE}/{version}/deb/x86_64/{filename}", pins["linux_sha256"], archive)
+        download(f"{RELEASES}/{version}/deb/x86_64/{filename}", pins["linux_sha256"], archive)
         with tarfile.open(archive) as bundle:
             bundle.extractall(destination / "unpacked", filter="data")
         packages = sorted((destination / "unpacked").glob("*/DEBS/*.deb"))
@@ -42,7 +42,7 @@ def install(destination: Path) -> Path:
     if sys.platform == "darwin":
         archive = destination / "libreoffice.dmg"
         filename = f"LibreOffice_{version}_MacOS_aarch64.dmg"
-        download(f"{ARCHIVE}/{version}/mac/aarch64/{filename}", pins["macos_sha256"], archive)
+        download(f"{RELEASES}/{version}/mac/aarch64/{filename}", pins["macos_sha256"], archive)
         mount = destination / "mount"
         subprocess.run(  # noqa: S603  Fixed CI qualification commands; no shell or document-controlled executable.
             [  # noqa: S607  Fixed CI qualification commands; no shell or document-controlled executable.
@@ -69,7 +69,7 @@ def install(destination: Path) -> Path:
     if sys.platform == "win32":
         archive = destination / "libreoffice.msi"
         filename = f"LibreOffice_{version}_Win_x86-64.msi"
-        download(f"{ARCHIVE}/{version}/win/x86_64/{filename}", pins["windows_sha256"], archive)
+        download(f"{RELEASES}/{version}/win/x86_64/{filename}", pins["windows_sha256"], archive)
         result = subprocess.run(  # noqa: S603  Fixed CI qualification commands; no shell or document-controlled executable.
             ["msiexec.exe", "/i", str(archive), "/qn", "/norestart"],  # noqa: S607  Windows system installer.
             check=False,
