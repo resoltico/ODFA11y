@@ -40,3 +40,6 @@ stderr only. JSON prints exactly `BatchRecord.as_dict()`. Verify existing item b
 
 Required native tools and identities resolve once per batch, after the first valid item plan.
 Later items reuse that result, including a tool failure; each item still prepares independently.
+
+Completed Python batch items expose their read-only `stages` tuple for inspection and text
+rendering. `batch.json` remains a summary; full run records stay in each item’s evidence bundle.

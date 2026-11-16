@@ -9,7 +9,7 @@ lazy from pathlib import Path
 from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.errors import Failure
 from odfa11y.publish import publish_file
-from odfa11y.run.record import RunRecord
+from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.status import ExitStatus, Profile, combine_statuses
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import Stage
@@ -23,6 +23,11 @@ class BatchItemResult:
     _result: RunRecord | Failure | None = None
     _started: bool = False
     _interrupted: bool = False
+
+    @property
+    def stages(self) -> tuple[StageResult, ...]:
+        """Expose completed run stages without duplicating them in the batch summary."""
+        return self._result.stages if isinstance(self._result, RunRecord) else ()
 
     @JsonProperty
     def error(self) -> Failure | None:

@@ -222,3 +222,50 @@ def test_batch_preparation_error_renders_every_problem_and_plan_remedy(tmp_path,
     problems = "\n".join(summary["items"][0]["error"]["problems"])
     assert "first_unknown" in problems
     assert "second_unknown" in problems
+
+
+@pytest.mark.parametrize(
+    ("error_type", "exit_status", "stage_status"),
+    [(DocumentRefusal, 2, "refused"), (ToolFailure, 3, "crashed")],
+)
+def test_completed_batch_runs_render_stage_reasons_and_remedies(
+    tmp_path, capsys, error_type, exit_status, stage_status
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    (tmp_path / "plan.toml").write_text(plan_header(source))
+    batch_file = write_batch_file(
+        tmp_path, [("one", "source.odt", "plan.toml"), ("two", "source.odt", "plan.toml")]
+    )
+
+    def fail(*args, **kwargs):
+        message = "Rendering resource is external"
+        raise error_type(
+            message,
+            problems=("Embed the reviewed dependency\x1b[31m",),
+            remedy=Remedy(RemedyAction.EMBED_RESOURCE, "Chart", "chart.png"),
+        )
+
+    target = tmp_path / "out"
+    assert (
+        main(
+            ["batch", str(batch_file), "--output-dir", str(target)],
+            native_tools=replace(native_fakes(), export=fail),
+        )
+        == exit_status
+    )
+    output = capsys.readouterr().out
+    assert output.count("Result:") == 1
+    assert "\x1b" not in output
+    for identity in ("one", "two"):
+        item_text = output.split(f"- {identity}: ", 1)[1]
+        if identity == "one":
+            item_text = item_text.split("- two: ", 1)[0]
+        assert f"export-source: {stage_status}; Rendering resource is external" in item_text
+        assert f"export-remediated: {stage_status}; Rendering resource is external" in item_text
+        assert item_text.count("Embed the reviewed dependency\\x1b[31m") == 2
+        assert item_text.count("Next: embed chart.png for Chart in the source application.") == 2
+    summary = json.loads((target / "batch.json").read_text())
+    for item in summary["items"]:
+        assert set(item) == {"id", "error", "evidence", "failed_stage", "exit_status", "status"}
+        assert item["error"] is None
+        assert (target / item["id"] / "run.json").is_file()

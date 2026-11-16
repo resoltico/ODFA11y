@@ -210,13 +210,20 @@ def _stage_detail(stage: api.StageResult) -> str:
     return ""
 
 
-def render_run(record: api.RunRecord, directory) -> str:
-    lines = [f"Profile: {record.profile.value}"]
-    for stage in record.stages:
-        lines += _field(f"- {stage.name.value}: {stage.outcome.status}; ", _stage_detail(stage))
+def _stage_lines(stages: Iterable[api.StageResult], *, indent: str = "") -> list[str]:
+    lines = []
+    for stage in stages:
+        lines += _field(
+            f"{indent}- {stage.name.value}: {stage.outcome.status}; ", _stage_detail(stage)
+        )
         if isinstance(stage.outcome, api.Refused | api.Crashed):
             error = stage.outcome.error
-            lines += _recovery_lines(error.problems, error.remedy)
+            lines += [indent + line for line in _recovery_lines(error.problems, error.remedy)]
+    return lines
+
+
+def render_run(record: api.RunRecord, directory) -> str:
+    lines = [f"Profile: {record.profile.value}", *_stage_lines(record.stages)]
     lines += _field("Evidence: ", directory)
     lines += _field("Review: ", str(directory) + "/REVIEW.md")
     lines.append(render_verdict(record.exit_status, strict=record.strict))
@@ -233,6 +240,7 @@ def render_batch(record: api.BatchRecord, directory) -> str:
         if item.error:
             lines += _field("  Reason: ", item.error.message)
             lines += _recovery_lines(item.error.problems, item.error.remedy)
+        lines += _stage_lines(item.stages, indent="  ")
     lines += _field("Evidence: ", directory)
     lines.append(render_verdict(record.exit_status, strict=record.profile.strict))
     return "\n".join(lines)
