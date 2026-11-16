@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Requires pypdf 6.21.4 or newer for security fixes; restore the lockfile for patched pypdf and the audit toolchain’s soupsieve.
+
 ## [0.8.0] - 2026-10-28
 
 - Requires Python 3.15+; restore the refreshed lockfile, including major dependency upgrades and patched PDF/image handling.
