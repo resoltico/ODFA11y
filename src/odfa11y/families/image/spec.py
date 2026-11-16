@@ -14,6 +14,7 @@ from odfa11y.families.image.kinds import DECISION_KINDS
 from odfa11y.families.spec import FamilySpec, LanguageTargets, ReviewItem, Unsupported
 from odfa11y.odf import Family, Part, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import XmlChange
 from odfa11y.odf.styles import normalize_generated
 lazy from odfa11y.odf import OdfDocument
 
@@ -33,7 +34,7 @@ def _language(document: OdfDocument) -> str | None:
     return style_language(document, "paragraph")
 
 
-def _set_language(document: OdfDocument, tag: str) -> bool:
+def _set_language(document: OdfDocument, tag: str) -> XmlChange:
     return set_style_language(document, tag, "paragraph")
 
 

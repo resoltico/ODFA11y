@@ -16,10 +16,11 @@ from odfa11y.concepts.graphics import set_description
 from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import PageMetadataAnswer, PageNavigationAnswer
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, TextFields
 from odfa11y.odf.canonical import protected_xml
 from odfa11y.odf.styles import normalize_generated
 from odfa11y.targets import Fingerprint
@@ -150,20 +151,26 @@ def navigation_problem(
     return None
 
 
-def edit_page_metadata(
-    document: OdfDocument, decision: Decision[PageMetadataAnswer]
-) -> tuple[Outcome, ...]:
+def edit_page_metadata(document: OdfDocument, decision: Decision[PageMetadataAnswer]) -> EditResult:
     """Apply reviewed metadata to one native page."""
     page = resolved_node(document, decision)
     if problem := GraphicIdentity(document, ()).style_problem(page):
         raise DocumentRefusal(problem)
+    fields = TextFields.capture(
+        Part.CONTENT,
+        page,
+        (
+            (xml_names.SVG_TITLE, decision.answer.title),
+            (xml_names.SVG_DESC, decision.answer.description),
+        ),
+    )
     changed = set_description(page, decision.answer.title, decision.answer.description)
-    return _page_outcome(decision, changed)
+    return EditResult(_page_outcome(decision, changed), fields.allowance())
 
 
 def edit_page_navigation(
     document: OdfDocument, decision: Decision[PageNavigationAnswer]
-) -> tuple[Outcome, ...]:
+) -> EditResult:
     """Apply a complete order of existing globally unique shape identities."""
     page = resolved_node(document, decision)
     identities = Counter(
@@ -175,11 +182,12 @@ def edit_page_navigation(
         raise DocumentRefusal(problem)
     if problem := navigation_problem(page, decision.answer.navigation, identities):
         raise DocumentRefusal(problem)
+    allowance = Allowance((Attributes(Part.CONTENT, page, frozenset({xml_names.DRAW_NAV_ORDER})),))
     value = " ".join(decision.answer.navigation)
     changed = page.get(xml_names.DRAW_NAV_ORDER) != value
     if changed:
         page.set(xml_names.DRAW_NAV_ORDER, value)
-    return _page_outcome(decision, changed)
+    return EditResult(_page_outcome(decision, changed), allowance)
 
 
 def _page_outcome(decision: Decision, changed: bool) -> tuple[Outcome, ...]:

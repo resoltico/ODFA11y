@@ -7,7 +7,8 @@ from enum import StrEnum
 lazy from collections.abc import Callable, Mapping
 
 from odfa11y.contracts import JsonProperty, validate
-from odfa11y.decisions.edit import Outcome
+from odfa11y.decisions.constraints import KindConstraints
+from odfa11y.decisions.edit import EditResult
 from odfa11y.errors import PlanError
 from odfa11y.targets import Target, TargetPath
 lazy from odfa11y.decisions.domain import TargetDomain
@@ -37,9 +38,10 @@ class DecisionKind[A]:
     id: str
     scope: DecisionScope
     _answer_type: type[A]
-    edit: Callable[[OdfDocument, Decision[A]], tuple[Outcome, ...]]
+    edit: Callable[[OdfDocument, Decision[A]], EditResult]
     domain: TargetDomain | None = None
     resolves: tuple[Rule, ...] = ()
+    constraints: KindConstraints = field(default_factory=KindConstraints)
 
     def __post_init__(self) -> None:
         """Require an introspectable answer contract.

@@ -16,6 +16,7 @@ from odfa11y.contracts import (
     RequireAny,
 )
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
+from odfa11y.decisions.edit import EditResult
 from odfa11y.errors import PlanError
 from odfa11y.families.text.domains import HEADINGS
 from odfa11y.plans import Plan, parse_tables, plan_schema, render_plan
@@ -40,7 +41,7 @@ class Metadata:
     __contract__: ClassVar[Annotated[object, RequireAny(("title", "description"))]]
 
 
-def _not_executed(document: object, decision: object) -> tuple[()]:
+def _not_executed(document: object, decision: object) -> EditResult:
     message = "Codec fixture kinds must not execute"
     raise AssertionError(message)
 

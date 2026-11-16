@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import ClassVar, cast
 
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, decode_answer
-from odfa11y.decisions.edit import Outcome
+from odfa11y.decisions.edit import EditResult, Outcome
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.fidelity import Pagination
@@ -43,11 +43,11 @@ class FaultInput:
     """Replace only an edit callback while retaining the production answer and target contract."""
 
     inputs: Authored
-    edit: Callable[[OdfDocument, Decision], tuple[Outcome, ...]]
+    edit: Callable[[OdfDocument, Decision], EditResult]
 
 
 def fault_input(
-    inputs: Authored, edit: Callable[[OdfDocument, Decision], tuple[Outcome, ...]]
+    inputs: Authored, edit: Callable[[OdfDocument, Decision], EditResult]
 ) -> FaultInput:
     return FaultInput(inputs, edit)
 
@@ -269,8 +269,8 @@ def materialize(document: OdfDocument | None, inputs: Iterable[Authored]) -> tup
     return tuple(result)
 
 
-def _fault(document: OdfDocument, decision: Decision[FaultEdit]) -> tuple[Outcome, ...]:
-    return decision.answer.apply(document)
+def _fault(document: OdfDocument, decision: Decision[FaultEdit]) -> EditResult:
+    return EditResult(decision.answer.apply(document))
 
 
 def _binding(document: OdfDocument | None, kind: DecisionKind, item: RawDecision) -> Target:

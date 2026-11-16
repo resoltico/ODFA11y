@@ -9,6 +9,7 @@ from odfa11y.families.pages.audit import audit_document
 from odfa11y.families.pages.kinds import DECISION_KINDS
 from odfa11y.families.pages.profiles import DRAWING_PROFILE, PRESENTATION_PROFILE
 from odfa11y.families.spec import FamilySpec, LanguageTargets, PdfExport
+from odfa11y.odf.allowance import XmlChange
 lazy from odfa11y.families.pages.profiles import PageProfile
 lazy from odfa11y.odf import OdfDocument
 
@@ -17,7 +18,7 @@ def _language(document: OdfDocument) -> str | None:
     return style_language(document, "paragraph")
 
 
-def _set_language(document: OdfDocument, tag: str) -> bool:
+def _set_language(document: OdfDocument, tag: str) -> XmlChange:
     return set_style_language(document, tag, "paragraph")
 
 

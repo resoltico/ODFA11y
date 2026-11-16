@@ -13,10 +13,11 @@ from odfa11y.concepts.text import eligible_text_node, reading_context_path, visi
 from odfa11y.decisions import Decision, DecisionKind, OpenDecision
 from odfa11y.decisions.answers import LinkDescriptionAnswer
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes
 from odfa11y.odf.canonical import protected_xml
 from odfa11y.odf.styles import normalize_generated
 from odfa11y.report import Location
@@ -130,9 +131,7 @@ def link_decision(
     )
 
 
-def edit_link(
-    document: OdfDocument, decision: Decision[LinkDescriptionAnswer]
-) -> tuple[Outcome, ...]:
+def edit_link(document: OdfDocument, decision: Decision[LinkDescriptionAnswer]) -> EditResult:
     """Set a reviewed link description without changing its label or destination."""
     link = resolved_node(document, decision)
     identities = Counter(
@@ -150,17 +149,21 @@ def edit_link(
         raise DocumentRefusal(message)
     if problem := GraphicIdentity(document, ()).style_problem(link):
         raise DocumentRefusal(problem)
+    allowance = Allowance((Attributes(Part.CONTENT, link, frozenset({xml_names.OFFICE_TITLE})),))
     changed = link.get(xml_names.OFFICE_TITLE) != decision.answer.description
     if changed:
         link.set(xml_names.OFFICE_TITLE, decision.answer.description)
-    return (
-        Outcome(
-            decision.kind.id,
-            Status.APPLIED if changed else Status.UNCHANGED,
-            "Applied source link description."
-            if changed
-            else "Source link description already matches.",
-            target=decision.target_path,
-            count=int(changed),
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                "Applied source link description."
+                if changed
+                else "Source link description already matches.",
+                target=decision.target_path,
+                count=int(changed),
+            ),
         ),
+        allowance,
     )

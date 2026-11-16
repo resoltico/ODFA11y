@@ -8,10 +8,11 @@ lazy from lxml import etree
 from odfa11y.concepts import graphic_normalization, protected_xml
 from odfa11y.decisions import Decision
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.families.text.answers import HeadingLevelAnswer
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes
 from odfa11y.odf.styles import normalize_generated
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint
@@ -62,20 +63,24 @@ def heading_fingerprint(
     )
 
 
-def edit_heading(
-    document: OdfDocument, decision: Decision[HeadingLevelAnswer]
-) -> tuple[Outcome, ...]:
+def edit_heading(document: OdfDocument, decision: Decision[HeadingLevelAnswer]) -> EditResult:
     """Set the reviewed semantic level of one heading."""
     heading = resolved_node(document, decision)
+    allowance = Allowance((
+        Attributes(Part.CONTENT, heading, frozenset({xml_names.TEXT_OUTLINE_LEVEL})),
+    ))
     changed = heading.get(xml_names.TEXT_OUTLINE_LEVEL) != str(decision.answer.level)
     if changed:
         heading.set(xml_names.TEXT_OUTLINE_LEVEL, str(decision.answer.level))
-    return (
-        Outcome(
-            decision.kind.id,
-            Status.APPLIED if changed else Status.UNCHANGED,
-            f"Outline level {decision.answer.level}.",
-            target=decision.target_path,
-            count=int(changed),
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                f"Outline level {decision.answer.level}.",
+                target=decision.target_path,
+                count=int(changed),
+            ),
         ),
+        allowance,
     )

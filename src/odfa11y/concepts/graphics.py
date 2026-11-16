@@ -8,10 +8,11 @@ from odfa11y.concepts.graphic_styles import GraphicRoleEditor, decorative_proble
 from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import GraphicAlternativeAnswer
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import NS, Part
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import TextFields
 lazy from odfa11y.odf import OdfDocument
 
 MIN_CONFLICTING_VALUES = 2
@@ -48,9 +49,7 @@ def _accessibility_position(frame: etree._Element, tag: str) -> int:
     return last_content + 1
 
 
-def edit_graphic(
-    document: OdfDocument, decision: Decision[GraphicAlternativeAnswer]
-) -> tuple[Outcome, ...]:
+def edit_graphic(document: OdfDocument, decision: Decision[GraphicAlternativeAnswer]) -> EditResult:
     """Apply a validated alternative to one canonically resolved graphic."""
     frame = resolved_node(document, decision)
     answer = decision.answer
@@ -70,19 +69,30 @@ def edit_graphic(
             problem = problem or decorative_problem(frame)
         if problem:
             raise DocumentRefusal(problem)
+    fields = TextFields.capture(
+        Part.CONTENT,
+        frame,
+        ((xml_names.SVG_TITLE, answer.title), (xml_names.SVG_DESC, answer.description)),
+    )
     changed = set_description(frame, answer.title, answer.description)
+    allowance = fields.allowance()
     if answer.decorative is not None:
-        changed = roles.set_role(frame, decorative=answer.decorative) or changed
-    return (
-        Outcome(
-            decision.kind.id,
-            Status.APPLIED if changed else Status.UNCHANGED,
-            "Set accessible graphic alternative."
-            if changed
-            else "Accessible alternative already matches.",
-            target=decision.target_path,
-            count=int(changed),
+        role_change = roles.set_role(frame, decorative=answer.decorative)
+        allowance |= role_change.allowance
+        changed = changed or role_change.changed
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                "Set accessible graphic alternative."
+                if changed
+                else "Accessible alternative already matches.",
+                target=decision.target_path,
+                count=int(changed),
+            ),
         ),
+        allowance,
     )
 
 

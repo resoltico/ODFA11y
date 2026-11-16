@@ -4,6 +4,7 @@
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
 from odfa11y.decisions import DecisionKind, DecisionScope
 from odfa11y.decisions.answers import SwitchAnswer
+from odfa11y.decisions.constraints import KindConstraints, StructurePolicy
 from odfa11y.families.text.answers import (
     HeadingLevelAnswer,
     TableHeadersAnswer,
@@ -25,6 +26,7 @@ LINKIFY_ADDRESSES = DecisionKind(
     SwitchAnswer,
     resolves=(rules.LINK001,),
     edit=edit_addresses,
+    constraints=KindConstraints(structure=StructurePolicy.CHANGES),
 )
 REMOVE_SPACERS = DecisionKind(
     "text.remove_spacers",
@@ -32,6 +34,7 @@ REMOVE_SPACERS = DecisionKind(
     SwitchAnswer,
     resolves=(rules.STYLE002,),
     edit=edit_spacers,
+    constraints=KindConstraints(structure=StructurePolicy.CHANGES),
 )
 HEADING_LEVEL = DecisionKind(
     "heading.level",
@@ -52,6 +55,7 @@ TABLE_HEADERS = DecisionKind(
     domain=TABLES,
     resolves=(rules.TABLE003,),
     edit=edit_headers,
+    constraints=KindConstraints(structure=StructurePolicy.CHANGES),
 )
 TEXT_SPACING = DecisionKind(
     "text.spacing", DecisionScope.DOCUMENT, TextSpacingAnswer, edit=edit_spacing
@@ -63,6 +67,7 @@ TARGET_LANGUAGE = DecisionKind(
     domain=LANGUAGES,
     resolves=(rules.LANG001,),
     edit=edit_language,
+    constraints=KindConstraints(structure=StructurePolicy.STABLE),
 )
 DECISION_KINDS = (
     LINKIFY_ADDRESSES,

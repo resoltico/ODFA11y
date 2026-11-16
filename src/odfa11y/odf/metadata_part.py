@@ -5,6 +5,7 @@ from lxml import etree
 
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Container, Created
 from odfa11y.odf.detect import declared_version
 from odfa11y.odf.names import NS
 from odfa11y.odf.schema import SUPPORTED_VERSIONS
@@ -13,7 +14,7 @@ from odfa11y.odf.xpath import select_elements
 lazy from odfa11y.odf.document import OdfDocument
 
 
-def ensure_metadata_part(document: OdfDocument) -> None:
+def ensure_metadata_part(document: OdfDocument) -> Allowance:
     """Create missing package metadata and its manifest entry after complete preflight.
 
     Flat storage already exposes its one tree as the metadata part. The caller edits the
@@ -26,7 +27,7 @@ def ensure_metadata_part(document: OdfDocument) -> None:
 
     """
     if document.has(Part.META):
-        return
+        return Allowance()
     version = declared_version(document)
     name = document.storage.member_for(Part.META)
     if version not in SUPPORTED_VERSIONS or name is None:
@@ -51,11 +52,19 @@ def ensure_metadata_part(document: OdfDocument) -> None:
     )
     root.set(xml_names.OFFICE_VERSION, version)
     etree.SubElement(root, xml_names.OFFICE_META)
+    permissions = []
     if not entries:
         parent = document.tree(Part.MANIFEST).getroot()
         entry = etree.SubElement(parent, xml_names.MANIFEST_FILE_ENTRY)
         entry.set(xml_names.MANIFEST_FULL_PATH, name)
         entry.set(xml_names.MANIFEST_MEDIA_TYPE, "text/xml")
+        permissions.append(Created.of(Part.MANIFEST, entry))
     document.storage.write_member(
         name, etree.tostring(root, xml_declaration=True, encoding="UTF-8")
     )
+    actual = document.tree(Part.META).getroot()
+    permissions.extend((
+        Container(Part.META, actual, tuple(actual.attrib.items())),
+        Container(Part.META, actual[0]),
+    ))
+    return Allowance(tuple(permissions))

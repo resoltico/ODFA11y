@@ -15,6 +15,7 @@ from odfa11y.contracts import Choices
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, Container, XmlChange
 from odfa11y.odf.canonical import protected_xml
 from odfa11y.odf.styles import (
     GeneratedStyle,
@@ -380,7 +381,7 @@ class GraphicRoleEditor(GraphicRoles):
         props.set(ROLE, str(decorative).lower())
         return ns, style
 
-    def set_role(self, shape: etree._Element, *, decorative: bool) -> bool:
+    def set_role(self, shape: etree._Element, *, decorative: bool) -> XmlChange:
         """Apply an isolated role; reuse only a proven earlier derivation.
 
         Returns
@@ -395,7 +396,7 @@ class GraphicRoleEditor(GraphicRoles):
 
         """
         if self.role(shape).decorative == decorative:
-            return False
+            return XmlChange(False)
         problem = self.change_problem(shape, decorative=decorative)
         if problem:
             raise DocumentRefusal(problem)
@@ -406,6 +407,7 @@ class GraphicRoleEditor(GraphicRoles):
             message = "Generated role style name collides with an authored common style."
             raise DocumentRefusal(message)
         found = self.automatic.get((family, name), [])
+        allowance = Allowance((Attributes(Part.CONTENT, shape, frozenset(STYLE_ATTRIBUTES)),))
         if found:
             problem = self._existing_problem(shape, style, found)
             if problem:
@@ -413,9 +415,11 @@ class GraphicRoleEditor(GraphicRoles):
             props = found[0].find("style:graphic-properties", NS)
             if props is None:
                 props = etree.SubElement(found[0], xml_names.STYLE_GRAPHIC_PROPERTIES)
+                allowance |= Allowance((Container(Part.CONTENT, props),))
+            allowance |= Allowance((Attributes(Part.CONTENT, props, frozenset({ROLE})),))
             props.set(ROLE, str(decorative).lower())
         else:
-            self._adopt(style)
+            allowance |= self._adopt(style)
         original = normalized_role_attributes(self.document, shape)
         for attr in STYLE_ATTRIBUTES:
             shape.attrib.pop(attr, None)
@@ -424,7 +428,7 @@ class GraphicRoleEditor(GraphicRoles):
             shape.set(qn(ns, "class-names"), shape.get(qn(ns, "class-names"), "") + " " + name)
         else:
             shape.set(qn(ns, "style-name"), name)
-        return True
+        return XmlChange(True, allowance)
 
     def change_problem(self, shape: etree._Element, *, decorative: bool) -> str | None:
         """Preflight target derivation reuse before any edit.
@@ -467,5 +471,5 @@ class GraphicRoleEditor(GraphicRoles):
             return "A role derivation referenced by another object cannot be edited."
         return None
 
-    def _adopt(self, style: etree._Element) -> None:
-        adopt_style(self.resolver, style)
+    def _adopt(self, style: etree._Element) -> Allowance:
+        return adopt_style(self.resolver, style)

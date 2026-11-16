@@ -6,6 +6,7 @@ lazy from lxml import etree
 from odfa11y.concepts import protected_xml
 from odfa11y.odf import Part
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, XmlChange
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
 
@@ -63,7 +64,7 @@ def language(document: OdfDocument) -> str | None:
     return root.get(XML_LANGUAGE) if root is not None else None
 
 
-def set_language(document: OdfDocument, tag: str) -> bool:
+def set_language(document: OdfDocument, tag: str) -> XmlChange:
     """Set the formula language without changing the mathematical expression.
 
     Returns
@@ -74,6 +75,6 @@ def set_language(document: OdfDocument, tag: str) -> bool:
     """
     root = expression(document)
     if root is None or root.get(XML_LANGUAGE) == tag:
-        return False
+        return XmlChange(False)
     root.set(XML_LANGUAGE, tag)
-    return True
+    return XmlChange(True, Allowance((Attributes(Part.CONTENT, root, frozenset({XML_LANGUAGE})),)))

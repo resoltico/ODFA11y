@@ -8,6 +8,7 @@ from lxml import etree
 from odfa11y.language_tags import language_parts, normalize_language
 from odfa11y.odf import NS, Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, Container, XmlChange
 lazy from odfa11y.odf import OdfDocument
 
 CHANNEL_ATTRIBUTES = tuple(
@@ -54,7 +55,7 @@ def style_language(document: OdfDocument, family: str, channel: int = 0) -> str 
     return normalize_language("-".join(components))
 
 
-def set_style_language(document: OdfDocument, tag: str, family: str) -> bool:
+def set_style_language(document: OdfDocument, tag: str, family: str) -> XmlChange:
     """Replace all three default script channels without editing authored overrides.
 
     Returns
@@ -65,7 +66,7 @@ def set_style_language(document: OdfDocument, tag: str, family: str) -> bool:
     """
     tag = normalize_language(tag)
     if not document.has(Part.STYLES):
-        return False
+        return XmlChange(False)
     values = language_parts(tag)
     props = _text_properties(document.tree(Part.STYLES), family)
     desired = {
@@ -74,14 +75,21 @@ def set_style_language(document: OdfDocument, tag: str, family: str) -> bool:
         for key, value in zip(channel, values, strict=True)
     }
     if props is not None and all(props.get(key) == value for key, value in desired.items()):
-        return False
+        return XmlChange(False)
+    known = set(document.tree(Part.STYLES).getroot().iter())
     props = _ensure_text_properties(document.tree(Part.STYLES), family)
     for key, value in desired.items():
         if value is None:
             props.attrib.pop(key, None)
         else:
             props.set(key, value)
-    return True
+    permissions = [Attributes(Part.STYLES, props, frozenset(desired))]
+    for node in (props, *props.iterancestors()):
+        if node in known:
+            break
+        attributes = () if node is props else tuple(node.attrib.items())
+        permissions.append(Container(Part.STYLES, node, attributes))
+    return XmlChange(True, Allowance(tuple(permissions)))
 
 
 def _text_properties(styles: etree._ElementTree, family: str) -> etree._Element | None:

@@ -9,7 +9,7 @@ lazy from lxml import etree
 from odfa11y.concepts import protected_xml
 from odfa11y.decisions import Decision
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.text.answers import TargetLanguageAnswer
 from odfa11y.families.text.language.effective import (
@@ -29,8 +29,9 @@ from odfa11y.families.text.language.styles import (
 )
 from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.language_tags import normalize_language
-from odfa11y.odf import NS
+from odfa11y.odf import NS, Part
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, Created
 from odfa11y.odf.styles import adopt_style, normalize_generated, styles_of
 from odfa11y.targets import Fingerprint, TargetPath
 lazy from odfa11y.families.text.language.styles import Binding
@@ -135,25 +136,38 @@ def prepare_language(
     return _prepare_answer(document, decision.target_path, node, decision.answer)
 
 
-def edit_language(
-    document: OdfDocument, decision: Decision[TargetLanguageAnswer]
-) -> tuple[Outcome, ...]:
+def edit_language(document: OdfDocument, decision: Decision[TargetLanguageAnswer]) -> EditResult:
     """Apply explicit language channels without changing authored text or shared styles."""
     item = prepare_language(document, decision)
+    allowance = Allowance()
+    expected = protected_xml(item.style)
     catalog = styles_of(document)
     if item.changed:
         family = family_of(item.node)
         if catalog.resolve(family, item.binding.name) is None:
-            adopt_style(catalog, item.style)
+            created = adopt_style(catalog, item.style)
+            # Preserve Q19's pre-adoption namespace-sensitive creation receipt.
+            allowance = Allowance(
+                tuple(
+                    replace(permission, expected=expected)
+                    if isinstance(permission, Created) and permission.node is item.style
+                    else permission
+                    for permission in created.permissions
+                )
+            )
+        allowance |= Allowance((Attributes(Part.CONTENT, item.node, frozenset({STYLE_NAME})),))
         item.node.set(STYLE_NAME, item.binding.name)
-    return (
-        Outcome(
-            decision.kind.id,
-            Status.APPLIED if item.changed else Status.UNCHANGED,
-            "Applied reviewed target language."
-            if item.changed
-            else "Target language already matches.",
-            target=item.target,
-            count=int(item.changed),
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if item.changed else Status.UNCHANGED,
+                "Applied reviewed target language."
+                if item.changed
+                else "Target language already matches.",
+                target=item.target,
+                count=int(item.changed),
+            ),
         ),
+        allowance,
     )

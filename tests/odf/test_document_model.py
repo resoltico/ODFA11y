@@ -8,9 +8,10 @@ import pytest
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import PackageError
 from odfa11y.odf import KINDS, NS, OdfDocument, PackageStorage, Part, Use, qn
+from odfa11y.odf.allowance import TextFields
 from odfa11y.odf.encryption import PackageProtection
 from tests.fixtures.answers import fault_input, metadata_input
 from tests.fixtures.operations import apply_answers, assert_refused
@@ -37,19 +38,18 @@ CORPUS_DOCUMENTS += tuple(
 )
 
 
-def _tree_metadata_edit(
-    operation: Decision, document: OdfDocument, status: Status
-) -> tuple[Outcome, ...]:
+def _tree_metadata_edit(operation: Decision, document: OdfDocument, status: Status) -> EditResult:
     meta = document.tree(Part.META).find("office:meta", NS)
     assert meta is not None
+    fields = TextFields.capture(Part.META, meta, ((qn("dc", "title"), operation.answer.title),))
     title = meta.find(qn("dc", "title"))
     if title is None:
         title = etree.SubElement(meta, qn("dc", "title"))
     title.text = operation.answer.title
-    return (Outcome(operation.kind.id, status, "Title"),)
+    return EditResult((Outcome(operation.kind.id, status, "Title"),), fields.allowance())
 
 
-def test_undeclared_tree_mutation_is_published_and_other_members_keep_their_bytes(
+def test_live_tree_mutation_without_dirty_hint_keeps_other_members_identical(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

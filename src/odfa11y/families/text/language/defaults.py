@@ -2,6 +2,7 @@
 """Bind the text family's language to its paragraph style."""
 
 from odfa11y.concepts import set_style_language, style_language
+from odfa11y.odf.allowance import XmlChange
 lazy from odfa11y.odf import OdfDocument
 
 
@@ -17,7 +18,7 @@ def default_language(document: OdfDocument) -> str | None:
     return style_language(document, "paragraph")
 
 
-def set_default_language(document: OdfDocument, tag: str) -> bool:
+def set_default_language(document: OdfDocument, tag: str) -> XmlChange:
     """Write the family's default language.
 
     Returns

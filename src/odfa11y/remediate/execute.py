@@ -9,7 +9,9 @@ lazy from collections.abc import Sequence
 from odfa11y.audit.engine import audit_document
 from odfa11y.capture import capture_source, source_digest
 from odfa11y.concepts import opaque_payloads
+from odfa11y.concepts.preservation import ProtectedPackage
 from odfa11y.decisions import Decision
+from odfa11y.decisions.constraints import check_plan
 from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import DocumentRefusal, OutputOccupied, PackageError, PlanError
 from odfa11y.families import require_spec
@@ -169,6 +171,7 @@ def _run_decisions(
 ) -> _Execution:
     state = _Execution()
     try:
+        check_plan(document, decisions)
         adapter.preflight(document, decisions)
     except DocumentRefusal as exc:
         state.violations.append(Violation(ViolationKind.FOREIGN_OPERATION, str(exc)))
@@ -196,10 +199,14 @@ def _run_decision(
     document: OdfDocument, adapter: FamilySpec, decision: Decision, state: _Execution
 ) -> None:
     before = document.checkpoint()
+    xml_before = ProtectedPackage.capture(document)
+    allowance = None
     protected = None
     try:
         protected = adapter.protect_edit(document, decision)
-        produced = decision.kind.edit(document, decision)
+        result = decision.kind.edit(document, decision)
+        produced = result.outcomes
+        allowance = result.allowance
     except DocumentRefusal as exc:
         produced = (Outcome(decision.kind.id, Status.FAILED, exc.message, failure=exc.as_record()),)
     state.outcomes.extend(produced)
@@ -218,6 +225,16 @@ def _run_decision(
         return
     if problem := _check_edit_accounting(decision, produced, changed):
         state.violations.append(Violation(ViolationKind.EDIT_ACCOUNTING, problem, decision.kind.id))
+    if allowance is not None and not xml_before.preserved(
+        ProtectedPackage.capture(document), allowance
+    ):
+        state.violations.append(
+            Violation(
+                ViolationKind.PROTECTED_CONTENT,
+                "Protected document content changed during remediation",
+                decision.kind.id,
+            )
+        )
     if protected is not None and not protected():
         state.violations.append(
             Violation(

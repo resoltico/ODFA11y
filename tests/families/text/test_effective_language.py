@@ -29,7 +29,7 @@ from tests.fixtures.answers import (
 from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
-lazy from odfa11y.decisions.edit import Outcome
+lazy from odfa11y.decisions.edit import EditResult
 
 STYLES = (
     '<style:style style:name="Body" style:family="paragraph"><style:text-properties '
@@ -243,7 +243,7 @@ def test_unrelated_derived_style_change_is_detected_by_publication_guard(
     })
     original = TARGET_LANGUAGE.edit
 
-    def corrupt_style(document: OdfDocument, decision: Decision) -> tuple[Outcome, ...]:
+    def corrupt_style(document: OdfDocument, decision: Decision) -> EditResult:
         outcomes = original(document, decision)
         styles = select_elements(document.tree(Part.CONTENT), "//style:style")
         props = styles[-1].find(qn("style", "text-properties"))

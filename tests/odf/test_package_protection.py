@@ -12,7 +12,7 @@ from lxml import etree
 import odfa11y.odf
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
-from odfa11y.decisions.edit import Outcome
+from odfa11y.decisions.edit import EditResult
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
 from odfa11y.run.native import export_document
@@ -37,7 +37,7 @@ def test_declared_signature_is_unverified_and_all_remediation_refuses(
     assert "PKG011" in {finding.rule_id for finding in report.findings}
     assert "cryptography" in next(f.message for f in report.findings if f.rule_id == "PKG011")
 
-    def forbidden(*_args: object) -> tuple[Outcome, ...]:
+    def forbidden(*_args: object) -> EditResult:
         pytest.fail("operation executed for signed input")
 
     destination = tmp_path / "output.odt"

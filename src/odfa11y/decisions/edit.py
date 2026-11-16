@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 """The outcome vocabulary of validated document edits."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from odfa11y.contracts import JsonObject, record_dict
 from odfa11y.errors import Failure
+from odfa11y.odf.allowance import Allowance
 
 
 class Status(StrEnum):
@@ -39,3 +40,11 @@ class Outcome:
     def as_dict(self) -> JsonObject:
         """Project this typed edit outcome using the shared contract engine."""
         return record_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class EditResult:
+    """Outcomes and the exact XML effects an edit permits."""
+
+    outcomes: tuple[Outcome, ...]
+    allowance: Allowance = field(default_factory=Allowance)

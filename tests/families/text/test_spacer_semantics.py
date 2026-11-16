@@ -7,7 +7,7 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from tests.fixtures.answers import fault_input, spacer_input
 from tests.fixtures.documents import Variant, make_flat, make_package
@@ -92,13 +92,13 @@ def test_spacer_guard_rejects_identity_loss_before_publication(
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"keep existing destination")
 
-    def damage(document: OdfDocument, decision: Decision) -> tuple[Outcome, ...]:
+    def damage(document: OdfDocument, decision: Decision) -> EditResult:
         tree = document.tree(Part.CONTENT)
         node = select_elements(tree, "//*[@xml:id='anchor']")[0]
         parent = node.getparent()
         assert parent is not None
         parent.remove(node)
-        return (Outcome(decision.kind.id, Status.APPLIED, "Removed", count=1),)
+        return EditResult((Outcome(decision.kind.id, Status.APPLIED, "Removed", count=1),))
 
     assert_refused(
         apply_answers(source, destination, [fault_input(spacer_input(), damage)]),

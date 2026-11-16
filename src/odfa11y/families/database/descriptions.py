@@ -9,9 +9,10 @@ from odfa11y.concepts import protected_xml
 from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import DatabaseDescriptionAnswer
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.odf import Part, qn, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes
 from odfa11y.report import Location
 from odfa11y.targets import Fingerprint
 lazy from odfa11y.odf import OdfDocument
@@ -134,22 +135,28 @@ def _ordinal(
 
 def edit_description(
     document: OdfDocument, decision: Decision[DatabaseDescriptionAnswer]
-) -> tuple[Outcome, ...]:
+) -> EditResult:
     """Set a supplied description while preserving connections, SQL and object content."""
     node = resolved_node(document, decision)
     attribute = description_attribute(node)
+    allowance = Allowance((
+        Attributes(Part.CONTENT, node, frozenset({description_attribute(node)})),
+    ))
     value = decision.answer.text.strip()
     changed = node.get(attribute) != value
     if changed:
         node.set(attribute, value)
-    return (
-        Outcome(
-            decision.kind.id,
-            Status.APPLIED if changed else Status.UNCHANGED,
-            "Applied database object description."
-            if changed
-            else "Database object description already matches.",
-            target=decision.target_path,
-            count=int(changed),
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                "Applied database object description."
+                if changed
+                else "Database object description already matches.",
+                target=decision.target_path,
+                count=int(changed),
+            ),
         ),
+        allowance,
     )

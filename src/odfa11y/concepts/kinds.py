@@ -11,6 +11,7 @@ from odfa11y.decisions.answers import (
     PageMetadataAnswer,
     PageNavigationAnswer,
 )
+from odfa11y.decisions.constraints import KindConstraints, StructurePolicy
 from odfa11y.decisions.decision import DecisionKind, DecisionScope
 from odfa11y.rules import registry as rules
 
@@ -31,6 +32,7 @@ LINK_DESCRIPTION = DecisionKind(
     LinkDescriptionAnswer,
     domain=LINKS,
     edit=edit_link,
+    constraints=KindConstraints(structure=StructurePolicy.STABLE_IF_ORDINAL),
     resolves=(rules.LINK003,),
 )
 PAGE_METADATA = DecisionKind(

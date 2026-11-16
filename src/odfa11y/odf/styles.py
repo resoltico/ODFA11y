@@ -14,6 +14,7 @@ from odfa11y.contracts import decode, record_dict
 from odfa11y.errors import DocumentRefusal
 from odfa11y.odf import NS, Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, Container, Created
 from odfa11y.odf.canonical import attribute_bindings
 lazy from odfa11y.odf import OdfDocument
 
@@ -507,7 +508,7 @@ def is_generated_from(
     )
 
 
-def adopt_style(catalog: StyleResolver, style: etree._Element) -> None:
+def adopt_style(catalog: StyleResolver, style: etree._Element) -> Allowance:
     """Insert a derived style among the content part's automatic styles and index it.
 
     Raises
@@ -521,6 +522,7 @@ def adopt_style(catalog: StyleResolver, style: etree._Element) -> None:
         message = "An adopted style must declare its family."
         raise DocumentRefusal(message)
     auto_styles = catalog.content_tree.find("office:automatic-styles", NS)
+    created_container = auto_styles is None
     if auto_styles is None:
         root = catalog.content_tree.getroot()
         auto_styles = etree.Element(xml_names.OFFICE_AUTOMATIC_STYLES)
@@ -529,11 +531,15 @@ def adopt_style(catalog: StyleResolver, style: etree._Element) -> None:
         root.insert(insert_at, auto_styles)
     auto_styles.append(style)
     catalog.register(family, style)
+    permissions = (Created.of(Part.CONTENT, style, style_name=style.get(xml_names.STYLE_NAME)),)
+    containers = (Container(Part.CONTENT, auto_styles),) if created_container else ()
+    return Allowance((*permissions, *containers))
 
 
-def set_spacing(style: etree._Element, spacing: dict[str, str]) -> None:
+def set_spacing(style: etree._Element, spacing: dict[str, str]) -> Allowance:
     """Replace the spacing attributes a style declares itself."""
     props = style.find(xml_names.STYLE_PARAGRAPH_PROPERTIES)
+    created = props is None
     if props is None:
         props = etree.Element(xml_names.STYLE_PARAGRAPH_PROPERTIES)
         text_props = style.find(xml_names.STYLE_TEXT_PROPERTIES)
@@ -545,6 +551,9 @@ def set_spacing(style: etree._Element, spacing: dict[str, str]) -> None:
         key = attr_from_display(display_name)
         if key in SPACING_ATTRIBUTES:
             props.set(key, value)
+    permissions = (Attributes(Part.CONTENT, props, frozenset(SPACING_ATTRIBUTES)),)
+    containers = (Container(Part.CONTENT, props),) if created else ()
+    return Allowance((*permissions, *containers))
 
 
 def derived_style_name(base: str) -> str:

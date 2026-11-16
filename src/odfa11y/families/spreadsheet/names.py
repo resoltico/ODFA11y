@@ -3,16 +3,18 @@
 
 import re
 from collections import Counter
+from collections.abc import Sequence
 from urllib.parse import unquote
 
 from odfa11y.decisions import Decision
 from odfa11y.decisions.domain import resolved_node
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import DocumentRefusal
 from odfa11y.families.spreadsheet.answers import SheetNameAnswer
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
 from odfa11y.odf import PackageStorage, Part, select_elements
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, Text
 lazy from odfa11y.odf import OdfDocument
 
 DYNAMIC_REFERENCE = re.compile(r"\b(?:INDIRECT|ADDRESS|HYPERLINK)\s*\(", re.IGNORECASE)
@@ -94,9 +96,10 @@ def _has_scripts(document: OdfDocument) -> bool:
     )
 
 
-def _rename_settings(document: OdfDocument, old: str, new: str) -> None:
+def _rename_settings(document: OdfDocument, old: str, new: str) -> Allowance:
     if not document.has(Part.SETTINGS):
-        return
+        return Allowance()
+    permissions = []
     for entry in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item-map-entry"):
         parent = entry.getparent()
         if (
@@ -104,15 +107,17 @@ def _rename_settings(document: OdfDocument, old: str, new: str) -> None:
             and parent.get(f"{CONFIG}name") in {"Tables", "ScriptConfiguration"}
             and entry.get(f"{CONFIG}name") == old
         ):
+            permissions.append(Attributes(Part.SETTINGS, entry, frozenset({f"{CONFIG}name"})))
             entry.set(f"{CONFIG}name", new)
     for item in document.tree(Part.SETTINGS).iter(f"{CONFIG}config-item"):
         if item.get(f"{CONFIG}name") == "ActiveTable" and item.text == old:
+            permissions.append(Text(Part.SETTINGS, item))
             item.text = new
 
+    return Allowance(tuple(permissions))
 
-def edit_sheet_name(
-    document: OdfDocument, decision: Decision[SheetNameAnswer]
-) -> tuple[Outcome, ...]:
+
+def edit_sheet_name(document: OdfDocument, decision: Decision[SheetNameAnswer]) -> EditResult:
     """Rename one sheet after establishing that references and settings can be preserved."""
     node = resolved_node(document, decision)
     old = sheet_name(node)
@@ -120,16 +125,39 @@ def edit_sheet_name(
     names = Counter(sheet_name(sheet) for sheet in sheets(document.tree(Part.CONTENT)))
     if problem := _document_problem(document, old, new, names):
         raise DocumentRefusal(problem)
+    allowance = Allowance((Attributes(Part.CONTENT, node, frozenset({xml_names.TABLE_NAME})),))
     changed = old != new
     if changed:
         node.set(xml_names.TABLE_NAME, new)
-        _rename_settings(document, old, new)
-    return (
-        Outcome(
-            decision.kind.id,
-            Status.APPLIED if changed else Status.UNCHANGED,
-            f"Renamed to {new!r}." if changed else f"Sheet is already named {new!r}.",
-            target=decision.target_path,
-            count=int(changed),
+        allowance |= _rename_settings(document, old, new)
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                f"Renamed to {new!r}." if changed else f"Sheet is already named {new!r}.",
+                target=decision.target_path,
+                count=int(changed),
+            ),
         ),
+        allowance,
     )
+
+
+def validate_renames(
+    document: OdfDocument, decision: Decision, decisions: Sequence[Decision]
+) -> None:
+    renames = {
+        sheet_name(resolved_node(document, candidate)): candidate.answer.name
+        for candidate in decisions
+        if candidate.kind is decision.kind
+    }
+    for old, new in renames.items():
+        if new.casefold() in {name.casefold() for name in renames if name != old}:
+            message = (
+                f"{new!r} is also renamed by this plan; chained and swapped renames are refused."
+            )
+            raise DocumentRefusal(message)
+        if sum(value.casefold() == new.casefold() for value in renames.values()) > 1:
+            message = f"More than one sheet is renamed to {new!r}."
+            raise DocumentRefusal(message)

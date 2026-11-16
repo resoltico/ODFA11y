@@ -4,6 +4,7 @@
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions import DecisionKind, DecisionScope, OpenDecision
 from odfa11y.decisions.answers import DocumentMetadataAnswer, OdfVersionAnswer
+from odfa11y.decisions.constraints import KindConstraints, RevisionPolicy
 from odfa11y.remediate.metadata import edit_metadata
 from odfa11y.remediate.version import edit_version
 from odfa11y.rules import registry as rules
@@ -33,6 +34,7 @@ COMMON_KINDS = (
             rules.CHART004,
         ),
         edit=edit_metadata,
+        constraints=KindConstraints(revisions=RevisionPolicy.TITLE_DESCRIPTION),
     ),
 )
 

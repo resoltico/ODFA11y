@@ -126,7 +126,7 @@ enabled = false
     for decision in decisions:
         assert decision.answer.enabled is False
         outcomes = decision.kind.edit(document, decision)
-        assert all(outcome.status is Status.UNCHANGED for outcome in outcomes)
+        assert all(outcome.status is Status.UNCHANGED for outcome in outcomes.outcomes)
     assert not document.dirty
 
 

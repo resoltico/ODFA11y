@@ -22,7 +22,7 @@ from tests.fixtures.answers import (
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.operations import apply_answers, assert_refused
 lazy from odfa11y.decisions import Decision
-lazy from odfa11y.decisions.edit import Outcome
+lazy from odfa11y.decisions.edit import EditResult
 lazy from odfa11y.odf import OdfDocument
 
 
@@ -34,7 +34,7 @@ def test_new_exact_address_wrapper_inside_field_is_rejected(
     source = make_flat(tmp_path, "text", Variant(body=body))
     original_apply = LINKIFY_ADDRESSES.edit
 
-    def corrupt(document: OdfDocument, operation: Decision) -> tuple[Outcome, ...]:
+    def corrupt(document: OdfDocument, operation: Decision) -> EditResult:
         outcomes = original_apply(document, operation)
         field = select_elements(document.tree(Part.CONTENT), "//text:page-number")[0]
         link = etree.SubElement(field, qn("text", "a"))
@@ -59,7 +59,7 @@ def test_metadata_normalization_does_not_mask_history_or_foreign_metadata(
     source = make_flat(tmp_path, "text", Variant(body=body))
     original_apply = COMMON_KINDS[1].edit
 
-    def corrupt(document: OdfDocument, operation: Decision) -> tuple[Outcome, ...]:
+    def corrupt(document: OdfDocument, operation: Decision) -> EditResult:
         outcomes = original_apply(document, operation)
         tree = document.tree(Part.CONTENT)
         node = (
@@ -90,7 +90,7 @@ def test_selected_outer_table_cannot_mask_unselected_nested_header_change(
     source = make_flat(tmp_path, "text", Variant(body=body))
     original_apply = TABLE_HEADERS.edit
 
-    def corrupt(document: OdfDocument, operation: Decision) -> tuple[Outcome, ...]:
+    def corrupt(document: OdfDocument, operation: Decision) -> EditResult:
         outcomes = original_apply(document, operation)
         inner = select_elements(document.tree(Part.CONTENT), "//table:table[@table:name='Inner']")[
             0

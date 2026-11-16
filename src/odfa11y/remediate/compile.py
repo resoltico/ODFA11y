@@ -2,11 +2,8 @@
 """Validate canonical bindings and order registered decisions for direct execution."""
 
 from odfa11y.decisions import Decision
-from odfa11y.decisions.domain import resolved_node
-from odfa11y.errors import DocumentRefusal, PlanError, Remedy, RemedyAction
+from odfa11y.errors import PlanError, Remedy, RemedyAction
 from odfa11y.families import require_spec
-from odfa11y.families.spreadsheet.kinds import SHEET_NAME
-from odfa11y.families.spreadsheet.sheets import sheet_name
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan
 from odfa11y.plans.registry import registered_kinds
@@ -44,7 +41,7 @@ def compile_decisions(
     if problems:
         message = "Plan answers do not match the source"
         raise PlanError(message, problems=tuple(problems), remedy=Remedy(RemedyAction.REBIND_PLAN))
-    _sheet_constraints(document, plan.decisions)
+    _kind_constraints(document, plan.decisions)
     return tuple(
         sorted(
             plan.decisions,
@@ -56,18 +53,7 @@ def compile_decisions(
     )
 
 
-def _sheet_constraints(document: OdfDocument, decisions: tuple[Decision, ...]) -> None:
-    renames = {}
+def _kind_constraints(document: OdfDocument, decisions: tuple[Decision, ...]) -> None:
     for decision in decisions:
-        if decision.kind is SHEET_NAME:
-            node = resolved_node(document, decision)
-            renames[sheet_name(node)] = decision.answer.name
-    for old, new in renames.items():
-        if new.casefold() in {name.casefold() for name in renames if name != old}:
-            message = (
-                f"{new!r} is also renamed by this plan; chained and swapped renames are refused."
-            )
-            raise DocumentRefusal(message)
-        if sum(value.casefold() == new.casefold() for value in renames.values()) > 1:
-            message = f"More than one sheet is renamed to {new!r}."
-            raise DocumentRefusal(message)
+        for check in decision.kind.constraints.checks:
+            check(document, decision, decisions)

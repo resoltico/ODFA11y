@@ -8,13 +8,14 @@ lazy from lxml import etree
 
 from odfa11y.concepts import eligible_text_node, visible_words
 from odfa11y.decisions import Decision
-from odfa11y.decisions.edit import Outcome, Status
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import DocumentRefusal, XmlParseError
 from odfa11y.families.text.answers import TextSpacingAnswer
 from odfa11y.families.text.contexts import text_nodes
 from odfa11y.families.text.styles.properties import paragraph_style_name
 from odfa11y.odf import Part, qn
 from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes
 from odfa11y.odf.styles import (
     NO_STYLE,
     StyleNormalization,
@@ -51,19 +52,19 @@ def _conflict(catalog: StyleResolver, base: str) -> str | None:
     )
 
 
-def _ensure_style(catalog: StyleResolver, base: str, spacing: dict[str, str]) -> int:
+def _ensure_style(
+    catalog: StyleResolver, base: str, spacing: dict[str, str]
+) -> tuple[int, Allowance]:
     name = derived_style_name(base)
     existing = catalog.resolve("paragraph", name)
     if existing is not None:
         if catalog.own_spacing(name) == spacing:
-            return 0
-        set_spacing(existing, spacing)
-        return 1
-    adopt_style(
-        catalog,
-        derive_paragraph_style(catalog, None if base == NO_STYLE else base, name, spacing),
+            return 0, Allowance()
+        return 1, set_spacing(existing, spacing)
+    allowance = adopt_style(
+        catalog, derive_paragraph_style(catalog, None if base == NO_STYLE else base, name, spacing)
     )
-    return 1
+    return 1, allowance
 
 
 def _style_key(paragraph: etree._Element) -> str:
@@ -154,24 +155,35 @@ class _SpacingEdit:
 
     decision: Decision[TextSpacingAnswer]
 
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+    def apply(self, document: OdfDocument) -> EditResult:
         try:
             plan = self._plan(document)
         except DocumentRefusal as exc:
-            return (self._failed(str(exc)),)
+            return EditResult((self._failed(str(exc)),))
         if isinstance(plan, tuple):
-            return plan
+            return EditResult(plan)
         catalog = styles_of(document)
-        changed = sum(_ensure_style(catalog, base, plan.spacing) for base in plan.needed)
+        changed = 0
+        allowance = Allowance()
+        for base in plan.needed:
+            count, style_allowance = _ensure_style(catalog, base, plan.spacing)
+            changed += count
+            allowance |= style_allowance
         for paragraph in plan.direct:
+            allowance |= Allowance((
+                Attributes(Part.CONTENT, paragraph, frozenset({xml_names.TEXT_STYLE_NAME})),
+            ))
             paragraph.set(xml_names.TEXT_STYLE_NAME, derived_style_name(_style_key(paragraph)))
             changed += 1
         if not changed:
-            return (
-                Outcome(self.decision.kind.id, Status.UNCHANGED, "Spacing already normalized."),
+            return EditResult(
+                (Outcome(self.decision.kind.id, Status.UNCHANGED, "Spacing already normalized."),),
+                allowance,
             )
         message = f"Normalized spacing to match reference style {plan.reference_style!r}."
-        return (Outcome(self.decision.kind.id, Status.APPLIED, message, count=changed),)
+        return EditResult(
+            (Outcome(self.decision.kind.id, Status.APPLIED, message, count=changed),), allowance
+        )
 
     def _plan(self, document: OdfDocument) -> _Plan | tuple[Outcome, ...]:
         """Resolve the reference, the spacing and the affected paragraphs before any edit.
@@ -235,8 +247,6 @@ class _SpacingEdit:
         return None
 
 
-def edit_spacing(
-    document: OdfDocument, decision: Decision[TextSpacingAnswer]
-) -> tuple[Outcome, ...]:
+def edit_spacing(document: OdfDocument, decision: Decision[TextSpacingAnswer]) -> EditResult:
     """Normalize only the reviewed paragraph styles using established derived-style guards."""
     return _SpacingEdit(decision).apply(document)
