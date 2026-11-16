@@ -11,7 +11,7 @@ from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.rules import registry as rules
 from tests.fixtures.paths import TESTS
 
-SOURCE = TESTS / "family_corpus/fruit-chart.odc"
+SOURCE = TESTS / "corpus/families/fruit-chart.odc"
 
 
 @pytest.mark.parametrize("gap", ["empty", "nan", "covered", "whitespace"])

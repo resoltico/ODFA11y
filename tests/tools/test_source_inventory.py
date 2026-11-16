@@ -7,13 +7,18 @@ lazy from pathlib import Path
 
 import pytest
 
-from tools.source_inventory import archive_errors, source_files
+from tools.source_inventory import archive_errors, distribution_sources, source_files
 
 FILES = {
     "docs/guide.md": b"Contributor documentation",
     "tests/corpus/document.odt": b"\x00\xffinvented binary corpus",
     "tools/check.py": b"pass\n",
-    "pyproject.toml": b"[project]\n",
+    "pyproject.toml": (
+        b"[project]\n[tool.hatch.build.targets.sdist]\n"
+        b'include = ["/pyproject.toml", "/README.md", "/LICENSE", "/src"]\n'
+    ),
+    "README.md": b"Published package guide",
+    "LICENSE": b"License fixture",
     ".gitignore": b".venv/\n",
     "src/domain/build/check.py": b"# Authored nested build domain\n",
     "src/domain/dist/source.py": b"# Authored nested distribution domain\n",
@@ -28,7 +33,11 @@ def inventory_fixture(
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
-    shipped: dict[str, bytes | None] = {**FILES, "PKG-INFO": b"Generated metadata", **changes}
+    shipped: dict[str, bytes | None] = {
+        **distribution_sources(root),
+        "PKG-INFO": b"Generated metadata",
+        **changes,
+    }
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w") as archive:
         for name, data in shipped.items():
@@ -40,7 +49,14 @@ def inventory_fixture(
     return tarfile.open(fileobj=buffer), buffer
 
 
-@pytest.mark.parametrize("name", FILES)
+@pytest.mark.parametrize(
+    "name",
+    [
+        name
+        for name in FILES
+        if name.startswith("src/") or name in {"pyproject.toml", "README.md", "LICENSE"}
+    ],
+)
 @pytest.mark.parametrize("replacement", [None, b"altered"])
 def test_every_contributor_material_is_required_byte_for_byte(
     tmp_path: Path, name: str, replacement: bytes | None
@@ -71,9 +87,9 @@ def test_duplicate_members_are_not_collapsed_by_dictionary_comparison(tmp_path: 
     archive.close()
     buffer.seek(0)
     with tarfile.open(fileobj=buffer, mode="a") as append:
-        info = tarfile.TarInfo("release/docs/guide.md")
-        info.size = len(FILES["docs/guide.md"])
-        append.addfile(info, io.BytesIO(FILES["docs/guide.md"]))
+        info = tarfile.TarInfo("release/README.md")
+        info.size = len(FILES["README.md"])
+        append.addfile(info, io.BytesIO(FILES["README.md"]))
     buffer.seek(0)
     with tarfile.open(fileobj=buffer) as amended, buffer:
         assert any("duplicate" in e for e in archive_errors(amended, tmp_path, "release"))

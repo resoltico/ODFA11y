@@ -37,14 +37,7 @@ class PlanResult:
 def plan(
     source: str | Path, *, from_plan: Plan | str | Path | None = None, include_all: bool = False
 ) -> PlanResult:
-    """Prepare source-bound human questions without changing the document.
-
-    Returns
-    -------
-    PlanResult
-        The source report and optional reviewed-answer template.
-
-    """
+    """Prepare source-bound human questions without changing the document."""
     previous = (
         (from_plan if isinstance(from_plan, Plan) else load_plan(from_plan))
         if from_plan is not None

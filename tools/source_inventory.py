@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Compare source archives with the authoritative contributor file inventory."""
+"""Select contributor inputs and verify minimal distribution inventories."""
 
 import subprocess
+import tomllib
 from pathlib import PurePosixPath
 lazy import tarfile
 lazy from pathlib import Path
@@ -60,6 +61,21 @@ def source_files(root: Path) -> dict[str, bytes]:
     return files
 
 
+def distribution_sources(root: Path) -> dict[str, bytes]:
+    """Select distribution inputs from the authoritative explicit sdist include roots."""
+    files = source_files(root)
+    project = tomllib.loads((root / "pyproject.toml").read_text())
+    included = tuple(
+        name.removeprefix("/")
+        for name in project["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+    )
+    return {
+        name: value
+        for name, value in files.items()
+        if any(name == prefix or name.startswith(prefix + "/") for prefix in included)
+    }
+
+
 def archive_errors(archive: tarfile.TarFile, root: Path, prefix: str) -> list[str]:
     """Require exact names/types/bytes, allowing only root PKG-INFO and directories.
 
@@ -96,13 +112,13 @@ def archive_errors(archive: tarfile.TarFile, root: Path, prefix: str) -> list[st
         stream = archive.extractfile(member)
         if stream is not None and relative != "PKG-INFO":
             shipped[relative] = stream.read()
-    expected = source_files(root)
+    expected = distribution_sources(root)
     errors.extend(
-        f"Source archive file set differs from contributor inventory: {name}"
+        f"Source archive file set differs from distribution inventory: {name}"
         for name in sorted(expected.keys() ^ shipped.keys())
     )
     errors.extend(
-        f"Source archive file differs from contributor inventory: {name}"
+        f"Source archive file differs from distribution inventory: {name}"
         for name in sorted(expected.keys() & shipped.keys())
         if expected[name] != shipped[name]
     )

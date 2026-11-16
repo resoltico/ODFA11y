@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 """Live XML changes, cache generations and access policy do not rely on edit declarations."""
 
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -10,32 +9,16 @@ from lxml import etree
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import PackageError
-from odfa11y.odf import KINDS, NS, OdfDocument, PackageStorage, Part, Use, qn
+from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, Use, qn
 from odfa11y.odf.allowance import TextFields
 from odfa11y.odf.encryption import PackageProtection
 from tests.fixtures.answers import fault_input, metadata_input
+from tests.fixtures.corpus import ALL_DOCUMENTS, CORPUS
 from tests.fixtures.operations import apply_answers, assert_refused
-from tests.fixtures.paths import TESTS
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.decisions import Decision
 
-CORPUS = TESTS
-CORPUS_DOCUMENTS = tuple(
-    directory / entry["file"]
-    for directory, section in [
-        (CORPUS / "corpus", "document"),
-        (CORPUS / "family_corpus", "documents"),
-    ]
-    for entry in tomllib.loads((directory / "manifest.toml").read_text())[section]
-)
-
-CORPUS_DOCUMENTS += tuple(
-    source
-    for directory in [CORPUS / "corpus/sources", CORPUS / "family_corpus/sources"]
-    for source in sorted(directory.rglob("*"))
-    if source.suffix.startswith(".fod")
-    or source.suffix in {kind.extension for kind in KINDS.values()}
-)
+CORPUS_DOCUMENTS = tuple(item.path for item in ALL_DOCUMENTS)
 
 
 def _tree_metadata_edit(operation: Decision, document: OdfDocument, status: Status) -> EditResult:

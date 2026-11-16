@@ -22,7 +22,7 @@ def test_notes_warn_consistently_and_fail_strict_acceptance(tmp_path: Path, fami
         source = ROOT / "corpus/footnotes.odt"
     else:
         suffix = ".odp" if family == "presentation" else ".odg"
-        document = OdfDocument.open(ROOT / "family_corpus" / (f"fruit-{family}" + suffix))
+        document = OdfDocument.open(ROOT / "corpus/families" / (f"fruit-{family}" + suffix))
         baseline = validate(document)
         [page] = select_elements(document.tree(Part.CONTENT), "//draw:page")
         annotation = etree.SubElement(page, qn("office", "annotation"))

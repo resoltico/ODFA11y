@@ -1,0 +1,10 @@
+# Pinned native CI inputs; supported runtime minima remain in native/libreoffice.py.
+[libreoffice]
+version = "26.8.1.1"
+linux_sha256 = "30903df3b9f61360d9660cd707de48cd2831469114492a5008ed58a0ac77d044"
+windows_sha256 = "c6298b10cfa1748bcbedad94c62ce771e240e5021bfd6d7a967cd571b04b5312"
+macos_sha256 = "ca074e0b13571efb30a31fc531c5f95e997030637325e5d5de92d67aefdf0dfc"
+
+[verapdf]
+version = "1.30.3"
+sha256 = "b512bf24945503a33fc10738ecffc1f2dccaaf8593a448e94ee9ac86a9559a59"

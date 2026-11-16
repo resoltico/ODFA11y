@@ -94,7 +94,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
 def test_the_one_link_reproduction_and_explicit_name_control(
     tmp_path: Path, external_tool: Callable[..., str], *, named: bool
 ) -> None:
-    source = TESTS / "reproductions" / "unnamed-link.odt"
+    source = TESTS / "corpus/reproductions" / "unnamed-link.odt"
     assert validate(OdfDocument.open(source)).count == 0
     package = PackageStorage(source)
     assert package.read("content.xml").count(b"<text:a ") == 1

@@ -8,7 +8,8 @@ import pytest
 from lxml import etree
 
 from tests.fixtures.paths import REPOSITORY
-from tools.install_verapdf import configuration, release_url, verify_sha256
+from tools.install_verapdf import configuration, release_url
+from tools.native_download import verify_sha256
 
 
 def test_the_release_url_groups_versions_by_series() -> None:
@@ -34,7 +35,7 @@ def test_the_unattended_configuration_names_the_install_directory(tmp_path: Path
 
 def test_the_workflow_pins_the_release_this_tool_installs() -> None:
     workflow = (REPOSITORY / ".github/workflows/checks.yml").read_text("utf-8")
-    assert "tools/install_verapdf.py" in workflow
+    assert "tools.install_verapdf" in workflow
 
 
 def test_the_installer_preserves_paths_with_xml_metacharacters(tmp_path: Path) -> None:

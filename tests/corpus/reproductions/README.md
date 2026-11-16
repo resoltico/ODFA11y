@@ -14,7 +14,7 @@ Generate a package with a disposable profile and a separate output directory:
 
 ```sh
 soffice -env:UserInstallation=file:///absolute/private/profile --headless \
-  --convert-to odt --outdir /absolute/output tests/reproductions/text-contexts.fodt
+  --convert-to odt --outdir /absolute/output tests/corpus/reproductions/text-contexts.fodt
 ```
 
 Native output has bundled-schema violations. Tests compare the actual before/after

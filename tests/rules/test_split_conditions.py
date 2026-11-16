@@ -290,7 +290,7 @@ def _chart_change(document: OdfDocument, condition: str) -> None:
     ],
 )
 def test_chart_conditions(tmp_path: Path, rule: str, condition: str) -> None:
-    source = TESTS / "family_corpus/fruit-chart.odc"
+    source = TESTS / "corpus/families/fruit-chart.odc"
     assert rule not in {finding.rule_id for finding in audit_odf(source).findings}
     document = OdfDocument.open(source)
     _chart_change(document, condition)
@@ -319,7 +319,7 @@ def test_version_conditions(tmp_path: Path, rule: str, member: Part, xpath: str)
 
 @pytest.mark.parametrize("rule", [rules.MATH001.id, rules.MATH002.id])
 def test_formula_conditions(tmp_path: Path, rule: str) -> None:
-    source = TESTS / "family_corpus/sum-formula.odf"
+    source = TESTS / "corpus/families/sum-formula.odf"
     assert rule not in {finding.rule_id for finding in audit_odf(source).findings}
     document = OdfDocument.open(source)
     root = document.tree(Part.CONTENT).getroot()

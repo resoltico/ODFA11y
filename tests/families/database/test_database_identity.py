@@ -11,7 +11,7 @@ from odfa11y.families.database.descriptions import targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from tests.fixtures.paths import TESTS
 
-SOURCE = TESTS / "family_corpus/fruit-database.odb"
+SOURCE = TESTS / "corpus/families/fruit-database.odb"
 
 
 class CountedElement(etree.ElementBase):

@@ -24,7 +24,7 @@ from tests.fixtures.plans import plan_header
 def test_writer_language_source_decision_and_pdf_tags(
     case: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
-    source = TESTS / "text_corpus" / f"language-{case}.odt"
+    source = TESTS / "corpus/structure" / f"language-{case}.odt"
     report = audit_odf(source)
     assert (rules.LANG001.id in {finding.rule_id for finding in report.findings}) is (
         case == "negative"

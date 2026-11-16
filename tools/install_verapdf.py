@@ -2,14 +2,15 @@
 """Install the pinned veraPDF release on any runner and print the directory to put on PATH."""
 
 import argparse
-import hashlib
 import subprocess
 import sys
 import tempfile
-import urllib.request
+import tomllib
 import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
+
+from tools.native_download import download
 
 DOWNLOAD = (
     "https://software.verapdf.org/releases/{series}/verapdf-greenfield-{version}-installer.zip"
@@ -43,21 +44,6 @@ def release_url(version: str) -> str:
     return DOWNLOAD.format(series=version.rpartition(".")[0], version=version)
 
 
-def verify_sha256(path: Path, expected: str) -> None:
-    """Refuse a file whose SHA-256 differs from the pinned digest.
-
-    Raises
-    ------
-    ValueError
-        The digest differs.
-
-    """
-    actual = hashlib.sha256(path.read_bytes()).hexdigest()
-    if actual != expected.lower():
-        msg = f"{path.name} has SHA-256 {actual}, expected {expected}"
-        raise ValueError(msg)
-
-
 def configuration(install_dir: Path) -> str:
     """Build the unattended installer configuration.
 
@@ -82,9 +68,7 @@ def install(version: str, sha256: str, destination: Path) -> Path:
     with tempfile.TemporaryDirectory(prefix="odfa11y-verapdf-") as scratch:
         work = Path(scratch)
         archive = work / "verapdf.zip"
-        with urllib.request.urlopen(release_url(version), timeout=TIMEOUT_SECONDS) as response:  # noqa: S310  Download the pinned HTTPS vendor release.
-            archive.write_bytes(response.read())
-        verify_sha256(archive, sha256)
+        download(release_url(version), sha256, archive)
         with zipfile.ZipFile(archive) as bundle:
             bundle.extractall(work / "installer")
         (work / "install.xml").write_text(configuration(destination), encoding="utf-8")
@@ -92,6 +76,7 @@ def install(version: str, sha256: str, destination: Path) -> Path:
         subprocess.run(  # noqa: S603  Arguments select a local tool without a shell.
             ["java", "-jar", str(jar), str(work / "install.xml")],  # noqa: S607  System tool is resolved through PATH.
             check=True,
+            stdout=sys.stderr,
             timeout=TIMEOUT_SECONDS,
         )
     return destination
@@ -107,11 +92,10 @@ def main() -> int:
 
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("version")
-    parser.add_argument("sha256")
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
-    sys.stdout.write(f"{install(args.version, args.sha256, args.destination)}\n")
+    pins = tomllib.loads(Path(__file__).with_name("native_versions.toml").read_text())["verapdf"]
+    sys.stdout.write(f"{install(pins['version'], pins['sha256'], args.destination)}\n")
     return 0
 
 

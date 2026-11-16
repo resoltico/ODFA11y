@@ -87,14 +87,7 @@ class DoctorResult:
         return failure_status(self.error) if self.error else ExitStatus.PASSED
 
     def as_dict(self) -> JsonObject:
-        """Serialize the typed environment record.
-
-        Returns
-        -------
-        JsonObject
-            Versioned tool, dependency and capability facts.
-
-        """
+        """Serialize the typed environment record."""
         return record_dict(self)
 
     @property

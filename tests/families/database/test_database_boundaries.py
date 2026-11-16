@@ -27,7 +27,7 @@ from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 
 CONFIG = "{urn:oasis:names:tc:opendocument:xmlns:config:1.0}"
-SOURCE = TESTS / "family_corpus/fruit-database.odb"
+SOURCE = TESTS / "corpus/families/fruit-database.odb"
 
 
 @dataclass(frozen=True, slots=True)

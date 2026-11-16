@@ -148,14 +148,7 @@ class AuditResult:
         return options.log(self.reports)
 
     def as_dict(self) -> JsonObject:
-        """Serialize per-input completion/failure evidence.
-
-        Returns
-        -------
-        JsonObject
-            The versioned multi-input record.
-
-        """
+        """Serialize per-input completion/failure evidence."""
         return record_dict(self)
 
 
@@ -171,14 +164,7 @@ def audit(
     observer: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> AuditResult:
-    """Inspect independent inputs, retaining completed checks through later failures.
-
-    Returns
-    -------
-    AuditResult
-        Per-input outcomes with one combined acceptance status.
-
-    """
+    """Inspect independent inputs, retaining completed checks through later failures."""
     selected = (sources,) if isinstance(sources, str | Path) else tuple(sources)
     if sarif is not None:
         sarif.preflight(selected)

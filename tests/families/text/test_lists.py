@@ -116,7 +116,7 @@ def test_table_cells_reset_nesting_and_do_not_share_implicit_counters(tmp_path: 
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_writer_list_fixtures_and_read_only_preservation(case: str) -> None:
-    source = TESTS / "text_corpus" / f"lists-{case}.odt"
+    source = TESTS / "corpus/structure" / f"lists-{case}.odt"
     report = audit_odf(source)
     findings = [f.rule_id for f in report.findings if f.rule_id.startswith("LIST")]
     assert findings == ([] if case == "positive" else [rules.LIST009.id, rules.LIST009.id])

@@ -75,7 +75,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
-    source = TESTS / "text_corpus/tables-data-no-headers.odt"
+    source = TESTS / "corpus/structure/tables-data-no-headers.odt"
     edited = tmp_path / "columns.odt"
     apply_answers(source, edited, [header_inputs({"Data": header_answer(columns=1)})])
     assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count

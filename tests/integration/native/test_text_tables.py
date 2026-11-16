@@ -26,7 +26,7 @@ from tests.fixtures.paths import TESTS
 def test_writer_table_classification_and_pdf_scope(
     case: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
-    source = TESTS / "text_corpus" / f"tables-{case}.odt"
+    source = TESTS / "corpus/structure" / f"tables-{case}.odt"
     report = audit_odf(source)
     row = measured(measurement(report, TableMeasurements).table_classifications)[0]
     expected = {"positive": "complex-data", "negative": "ambiguous", "data-no-headers": "data"}

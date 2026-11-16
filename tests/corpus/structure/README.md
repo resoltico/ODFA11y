@@ -1,6 +1,6 @@
 # Writer text-structure corpus
 
-These invented inputs were saved by the LibreOffice version in [manifest.json](manifest.json).
+These invented inputs were saved by the LibreOffice version in [unified manifest](../manifest.toml).
 The manifest binds each ODT and its [authoring source](sources) by SHA-256 and records its
 strict-schema violation baseline. Tests verify inventory, producer, bytes and actual behavior.
 
@@ -13,12 +13,9 @@ strict-schema violation baseline. Tests verify inventory, producer, bytes and ac
 | Visibility | Plain current text versus tracked deletion, hidden section and uncertain layout. |
 
 Regenerate a selected feature with
-`uv run --no-sync python -m tools.build_text_corpus FEATURE` (`lists`, `references`,
-`language`, `tables`, `visibility`). Review changed source/native/PDF results before retaining
-new bytes. Regeneration reproduces intended semantics, not byte-identical native output.
-Writer numeric cells need explicit number formatting to retain their types.
+`uv run --no-sync python -m tools.build_corpus /absolute/new-output --purpose text-structure`.
 
 Positive/negative refer to the feature under test. Short fixtures still have an informational PDF heading
 finding; source-valid reference relationships can have failing exported annotations.
-See [measured PDF results](../../docs/measurements/text-exports.json) and
-[accessibility boundaries](../../docs/ACCESSIBILITY.md). No fixture is an accessibility certificate.
+See [measured PDF results](../../../docs/measurements/text-exports.json) and
+[accessibility boundaries](../../../docs/ACCESSIBILITY.md). No fixture is an accessibility certificate.

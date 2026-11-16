@@ -28,7 +28,7 @@ from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header
 
-SOURCE = TESTS / "family_corpus/sum-formula.odf"
+SOURCE = TESTS / "corpus/families/sum-formula.odf"
 
 
 @dataclass(frozen=True, slots=True)

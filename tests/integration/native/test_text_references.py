@@ -23,7 +23,7 @@ from tests.fixtures.paths import TESTS
 def test_writer_reference_wording_and_source_scope(
     case: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
-    source = TESTS / "text_corpus" / f"references-{case}.odt"
+    source = TESTS / "corpus/structure" / f"references-{case}.odt"
     output = tmp_path / "references.pdf"
     export_document(source, output, Tools(soffice=external_tool("soffice", "libreoffice")))
     reader = PdfReader(output)

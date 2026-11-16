@@ -18,7 +18,7 @@ from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 
-FIXTURE = TESTS / "reproductions/text-contexts.odt"
+FIXTURE = TESTS / "corpus/reproductions/text-contexts.odt"
 
 
 def test_writer_revision_reload_and_rendered_word_boundaries(

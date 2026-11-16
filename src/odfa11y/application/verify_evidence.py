@@ -31,12 +31,5 @@ class VerificationResult:
 
 @translate_io
 def verify_evidence(directory: str | Path) -> VerificationResult:
-    """Check recorded file integrity without claiming document accessibility.
-
-    Returns
-    -------
-    VerificationResult
-        Every integrity problem and effective status.
-
-    """
+    """Check recorded file integrity without claiming document accessibility."""
     return VerificationResult(tuple(check_bundle(directory)))

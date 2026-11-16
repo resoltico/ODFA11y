@@ -18,7 +18,7 @@ from tests.fixtures.native_resources import png_bytes
 from tests.fixtures.paths import TESTS
 lazy from tests.fixtures.answers import apply_in_memory
 
-DRAWING = TESTS / "family_corpus" / "fruit-drawing.odg"
+DRAWING = TESTS / "corpus/families" / "fruit-drawing.odg"
 
 
 def declaration(directory: Path, kind: str, href: str | None, *, active: bool = False) -> Path:

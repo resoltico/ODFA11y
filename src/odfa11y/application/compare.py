@@ -29,19 +29,7 @@ PDF_MAGIC = b"%PDF"
 
 
 def is_pdf(path: Path) -> bool:
-    """Sniff four bytes from a regular input with a nonblocking descriptor.
-
-    Returns
-    -------
-    bool
-        Whether the input has the PDF signature.
-
-    Raises
-    ------
-    PackageError
-        The selected or opened input is nonregular.
-
-    """
+    """Sniff four bytes from a regular input with a nonblocking descriptor."""
     if not stat.S_ISREG(path.stat().st_mode):
         msg = f"Input {path} must be a regular file (ordinary file aliases are supported)"
         raise PackageError(msg)
@@ -156,14 +144,7 @@ def compare(
     observer: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> ComparisonResult:
-    """Compare original ODF/PDF inputs under the selected fidelity policy.
-
-    Returns
-    -------
-    ComparisonResult
-        Fidelity findings and effective strict acceptance.
-
-    """
+    """Compare original ODF/PDF inputs under the selected fidelity policy."""
     if sarif is not None:
         sarif.preflight((candidate, source))
     policy = (

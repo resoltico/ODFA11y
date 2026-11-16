@@ -18,7 +18,9 @@ def test_writer_list_structure(
 ) -> None:
     executable = external_tool("soffice", "libreoffice")
     output = tmp_path / "lists.pdf"
-    export_document(TESTS / "text_corpus" / f"lists-{case}.odt", output, Tools(soffice=executable))
+    export_document(
+        TESTS / "corpus/structure" / f"lists-{case}.odt", output, Tools(soffice=executable)
+    )
     reader = PdfReader(output)
     pending = [reader.root_object["/StructTreeRoot"]]
     roles = []

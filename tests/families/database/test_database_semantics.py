@@ -30,7 +30,7 @@ from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.runs import RunSettings, execute
 
-SOURCE = TESTS / "family_corpus/fruit-database.odb"
+SOURCE = TESTS / "corpus/families/fruit-database.odb"
 
 
 def _query_source(tmp_path: Path, *, duplicate: bool = False) -> Path:

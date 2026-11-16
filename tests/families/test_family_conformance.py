@@ -23,7 +23,7 @@ from tests.fixtures.paths import TESTS
 from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet, text_cell
 from tests.fixtures.writer import make_minimal_odt
 
-FAMILY_CORPUS = TESTS / "family_corpus"
+FAMILY_CORPUS = TESTS / "corpus/families"
 FAMILY_FIXTURES = [
     "text",
     "spreadsheet",

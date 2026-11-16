@@ -24,14 +24,7 @@ def batch(
     observer: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> BatchRecord:
-    """Execute independent batch-file items and retain their actual outcomes.
-
-    Returns
-    -------
-    BatchRecord
-        Per-item outcomes and the combined effective status.
-
-    """
+    """Execute independent batch-file items and retain their actual outcomes."""
     if not isinstance(profile, Profile):
         message = "A batch requires a Profile value."
         raise InvalidOption(message)

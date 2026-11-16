@@ -3,8 +3,6 @@ on:
   schedule:
     - cron: "17 5 * * 1"
   workflow_dispatch:
-env:
-  ODFA11Y_UV_VERSION: "0.13.6"
 permissions:
   contents: read
 concurrency:
@@ -24,14 +22,12 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
-          version: ${{ env.ODFA11Y_UV_VERSION }}
           cache-dependency-glob: |
             uv.lock
+            pyproject.toml
             .python-version
           save-cache: ${{ github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
       - name: Restore locked Python environment
         run: uv sync --locked --group audit
       - name: Audit locked dependencies
-        run: |
-          uv export --locked --group audit --no-emit-project --output-file "$RUNNER_TEMP/audit-requirements.txt" > /dev/null
-          uv run --no-sync pip-audit --strict --require-hashes --disable-pip -r "$RUNNER_TEMP/audit-requirements.txt"
+        run: uv run --no-sync python -m tools.check audit

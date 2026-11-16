@@ -262,7 +262,7 @@ def test_unrelated_derived_style_change_is_detected_by_publication_guard(
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_writer_language_source_controls(case: str) -> None:
-    report = audit_odf(TESTS / "text_corpus" / f"language-{case}.odt")
+    report = audit_odf(TESTS / "corpus/structure" / f"language-{case}.odt")
     assert (rules.LANG001.id in {f.rule_id for f in report.findings}) is (case == "negative")
     assert rules.LANG002.id not in {f.rule_id for f in report.findings}
 

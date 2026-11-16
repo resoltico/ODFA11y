@@ -2,7 +2,6 @@
 """Real current Impress/Draw documents prove source repair and complete PDF assurance."""
 
 import hashlib
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -16,11 +15,12 @@ from tests.fixtures.answers import (
     metadata_input,
     page_answer,
 )
+from tests.fixtures.corpus import ALL_DOCUMENTS
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 lazy from tests.fixtures.answers import graphic_inputs, page_inputs
 
-CORPUS = TESTS / "family_corpus"
+CORPUS = TESTS / "corpus/families"
 FAMILIES = {"presentation": (".odp", pages), "drawing": (".odg", pages)}
 
 
@@ -41,18 +41,16 @@ def _plan() -> list[Authored]:
 
 
 def test_native_family_corpus_matches_provenance_and_validates() -> None:
-    manifest = tomllib.loads((CORPUS / "manifest.toml").read_text())
-    assert manifest["producer"] == "LibreOffice 26.8.0.3"
-    expected = {f"fruit-{family}{suffix}" for family, (suffix, _) in FAMILIES.items()}
-    assert {
-        entry["file"] for entry in manifest["documents"] if entry["family"] in FAMILIES
-    } == expected
-    for entry in manifest["documents"]:
-        source = CORPUS / entry["file"]
-        assert hashlib.sha256(source.read_bytes()).hexdigest() == entry["sha256"]
-        result = validate(OdfDocument.open(source))
-        assert result.version == manifest["odf_version"] == "1.4"
-        assert result.count == entry["schema_violations"] == 0
+    documents = tuple(item for item in ALL_DOCUMENTS if "family-conformance" in item.purposes)
+    expected = {f"families/fruit-{family}{suffix}" for family, (suffix, _) in FAMILIES.items()}
+    assert {item.file for item in documents if item.family in FAMILIES} == expected
+    for item in documents:
+        assert hashlib.sha256(item.path.read_bytes()).hexdigest() == item.sha256
+        result = validate(OdfDocument.open(item.path))
+        assert result.version == item.odf_version == "1.4"
+        assert result.count == item.schema_violations == 0
+        if item.producer.startswith("LibreOffice"):
+            assert item.producer == "LibreOffice 26.8.0.3"
 
 
 @pytest.mark.parametrize("family", FAMILIES)

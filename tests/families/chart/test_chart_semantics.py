@@ -28,7 +28,7 @@ from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.runs import RunSettings, execute
 
-SOURCE = TESTS / "family_corpus/fruit-chart.odc"
+SOURCE = TESTS / "corpus/families/fruit-chart.odc"
 
 
 def _plan() -> list[Authored]:

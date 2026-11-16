@@ -3,8 +3,10 @@
 
 import json
 import re
+import sys
 
 from tests.fixtures.paths import REPOSITORY
+from tools.check import commands as check_commands
 
 ROOT = REPOSITORY
 WORKFLOW = (ROOT / ".github/workflows/checks.yml").read_text(encoding="utf-8")
@@ -91,7 +93,7 @@ def test_check_triggers_cover_prs_main_tags_and_manual_branch_runs() -> None:
     assert "paths:" not in triggers
     assert "paths-ignore:" not in triggers
     # These jobs also run on manually selected branches; only release creation is restricted.
-    for job in ("static", "test", "integration"):
+    for job in ("static", "test"):
         assert not re.search(r"^    if:", job_block(job), re.MULTILINE)
 
 
@@ -107,25 +109,23 @@ def test_tag_and_manual_release_runs_cannot_restore_go_analysis_caches() -> None
 
 
 def test_parallel_native_tests_still_require_tools_and_reject_worker_crashes() -> None:
-    integration = job_block("integration")
+    integration = job_block("test")
     assert 'ODFA11Y_REQUIRE_INTEGRATION: "1"' in integration
-    assert "pytest tests/integration -n 2 --max-worker-restart=0" in integration
+    assert "python -m tools.check all" in integration
+    commands = check_commands("integration")
+    assert commands == (
+        [sys.executable, "-m", "pytest", "tests/integration", "-n", "2", "--max-worker-restart=0"],
+    )
     assert "os: [ubuntu-latest, macos-latest, windows-latest]" in integration
 
 
-def test_windows_installation_bounds_downloads_and_verifies_before_installing() -> None:
-    block = job_block("integration").split("- name: Install LibreOffice on Windows\n", 1)[1]
-    block = block.split("- name: Install pinned veraPDF\n", 1)[0]
-    assert "timeout-minutes: 15" in block
-    assert "curl.exe --version" in block
-    assert "--fail --location --retry 3 --retry-all-errors" in block
-    assert "--connect-timeout 30 --max-time 180 --retry-max-time 600" in block
-    assert "--output $installer $url" in block
+def test_native_installer_has_a_bounded_step_and_one_checked_path_per_application() -> None:
+    block = job_block("test")
+    assert "timeout-minutes: 20" in block
+    assert "tools.install_libreoffice" in block
+    assert "tools.install_verapdf" in block
+    assert "curl.exe" not in block
     assert "Invoke-WebRequest" not in block
-    assert block.index("if ($LASTEXITCODE -ne 0)") < block.index("Get-FileHash")
-    assert block.index("Get-FileHash") < block.index("Start-Process msiexec.exe")
-    assert "throw 'LibreOffice installer checksum mismatch'" in block
-    assert "$installation.ExitCode -notin @(0, 3010)" in block
 
 
 def test_go_cache_identity_uses_the_same_pins_as_the_scanner_commands() -> None:
@@ -142,10 +142,13 @@ def test_go_cache_identity_uses_the_same_pins_as_the_scanner_commands() -> None:
 
 def test_dependency_caches_are_saved_only_from_main_and_release_caches_are_bypassed() -> None:
     main_push = "github.event_name == 'push' && github.ref == 'refs/heads/main'"
-    for job in ("static", "test", "integration"):
+    for job in ("static", "test"):
         block = job_block(job)
         assert f"save-cache: ${{{{ {main_push} }}}}" in block
-        assert "cache-dependency-glob: |\n            uv.lock\n            .python-version" in block
+        assert (
+            "cache-dependency-glob: |\n            uv.lock\n"
+            "            pyproject.toml\n            .python-version" in block
+        )
         assert (
             "restore-cache: ${{ github.event_name != 'workflow_dispatch' || !inputs.release }}"
             in block
@@ -167,16 +170,9 @@ def test_draft_creation_requires_successful_state_queries_and_verifies_downloade
     assert draft.index("gh release create") < draft.index("tools.github_release draft")
 
 
-def test_contributor_and_installed_checks_run_from_the_extracted_source_archive() -> None:
+def test_release_qualification_uses_the_central_checker_and_clean_rebuild_smoke_path() -> None:
     test = job_block("test")
-    assert 'archive.extractall(target, filter="data")' in test
-    assert test.count('cd "$RUNNER_TEMP"/sdist-check/*') == 2
-    assert 'uv run --no-sync python -m tools.check_release "$tag" dist' in test
-    assert test.index("Verify extracted source archive") < test.index("Verify installed wheel")
-
-
-def test_extracted_checks_rebuild_and_inspect_archives_after_property_test_caches_exist() -> None:
-    flow = job_block("test").split("- name: Verify extracted source archive contributor flow", 1)[1]
-    flow = flow.split("- name: Verify installed wheel", 1)[0]
-    assert flow.index("pytest --ignore=tests/integration -n auto") < flow.index("uv build")
-    assert flow.index("uv build") < flow.index('tools.check_release "$tag" dist')
+    assert "python -m tools.check all" in test
+    commands = check_commands("release")
+    assert any("tools.check_release" in command for command in commands)
+    assert any("tools.qualify_build" in command for command in commands)

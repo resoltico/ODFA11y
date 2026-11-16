@@ -26,7 +26,7 @@ def test_every_targeted_kind_owns_a_domain_and_resolved_rules_are_registered_obj
 
 
 def test_chart_description_finding_raises_its_common_metadata_question_in_the_same_call() -> None:
-    report = audit_odf(TESTS / "family_corpus/fruit-chart.odc")
+    report = audit_odf(TESTS / "corpus/families/fruit-chart.odc")
     assert any(finding.rule is rules.CHART004 for finding in report.findings)
     (question,) = [
         question for question in report.decisions if question.kind.id == "document.metadata"

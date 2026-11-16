@@ -100,7 +100,7 @@ def test_relationship_controls(tmp_path: Path, body: str, expected: list[str]) -
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_writer_relationship_fixtures(case: str) -> None:
-    report = audit_odf(TESTS / "text_corpus" / f"references-{case}.odt")
+    report = audit_odf(TESTS / "corpus/structure" / f"references-{case}.odt")
     findings = [f.rule_id for f in report.findings if f.rule_id.startswith("REF")]
     assert findings == ([] if case == "positive" else [rules.REF001.id])
 
@@ -168,7 +168,7 @@ def test_duplicate_note_identities_are_reported_without_reference_fields(tmp_pat
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_review_metadata_does_not_repair_or_retarget_references(tmp_path: Path, case: str) -> None:
-    source = TESTS / "text_corpus" / f"references-{case}.odt"
+    source = TESTS / "corpus/structure" / f"references-{case}.odt"
     output = tmp_path / "reviewed.odt"
     before = etree.tostring(OdfDocument.open(source).tree(Part.CONTENT))
     apply_answers(source, output, [metadata_input(title="Reviewed references")])

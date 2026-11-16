@@ -15,9 +15,9 @@ from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet
 ROOT = TESTS
 SOURCES = {
     "text": ROOT / "corpus/images-undescribed.odt",
-    "presentation": ROOT / "family_corpus/fruit-presentation.odp",
-    "drawing": ROOT / "family_corpus/fruit-drawing.odg",
-    "image": ROOT / "family_corpus/fruit-image.odi",
+    "presentation": ROOT / "corpus/families/fruit-presentation.odp",
+    "drawing": ROOT / "corpus/families/fruit-drawing.odg",
+    "image": ROOT / "corpus/families/fruit-image.odi",
 }
 
 

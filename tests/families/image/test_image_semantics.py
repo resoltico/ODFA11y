@@ -32,7 +32,7 @@ from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.runs import RunSettings, execute
 
-SOURCE = TESTS / "family_corpus/fruit-image.odi"
+SOURCE = TESTS / "corpus/families/fruit-image.odi"
 
 
 def _plan() -> list[Authored]:

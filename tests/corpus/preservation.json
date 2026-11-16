@@ -3734,7 +3734,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/family_corpus/fruit-chart.odc",
+      "source": "tests/corpus/families/fruit-chart.odc",
       "sha256": "3d2a9662675a4e3751a1e15a30726be6424365559ad17791fca50ca2a779133b",
       "kind": "document.metadata",
       "answers": [
@@ -3750,7 +3750,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-chart.odc",
+      "source": "tests/corpus/families/fruit-chart.odc",
       "sha256": "3d2a9662675a4e3751a1e15a30726be6424365559ad17791fca50ca2a779133b",
       "kind": "document.odf_version",
       "answers": [
@@ -3764,14 +3764,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-database.odb",
+      "source": "tests/corpus/families/fruit-database.odb",
       "sha256": "dd01697b58faa3d686c5c4106742ebe9bbe7db97d66a7ab02cfd251bb5e78871",
       "kind": "database.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/family_corpus/fruit-database.odb",
+      "source": "tests/corpus/families/fruit-database.odb",
       "sha256": "dd01697b58faa3d686c5c4106742ebe9bbe7db97d66a7ab02cfd251bb5e78871",
       "kind": "document.metadata",
       "answers": [
@@ -3787,7 +3787,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-database.odb",
+      "source": "tests/corpus/families/fruit-database.odb",
       "sha256": "dd01697b58faa3d686c5c4106742ebe9bbe7db97d66a7ab02cfd251bb5e78871",
       "kind": "document.odf_version",
       "answers": [
@@ -3801,7 +3801,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-drawing.odg",
+      "source": "tests/corpus/families/fruit-drawing.odg",
       "sha256": "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4",
       "kind": "document.metadata",
       "answers": [
@@ -3817,7 +3817,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-drawing.odg",
+      "source": "tests/corpus/families/fruit-drawing.odg",
       "sha256": "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4",
       "kind": "document.odf_version",
       "answers": [
@@ -3831,7 +3831,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-drawing.odg",
+      "source": "tests/corpus/families/fruit-drawing.odg",
       "sha256": "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4",
       "kind": "graphic.alternative",
       "answers": [
@@ -3860,14 +3860,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-drawing.odg",
+      "source": "tests/corpus/families/fruit-drawing.odg",
       "sha256": "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/family_corpus/fruit-drawing.odg",
+      "source": "tests/corpus/families/fruit-drawing.odg",
       "sha256": "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4",
       "kind": "page.metadata",
       "answers": [
@@ -3882,7 +3882,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-drawing.odg",
+      "source": "tests/corpus/families/fruit-drawing.odg",
       "sha256": "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4",
       "kind": "page.navigation",
       "answers": [
@@ -3900,7 +3900,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-image.odi",
+      "source": "tests/corpus/families/fruit-image.odi",
       "sha256": "e1d9cc787e083d49ab25924691028d08fdf13b039ae7ae3fb26d007753573298",
       "kind": "document.metadata",
       "answers": [
@@ -3916,7 +3916,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-image.odi",
+      "source": "tests/corpus/families/fruit-image.odi",
       "sha256": "e1d9cc787e083d49ab25924691028d08fdf13b039ae7ae3fb26d007753573298",
       "kind": "document.odf_version",
       "answers": [
@@ -3930,7 +3930,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-image.odi",
+      "source": "tests/corpus/families/fruit-image.odi",
       "sha256": "e1d9cc787e083d49ab25924691028d08fdf13b039ae7ae3fb26d007753573298",
       "kind": "graphic.alternative",
       "answers": [
@@ -3945,7 +3945,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-presentation.odp",
+      "source": "tests/corpus/families/fruit-presentation.odp",
       "sha256": "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308",
       "kind": "document.metadata",
       "answers": [
@@ -3961,7 +3961,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-presentation.odp",
+      "source": "tests/corpus/families/fruit-presentation.odp",
       "sha256": "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308",
       "kind": "document.odf_version",
       "answers": [
@@ -3975,7 +3975,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-presentation.odp",
+      "source": "tests/corpus/families/fruit-presentation.odp",
       "sha256": "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308",
       "kind": "graphic.alternative",
       "answers": [
@@ -4018,14 +4018,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-presentation.odp",
+      "source": "tests/corpus/families/fruit-presentation.odp",
       "sha256": "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/family_corpus/fruit-presentation.odp",
+      "source": "tests/corpus/families/fruit-presentation.odp",
       "sha256": "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308",
       "kind": "page.metadata",
       "answers": [
@@ -4040,7 +4040,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/fruit-presentation.odp",
+      "source": "tests/corpus/families/fruit-presentation.odp",
       "sha256": "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308",
       "kind": "page.navigation",
       "answers": [
@@ -4058,7 +4058,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-references.ods",
+      "source": "tests/corpus/families/sheet-references.ods",
       "sha256": "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158",
       "kind": "document.metadata",
       "answers": [
@@ -4074,7 +4074,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-references.ods",
+      "source": "tests/corpus/families/sheet-references.ods",
       "sha256": "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158",
       "kind": "document.odf_version",
       "answers": [
@@ -4088,7 +4088,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-references.ods",
+      "source": "tests/corpus/families/sheet-references.ods",
       "sha256": "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158",
       "kind": "graphic.alternative",
       "answers": [
@@ -4103,7 +4103,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-references.ods",
+      "source": "tests/corpus/families/sheet-references.ods",
       "sha256": "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158",
       "kind": "link.description",
       "answers": [
@@ -4117,7 +4117,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-references.ods",
+      "source": "tests/corpus/families/sheet-references.ods",
       "sha256": "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158",
       "kind": "sheet.name",
       "answers": [
@@ -4137,7 +4137,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/family_corpus/sheet-values.ods",
+      "source": "tests/corpus/families/sheet-values.ods",
       "sha256": "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c",
       "kind": "document.metadata",
       "answers": [
@@ -4153,7 +4153,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-values.ods",
+      "source": "tests/corpus/families/sheet-values.ods",
       "sha256": "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c",
       "kind": "document.odf_version",
       "answers": [
@@ -4167,7 +4167,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-values.ods",
+      "source": "tests/corpus/families/sheet-values.ods",
       "sha256": "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c",
       "kind": "graphic.alternative",
       "answers": [
@@ -4182,7 +4182,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-values.ods",
+      "source": "tests/corpus/families/sheet-values.ods",
       "sha256": "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c",
       "kind": "link.description",
       "answers": [
@@ -4196,7 +4196,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sheet-values.ods",
+      "source": "tests/corpus/families/sheet-values.ods",
       "sha256": "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c",
       "kind": "sheet.name",
       "answers": [
@@ -4216,7 +4216,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sum-formula.odf",
+      "source": "tests/corpus/families/sum-formula.odf",
       "sha256": "eafceebc92348aa8ed7193b8634a5e5364bbf20fb5d5808b1befabed672b3cd2",
       "kind": "document.metadata",
       "answers": [
@@ -4232,7 +4232,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sum-formula.odf",
+      "source": "tests/corpus/families/sum-formula.odf",
       "sha256": "eafceebc92348aa8ed7193b8634a5e5364bbf20fb5d5808b1befabed672b3cd2",
       "kind": "document.odf_version",
       "answers": [
@@ -4246,7 +4246,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/family_corpus/sum-formula.odf",
+      "source": "tests/corpus/families/sum-formula.odf",
       "sha256": "eafceebc92348aa8ed7193b8634a5e5364bbf20fb5d5808b1befabed672b3cd2",
       "kind": "formula.alternative",
       "answers": [
@@ -4260,7 +4260,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "document.metadata",
       "answers": [
@@ -4276,7 +4276,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "document.odf_version",
       "answers": [
@@ -4290,14 +4290,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "heading.level",
       "answers": [
@@ -4317,7 +4317,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "language.target",
       "answers": [
@@ -4355,7 +4355,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "link.description",
       "answers": [
@@ -4369,14 +4369,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -4390,7 +4390,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "text.remove_spacers",
       "answers": [
@@ -4404,7 +4404,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.fodt",
+      "source": "tests/corpus/reproductions/text-contexts.fodt",
       "sha256": "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d",
       "kind": "text.spacing",
       "answers": [
@@ -4422,7 +4422,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "document.metadata",
       "answers": [
@@ -4438,7 +4438,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "document.odf_version",
       "answers": [
@@ -4452,14 +4452,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "heading.level",
       "answers": [
@@ -4479,7 +4479,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "language.target",
       "answers": [
@@ -4517,7 +4517,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "link.description",
       "answers": [
@@ -4531,14 +4531,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -4552,7 +4552,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "text.remove_spacers",
       "answers": [
@@ -4566,7 +4566,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/text-contexts.odt",
+      "source": "tests/corpus/reproductions/text-contexts.odt",
       "sha256": "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae",
       "kind": "text.spacing",
       "answers": [
@@ -4584,7 +4584,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "document.metadata",
       "answers": [
@@ -4600,7 +4600,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "document.odf_version",
       "answers": [
@@ -4614,21 +4614,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "language.target",
       "answers": [
@@ -4648,7 +4648,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "link.description",
       "answers": [
@@ -4662,14 +4662,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -4683,7 +4683,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "text.remove_spacers",
       "answers": [
@@ -4697,7 +4697,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/reproductions/unnamed-link.odt",
+      "source": "tests/corpus/reproductions/unnamed-link.odt",
       "sha256": "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c",
       "kind": "text.spacing",
       "answers": [
@@ -4715,7 +4715,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "document.metadata",
       "answers": [
@@ -4731,7 +4731,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "document.odf_version",
       "answers": [
@@ -4745,21 +4745,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "language.target",
       "answers": [
@@ -4773,21 +4773,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -4801,7 +4801,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "text.remove_spacers",
       "answers": [
@@ -4815,7 +4815,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-negative.odt",
+      "source": "tests/corpus/structure/language-negative.odt",
       "sha256": "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367",
       "kind": "text.spacing",
       "answers": [
@@ -4833,7 +4833,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "document.metadata",
       "answers": [
@@ -4849,7 +4849,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "document.odf_version",
       "answers": [
@@ -4863,21 +4863,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "language.target",
       "answers": [
@@ -4897,21 +4897,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -4925,7 +4925,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "text.remove_spacers",
       "answers": [
@@ -4939,7 +4939,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/language-positive.odt",
+      "source": "tests/corpus/structure/language-positive.odt",
       "sha256": "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2",
       "kind": "text.spacing",
       "answers": [
@@ -4957,7 +4957,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "document.metadata",
       "answers": [
@@ -4973,7 +4973,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "document.odf_version",
       "answers": [
@@ -4987,21 +4987,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "language.target",
       "answers": [
@@ -5021,21 +5021,21 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5049,7 +5049,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5063,7 +5063,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-negative.odt",
+      "source": "tests/corpus/structure/lists-negative.odt",
       "sha256": "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8",
       "kind": "text.spacing",
       "answers": [
@@ -5081,7 +5081,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "document.metadata",
       "answers": [
@@ -5097,7 +5097,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "document.odf_version",
       "answers": [
@@ -5111,21 +5111,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "language.target",
       "answers": [
@@ -5163,21 +5163,21 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5191,7 +5191,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5205,7 +5205,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/lists-positive.odt",
+      "source": "tests/corpus/structure/lists-positive.odt",
       "sha256": "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b",
       "kind": "text.spacing",
       "answers": [
@@ -5224,7 +5224,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "document.metadata",
       "answers": [
@@ -5240,7 +5240,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "document.odf_version",
       "answers": [
@@ -5254,21 +5254,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "language.target",
       "answers": [
@@ -5288,7 +5288,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "link.description",
       "answers": [
@@ -5302,14 +5302,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5323,7 +5323,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5337,7 +5337,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-negative.odt",
+      "source": "tests/corpus/structure/references-negative.odt",
       "sha256": "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1",
       "kind": "text.spacing",
       "answers": [
@@ -5355,7 +5355,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "document.metadata",
       "answers": [
@@ -5371,7 +5371,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "document.odf_version",
       "answers": [
@@ -5385,21 +5385,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "language.target",
       "answers": [
@@ -5431,7 +5431,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "link.description",
       "answers": [
@@ -5445,14 +5445,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5466,7 +5466,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5480,7 +5480,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/references-positive.odt",
+      "source": "tests/corpus/structure/references-positive.odt",
       "sha256": "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92",
       "kind": "text.spacing",
       "answers": [
@@ -5498,7 +5498,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "document.metadata",
       "answers": [
@@ -5514,7 +5514,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "document.odf_version",
       "answers": [
@@ -5528,21 +5528,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "language.target",
       "answers": [
@@ -5556,21 +5556,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5584,7 +5584,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5598,7 +5598,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-negative.fodt",
+      "source": "tests/corpus/structure/sources/language-negative.fodt",
       "sha256": "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd",
       "kind": "text.spacing",
       "answers": [
@@ -5616,7 +5616,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "document.metadata",
       "answers": [
@@ -5632,7 +5632,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "document.odf_version",
       "answers": [
@@ -5646,21 +5646,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "language.target",
       "answers": [
@@ -5680,21 +5680,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5708,7 +5708,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5722,7 +5722,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/language-positive.fodt",
+      "source": "tests/corpus/structure/sources/language-positive.fodt",
       "sha256": "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc",
       "kind": "text.spacing",
       "answers": [
@@ -5740,7 +5740,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "document.metadata",
       "answers": [
@@ -5756,7 +5756,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "document.odf_version",
       "answers": [
@@ -5770,21 +5770,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "language.target",
       "answers": [
@@ -5804,21 +5804,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5832,7 +5832,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5846,7 +5846,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-negative.fodt",
+      "source": "tests/corpus/structure/sources/lists-negative.fodt",
       "sha256": "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315",
       "kind": "text.spacing",
       "answers": [
@@ -5864,7 +5864,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "document.metadata",
       "answers": [
@@ -5880,7 +5880,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "document.odf_version",
       "answers": [
@@ -5894,21 +5894,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "language.target",
       "answers": [
@@ -5946,21 +5946,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -5974,7 +5974,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "text.remove_spacers",
       "answers": [
@@ -5988,7 +5988,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/lists-positive.fodt",
+      "source": "tests/corpus/structure/sources/lists-positive.fodt",
       "sha256": "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75",
       "kind": "text.spacing",
       "answers": [
@@ -6006,7 +6006,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "document.metadata",
       "answers": [
@@ -6022,7 +6022,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "document.odf_version",
       "answers": [
@@ -6036,21 +6036,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "language.target",
       "answers": [
@@ -6070,7 +6070,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "link.description",
       "answers": [
@@ -6084,14 +6084,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6105,7 +6105,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6119,7 +6119,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-negative.fodt",
+      "source": "tests/corpus/structure/sources/references-negative.fodt",
       "sha256": "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035",
       "kind": "text.spacing",
       "answers": [
@@ -6137,7 +6137,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "document.metadata",
       "answers": [
@@ -6153,7 +6153,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "document.odf_version",
       "answers": [
@@ -6167,21 +6167,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "language.target",
       "answers": [
@@ -6213,7 +6213,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "link.description",
       "answers": [
@@ -6227,14 +6227,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6248,7 +6248,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6262,7 +6262,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/references-positive.fodt",
+      "source": "tests/corpus/structure/sources/references-positive.fodt",
       "sha256": "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5",
       "kind": "text.spacing",
       "answers": [
@@ -6280,7 +6280,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "document.metadata",
       "answers": [
@@ -6296,7 +6296,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "document.odf_version",
       "answers": [
@@ -6310,21 +6310,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "language.target",
       "answers": [
@@ -6356,14 +6356,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "table.headers",
       "answers": [
@@ -6377,7 +6377,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6391,7 +6391,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6405,7 +6405,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-data-no-headers.fodt",
+      "source": "tests/corpus/structure/sources/tables-data-no-headers.fodt",
       "sha256": "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08",
       "kind": "text.spacing",
       "answers": [
@@ -6423,7 +6423,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "document.metadata",
       "answers": [
@@ -6439,7 +6439,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "document.odf_version",
       "answers": [
@@ -6453,21 +6453,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "language.target",
       "answers": [
@@ -6499,14 +6499,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "table.headers",
       "answers": [
@@ -6520,7 +6520,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6534,7 +6534,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6548,7 +6548,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-negative.fodt",
+      "source": "tests/corpus/structure/sources/tables-negative.fodt",
       "sha256": "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38",
       "kind": "text.spacing",
       "answers": [
@@ -6566,7 +6566,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "document.metadata",
       "answers": [
@@ -6582,7 +6582,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "document.odf_version",
       "answers": [
@@ -6596,21 +6596,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "language.target",
       "answers": [
@@ -6666,14 +6666,14 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "table.headers",
       "answers": [
@@ -6687,7 +6687,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6701,7 +6701,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6715,7 +6715,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/tables-positive.fodt",
+      "source": "tests/corpus/structure/sources/tables-positive.fodt",
       "sha256": "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6",
       "kind": "text.spacing",
       "answers": [
@@ -6733,7 +6733,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "document.metadata",
       "answers": [
@@ -6749,7 +6749,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "document.odf_version",
       "answers": [
@@ -6763,7 +6763,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "graphic.alternative",
       "answers": [
@@ -6778,14 +6778,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "language.target",
       "answers": [
@@ -6811,21 +6811,21 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6839,7 +6839,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6853,7 +6853,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-negative.fodt",
+      "source": "tests/corpus/structure/sources/visibility-negative.fodt",
       "sha256": "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6",
       "kind": "text.spacing",
       "answers": [
@@ -6871,7 +6871,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "document.metadata",
       "answers": [
@@ -6887,7 +6887,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "document.odf_version",
       "answers": [
@@ -6901,21 +6901,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "language.target",
       "answers": [
@@ -6929,21 +6929,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -6957,7 +6957,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "text.remove_spacers",
       "answers": [
@@ -6971,7 +6971,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/sources/visibility-positive.fodt",
+      "source": "tests/corpus/structure/sources/visibility-positive.fodt",
       "sha256": "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781",
       "kind": "text.spacing",
       "answers": [
@@ -6989,7 +6989,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "document.metadata",
       "answers": [
@@ -7005,7 +7005,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "document.odf_version",
       "answers": [
@@ -7019,21 +7019,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "language.target",
       "answers": [
@@ -7065,14 +7065,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "table.headers",
       "answers": [
@@ -7086,7 +7086,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -7100,7 +7100,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "text.remove_spacers",
       "answers": [
@@ -7114,7 +7114,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-data-no-headers.odt",
+      "source": "tests/corpus/structure/tables-data-no-headers.odt",
       "sha256": "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a",
       "kind": "text.spacing",
       "answers": [
@@ -7132,7 +7132,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "document.metadata",
       "answers": [
@@ -7148,7 +7148,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "document.odf_version",
       "answers": [
@@ -7162,21 +7162,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "language.target",
       "answers": [
@@ -7208,14 +7208,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "table.headers",
       "answers": [
@@ -7229,7 +7229,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -7243,7 +7243,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "text.remove_spacers",
       "answers": [
@@ -7257,7 +7257,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-negative.odt",
+      "source": "tests/corpus/structure/tables-negative.odt",
       "sha256": "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa",
       "kind": "text.spacing",
       "answers": [
@@ -7275,7 +7275,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "document.metadata",
       "answers": [
@@ -7291,7 +7291,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "document.odf_version",
       "answers": [
@@ -7305,21 +7305,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "language.target",
       "answers": [
@@ -7375,14 +7375,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "table.headers",
       "answers": [
@@ -7396,7 +7396,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -7410,7 +7410,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "text.remove_spacers",
       "answers": [
@@ -7424,7 +7424,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/tables-positive.odt",
+      "source": "tests/corpus/structure/tables-positive.odt",
       "sha256": "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414",
       "kind": "text.spacing",
       "answers": [
@@ -7442,7 +7442,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "document.metadata",
       "answers": [
@@ -7458,7 +7458,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "document.odf_version",
       "answers": [
@@ -7472,7 +7472,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "graphic.alternative",
       "answers": [
@@ -7487,14 +7487,14 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "language.target",
       "answers": [
@@ -7520,21 +7520,21 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -7548,7 +7548,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "text.remove_spacers",
       "answers": [
@@ -7562,7 +7562,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-negative.odt",
+      "source": "tests/corpus/structure/visibility-negative.odt",
       "sha256": "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf",
       "kind": "text.spacing",
       "answers": [
@@ -7580,7 +7580,7 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "document.metadata",
       "answers": [
@@ -7596,7 +7596,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "document.odf_version",
       "answers": [
@@ -7610,21 +7610,21 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "graphic.alternative",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "heading.level",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "language.target",
       "answers": [
@@ -7638,21 +7638,21 @@
       "expected": "refused"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "link.description",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "table.headers",
       "answers": [],
       "expected": "no-targets"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "text.linkify_addresses",
       "answers": [
@@ -7666,7 +7666,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "text.remove_spacers",
       "answers": [
@@ -7680,7 +7680,7 @@
       "expected": "published"
     },
     {
-      "source": "tests/text_corpus/visibility-positive.odt",
+      "source": "tests/corpus/structure/visibility-positive.odt",
       "sha256": "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123",
       "kind": "text.spacing",
       "answers": [

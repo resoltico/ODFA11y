@@ -24,7 +24,7 @@ from tests.fixtures.paths import TESTS
 def test_writer_revision_visibility_and_reading_order_scope(
     case: str, tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
-    source = TESTS / "text_corpus" / f"visibility-{case}.odt"
+    source = TESTS / "corpus/structure" / f"visibility-{case}.odt"
     report = audit_odf(source)
     findings = {finding.rule_id for finding in report.findings}
     assert (

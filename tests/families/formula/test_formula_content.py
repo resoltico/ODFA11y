@@ -11,7 +11,7 @@ from odfa11y.odf import OdfDocument, Part, qn, validate
 from odfa11y.rules import registry as rules
 from tests.fixtures.paths import TESTS
 
-SOURCE = TESTS / "family_corpus/sum-formula.odf"
+SOURCE = TESTS / "corpus/families/sum-formula.odf"
 
 
 def _expression(tmp_path: Path, xml: str) -> Path:

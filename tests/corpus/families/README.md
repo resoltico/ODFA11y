@@ -1,7 +1,7 @@
 # Native document-family fixtures
 
 These invented documents exercise family semantics, preservation and native export
-boundaries. [manifest.toml](manifest.toml) is authoritative for producer identity, standard
+boundaries. [unified manifest](../manifest.toml) is authoritative for producer identity, standard
 ODF version, authoring method, stored-byte hashes and expected schema results. Every stored
 fixture validates with zero ODF/MathML violations. Hashes identify artifacts; semantic
 tests and real exports establish the separate behavioral properties below.
@@ -30,26 +30,19 @@ tests and real exports establish the separate behavioral properties below.
 
 ## Sources and regeneration
 
-Use a disposable LibreOffice profile and an existing output directory. Set
-`ODFA11Y_FIXTURE_ROOT` to that directory. For page documents, copy
-[sources/fruit.svg](sources/fruit.svg) there. Configure the disposable profile's
-`/org.openoffice.Office.Common/Save/ODF/DefaultVersion` to `12`, the native constant for
-standard ODF 1.4, and enable macro execution for these trusted fixture modules only.
-Never apply these authoring settings to a user's profile.
+Use the [single builder](../../../tools/build_corpus.py) with `--purpose family-conformance`
+and a new output directory. It installs the trusted modules below only in disposable
+profiles, selects standard ODF 1.4 and binds the output directory. No user's profile is changed.
 
-Load one BASIC source as `Standard.Module1`, invoke `macro:///Standard.Module1.Main`, and
-use a separate application run for each module:
+The retained sources explain each native operation:
 
-- [page-documents.bas](sources/page-documents.bas) creates the presentation and drawing.
+- [page-documents.bas](sources/page-documents.bas) creates presentation and drawing inputs.
 - [formula-document.bas](sources/formula-document.bas) creates the formula package.
-- [database-document.bas](sources/database-document.bas) creates the invented database.
-  This trusted authoring module opens a connection to populate fixture rows.
-- [chart-document.bas](sources/chart-document.bas) creates `fruit-chart-source.ods`.
-  The standalone Chart fixture requires explicit package assembly: its native
-  `Fruit/content.xml`, `styles.xml` and `meta.xml` occupy the package root, with the
-  standard Chart mimetype and manifest. The Image fixture likewise uses the drawing's
-  native frame and SVG in a standard Image body and package. Neither assembly claims
-  direct standalone native save or export support.
+- [database-document.bas](sources/database-document.bas) populates invented database rows.
+- [chart-document.bas](sources/chart-document.bas) creates a native internal-data-provider chart.
+
+Chart and Image require explicit standard-package assembly from native Calc/Draw parts;
+the builder performs that assembly without claiming direct standalone save/export support.
 
 Native regeneration reproduces semantics rather than exact bytes. Retain unmodified
 native outputs or the explicitly described assemblies, inspect XML and payloads for

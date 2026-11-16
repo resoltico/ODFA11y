@@ -101,14 +101,7 @@ def export(
     observer: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> ExportResult:
-    """Publish a guarded native export with caller-selected tools.
-
-    Returns
-    -------
-    ExportResult
-        The published PDF and effective status.
-
-    """
+    """Publish a guarded native export with caller-selected tools."""
     return ExportResult(
         export_document(
             source,
