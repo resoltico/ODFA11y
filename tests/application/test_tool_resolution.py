@@ -1,15 +1,21 @@
 # SPDX-License-Identifier: MPL-2.0
 """Required native tools are identified once before execution and unused selections stay inert."""
 
+import json
 from dataclasses import replace
 
 import pytest
 
+from odfa11y import batch
 from odfa11y.application.tools import Tools
 from odfa11y.errors import RemedyAction, ToolUnavailable
+from odfa11y.status import Profile
 from odfa11y.tool_identity import ToolIdentity
 from odfa11y.tool_timeout import Timeout
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.native import export_settings, native_fakes, refusing
+from tests.fixtures.plans import plan_header
+from tests.fixtures.writer import make_minimal_odt
 
 
 def test_required_tools_are_selected_once_and_share_the_validated_duration() -> None:
@@ -83,3 +89,98 @@ def test_validated_seconds_are_not_converted_back_to_unvalidated_inputs() -> Non
     assert Timeout(seconds) is seconds
     assert Tools(timeout=seconds).timeout is seconds
     assert export_settings("writer_pdf_Export", timeout=seconds).timeout is seconds
+
+
+def _record_tool_resolution(calls):
+    native = native_fakes()
+
+    def locate(requested):
+        calls.append("locate")
+        return native.locate(requested)
+
+    def identify(*args, **kwargs):
+        calls.append("identify")
+        return native.identify(*args, **kwargs)
+
+    def validator(requested):
+        calls.append("validator")
+        return native.validator(requested)
+
+    def identify_validator(*args, **kwargs):
+        calls.append("identify-validator")
+        return native.identify_validator(*args, **kwargs)
+
+    return replace(
+        native,
+        locate=locate,
+        identify=identify,
+        validator=validator,
+        identify_validator=identify_validator,
+    )
+
+
+@pytest.mark.parametrize(
+    ("profile", "expected"),
+    [
+        ("source", []),
+        ("pdf", ["locate", "identify"]),
+        ("production", ["locate", "identify", "validator", "identify-validator"]),
+    ],
+)
+def test_batch_resolves_required_tools_once_for_all_items(tmp_path, profile, expected) -> None:
+
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    (tmp_path / "plan.toml").write_text(plan_header(source))
+    batch_file = write_batch_file(
+        tmp_path, [("one", "doc.odt", "plan.toml"), ("two", "doc.odt", "plan.toml")]
+    )
+    calls = []
+    record = batch(
+        batch_file,
+        tmp_path / "out",
+        profile=Profile(profile),
+        native_tools=_record_tool_resolution(calls),
+    )
+    assert record.exit_status == 0
+    assert record.profile == Profile(profile)
+    assert calls == expected
+    for item in ("one", "two"):
+        published = json.loads((tmp_path / "out" / item / "run.json").read_text())
+        assert published["profile"] == profile
+        if profile != "source":
+            assert published["toolchain"]["libreoffice"]["version"] == "26.8.0.3"
+        if profile == "production":
+            assert published["toolchain"]["verapdf"]["version"] == "test"
+
+
+def test_batch_retains_item_preparation_failures_without_retrying_absent_tools(tmp_path) -> None:
+
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    (tmp_path / "plan.toml").write_text(plan_header(source))
+    (tmp_path / "bad.toml").write_text("[unknown]\nvalue = 1\n")
+    batch_file = write_batch_file(
+        tmp_path,
+        [
+            ("bad", "doc.odt", "bad.toml"),
+            ("one", "doc.odt", "plan.toml"),
+            ("two", "doc.odt", "plan.toml"),
+        ],
+    )
+    calls = []
+
+    def absent(requested):
+        calls.append("validator")
+        message = "veraPDF unavailable"
+        raise ToolUnavailable(message)
+
+    record = batch(
+        batch_file,
+        tmp_path / "out",
+        profile=Profile.PRODUCTION,
+        native_tools=replace(_record_tool_resolution(calls), validator=absent),
+    )
+    assert [item.exit_status for item in record.items] == [4, 3, 3]
+    assert calls == ["locate", "identify", "validator"]
+    assert record.exit_status == 3
+    assert all(item.error is not None and item.evidence is None for item in record.items)
+    assert {path.name for path in (tmp_path / "out").iterdir()} == {"batch.json"}

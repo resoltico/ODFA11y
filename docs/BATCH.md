@@ -37,3 +37,6 @@ can prevent cleanup/publication. Use a new root afterward.
 Progress events carry each item ID and fixed inner steps. Progress is interactive text
 stderr only. JSON prints exactly `BatchRecord.as_dict()`. Verify existing item bundles with
 `odfa11y verify-evidence batch-evidence/report`, then perform their human reviews.
+
+Required native tools and identities resolve once per batch, after the first valid item plan.
+Later items reuse that result, including a tool failure; each item still prepares independently.

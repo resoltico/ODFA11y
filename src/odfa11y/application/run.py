@@ -2,6 +2,7 @@
 """Prepare one captured, parsed run before creating user-visible output."""
 
 import tempfile
+from collections.abc import Callable
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from odfa11y.capture import capture_source
 from odfa11y.errors import InvalidOption, IoFailure
 from odfa11y.evidence import require_free_directory
 from odfa11y.families import require_spec
+from odfa11y.native.tools import ResolvedTools
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.plans import Plan
 from odfa11y.plans.registry import load_plan
@@ -38,17 +40,40 @@ def run(
         raise InvalidOption(message)
     operations = native_tools or NativeTools()
     selection = tools or Tools()
+    return _run_with_tools(
+        source,
+        plan,
+        output_dir,
+        profile=profile,
+        observer=observer,
+        native_tools=operations,
+        resolve_tools=lambda: selection.resolve(
+            libreoffice=profile >= Profile.PDF,
+            verapdf=profile is Profile.PRODUCTION,
+            native_tools=operations,
+        ),
+    )
+
+
+def _run_with_tools(
+    source: str | Path,
+    plan: Plan | str | Path,
+    output_dir: str | Path,
+    *,
+    profile: Profile,
+    observer: ProgressObserver | None,
+    native_tools: NativeTools,
+    resolve_tools: Callable[[], ResolvedTools],
+) -> RunRecord:
+    """Prepare each item in run order using its use case's shared tool resolution."""
+    operations = native_tools
     target = Path(output_dir)
     try:
         with ExitStack() as lifetime, tempfile.TemporaryDirectory(prefix="odfa11y-run-") as scratch:
             work = Path(scratch)
             with step(observer, Step.PREPARE):
                 selected = plan if isinstance(plan, Plan) else load_plan(plan)
-                resolved = selection.resolve(
-                    libreoffice=profile >= Profile.PDF,
-                    verapdf=profile is Profile.PRODUCTION,
-                    native_tools=operations,
-                )
+                resolved = resolve_tools()
                 require_free_directory(target)
                 captured = lifetime.enter_context(capture_source(Path(source)))
                 document = OdfDocument.open(captured.path)
