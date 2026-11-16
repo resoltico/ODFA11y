@@ -116,15 +116,15 @@ def test_cyclic_structure_arrays_do_not_repeat_traversal(tmp_path: Path) -> None
 
 def test_skipped_heading_levels_are_reported(tmp_path: Path) -> None:
     report = audit(tmp_path, tagged_writer(["H1", "H3", "H2"]))
-    finding = next(f for f in report.findings if f.rule_id == rules.PDF013.id)
+    finding = next(f for f in report.findings if f.rule_id == rules.PDF025.id)
     assert finding.details["skips"] == ["H1 to H3"]
-    assert rules.PDF013.id not in ids(audit(tmp_path, tagged_writer(["H1", "H2", "H3", "H2"])))
+    assert rules.PDF025.id not in ids(audit(tmp_path, tagged_writer(["H1", "H2", "H3", "H2"])))
     first = next(
         f
         for f in audit(tmp_path, tagged_writer(["H2", "H3"])).findings
         if f.rule_id == rules.PDF013.id
     )
-    assert first.details["skips"] == ["start to H2"]
+    assert first.details["level"] == 2
 
 
 def test_well_formed_lists_and_tables_pass(tmp_path: Path) -> None:
@@ -277,3 +277,17 @@ def test_malformed_annotation_entries_do_not_abort_the_audit(tmp_path: Path) -> 
     assert isinstance(annotations, ArrayObject)
     annotations.insert(0, NumberObject(7))
     assert rules.PDF001.id not in ids(audit(tmp_path, writer))
+
+
+@pytest.mark.parametrize(
+    ("rule", "broken", "repaired"),
+    [
+        (rules.PDF013, ["H2", "H3"], ["H1", "H2"]),
+        (rules.PDF025, ["H1", "H3"], ["H1", "H2"]),
+    ],
+)
+def test_heading_conditions_have_independent_positive_and_negative_controls(
+    tmp_path: Path, rule, broken: list[str], repaired: list[str]
+) -> None:
+    assert rule.id in ids(audit(tmp_path, tagged_writer(broken)))
+    assert rule.id not in ids(audit(tmp_path, tagged_writer(repaired)))

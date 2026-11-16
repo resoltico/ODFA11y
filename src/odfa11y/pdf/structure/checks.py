@@ -112,11 +112,13 @@ def _check_headings(nodes: list[StructureNode], report: Report) -> None:
         level = _heading_level(node)
         if not level:
             continue
-        if level > previous + 1:
-            skips.append(f"H{previous} to H{level}" if previous else f"start to H{level}")
+        if previous == 0 and level > 1:
+            report.raise_(rules.PDF013, details={"level": level})
+        elif level > previous + 1:
+            skips.append(f"H{previous} to H{level}")
         previous = level
     if skips:
-        report.raise_(rules.PDF013, details={"skips": skips})
+        report.raise_(rules.PDF025, details={"skips": skips})
 
 
 def _check_lists(nodes: list[StructureNode], report: Report) -> None:

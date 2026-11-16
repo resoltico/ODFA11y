@@ -3,6 +3,7 @@
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Literal
 
 from odfa11y.rules.details import DetailList, DetailText, detail_contract
 
@@ -478,8 +479,8 @@ PDF012 = _rule(
 PDF013 = _rule(
     "PDF013",
     ERROR,
-    "Heading structure starts too deep or skips a level.",
-    detail_fields={"skips": DetailList},
+    "The first numbered PDF heading starts below level one.",
+    detail_fields={"level": int},
 )
 PDF014 = _rule(
     "PDF014", ERROR, "List structure is malformed.", detail_fields={"problems": DetailList}
@@ -536,6 +537,12 @@ PDF024 = _rule(
     "Text is shown outside tagged content and artifacts.",
     detail_fields={"pages": DetailList},
 )
+PDF025 = _rule(
+    "PDF025",
+    ERROR,
+    "Numbered PDF heading hierarchy skips a level.",
+    detail_fields={"skips": DetailList},
+)
 PDFUA001 = _rule(
     "PDFUA001",
     ERROR,
@@ -580,6 +587,18 @@ FIDELITY007 = _rule(
     ERROR,
     "A page is too large to render for comparison.",
     detail_fields={"pages": DetailList, "pixel_limit": int},
+)
+
+
+FIDELITY008 = _rule(
+    "FIDELITY008",
+    ERROR,
+    "A URI destination cannot be established.",
+    detail_fields={
+        "artifact": Literal["source", "candidate"],
+        "page": int | None,
+        "problem": DetailText,
+    },
 )
 
 

@@ -38,6 +38,7 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `FIDELITY005` | Error | Rendered page differs beyond the tolerance. |  |
 | `FIDELITY006` | Info | Links were added. |  |
 | `FIDELITY007` | Error | A page is too large to render for comparison. |  |
+| `FIDELITY008` | Error | A URI destination cannot be established. |  |
 | `GRAPHIC001` | Error | Graphic has neither accessible title nor description. | `graphic.alternative` |
 | `GRAPHIC002` | Warning | Nontext shape needs a meaning/decorative-content decision. | `graphic.alternative` |
 | `GRAPHIC003` | Warning | Graphic decorative role is unresolved or unsafe. |  |
@@ -112,7 +113,7 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `PDF010` | Error | PDF has no pages. |  |
 | `PDF011` | Error | No extractable text or inspected described graphical content was found. |  |
 | `PDF012` | Error | A custom structure role does not resolve to a standard role. |  |
-| `PDF013` | Error | Heading structure starts too deep or skips a level. |  |
+| `PDF013` | Error | The first numbered PDF heading starts below level one. |  |
 | `PDF014` | Error | List structure is malformed. |  |
 | `PDF015` | Error | Table structure is malformed. |  |
 | `PDF016` | Warning | Table has no header cells. |  |
@@ -124,6 +125,7 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `PDF022` | Warning | A structure element refers to marked content its inspected stream does not have. |  |
 | `PDF023` | Warning | Marked content is referenced by more than one element. |  |
 | `PDF024` | Error | Text is shown outside tagged content and artifacts. |  |
+| `PDF025` | Error | Numbered PDF heading hierarchy skips a level. |  |
 | `PDFUA001` | Error | veraPDF reports a failed PDF/UA-1 rule. |  |
 | `PKG001` | Error | Source is not a readable ODF package or flat XML document. |  |
 | `PKG002` | Warning | The document has no office:mimetype attribute. |  |
@@ -265,7 +267,7 @@ The [registry](../src/odfa11y/rules/registry.py) is authoritative.
 | `PDF009` | `PDF010` |
 | `PDF010` | `PDF011` |
 | `PDF011` | `PDF012` |
-| `PDF012` | `PDF013` |
+| `PDF012` | `PDF013`, `PDF025` |
 | `PDF013` | `PDF014` |
 | `PDF014` | `PDF015` |
 | `PDF015` | `PDF016` |

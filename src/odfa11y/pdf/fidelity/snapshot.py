@@ -27,11 +27,18 @@ class PageSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class UriIssue:
+    page: int | None
+    problem: str
+
+
+@dataclass(frozen=True, slots=True)
 class PdfSnapshot:
     """Pages plus the multiset of external link targets."""
 
     pages: tuple[PageSnapshot, ...]
-    links: Counter[str]
+    links: tuple[tuple[str, int], ...]
+    issues: tuple[UriIssue, ...] = ()
 
     @property
     def text(self) -> str:
@@ -64,7 +71,12 @@ def read_snapshot(path: str | Path) -> PdfSnapshot:
 def _snapshot(reader: BoundedPdf) -> PdfSnapshot:
     pages = []
     links: Counter[str] = Counter()
-    base = uri_base(reader.catalog)
+    issues = []
+    try:
+        base = uri_base(reader.catalog)
+    except PdfReadError as error:
+        base = None
+        issues.append(UriIssue(None, str(error)))
     for index, page in enumerate(reader.pages):
         box = page.mediabox
         text = " ".join((reader.text(index)).split())
@@ -75,11 +87,13 @@ def _snapshot(reader: BoundedPdf) -> PdfSnapshot:
                 text,
             )
         )
-        links.update(_link_targets(page, base))
-    return PdfSnapshot(tuple(pages), links)
+        links.update(_link_targets(page, base, index + 1, issues))
+    return PdfSnapshot(tuple(pages), tuple(sorted(links.items())), tuple(issues))
 
 
-def _link_targets(page: PageObject, base: str | None) -> list[str]:
+def _link_targets(
+    page: PageObject, base: str | None, number: int, issues: list[UriIssue]
+) -> list[str]:
     annotations = page.get("/Annots")
     if annotations is None:
         return []
@@ -95,16 +109,25 @@ def _link_targets(page: PageObject, base: str | None) -> list[str]:
             raise PdfReadError(msg)
         if annotation.get("/Subtype") != "/Link":
             continue
-        action = resolve(annotation.get("/A"))
-        if action is not None and not isinstance(action, DictionaryObject):
-            msg = "Expected a PDF action dictionary"
-            raise PdfReadError(msg)
-        subtype = resolve(action.get("/S")) if action is not None else None
-        if action is not None and not isinstance(subtype, NameObject):
-            msg = "Expected a PDF action subtype"
-            raise PdfReadError(msg)
-        if action is None or subtype != "/URI":
-            continue
-        uri = resolve(action.get("/URI"))
-        targets.append(effective_uri(uri, base))
+        try:
+            target = _action_uri(annotation, base)
+        except PdfReadError as error:
+            issues.append(UriIssue(number, str(error)))
+        else:
+            if target is not None:
+                targets.append(target)
     return targets
+
+
+def _action_uri(annotation: DictionaryObject, base: str | None) -> str | None:
+    action = resolve(annotation.get("/A"))
+    if action is None:
+        return None
+    if not isinstance(action, DictionaryObject):
+        message = "Expected a PDF action dictionary"
+        raise PdfReadError(message)
+    subtype = resolve(action.get("/S"))
+    if not isinstance(subtype, NameObject):
+        message = "Expected a PDF action subtype"
+        raise PdfReadError(message)
+    return effective_uri(resolve(action.get("/URI")), base) if subtype == "/URI" else None

@@ -5,11 +5,14 @@ from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
+from pypdf import PdfWriter
+from pypdf.generic import FloatObject, RectangleObject
 
 from odfa11y.application.native import NativeTools
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.compare import FidelityMeasurements
+from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
 from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
@@ -169,3 +172,24 @@ def test_fixed_resolution_retains_the_existing_pixel_limit(tmp_path: Path, width
     pdf = text_pdf(tmp_path / "sized.pdf", [LINES], size=(width, width))
     report = compare_pdfs(pdf, pdf, Pagination.SAME())
     assert ids(report) == ({rules.FIDELITY007.id} if width == 5000 else set())
+
+
+def test_crop_box_is_the_canvas_for_the_render_pixel_cap(tmp_path: Path) -> None:
+    path = text_pdf(tmp_path / "cropped.pdf", [LINES], size=(5000, 5000))
+    writer = PdfWriter(clone_from=path)
+    writer.pages[0].cropbox = RectangleObject([0, 0, 100, 100])
+    writer.write(path)
+    assert compare_pdfs(path, path, Pagination.SAME()).findings == []
+
+
+def test_raster_size_difference_is_geometry_and_has_no_changed_pixel_ratio(tmp_path: Path) -> None:
+    original = text_pdf(tmp_path / "original.pdf", [LINES])
+    changed = text_pdf(tmp_path / "changed.pdf", [LINES])
+    writer = PdfWriter(clone_from=changed)
+    writer.pages[0].mediabox.right = FloatObject(200.01)
+    writer.write(changed)
+    assert read_snapshot(original).pages[0].width == read_snapshot(changed).pages[0].width
+    report = compare_pdfs(original, changed, Pagination.SAME())
+    assert ids(report) == {rules.FIDELITY002.id}
+    assert report.findings[0].details["pages"] == [1]
+    assert measurement(report, FidelityMeasurements).raster_changed_ratios is None

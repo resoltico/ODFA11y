@@ -3,6 +3,8 @@
 
 from dataclasses import dataclass
 
+from odfa11y.contracts import JsonObject, record_dict
+
 
 @dataclass(frozen=True, slots=True)
 class ToolIdentity:
@@ -11,12 +13,12 @@ class ToolIdentity:
     name: str
     version: str
 
-    def as_dict(self) -> dict[str, str]:
+    def as_dict(self) -> JsonObject:
         """Serialize the identity.
 
         Returns
         -------
-        dict[str, str]
+        JsonObject
             The tool name and version.
         """
-        return {"name": self.name, "version": self.version}
+        return record_dict(self)

@@ -2946,7 +2946,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Source and candidate link counts."
+                            "description": "Established external URI destination counts."
                           },
                           "page_count": {
                             "anyOf": [
@@ -12331,10 +12331,8 @@
                           "details": {
                             "additionalProperties": false,
                             "properties": {
-                              "skips": {
-                                "items": {},
-                                "maxItems": 8,
-                                "type": "array"
+                              "level": {
+                                "type": "integer"
                               }
                             },
                             "required": [],
@@ -13241,6 +13239,81 @@
                         "properties": {
                           "category": {
                             "enum": [
+                              "pdf"
+                            ]
+                          },
+                          "details": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "skips": {
+                                "items": {},
+                                "maxItems": 8,
+                                "type": "array"
+                              }
+                            },
+                            "required": [],
+                            "type": "object"
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "member": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "path": {
+                                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "member"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "rule_id": {
+                            "enum": [
+                              "PDF025"
+                            ]
+                          },
+                          "severity": {
+                            "enum": [
+                              "error"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "category",
+                          "details",
+                          "location",
+                          "message",
+                          "rule_id",
+                          "severity"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "category": {
+                            "enum": [
                               "pdfua"
                             ]
                           },
@@ -13874,6 +13947,96 @@
                           "rule_id": {
                             "enum": [
                               "FIDELITY007"
+                            ]
+                          },
+                          "severity": {
+                            "enum": [
+                              "error"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "category",
+                          "details",
+                          "location",
+                          "message",
+                          "rule_id",
+                          "severity"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "category": {
+                            "enum": [
+                              "fidelity"
+                            ]
+                          },
+                          "details": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "artifact": {
+                                "enum": [
+                                  "source",
+                                  "candidate"
+                                ]
+                              },
+                              "page": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "problem": {
+                                "maxLength": 4096,
+                                "type": "string"
+                              }
+                            },
+                            "required": [],
+                            "type": "object"
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "member": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "path": {
+                                    "pattern": "^(?:content|document|manifest|meta|package|settings|styles)(?:/[A-Za-z][A-Za-z0-9_.-]*(?:\\[(?:(?:name|id)=((?:[A-Za-z0-9_.~-]|%[0-9A-F]{2})*)|[1-9][0-9]*)\\])?)*(?![\\s\\S])",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "member"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "rule_id": {
+                            "enum": [
+                              "FIDELITY008"
                             ]
                           },
                           "severity": {

@@ -312,7 +312,7 @@ depends_on = ["odfa11y.decisions", "odfa11y.concepts", "odfa11y.odf"]
 [[modules]]
 path = "odfa11y.tool_identity"
 layer = "foundation"
-depends_on = []
+depends_on = ["odfa11y.contracts"]
 
 [[modules]]
 path = "odfa11y.native.verapdf"

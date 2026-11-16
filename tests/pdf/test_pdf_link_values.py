@@ -18,6 +18,7 @@ from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
 from tests.fixtures.pdf import register, tagged_writer
 
 
@@ -39,9 +40,16 @@ def test_malformed_annotations_fail_cleanly(
     writer.pages[0][NameObject("/Annots")] = values[shape]
     path = tmp_path / "malformed.pdf"
     writer.write(path)
-    with pytest.raises(ToolFailure, match="Expected a PDF"):
-        read_snapshot(path)
-    assert main(["compare", str(path), str(path)]) == 3
+    if shape == "action":
+        assert read_snapshot(path).issues
+        assert rules.FIDELITY008.id in {
+            finding.rule_id for finding in compare_pdfs(path, path, Pagination.SAME()).findings
+        }
+        assert main(["compare", str(path), str(path)]) == 2
+    else:
+        with pytest.raises(ToolFailure, match="Expected a PDF"):
+            read_snapshot(path)
+        assert main(["compare", str(path), str(path)]) == 3
     assert "Traceback" not in capsys.readouterr().err
 
 
@@ -62,7 +70,7 @@ def test_uri_multiplicity_and_change(tmp_path: Path, *, indirect: bool) -> None:
         writer.pages[0][NameObject("/Annots")] = ArrayObject([annotation, annotation])
         path = tmp_path / f"{target}.pdf"
         writer.write(path)
-        assert read_snapshot(path).links[f"https://example.test/{target}"] == 2
+        assert dict(read_snapshot(path).links)[f"https://example.test/{target}"] == 2
         paths.append(path)
     report = compare_pdfs(paths[0], paths[1], Pagination.SAME())
     assert report.error_count != 0
