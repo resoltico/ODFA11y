@@ -16,6 +16,7 @@
 - Batch preparation failures appear only in `batch.json`; completed runs retain independent bundles and later items continue. Progress events include item IDs.
 - Human-review topics now come from concept/family observations, including database privacy, MathML language and source/native assurance boundaries.
 - `REVIEW.md` starts with human work, limits its checklist to observed topics and shows source → candidate facts. The manifest alone owns file hashes.
+- Review sheets escape authored names, metadata and diagnostics as literal text after path redaction, preventing active HTML, images and links.
 - Doctor alone measures exporter capabilities, reporting meanings, related rules and unmeasured reasons; document runs and batches no longer probe or cache experiments.
 - Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs now use one condition per concept; see the [mapping](docs/RULES.md#renamed-in-the-next-release).
 - Schema regression checks keep existing defects stable through in-memory metadata edits and still reject equal-message defects introduced on other nodes.

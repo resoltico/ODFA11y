@@ -2,6 +2,7 @@
 """Put outstanding human work before gates and source-to-candidate facts."""
 
 import json
+import string
 
 from odfa11y.contracts import JsonValue, record_dict
 from odfa11y.progress import Stage
@@ -16,12 +17,17 @@ NOT_VALIDATION = (
 
 def render_review(record: RunRecord, *, redactor: Redactor | None = None) -> str:
     """Render outstanding decisions, observed review topics and facts without duplicate audits."""
-    lines = [f"# Review sheet: {_cell(record.source_name)}", "", "## Needs a human", ""]
+    lines = [
+        f"# Review sheet: {_literal(record.source_name, redactor)}",
+        "",
+        "## Needs a human",
+        "",
+    ]
     lines += _attention(record, redactor) or [
-        "- No outstanding machine finding or unanswered decision."
+        "- No failed stage, error/warning finding or unanswered decision."
     ]
     lines += ["", "## Human review still required", ""]
-    lines += [f"- [ ] {item.text}" for item in record.human_review]
+    lines += [f"- [ ] {_literal(item.text, redactor)}" for item in record.human_review]
     validator = next((stage for stage in record.stages if stage.name == Stage.VALIDATE_PDF), None)
     if validator is None or not isinstance(validator.outcome, Passed):
         caveat = (
@@ -43,10 +49,8 @@ def render_review(record: RunRecord, *, redactor: Redactor | None = None) -> str
         "| --- | --- | --- |",
     ]
     for stage in record.stages:
-        detail = _detail(stage)
-        if redactor:
-            detail = redactor.text(detail)
-        lines.append(f"| `{stage.name}` | {stage.outcome.status} | {_cell(detail)} |")
+        detail = _literal(_detail(stage), redactor)
+        lines.append(f"| `{stage.name}` | {stage.outcome.status} | {detail} |")
     lines += ["", "## Machine-established facts", "", *_facts(record, redactor)]
     return "\n".join(lines) + "\n"
 
@@ -67,8 +71,15 @@ def _detail(stage: StageResult) -> str:
     return ""
 
 
-def _cell(text: str) -> str:
-    return " ".join(text.split()).replace("\\", "\\\\").replace("|", "\\|")
+def _literal(value: object, redactor: Redactor | None = None) -> str:
+    """Present dynamic data as one literal Markdown line, after path redaction."""
+    text = str(value)
+    if redactor is not None:
+        text = redactor.text(text)
+    text = " ".join(text.split())
+    return "".join(
+        "\\" + character if character in string.punctuation else character for character in text
+    )
 
 
 def _measurements(stage: StageResult | None) -> dict[str, JsonValue]:
@@ -89,14 +100,18 @@ def _facts(record: RunRecord, redactor: Redactor | None) -> list[str]:
         source = redactor.record(source)
         candidate = redactor.record(candidate)
     facts = [
-        f"- {key}: {_value(source.get(key))} → {_value(candidate.get(key))}"
+        f"- {_literal(key)}: {_literal(_value(source.get(key)))} → "
+        f"{_literal(_value(candidate.get(key)))}"
         for key in sorted(source.keys() | candidate.keys())
     ]
     for name in (Stage.AUDIT_PDF, Stage.VALIDATE_PDF, Stage.FIDELITY):
         measurements = _measurements(stages.get(name))
         if redactor:
             measurements = redactor.record(measurements)
-        facts += [f"- `{name}` {key}: {_value(value)}" for key, value in measurements.items()]
+        facts += [
+            f"- `{name}` {_literal(key)}: {_literal(_value(value))}"
+            for key, value in measurements.items()
+        ]
     return facts or ["- No stage produced facts."]
 
 
@@ -111,19 +126,19 @@ def _attention(record: RunRecord, redactor: Redactor | None) -> list[str]:
     )
     for stage in record.stages:
         if isinstance(stage.outcome, Refused | Crashed):
-            detail = str(stage.outcome.error)
-            if redactor:
-                detail = redactor.text(detail)
-            lines.append(f"- `{stage.name}`: {_cell(detail)}")
+            detail = _literal(str(stage.outcome.error), redactor)
+            lines.append(f"- `{stage.name}`: {detail}")
         if stage.report and (stage.name != Stage.AUDIT_SOURCE or not candidate_exists):
             lines += [
-                f"- `{stage.name}` {finding.severity.value} {finding.rule_id}: {finding.message}"
+                f"- `{stage.name}` {finding.severity.value} {finding.rule_id}: "
+                f"{_literal(finding.message, redactor)}"
                 for finding in stage.report.findings
                 if finding.severity.value in {"error", "warning"}
             ]
         if stage.remediation:
             lines += [
-                f"- Unanswered: `{item.kind_id}`" + (f" at `{item.target}`" if item.target else "")
+                f"- Unanswered: {_literal(item.kind_id, redactor)}"
+                + (f" at {_literal(item.target, redactor)}" if item.target else "")
                 for item in stage.remediation.unanswered
             ]
     return lines

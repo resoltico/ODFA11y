@@ -41,6 +41,8 @@ Diagnostic artifacts redact known source/capture/work/output/profile locations a
 local directories before JSON/XML serialization and Markdown escaping. Validator XML is a
 redacted diagnostic report, not a raw-byte transcript. Original report bytes are parsed
 without replacement decoding. In-memory diagnostics are not universally path-free.
+Review sheets display dynamic names, metadata, findings and diagnostics as literal Markdown
+text after redaction; authored HTML, images and links do not become active review content.
 ODF/PDF/image payloads and authored wording/references can retain private content. Treat
 bundles with the source's confidentiality; do not attach private bundles to public issues.
 

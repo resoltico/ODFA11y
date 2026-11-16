@@ -5,6 +5,7 @@ from dataclasses import replace
 lazy from pathlib import Path
 
 import pytest
+from markdown_it import MarkdownIt
 
 from odfa11y.errors import DocumentRefusal, IoFailure, OutputOccupied
 from odfa11y.evidence import Redactor, require_free_directory
@@ -63,11 +64,12 @@ def test_failed_publication_leaves_no_partial_bundle(tmp_path: Path) -> None:
 def test_review_separates_facts_from_decisions_and_never_overclaims() -> None:
     text = render_review(record())
     assert "## Machine-established facts" in text
-    assert "- `audit-pdf` pdf-document.page_count: 2" in text
-    assert f"{rules.PDF006.id}: No title display." in text
+    rendered = MarkdownIt("commonmark").render(text)
+    assert "<code>audit-pdf</code> pdf-document.page_count: 2" in rendered
+    assert f"{rules.PDF006.id}: No title display." in rendered
     assert "not PDF/UA validation" in text
     for item in REVIEW_ITEMS:
-        assert f"- [ ] {item.text}" in text
+        assert MarkdownIt("commonmark").render(f"- [ ] {item.text}").splitlines()[1] in rendered
 
 
 def test_review_omits_the_validation_caveat_only_when_verapdf_passed() -> None:

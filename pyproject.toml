@@ -44,6 +44,7 @@ dev = [
   "tach==0.35.3",
   "ty==0.0.93",
   "jsonschema>=4.26.0,<5",
+  "markdown-it-py==4.2.0",
 ]
 audit = [
   "pip-audit==2.10.1",
