@@ -69,7 +69,8 @@ def test_endpoints_refuse_resource_overflow(
 def test_extraction_depth_is_a_controlled_failure(tmp_path: Path) -> None:
     writer = tagged_writer(["H1"])
     stream = DecodedStreamObject()
-    stream.set_data(b"[" * 2_000 + b"]" * 2_000)
+    # A text-showing operator makes extraction inspect the nested operand.
+    stream.set_data(b"[" * 2_000 + b"]" * 2_000 + b" TJ")
     writer.pages[0][NameObject("/Contents")] = register(writer, stream)
     path = tmp_path / "deep.pdf"
     writer.write(path)
