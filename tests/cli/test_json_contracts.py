@@ -11,7 +11,9 @@ import pytest
 import odfa11y as api
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
+from odfa11y.rules import registry as rules
 from tests.batch.test_batch import write_batch_file
+from tests.fixtures.documents import Variant, make_flat, make_package
 from tests.fixtures.native import native_fakes, refusing
 from tests.fixtures.plans import plan_header
 from tests.fixtures.schema import assert_record_schema
@@ -235,3 +237,35 @@ def test_batch_invalid_profile_is_refused_before_creating_output(tmp_path: Path)
     with pytest.raises(api.InvalidOption):
         api.batch(batch_file, tmp_path / "output", profile=cast(api.Profile, "source"))
     assert not (tmp_path / "output").exists()
+
+
+@pytest.mark.parametrize("author", [make_flat, make_package], ids=["flat", "package"])
+def test_unknown_odf_media_type_retains_public_package_diagnostics(
+    tmp_path, capsys, author
+) -> None:
+    source = author(
+        tmp_path, "text", Variant(media_type="application/vnd.oasis.opendocument.unknown")
+    )
+    original = source.read_bytes()
+    result = api.audit(source)
+    assert len(result.reports) == 1
+    assert not result.failures
+    assert not result.inputs[0].plannable
+    assert rules.ODF006.id in {finding.rule_id for finding in result.reports[0].findings}
+    assert result.reports[0].facts
+    assert result.exit_status == 2
+    expected = assert_record_schema(result)
+    assert main(["audit", str(source), "--format", "json"]) == 2
+    assert json.loads(capsys.readouterr().out) == expected
+    assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("content", [b"Unrelated text", b"<root/>"])
+def test_unrelated_input_remains_a_public_input_failure(tmp_path, capsys, content) -> None:
+    source = tmp_path / "input.bin"
+    source.write_bytes(content)
+    result = api.audit(source)
+    assert not result.reports
+    assert isinstance(result.inputs[0].error, api.DocumentRefusal)
+    assert main(["audit", str(source), "--format", "json"]) == 2
+    assert json.loads(capsys.readouterr().out) == assert_record_schema(result)

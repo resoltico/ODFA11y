@@ -7,7 +7,7 @@ lazy from lxml import etree
 
 from odfa11y.errors import PackageError
 from odfa11y.odf import names as xml_names
-from odfa11y.odf.kinds import kind_for_media_type
+from odfa11y.odf.kinds import OASIS_PREFIX, kind_for_media_type
 from odfa11y.odf.names import NS, is_office_element
 from odfa11y.odf.storage import Part
 from odfa11y.odf.xpath import select_elements
@@ -54,6 +54,18 @@ def detect(document: OdfDocument) -> Detection:
         body_element=_body_element(document),
         extension=document.storage.source.suffix.lower(),
     )
+
+
+def is_odf_container(document: OdfDocument) -> bool:
+    """Recognize ODF declarations or roots independently of supported media types."""
+    if (document.detection.media_type or "").startswith(OASIS_PREFIX):
+        return True
+    if not document.has(Part.CONTENT):
+        return False
+    return document.tree(Part.CONTENT).getroot().tag in {
+        xml_names.OFFICE_DOCUMENT,
+        xml_names.OFFICE_DOCUMENT_CONTENT,
+    }
 
 
 def declared_version(document: OdfDocument) -> str | None:

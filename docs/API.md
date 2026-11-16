@@ -32,6 +32,9 @@ resolved only when required. Use `Profile.SOURCE`, `Profile.PDF` or `Profile.PRO
 production alone rejects warnings and requires independent validation. `NativeTools` is
 the explicit seam for native execution and test fakes.
 
+Recognizable ODF containers with unsupported media types retain package/structure findings;
+planning and edits remain unavailable. Unrelated inputs are refused.
+
 Audit JSON always contains an `inputs` array, for one or several sources. It is exactly
 `AuditResult.as_dict()`, not a conditional report/object array. Each input retains completed
 reports through later failures and exposes core-owned `plannable`. Progress observers receive

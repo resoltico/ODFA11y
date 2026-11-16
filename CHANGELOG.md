@@ -10,6 +10,7 @@
 - Remediation and export refuse existing files unless `--replace`; sources, symlink destinations and occupied evidence directories remain protected.
 - Required tools resolve before output: production and `audit --validate` require veraPDF. `--verapdf PATH` selects a tool without requesting audit validation.
 - All use cases capture privately without writing beside sources. Native work refuses filename/path fields and relative hyperlinks; make link destinations absolute.
+- Unknown ODF media types retain package and structure diagnostics in public audits; unsupported planning/edits and unrelated inputs remain refused.
 - Runs execute from available artifacts after finding/validator failures; unreadable sources and guard-refused candidates never supply export inputs.
 - Batch preparation failures appear only in `batch.json`; completed runs retain independent bundles and later items continue. Progress events include item IDs.
 - `REVIEW.md` starts with human work, limits its checklist to observed topics and shows source → candidate facts. The manifest alone owns file hashes.

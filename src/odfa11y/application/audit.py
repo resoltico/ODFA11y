@@ -18,6 +18,7 @@ from odfa11y.contracts import JsonObject, JsonProperty, record_dict
 from odfa11y.errors import DocumentRefusal, Failure, IoFailure, OdfA11yError, PackageError
 from odfa11y.native.tools import ResolvedTools
 from odfa11y.odf import OdfDocument, Use
+from odfa11y.odf.detect import is_odf_container
 from odfa11y.pdf import audit_pdfua
 from odfa11y.progress import ProgressObserver, Step, step
 from odfa11y.report import Report, ReportKind, SarifOptions, exit_status
@@ -68,10 +69,11 @@ def audit_document(
             return
         try:
             document.require(Use.AUDIT)
+            recognized = document.kind is not None or is_odf_container(document)
         except PackageError:
             yield audit_odf_document(document, subject=str(source), source=source, schema=schema)
             return
-        if document.kind is None:
+        if not recognized:
             message = "Input is not an OpenDocument or PDF file"
             raise DocumentRefusal(message)
         yield audit_odf_document(document, subject=str(source), source=source, schema=schema)
