@@ -14,6 +14,7 @@ from odfa11y.errors import InvalidOption
 from odfa11y.odf import Family, Layout, OdfDocument, PackageStorage
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.status import Profile
+from tests.fixtures.answers import version_input
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.records import record
 from tests.fixtures.runs import RunSettings, execute
@@ -99,3 +100,18 @@ def test_run_serialization_refuses_bogus_detection_values(field: str) -> None:
         detection = replace(detection, **{field: invalid})
     with pytest.raises(InvalidOption):
         replace(result, document=detection).as_dict()
+
+
+def test_detection_identifies_the_captured_source_before_remediation(tmp_path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", version="1.3")
+    original = OdfDocument.open(source).detection
+    result = execute(
+        source,
+        reviewed_plan(source, [version_input("1.4")]),
+        tmp_path / "bundle",
+        RunSettings(profile=Profile.SOURCE),
+    )
+    assert result.exit_status == 0
+    assert result.document == original
+    assert result.document.odf_version == "1.3"
+    assert OdfDocument.open(tmp_path / "bundle/remediated.odt").detection.odf_version == "1.4"

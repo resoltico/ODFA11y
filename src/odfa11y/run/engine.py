@@ -13,7 +13,7 @@ from odfa11y.run.state import RunState
 
 
 def execute(state: RunState, target: Path) -> RunRecord:
-    document = state.document
+    detection = state.document.detection
     stages = []
     for spec in STAGES:
         state, result = run_stage(spec, state)
@@ -33,7 +33,7 @@ def execute(state: RunState, target: Path) -> RunRecord:
             for stage in stages
         ]
     record = RunRecord(
-        document=document.detection,
+        document=detection,
         source_name=state.source.identity.name,
         source_sha256=state.source.digest,
         fidelity_policy=state.plan.fidelity,

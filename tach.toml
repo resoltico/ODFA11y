@@ -142,7 +142,7 @@ depends_on = ["odfa11y.concepts.review", "odfa11y.contracts", "odfa11y.decisions
 [[modules]]
 path = "odfa11y.plans"
 layer = "model"
-depends_on = ["odfa11y.odf", "odfa11y.evidence.redact", "odfa11y.rules", "odfa11y.capture", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.report", "odfa11y.targets"]
+depends_on = ["odfa11y.odf", "odfa11y.evidence.redact", "odfa11y.rules", "odfa11y.capture", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.report", "odfa11y.targets"]
 
 [[modules]]
 path = "odfa11y.concepts"
