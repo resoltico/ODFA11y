@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, make_dataclass
 from functools import reduce
 from operator import or_
-from types import GenericAlias
 from typing import Literal, Protocol, cast
 
 from odfa11y.contracts import fields_of, mapping_contract
@@ -18,11 +17,11 @@ from odfa11y.targets import Fingerprint, Target, TargetPath
 
 
 @dataclass(frozen=True, slots=True)
-class PlanFile[T]:
+class PlanFile:
     """The source binding, decision tables and fidelity policy in a plan file."""
 
     plan: PlanHeader
-    decisions: T = field(default_factory=dict)
+    decisions: Mapping[str, object] = field(default_factory=dict)
     fidelity: FidelityPolicy = field(default_factory=Pagination.SAME)
 
 
@@ -54,7 +53,7 @@ def target_answer(kind: DecisionKind) -> type[object]:
     )
 
 
-def file_contract(kinds: Mapping[str, DecisionKind]) -> object:
+def file_contract(kinds: Mapping[str, DecisionKind]) -> type[PlanFile]:
     tables = {
         kind.id: reduce(or_, (kind.answer_type, UnansweredDocument))
         if kind.scope is DecisionScope.DOCUMENT
@@ -64,7 +63,15 @@ def file_contract(kinds: Mapping[str, DecisionKind]) -> object:
         ))
         for kind in kinds.values()
     }
-    return GenericAlias(PlanFile, mapping_contract("PlanDecisions", tables, total=False))
+    decisions = mapping_contract("PlanDecisions", tables, total=False)
+    return make_dataclass(
+        "PlanFile",
+        [("decisions", decisions, field(default_factory=dict))],
+        bases=(PlanFile,),
+        frozen=True,
+        slots=True,
+        module=__name__,
+    )
 
 
 def decision_contract(kinds: Mapping[str, DecisionKind], *, open_decision: bool) -> object:
@@ -88,7 +95,7 @@ def decision_contract(kinds: Mapping[str, DecisionKind], *, open_decision: bool)
     return reduce(or_, variants)
 
 
-def to_file(plan: Plan) -> PlanFile[dict[str, object]]:
+def to_file(plan: Plan) -> PlanFile:
     tables: dict[str, object] = {}
     for decision in plan.decisions:
         if decision.target is None:
@@ -110,7 +117,7 @@ def to_file(plan: Plan) -> PlanFile[dict[str, object]]:
     return PlanFile(plan.header, tables, plan.fidelity)
 
 
-def from_file(record: PlanFile[Mapping[str, object]], kinds: Mapping[str, DecisionKind]) -> Plan:
+def from_file(record: PlanFile, kinds: Mapping[str, DecisionKind]) -> Plan:
     decisions = []
     unanswered = []
     problems = []

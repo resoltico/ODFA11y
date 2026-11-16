@@ -84,9 +84,7 @@ def parse_tables(
         raise PlanError(message)
     contract = file_contract(kinds)
     try:
-        record = cast(
-            PlanFile[Mapping[str, object]], decode(contract, values, label="plan", error=PlanError)
-        )
+        record = cast(PlanFile, decode(contract, values, label="plan", error=PlanError))
         return from_file(record, kinds)
     except PlanError as error:
         problems = list(error.problems or (error.message,))
