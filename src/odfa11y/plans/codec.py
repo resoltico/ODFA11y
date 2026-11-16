@@ -12,7 +12,7 @@ from odfa11y.contracts import decode, fields_of, record_dict, schema_for
 from odfa11y.decisions import DecisionScope
 from odfa11y.errors import DocumentRefusal, IoFailure, PlanError
 from odfa11y.evidence.redact import Redactor
-from odfa11y.plans.contracts import PlanFile, decision_contract, file_contract, from_file
+from odfa11y.plans.contracts import decision_contract, file_contract, from_file
 from odfa11y.plans.model import PLAN_SCHEMA_VERSION, Plan, PlanHeader
 from odfa11y.targets import (
     Fingerprint,
@@ -84,7 +84,7 @@ def parse_tables(
         raise PlanError(message)
     contract = file_contract(kinds)
     try:
-        record = cast(PlanFile, decode(contract, values, label="plan", error=PlanError))
+        record = decode(contract, values, label="plan", error=PlanError)
         return from_file(record, kinds)
     except PlanError as error:
         problems = list(error.problems or (error.message,))

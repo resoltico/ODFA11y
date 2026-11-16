@@ -64,7 +64,7 @@ def file_contract(kinds: Mapping[str, DecisionKind]) -> type[PlanFile]:
         for kind in kinds.values()
     }
     decisions = mapping_contract("PlanDecisions", tables, total=False)
-    return make_dataclass(
+    contract = make_dataclass(
         "PlanFile",
         [("decisions", decisions, field(default_factory=dict))],
         bases=(PlanFile,),
@@ -72,6 +72,8 @@ def file_contract(kinds: Mapping[str, DecisionKind]) -> type[PlanFile]:
         slots=True,
         module=__name__,
     )
+    # make_dataclass's return annotation cannot express its explicit PlanFile base.
+    return cast("type[PlanFile]", contract)
 
 
 def decision_contract(kinds: Mapping[str, DecisionKind], *, open_decision: bool) -> object:
