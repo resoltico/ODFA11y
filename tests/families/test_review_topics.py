@@ -2,6 +2,7 @@
 """Family analyses compose observed review guidance and omit absent optional content."""
 
 import pytest
+from markdown_it import MarkdownIt
 
 from odfa11y import run
 from odfa11y.audit import audit_odf
@@ -28,7 +29,7 @@ def test_database_run_keeps_object_privacy_and_source_boundary_guidance(tmp_path
         Topic.PRIVACY_AND_EXECUTION,
         Topic.SOURCE_BOUNDARY,
     }
-    review = (tmp_path / "bundle/REVIEW.md").read_text()
+    review = MarkdownIt("commonmark").render((tmp_path / "bundle/REVIEW.md").read_text())
     assert "Whether object descriptions explain queries" in review
     assert "Review credentials, bindings, SQL and macros offline" in review
 

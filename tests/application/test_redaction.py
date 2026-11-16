@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from lxml import etree
+from markdown_it import MarkdownIt
 
 from odfa11y.errors import DocumentRefusal
 from odfa11y.evidence import Redactor, check_bundle
@@ -153,6 +154,6 @@ def test_review_redacts_paths_before_markdown_escaping(tmp_path: Path, private_p
     write_run_bundle(target, failed, {}, Redactor(()))
     review = (target / "REVIEW.md").read_text()
     assert "zz-private-person-zz" not in review
-    assert "<path>/no-such-soffice" in review
+    assert "&lt;path&gt;/no-such-soffice" in MarkdownIt("commonmark").render(review)
     assert r"\| failed" in review
     assert check_bundle(target) == []

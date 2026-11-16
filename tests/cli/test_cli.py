@@ -190,7 +190,7 @@ def test_invalid_configuration_is_reported_on_stderr(
     assert main(["remediate", str(source), str(tmp_path / "o.odt"), "--plan", str(invalid)]) == 4
     error = capsys.readouterr().err
     assert "document.metadata.language" in error
-    assert "must satisfy" in error
+    assert "requires a string" in error
     assert not (tmp_path / "o.odt").exists()
 
 
