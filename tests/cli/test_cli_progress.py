@@ -236,3 +236,18 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
     assert caught.value is failure
     assert events[-2:] == [("publish-evidence", "running"), ("publish-evidence", status)]
     assert ("publish-evidence", "passed") not in events
+
+
+def test_interactive_progress_retains_escaped_item_identity(monkeypatch) -> None:
+    terminal = Terminal()
+    monkeypatch.setattr("sys.stderr", terminal)
+    monkeypatch.setenv("NO_COLOR", "1")
+    callback = progress_callback("text")
+    assert callback is not None
+    callback(ProgressEvent(Step.BATCH_ITEM, StepState.RUNNING, item="reviewed"))
+    callback(ProgressEvent(Step.AUDIT_SOURCE, StepState.PASSED, item="malformed\x1b[31m\n"))
+    assert terminal.getvalue() == (
+        "Progress: [reviewed] Process batch item: running\n"
+        "Progress: [malformed\\x1b[31m\\x0a] Audit source: passed\n"
+    )
+    assert "\x1b" not in terminal.getvalue()

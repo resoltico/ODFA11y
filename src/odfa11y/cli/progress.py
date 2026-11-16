@@ -51,8 +51,9 @@ def progress_callback(output_format: str) -> ProgressObserver | None:
         if enabled:
             try:
                 label = _LABELS[event.step]
+                item = f"[{terminal_text(event.item)}] " if event.item is not None else ""
                 err(
-                    f"Progress: {terminal_text(label)}: {terminal_text(event.state)}",
+                    f"Progress: {item}{terminal_text(label)}: {terminal_text(event.state)}",
                     stream=stream,
                     flush=True,
                 )

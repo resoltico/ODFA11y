@@ -317,14 +317,18 @@ class _Walker:
         elif expected in (str, int, bool):
             if (expected is str and isinstance(value, str)) or type(value) is expected:
                 return value
+            labels: dict[object, str] = {str: "a string", int: "an integer", bool: "a boolean"}
+            label = labels[expected]
+            return self.fail(path, f"requires {label}")
         elif expected is Path:
             if self.mode == "decode" and isinstance(value, str):
                 return Path(value)
             if isinstance(value, Path):
                 return str(value) if self.mode == "encode" else value
+            return self.fail(path, "requires a path")
         elif isinstance(expected, type):
             return self.wrapper(value, expected, path)
-        return self.fail(path, f"must satisfy {expected}")
+        return self.fail(path, "has an unsupported scalar contract")
 
     def wrapper(self, value: object, expected: type[object], path: str) -> object:
         contract = root_contract(expected)

@@ -166,10 +166,10 @@ directories within package budgets. Exhaustion is explicit incomplete-context re
 
 ## Native execution limits
 
-Selected work timeouts default to 120 seconds per invocation; direct `validate_pdfua`
-defaults to 180 and identity probes have a separate 20-second bound. CLI accepts whole
-seconds; library calls accept fractional finite positive numbers, excluding booleans.
-The portable maximum is `(2**32 - 2) / 1000` seconds. Invalid values fail before launch/output.
+Export, validation and identification share the selected per-call duration, validated by
+[`Timeout`](../src/odfa11y/tool_timeout.py). The [generated CLI reference](CLI.md) describes
+`--timeout`; CLI and library durations support finite positive fractional seconds and
+exclude booleans. Defaults and portable bounds have one owner in `Timeout`.
 Timeouts are not workflow deadlines; cleanup adds grace and cannot recover escaped descendants.
 See [batch interruption](BATCH.md).
 

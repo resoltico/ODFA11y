@@ -153,3 +153,20 @@ def test_combined_constraints_are_all_retained_in_the_schema() -> None:
         with pytest.raises(ValidationError):
             Draft202012Validator(schema_for(contract)).validate({"value": invalid})
     assert encode(decode(contract, {"value": "ABC"})) == {"value": "ABC"}
+
+
+@pytest.mark.parametrize(
+    ("expected", "value", "path", "word"),
+    [
+        (int, "1", "plan.heading.level", "integer"),
+        (bool, "true", "plan.text.enabled", "boolean"),
+        (str, 7, "plan.metadata.title", "string"),
+    ],
+)
+def test_scalar_mismatches_use_plain_expected_types(expected, value, path, word) -> None:
+    with pytest.raises(PlanError) as caught:
+        decode(expected, value, label=path, error=PlanError)
+    text = str(caught.value)
+    assert path in text
+    assert word in text
+    assert "<class" not in text
