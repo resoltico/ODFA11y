@@ -14,11 +14,10 @@ lazy from multiprocessing.synchronize import Event
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.native import process
 from odfa11y.native.process import ToolRun, identify, run_bounded
-from odfa11y.run.context import RunSettings
+from tests.fixtures.runs import RunSettings, run_batch
 
 PYTHON = sys.executable
 

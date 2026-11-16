@@ -6,12 +6,12 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import IoFailure, OutputOccupied
+from odfa11y.errors import DocumentRefusal, IoFailure, OutputOccupied
 from odfa11y.evidence import Redactor, require_free_directory
 from odfa11y.families.text import SPEC
 from odfa11y.rules import registry as rules
 from odfa11y.run.review import render_review
-from odfa11y.status import StageStatus
+from odfa11y.status import Passed, Refused
 from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.records import record
@@ -72,7 +72,7 @@ def test_review_separates_facts_from_decisions_and_never_overclaims() -> None:
 
 def test_review_omits_the_validation_caveat_only_when_verapdf_passed() -> None:
     passed = record()
-    passed.stages[1] = replace(passed.stages[1], status=StageStatus.PASSED)
+    passed = replace(passed, stages=(passed.stages[0], replace(passed.stages[1], outcome=Passed())))
     assert "not PDF/UA validation" not in render_review(passed)
     failed = record(status="failed", failed_stage="fidelity")
     assert "(failed at `fidelity`)" in render_review(failed)
@@ -86,8 +86,17 @@ def test_review_items_appear_in_the_accessibility_guide() -> None:
 
 def test_review_table_cells_stay_on_one_line_and_escape_pipes() -> None:
     failed = record(status="failed", failed_stage="remediate")
-    failed.stages[0] = replace(
-        failed.stages[0], reason="Remediation failed:\n- set_graphic_alternatives [Logo]: a | b"
+    failed = replace(
+        failed,
+        stages=(
+            replace(
+                failed.stages[0],
+                outcome=Refused(
+                    DocumentRefusal("Remediation failed:\n- graphic.alternative [Logo]: a | b")
+                ),
+            ),
+            *failed.stages[1:],
+        ),
     )
     table = [
         line for line in render_review(failed).splitlines() if line.startswith("| `audit-pdf`")

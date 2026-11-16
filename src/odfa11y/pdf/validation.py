@@ -3,8 +3,7 @@
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Annotated, Literal, Protocol
+from typing import Annotated, Literal
 
 from lxml import etree
 
@@ -61,19 +60,6 @@ class VeraPdfResult:
     failures: tuple[FailedRule, ...]
     raw_xml: str
     xml_root: etree._Element
-
-
-class PdfValidator(Protocol):
-    """The independent validator operation accepted by PDF checks."""
-
-    def __call__(
-        self,
-        pdf: str | Path,
-        *,
-        executable: str | Path | None = None,
-        flavour: str = "ua1",
-        timeout: float,
-    ) -> VeraPdfResult: ...
 
 
 def add_verapdf_findings(report: Report, result: VeraPdfResult) -> None:

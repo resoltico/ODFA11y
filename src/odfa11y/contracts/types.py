@@ -36,6 +36,12 @@ class JsonProperty(property):
 def split(annotation: object) -> tuple[object, tuple[Constraint | Description, ...]]:
     if isinstance(annotation, TypeAliasType):
         return split(annotation.__value__)
+    origin = get_origin(annotation)
+    if isinstance(origin, TypeAliasType):
+        bindings: dict[object, object] = dict(
+            zip(origin.__type_params__, get_args(annotation), strict=True)
+        )
+        return split(bind(origin.__value__, bindings))
     if get_origin(annotation) in (Required, NotRequired):
         return split(get_args(annotation)[0])
     if get_origin(annotation) is Annotated:

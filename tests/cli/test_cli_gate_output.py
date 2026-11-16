@@ -9,16 +9,16 @@ import pytest
 
 from odfa11y.cli import main
 from odfa11y.cli import pipeline as cli_pipeline
+from odfa11y.errors import DocumentRefusal, ToolFailure
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
 from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.run.profiles import PROFILES
 from odfa11y.run.record import RunRecord, StageResult
 from odfa11y.run.review import render_review
-from odfa11y.status import StageStatus
+from odfa11y.status import Crashed, Passed, Profile, Refused
 from tests.fixtures.plans import plan_header
 from tests.fixtures.records import record
 from tests.fixtures.writer import make_minimal_odt
@@ -50,25 +50,28 @@ def test_partial_audit_ends_with_execution_failure(
 
 @pytest.mark.parametrize("output_format", ["text", "json"])
 def test_production_warning_failure_preserves_findings_and_schema(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], output_format: str
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], output_format: str, native_tools
 ) -> None:
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     config = tmp_path / "plan.toml"
     config.write_text(plan_header(source) + "", encoding="utf-8")
     evidence = tmp_path / "evidence"
     assert (
-        main([
-            "pipeline",
-            str(source),
-            "--plan",
-            str(config),
-            "--output-dir",
-            str(evidence),
-            "--profile",
-            "production",
-            "--format",
-            output_format,
-        ])
+        main(
+            [
+                "pipeline",
+                str(source),
+                "--plan",
+                str(config),
+                "--output-dir",
+                str(evidence),
+                "--profile",
+                "production",
+                "--format",
+                output_format,
+            ],
+            native_tools=native_tools,
+        )
         == 1
     )
     output = capsys.readouterr()
@@ -80,7 +83,7 @@ def test_production_warning_failure_preserves_findings_and_schema(
     else:
         assert "Pipeline profile: production" in output.out
         assert "Command: failed (exit 1" in output.out
-        assert "Gate findings: audit-remediated" in output.out
+        assert "Findings: audit-remediated" in output.out
         assert rules.LINK001.id in output.out
         assert "REVIEW.md" in output.out
     assert not output.err
@@ -114,8 +117,11 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
 @pytest.mark.parametrize("failure", ["validation failed", "executable unavailable"])
 def test_review_does_not_claim_a_failed_validator_was_not_run(failure: str) -> None:
     data = record(status="failed", failed_stage="validate-pdf")
-    data.profile = PROFILES["production"]
-    data.stages[1] = replace(data.stages[1], status=StageStatus.FAILED, reason=failure)
+    data = replace(
+        data,
+        profile=Profile.PRODUCTION,
+        stages=(data.stages[0], replace(data.stages[1], outcome=Refused(DocumentRefusal(failure)))),
+    )
     text = render_review(data)
     assert "Automated gates: **FAILED**" in text
     assert "Assurance profile: `production`" in text
@@ -132,24 +138,28 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     data = RunRecord(
         document=DocumentIdentity("doc.odt"),
         fidelity_policy=Pagination.SAME(),
-        profile=PROFILES["source"],
+        profile=Profile.SOURCE,
     )
-    data.stages = [
-        StageResult(Stage.AUDIT_SOURCE, StageStatus.PASSED, report=source, _gate=False),
-        StageResult(
-            Stage.REMEDIATE,
-            StageStatus.FAILED,
-            "native tool failed",
-            _error=True,
-            details="untrusted\x1b[31m\nCommand: completed",
+    data = replace(
+        data,
+        stages=(
+            StageResult(Stage.AUDIT_SOURCE, Passed(source)),
+            StageResult(
+                Stage.REMEDIATE,
+                Crashed(
+                    ToolFailure(
+                        "native tool failed", details="untrusted\x1b[31m\nCommand: completed"
+                    )
+                ),
+            ),
         ),
-    ]
+    )
     config = tmp_path / "plan.toml"
     config.write_text(plan_header(tmp_path / "source.odt") + "", encoding="utf-8")
     monkeypatch.setattr(cli_pipeline.api, "run", lambda *_args, **_kwargs: data)
     assert main(["pipeline", "source.odt", "--plan", str(config), "--output-dir", "evidence"]) == 3
     text = capsys.readouterr().out
-    assert "Before remediation: audit-source" in text
+    assert "Findings: audit-source" in text
     assert rules.LINK001.id in text
     assert "Command: failed (exit 3" in text
     assert "Tool details:" in text

@@ -34,7 +34,9 @@ def compare(
         The fidelity report.
 
     """
-    return compare_pdfs(source, candidate, policy or Pagination.SAME(), diff_dir=tmp_path / "diff")
+    return compare_pdfs(
+        source, candidate, policy or Pagination.SAME(), diff_dir=tmp_path / "diff"
+    ).report
 
 
 def ids(report: Report) -> set[str]:
@@ -160,7 +162,7 @@ def test_oversized_page_is_controlled_before_rendering(
     native_tools = replace(native_tools, render=refusing(rendered))
     report = compare_pdfs(
         pdf, pdf, Pagination.SAME(), diff_dir=tmp_path / "diff", render=native_tools.render
-    )
+    ).report
     assert ids(report) == {rules.FIDELITY007.id}
     assert not rendered
     assert not (tmp_path / "diff").exists()
@@ -170,7 +172,7 @@ def test_oversized_page_is_controlled_before_rendering(
 @pytest.mark.parametrize("width", [200, 512, 5000])
 def test_fixed_resolution_retains_the_existing_pixel_limit(tmp_path: Path, width: int) -> None:
     pdf = text_pdf(tmp_path / "sized.pdf", [LINES], size=(width, width))
-    report = compare_pdfs(pdf, pdf, Pagination.SAME())
+    report = compare_pdfs(pdf, pdf, Pagination.SAME()).report
     assert ids(report) == ({rules.FIDELITY007.id} if width == 5000 else set())
 
 
@@ -179,7 +181,7 @@ def test_crop_box_is_the_canvas_for_the_render_pixel_cap(tmp_path: Path) -> None
     writer = PdfWriter(clone_from=path)
     writer.pages[0].cropbox = RectangleObject([0, 0, 100, 100])
     writer.write(path)
-    assert compare_pdfs(path, path, Pagination.SAME()).findings == []
+    assert compare_pdfs(path, path, Pagination.SAME()).report.findings == []
 
 
 def test_raster_size_difference_is_geometry_and_has_no_changed_pixel_ratio(tmp_path: Path) -> None:
@@ -189,7 +191,7 @@ def test_raster_size_difference_is_geometry_and_has_no_changed_pixel_ratio(tmp_p
     writer.pages[0].mediabox.right = FloatObject(200.01)
     writer.write(changed)
     assert read_snapshot(original).pages[0].width == read_snapshot(changed).pages[0].width
-    report = compare_pdfs(original, changed, Pagination.SAME())
+    report = compare_pdfs(original, changed, Pagination.SAME()).report
     assert ids(report) == {rules.FIDELITY002.id}
     assert report.findings[0].details["pages"] == [1]
     assert measurement(report, FidelityMeasurements).raster_changed_ratios is None

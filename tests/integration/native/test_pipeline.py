@@ -8,10 +8,7 @@ lazy from pathlib import Path
 from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import (
     graphic_answer,
     graphic_inputs,
@@ -21,8 +18,8 @@ from tests.fixtures.answers import (
     spacer_input,
 )
 from tests.fixtures.plans import reviewed_plan
-from tests.fixtures.writer import make_minimal_odt
-from tests.run.test_pipeline import _document_with_spacers, statuses
+from tests.fixtures.runs import STAGE_NAMES, RunSettings, execute, stage_statuses
+from tests.fixtures.writer import document_with_spacers, make_minimal_odt
 
 
 def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
@@ -40,7 +37,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
         graphic_inputs({"Logo": graphic_answer("Logo", "A sample logo")}),
     ]
     options = RunSettings(
-        tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+        tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
     )
     record = execute(
         source, reviewed_plan(source, operations, Pagination.SAME()), tmp_path / "out", options
@@ -52,9 +49,9 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
             [f.message for f in stage.report.findings] if stage.report else [],
         )
         for stage in record.stages
-        if stage.status != "passed"
+        if stage.outcome.status != "passed"
     ]
-    assert statuses(record) == dict.fromkeys(PIPELINE_STAGES, "passed"), why
+    assert stage_statuses(record) == dict.fromkeys(STAGE_NAMES, "passed"), why
     assert record.exit_status == 0
     assert check_bundle(tmp_path / "out") == []
     run = json.loads((tmp_path / "out" / "run.json").read_text())
@@ -75,7 +72,7 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
     tmp_path: Path, external_tool: Callable[..., str]
 ) -> None:
     soffice = external_tool("soffice", "libreoffice")
-    source = _document_with_spacers(tmp_path)
+    source = document_with_spacers(tmp_path)
     options = RunSettings(tools=Tools(soffice=soffice))
     failed = execute(
         source,
@@ -83,7 +80,7 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
         tmp_path / "strict",
         options,
     )
-    assert statuses(failed)["fidelity"] == "failed"
+    assert stage_statuses(failed)["fidelity"] == "failed"
     assert failed.exit_status == 2
     assert (tmp_path / "strict" / "fidelity" / "page-001-diff.png").is_file()
     allowed = Pagination.MAY_CHANGE
@@ -93,7 +90,7 @@ def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_dif
         tmp_path / "relaxed",
         options,
     )
-    assert statuses(passed)["fidelity"] == "passed"
+    assert stage_statuses(passed)["fidelity"] == "passed"
 
 
 def test_repeated_runs_have_equal_logical_results_and_identical_documents(

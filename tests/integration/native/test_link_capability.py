@@ -8,22 +8,21 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.cli import main
 from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.evidence import check_bundle
 from odfa11y.families.text.probes import LINK_PURPOSE, write_link_probe
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua, identify_soffice
+from odfa11y.native.libreoffice import export_pdfua, identify_soffice
 from odfa11y.odf import OdfDocument, PackageStorage, validate
 from odfa11y.pdf import audit_pdfua
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
 from tests.application.test_link_capability import LINK_BODY, WRITER
 from tests.fixtures.answers import link_answer, link_inputs
+from tests.fixtures.native import export_settings, validate_pdfua
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -38,7 +37,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     )
     linked = tmp_path / "linked.odt"
     package.save(linked)
-    pdf = export_pdfua(linked, tmp_path / "linked.pdf", ExportSettings(WRITER, soffice=soffice))
+    pdf = export_pdfua(linked, tmp_path / "linked.pdf", export_settings(WRITER, soffice=soffice))
     assert rules.PDF020.id in {f.rule_id for f in audit_pdfua(pdf).findings}
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))
     link_failures = {("7.18.1", "2"), ("7.18.5", "2")}
@@ -52,7 +51,7 @@ def test_doctor_agrees_with_the_audit_of_a_real_export(
     )
     titled_probe = write_link_probe(tmp_path)
     probe_pdf = export_pdfua(
-        titled_probe, tmp_path / "title-probe.pdf", ExportSettings(WRITER, soffice=soffice)
+        titled_probe, tmp_path / "title-probe.pdf", export_settings(WRITER, soffice=soffice)
     )
     expected_support = (
         "unsupported"
@@ -106,7 +105,7 @@ def test_the_one_link_reproduction_and_explicit_name_control(
     pdf = export_pdfua(
         source,
         tmp_path / "link.pdf",
-        ExportSettings(WRITER, soffice=external_tool("soffice", "libreoffice")),
+        export_settings(WRITER, soffice=external_tool("soffice", "libreoffice")),
     )
     report = audit_pdfua(pdf)
     result = validate_pdfua(pdf, executable=external_tool("verapdf"))

@@ -1,192 +1,149 @@
 # SPDX-License-Identifier: MPL-2.0
-"""The pipeline: fail-closed stages, evidence on failure, and the real end-to-end run."""
+"""Preparation is effect-free; completed artifacts drive independent run stages."""
 
-import json
-lazy from pathlib import Path
+from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
+from odfa11y.application import run
 from odfa11y.application.tools import Tools
-from odfa11y.errors import InvalidOption, OutputOccupied
-from odfa11y.evidence import check_bundle
-from odfa11y.odf import PackageStorage
-from odfa11y.plans.fidelity import Pagination
-from odfa11y.progress import PIPELINE_STAGES
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import PROFILES, profile_named
-from tests.fixtures.answers import (
-    graphic_answer,
-    graphic_inputs,
-    metadata_input,
+from odfa11y.errors import (
+    DocumentRefusal,
+    IoFailure,
+    OutputOccupied,
+    PackageError,
+    PlanError,
+    ToolUnavailable,
 )
+from odfa11y.evidence import check_bundle
+from odfa11y.progress import Stage
+from odfa11y.run.stages import STAGES
+from odfa11y.status import GateFailed, Passed, Profile, Skipped, SkipReason
+from tests.fixtures.answers import graphic_answer, graphic_inputs
+from tests.fixtures.native import native_fakes, recording, validation_result
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
-lazy from odfa11y.run.record import RunRecord
 
 
-def statuses(record: RunRecord) -> dict[str, str]:
-    """Map stage names to statuses.
+@pytest.mark.parametrize("profile", tuple(Profile))
+def test_record_declares_every_stage_and_profile_eligibility(
+    tmp_path: Path, profile: Profile
+) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    result = run(
+        source,
+        reviewed_plan(source),
+        tmp_path / "bundle",
+        profile=profile,
+        native_tools=native_fakes(),
+    )
+    assert tuple(stage.name for stage in result.stages) == tuple(spec.name for spec in STAGES)
+    for spec, stage in zip(STAGES, result.stages, strict=True):
+        assert isinstance(stage.outcome, Skipped) == (profile < spec.minimum)
+    assert result.profile is profile
+    assert_record_schema(result)
+    assert check_bundle(tmp_path / "bundle") == []
 
-    Returns
-    -------
-    dict[str, str]
-        Stage statuses in order.
 
-    """
-    return {stage.name: stage.status for stage in record.stages}
-
-
-def test_unreadable_source_stops_everything_but_still_publishes_evidence(tmp_path: Path) -> None:
+@pytest.mark.parametrize("payload", [None, b"not an ODF package"])
+def test_unreadable_source_preparation_leaves_no_bundle(
+    tmp_path: Path, payload: bytes | None
+) -> None:
     source = tmp_path / "broken.odt"
-    source.write_bytes(b"not a zip")
-    record = execute(source, reviewed_plan(source, [], Pagination.SAME()), tmp_path / "out")
-    assert_record_schema(record)
-    assert statuses(record)["audit-source"] == "failed"
-    assert statuses(record)["identify-source"] == "passed"
-    kept = {"identify-source", "audit-source"}
-    assert all(s == "skipped" for name, s in statuses(record).items() if name not in kept)
-    assert record.exit_status == 2
-    assert check_bundle(tmp_path / "out") == []
-    run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert (run["status"], run["failed_stage"]) == ("failed", "audit-source")
+    if payload is not None:
+        source.write_bytes(payload)
+    plan = reviewed_plan(source)
+    with pytest.raises(IoFailure if payload is None else PackageError):
+        run(source, plan, tmp_path / "bundle", profile=Profile.SOURCE)
+    assert not (tmp_path / "bundle").exists()
 
 
-def test_remediation_failure_publishes_evidence_without_a_remediated_document(
-    tmp_path: Path,
-) -> None:
+def test_stale_target_is_a_preparation_error_without_evidence(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    operations = [graphic_inputs({"Missing": graphic_answer("x")})]
-    record = execute(source, reviewed_plan(source, operations, Pagination.SAME()), tmp_path / "out")
-    assert statuses(record)["remediate"] == "failed"
-    assert record.exit_status == 4
-    assert not (tmp_path / "out" / "remediated.odt").exists()
-    stages = {
-        x["name"]: x for x in json.loads((tmp_path / "out" / "run.json").read_text())["stages"]
-    }
-    assert "Missing" in stages["remediate"]["reason"]
-    assert check_bundle(tmp_path / "out") == []
+    plan = reviewed_plan(source, [graphic_inputs({"Missing": graphic_answer("description")})])
+    with pytest.raises(PlanError):
+        run(source, plan, tmp_path / "bundle", profile=Profile.SOURCE)
+    assert not (tmp_path / "bundle").exists()
 
 
-def test_an_occupied_evidence_directory_is_refused_before_any_work(tmp_path: Path) -> None:
+@pytest.mark.parametrize("profile", [Profile.PDF, Profile.PRODUCTION])
+def test_required_office_absence_is_a_preparation_failure(tmp_path: Path, profile: Profile) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    target = tmp_path / "out"
-    target.mkdir()
-    (target / "keep.txt").write_text("precious")
-    with pytest.raises(OutputOccupied):
-        execute(source, reviewed_plan(source, [], Pagination.SAME()), target)
-    assert [p.name for p in target.iterdir()] == ["keep.txt"]
-
-
-def test_a_missing_libreoffice_fails_the_export_stage_and_keeps_earlier_evidence(
-    tmp_path: Path,
-) -> None:
-    source = make_minimal_odt(tmp_path / "doc.odt")
-    options = RunSettings(tools=Tools(soffice=str(tmp_path / "no-such-soffice")))
-    record = execute(
-        source,
-        reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()),
-        tmp_path / "out",
-        options,
-    )
-    assert statuses(record)["remediate"] == "passed"
-    assert statuses(record)["export-source"] == "failed"
-    assert record.exit_status == 3
-    assert (tmp_path / "out" / "remediated.odt").is_file()
-
-
-def test_the_record_lists_every_stage_in_order(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "doc.odt")
-    record = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        tmp_path / "out",
-        RunSettings(tools=Tools(soffice="nope")),
-    )
-    assert tuple(stage.name for stage in record.stages) == PIPELINE_STAGES
-
-
-def _document_with_spacers(tmp_path: Path) -> Path:
-    source = make_minimal_odt(tmp_path / "spacers.odt", features={"add_blank_body_paragraph": True})
-    package = PackageStorage(source)
-    package.write_member(
-        "content.xml",
-        package.read("content.xml").replace(
-            b'<text:p text:style-name="Body"/>',
-            b'<text:p text:style-name="Body"/><text:p text:style-name="Body"/>'
-            b'<text:p text:style-name="Body">Text after the spacers moves up.</text:p>',
-        ),
-    )
-    shifted = tmp_path / "with-spacers.odt"
-    package.save(shifted)
-    return shifted
-
-
-def test_an_unreadable_source_still_yields_an_evidence_bundle(tmp_path: Path) -> None:
-    record = execute(
-        tmp_path / "absent.odt",
-        reviewed_plan(tmp_path / "absent.odt", [], Pagination.SAME()),
-        tmp_path / "out",
-    )
-    assert statuses(record)["identify-source"] == "failed"
-    assert record.exit_status == 3
-    run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert run["document"] == {
-        "name": "absent.odt",
-        "sha256": None,
-        "kind": None,
-        "media_type": None,
-        "layout": None,
-        "family": None,
-        "adapter": None,
-        "odf_version": None,
-    }
-    assert (run["status"], run["failed_stage"]) == ("failed", "identify-source")
-    assert check_bundle(tmp_path / "out") == []
-    assert "absent.odt" in (tmp_path / "out" / "REVIEW.md").read_text()
-
-
-def test_a_profile_runs_only_its_stages_and_records_the_rest_as_skipped(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "doc.odt")
-    options = RunSettings(profile=profile_named("source"))
-    record = execute(
-        source,
-        reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()),
-        tmp_path / "o",
-        options,
-    )
-    expected = {
-        name: "passed" if name in PROFILES["source"].stages else "skipped"
-        for name in PIPELINE_STAGES
-    }
-    assert statuses(record) == expected
-    assert record.exit_status == 0
-    skipped = [s for s in record.stages if s.name == "export-source"]
-    assert skipped[0].reason == "not part of the source profile"
-    run = json.loads((tmp_path / "o" / "run.json").read_text())
-    assert run["profile"] == PROFILES["source"].as_dict()
-
-
-def test_an_unknown_profile_is_a_configuration_error(tmp_path: Path) -> None:
-    source = make_minimal_odt(tmp_path / "doc.odt")
-    with pytest.raises(InvalidOption, match="Unknown profile"):
-        execute(
+    with pytest.raises(ToolUnavailable):
+        run(
             source,
-            reviewed_plan(source, [], Pagination.SAME()),
-            tmp_path / "o",
-            RunSettings(profile=profile_named("x")),
+            reviewed_plan(source),
+            tmp_path / "bundle",
+            profile=profile,
+            tools=Tools(soffice=tmp_path / "missing"),
         )
-    assert not (tmp_path / "o").exists()
+    assert not (tmp_path / "bundle").exists()
 
 
-def test_the_production_profile_fails_at_export_when_libreoffice_is_unavailable(
-    tmp_path: Path,
-) -> None:
+def test_occupied_output_is_refused_without_altering_contents(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    options = RunSettings(
-        tools=Tools(soffice=str(tmp_path / "none")), profile=profile_named("production")
+    target = tmp_path / "bundle"
+    target.mkdir()
+    (target / "keep").write_text("precious")
+    with pytest.raises(OutputOccupied):
+        run(source, reviewed_plan(source), target, profile=Profile.SOURCE)
+    assert (target / "keep").read_text() == "precious"
+
+
+def test_candidate_findings_do_not_block_export_or_pdf_checks(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt", features={"with_image_without_alt": True})
+    calls = []
+    native = replace(native_fakes(), export=recording(calls))
+    result = run(source, reviewed_plan(source), tmp_path / "bundle", native_tools=native)
+    outcomes = {stage.name: stage.outcome for stage in result.stages}
+    assert isinstance(outcomes[Stage.AUDIT_REMEDIATED], GateFailed)
+    assert isinstance(outcomes[Stage.EXPORT_REMEDIATED], Passed)
+    assert not isinstance(outcomes[Stage.AUDIT_PDF], Skipped)
+    assert isinstance(outcomes[Stage.FIDELITY], Passed)
+    assert len(calls) == 2
+    assert result.exit_status == 2
+    assert (tmp_path / "bundle" / "remediated.pdf").is_file()
+
+
+def test_validator_gate_failure_does_not_block_fidelity(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    native = replace(native_fakes(), validate=lambda *_args, **_kwargs: validation_result(False))
+    result = run(
+        source,
+        reviewed_plan(source),
+        tmp_path / "bundle",
+        profile=Profile.PRODUCTION,
+        native_tools=native,
     )
-    record = execute(source, reviewed_plan(source, [], Pagination.SAME()), tmp_path / "o", options)
-    assert statuses(record)["export-source"] == "failed"
-    assert record.strict
+    outcomes = {stage.name: stage.outcome for stage in result.stages}
+    assert isinstance(outcomes[Stage.VALIDATE_PDF], GateFailed)
+    assert isinstance(outcomes[Stage.FIDELITY], Passed)
+    assert result.exit_status == 2
+    assert check_bundle(tmp_path / "bundle") == []
+
+
+def test_export_refusal_skips_only_stages_missing_its_artifact(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    native = native_fakes()
+    original = native.export
+
+    def refuse_candidate(path, output, settings):
+        if path.name.startswith("remediated"):
+            message = "Controlled candidate export refusal"
+            raise DocumentRefusal(message)
+        return original(path, output, settings)
+
+    result = run(
+        source,
+        reviewed_plan(source),
+        tmp_path / "bundle",
+        native_tools=replace(native, export=refuse_candidate),
+    )
+    outcomes = {stage.name: stage.outcome for stage in result.stages}
+    assert isinstance(outcomes[Stage.EXPORT_SOURCE], Passed)
+    assert outcomes[Stage.AUDIT_PDF] == Skipped(SkipReason.MISSING_INPUT, Stage.EXPORT_REMEDIATED)
+    assert outcomes[Stage.FIDELITY] == Skipped(SkipReason.MISSING_INPUT, Stage.EXPORT_REMEDIATED)
+    assert not (tmp_path / "bundle" / "remediated.pdf").exists()
+    assert check_bundle(tmp_path / "bundle") == []

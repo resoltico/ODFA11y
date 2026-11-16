@@ -10,18 +10,14 @@ from pypdf import PdfReader
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.audit.package import PackageMeasurements
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.families.spreadsheet.audit import SpreadsheetMeasurements
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from odfa11y.targets import require_target
 from tests.fixtures.answers import (
     graphic_answer,
@@ -29,8 +25,10 @@ from tests.fixtures.answers import (
     metadata_input,
 )
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import export_settings, validate_pdfua
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import STAGE_NAMES, RunSettings, execute
 from tests.fixtures.spreadsheets import (
     HIDDEN_SHEET_STYLE,
     data_sheet,
@@ -123,7 +121,7 @@ def pdf_text(path: Path) -> str:
 
 
 def stages(record: RunRecord) -> dict[str, str]:
-    return {stage.name: stage.status for stage in record.stages}
+    return {stage.name: stage.outcome.status for stage in record.stages}
 
 
 def test_libreoffice_authored_packages_are_recognised_and_audited(
@@ -178,7 +176,7 @@ def test_a_plan_on_a_libreoffice_authored_package_reloads_and_prints_the_new_nam
     ) == ["Fruit prices", "Data", "Spare"]
     after = {f.rule_id for f in audit_odf(output, schema=True).findings}
     assert not {rules.SHEET002.id, rules.GRAPHIC001.id} & after
-    export = ExportSettings("calc_pdf_Export", soffice, profile_dir=tmp_path / "profile")
+    export = export_settings("calc_pdf_Export", soffice, profile_dir=tmp_path / "profile")
     before_text = pdf_text(export_pdfua(source, tmp_path / "source.pdf", export))
     after_text = pdf_text(export_pdfua(output, tmp_path / "remediated.pdf", export))
     assert "Fruit prices" in after_text
@@ -215,7 +213,7 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
         source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options
     )
     reached = stages(record)
-    assert all(reached[name] == "passed" for name in PIPELINE_STAGES[:6]), record.as_dict()
+    assert all(reached[name] == "passed" for name in STAGE_NAMES[:6]), record.as_dict()
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")
     assert pdf_stage.report is not None
     pdf_rules = {f.rule_id for f in pdf_stage.report.findings}
@@ -246,7 +244,7 @@ def test_renaming_a_sheet_changes_the_printed_header_and_the_fidelity_gate_says_
     assert stages(record)["remediate"] == "passed"
     report = compare_pdfs(
         tmp_path / "out" / "source.pdf", tmp_path / "out" / "remediated.pdf", Pagination.SAME()
-    )
+    ).report
     assert rules.FIDELITY003.id in {f.rule_id for f in report.findings}
     assert record.failed_stage == "fidelity", record.as_dict()
 
@@ -258,7 +256,7 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     verapdf = external_tool("verapdf")
     source = author(tmp_path, soffice, *clean_sheets())
     options = RunSettings(
-        tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+        tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
     )
     record = execute(
         source,

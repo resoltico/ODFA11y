@@ -11,10 +11,10 @@ lazy from pathlib import Path
 import pytest
 from pypdf.generic import EncodedStreamObject, NameObject, StreamObject
 
+from odfa11y.application.compare import is_pdf
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.rules import registry as rules
-from odfa11y.run.comparison import is_pdf
 from tests.fixtures.native import refusing
 from tests.fixtures.pdf import register, tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
@@ -155,11 +155,11 @@ def test_unreadable_input_continues_to_next_audit(
     good = make_minimal_odt(tmp_path / "good.odt")
     opener = os.open
 
-    def open_input(path: Path, flags: int) -> int:
+    def open_input(path, flags, mode=0o777, *, dir_fd=None) -> int:
         if path == blocked:
             message = "Permission denied"
             raise PermissionError(13, message, str(path))
-        return opener(path, flags)
+        return opener(path, flags, mode, dir_fd=dir_fd)
 
     monkeypatch.setattr(os, "open", open_input)
     assert main(["audit", str(blocked), str(good), "--format", "json"]) == 3
@@ -177,6 +177,6 @@ def test_help_explains_profiles_and_timeout(
         main([command, "--help"])
     assert exited.value.code == 0
     output = " ".join(capsys.readouterr().out.split())
-    assert "default: verify" in output
+    assert "default: pdf" in output
     assert "production also requires veraPDF and gates warnings" in output
     assert "seconds (default: 120)" in output

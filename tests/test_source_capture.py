@@ -3,7 +3,6 @@
 
 import hashlib
 import importlib
-import json
 import multiprocessing
 import os
 import sys
@@ -12,18 +11,16 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y import capture
-from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute, run_batch
 
 
 def test_oversized_sparse_input_is_refused_without_copying(tmp_path: Path) -> None:
@@ -73,12 +70,10 @@ def test_growth_after_descriptor_size_check_is_bounded(
 
 
 def _pipeline(source: str, output: str) -> None:
-    result = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        output,
-        RunSettings(profile=profile_named("source")),
-    )
+    try:
+        result = execute(source, reviewed_plan(source), output, RunSettings(profile=Profile.SOURCE))
+    except PackageError as error:
+        sys.exit(error.exit_status)
     sys.exit(result.exit_status)
 
 
@@ -95,9 +90,7 @@ def test_fifo_pipeline_refuses_without_waiting_for_a_writer(tmp_path: Path) -> N
         child.join(3)
         assert not child.is_alive(), "nonregular source open blocked"
         assert child.exitcode == 2
-        record = json.loads((output / "run.json").read_text())
-        assert record["failed_stage"] == "identify-source"
-        assert check_bundle(output) == []
+        assert not output.exists()
         assert not list(tmp_path.glob(".odfa11y-source-*"))
     finally:
         if child.is_alive():
@@ -171,30 +164,28 @@ def test_descriptor_validation_rejects_replacement_fifo_nonblocking(
 def test_zero_length_input_retains_invalid_document_outcome(tmp_path: Path) -> None:
     source = tmp_path / "empty.odt"
     source.write_bytes(b"")
-    result = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        tmp_path / "out",
-        RunSettings(profile=profile_named("source")),
-    )
-    assert result.failed_stage == "audit-source"
-    assert result.exit_status == 2
-    assert check_bundle(tmp_path / "out") == []
+    with pytest.raises(PackageError):
+        execute(
+            source,
+            reviewed_plan(source, [], Pagination.SAME()),
+            tmp_path / "out",
+            RunSettings(profile=Profile.parse("source")),
+        )
+    assert not (tmp_path / "out").exists()
 
 
 def test_directory_input_has_valid_execution_failure_evidence(tmp_path: Path) -> None:
     source = tmp_path / "directory.odt"
     source.mkdir()
     output = tmp_path / "evidence"
-    result = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        output,
-        RunSettings(profile=profile_named("source")),
-    )
-    assert result.failed_stage == "identify-source"
-    assert result.exit_status == 2
-    assert check_bundle(output) == []
+    with pytest.raises(PackageError):
+        execute(
+            source,
+            reviewed_plan(source, [], Pagination.SAME()),
+            output,
+            RunSettings(profile=Profile.parse("source")),
+        )
+    assert not (output).exists()
 
 
 def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
@@ -209,12 +200,13 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
         tmp_path, [("oversized", source.name, "plan.toml"), ("valid", normal.name, "plan.toml")]
     )
     result = run_batch(
-        manifest, tmp_path / "evidence", RunSettings(profile=profile_named("source"))
+        manifest, tmp_path / "evidence", RunSettings(profile=Profile.parse("source"))
     )
     assert [item.exit_status for item in result.items] == [2, 0]
-    assert result.items[0].failed_stage == "identify-source"
-    for name in ["oversized", "valid"]:
-        assert check_bundle(tmp_path / "evidence" / name) == []
+    assert result.items[0].failed_stage is None
+    assert result.items[0].error is not None
+    assert not (tmp_path / "evidence" / "oversized").exists()
+    assert check_bundle(tmp_path / "evidence" / "valid") == []
     assert not list(tmp_path.glob(".odfa11y-source-*"))
 
 
@@ -232,7 +224,7 @@ def test_readonly_source_directory_does_not_need_write_access(tmp_path: Path) ->
             source,
             reviewed_plan(source, [], Pagination.SAME()),
             output,
-            RunSettings(profile=profile_named("source")),
+            RunSettings(profile=Profile.parse("source")),
         )
         assert result.failed_stage is None
         assert result.exit_status == 0

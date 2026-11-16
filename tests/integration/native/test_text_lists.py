@@ -7,8 +7,8 @@ lazy from pathlib import Path
 import pytest
 from pypdf import PdfReader
 
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
-from odfa11y.run.native import export_document
 from tests.fixtures.paths import TESTS
 
 

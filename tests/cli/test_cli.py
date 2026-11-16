@@ -99,10 +99,17 @@ def test_missing_verapdf_is_a_tool_failure_without_a_fake_finding(
 ) -> None:
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
-    arguments = ["audit", str(pdf), "--verapdf-path", str(tmp_path / "absent"), "--format", "json"]
+    arguments = [
+        "audit",
+        "--validate",
+        str(pdf),
+        "--verapdf",
+        str(tmp_path / "absent"),
+        "--format",
+        "json",
+    ]
     assert main(arguments) == 3
-    report = json.loads(capsys.readouterr().out)
-    assert report["kind"] == "pdf"
+    assert not capsys.readouterr().out
     assert main([*arguments, "--strict"]) == 3
 
 
@@ -146,7 +153,7 @@ def test_remediate_json_output_is_structured(
     ]
     assert main([*arguments, "--format", "json", "--dry-run"]) == 0
     data = json.loads(capsys.readouterr().out)
-    assert data["dry_run"] is True
+    assert data["publication"] == "preview"
     assert data["decisions"][0]["kind_id"] == "document.metadata"
     assert data["outcomes"][0]["status"] == "applied"
 
@@ -251,9 +258,9 @@ def test_pipeline_command_without_libreoffice_fails_with_evidence_and_exit_3(
     ]
     assert main([*arguments, "--output-dir", str(tmp_path / "ev")]) == EXECUTION_FAILURE
     output = capsys.readouterr().out
-    assert "failed  export-source" in output
-    assert (tmp_path / "ev" / "run.json").is_file()
-    assert main([*arguments, "--output-dir", str(tmp_path / "ev"), "--format", "json"]) == 4
+    assert not output
+    assert not (tmp_path / "ev").exists()
+    assert main([*arguments, "--output-dir", str(tmp_path / "ev"), "--format", "json"]) == 3
 
 
 def test_verapdf_flag_does_not_swallow_the_next_argument(
@@ -262,6 +269,5 @@ def test_verapdf_flag_does_not_swallow_the_next_argument(
     monkeypatch.setenv("PATH", "")
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
-    assert main(["audit", "--verapdf", str(pdf), "--format", "json"]) == 3
-    reports = json.loads(capsys.readouterr().out)
-    assert reports["kind"] == "pdf"
+    assert main(["audit", "--validate", str(pdf), "--format", "json"]) == 3
+    assert not capsys.readouterr().out

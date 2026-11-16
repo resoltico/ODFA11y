@@ -114,9 +114,9 @@ def doctor(
                 execution = probe_operations.measure_probe(
                     probe,
                     office.identity,
-                    ExportSettings(probe.export_filter, office.executable, selection.timeout),
+                    ExportSettings(probe.export_filter, office, selection.timeout),
                     observer=observer,
-                    verapdf_path=validator.executable if validator else None,
+                    verapdf=validator,
                     export=operations.export,
                     validate=operations.validate,
                 )

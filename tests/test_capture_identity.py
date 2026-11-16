@@ -7,16 +7,14 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y import capture
-from odfa11y.batch import run_batch
 from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute, run_batch
 
 
 @pytest.mark.parametrize("kind", ["symlink", "regular", "symlink-without-nofollow"])
@@ -79,16 +77,14 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
 
     monkeypatch.setattr(capture.os, "open", exchange)
     output = tmp_path / "pipeline"
-    record = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        output,
-        RunSettings(profile=profile_named("source")),
-    )
-    assert record.exit_status == 2
-    assert record.failed_stage == "identify-source"
-    assert check_bundle(output) == []
-    assert not list(output.glob("remediated.*"))
+    with pytest.raises(PackageError, match="identity changed"):
+        execute(
+            source,
+            reviewed_plan(source, [], Pagination.SAME()),
+            output,
+            RunSettings(profile=Profile.parse("source")),
+        )
+    assert not output.exists()
     # Give the next capture a distinct selected inode again.
     source.unlink()
     source.write_bytes(other.read_bytes())
@@ -105,11 +101,12 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
             ("valid", valid.relative_to(tmp_path).as_posix(), "plan.toml"),
         ],
     )
-    result = run_batch(manifest, tmp_path / "batch", RunSettings(profile=profile_named("source")))
+    result = run_batch(manifest, tmp_path / "batch", RunSettings(profile=Profile.parse("source")))
     assert [r.exit_status for r in result.items] == [2, 0]
-    assert result.items[0].failed_stage == "identify-source"
-    for name in ["changed", "valid"]:
-        assert check_bundle(tmp_path / "batch" / name) == []
+    assert result.items[0].failed_stage is None
+    assert result.items[0].error is not None
+    assert not (tmp_path / "batch" / "changed").exists()
+    assert check_bundle(tmp_path / "batch" / "valid") == []
     assert not list(tmp_path.glob(".odfa11y-source-*"))
 
 

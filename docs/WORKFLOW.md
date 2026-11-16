@@ -57,12 +57,14 @@ uv run --no-sync odfa11y verify evidence
 | Profile | Required assurance |
 | --- | --- |
 | `source` | Source inspection, remediation and candidate audit; warnings allowed. |
-| `verify` (default) | Source work plus native/PDF/fidelity checks; warnings allowed. |
+| `pdf` (default) | Source work plus native/PDF/fidelity checks; warnings allowed. |
 | `production` | All stages, required veraPDF, errors and warnings fail. |
 
-Source findings inform remediation; the candidate audit gates it. Later stages stop at a
-failed gate. Unsupported stages are `not-applicable`; production fails required missing
-PDF assurance. [Evidence](EVIDENCE.md) retains completed artifacts and failures when the
+Source findings inform remediation; the candidate audit gates acceptance. Stages run whenever
+their declared inputs exist: candidate findings do not prevent export, and validator failures do
+not prevent fidelity. A refused candidate is never exported. Unsupported stages are
+`not-applicable`; production requires PDF assurance. Required tools and plans are checked
+before a run publishes output; batch preparation failures appear only in `batch.json`. [Evidence](EVIDENCE.md) retains completed artifacts and failures when the
 output location can be safely published. Integrity verification checks recorded bytes.
 Read `REVIEW.md` and perform the [human checks](ACCESSIBILITY.md#human-acceptance).
 

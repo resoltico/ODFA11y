@@ -5,6 +5,8 @@ import zipfile
 from typing import TypedDict
 lazy from pathlib import Path
 
+from odfa11y.odf import PackageStorage
+
 TEXT_MEDIA_TYPE = "application/vnd.oasis.opendocument.text"
 
 
@@ -186,3 +188,19 @@ def _data_table(features: Features) -> str:
             rows = columns + row1 + row2 + row3
         table = f'<table:table table:name="Data">{rows}</table:table>'
     return table
+
+
+def document_with_spacers(tmp_path: Path) -> Path:
+    source = make_minimal_odt(tmp_path / "spacers.odt", features={"add_blank_body_paragraph": True})
+    package = PackageStorage(source)
+    package.write_member(
+        "content.xml",
+        package.read("content.xml").replace(
+            b'<text:p text:style-name="Body"/>',
+            b'<text:p text:style-name="Body"/><text:p text:style-name="Body"/>'
+            b'<text:p text:style-name="Body">Text after the spacers moves up.</text:p>',
+        ),
+    )
+    shifted = tmp_path / "with-spacers.odt"
+    package.save(shifted)
+    return shifted

@@ -15,7 +15,6 @@ from odfa11y.families.text.headings.audit import TextContentMeasurements
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.odf.styles import styles_of
 from odfa11y.rules import registry as rules
-from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     apply_in_memory,
     spacer_input,
@@ -220,7 +219,7 @@ def test_inherited_page_number_reset_protects_empty_paragraphs(
         reloaded.tree(part), f"//style:paragraph-properties[@style:page-number='{number}']"
     )
     assert len(declarations) == 1
-    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.status == "passed"
     assert result.schema.new_count == 0
 
 

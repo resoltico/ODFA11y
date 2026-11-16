@@ -16,9 +16,7 @@ from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import (
     Authored,
     FaultEdit,
@@ -28,9 +26,11 @@ from tests.fixtures.answers import (
     metadata_input,
 )
 from tests.fixtures.documents import make_flat
+from tests.fixtures.native import native_fakes
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 
 SOURCE = TESTS / "family_corpus/fruit-image.odi"
 
@@ -109,18 +109,19 @@ def test_changed_actual_image_bytes_make_reviewed_description_stale() -> None:
     assert not document.dirty
 
 
-@pytest.mark.parametrize("profile", ["source", "verify"])
+@pytest.mark.parametrize("profile", ["source", "pdf"])
 def test_image_source_profiles_do_not_claim_pdf_assurance(tmp_path: Path, profile: str) -> None:
     record = execute(
         SOURCE,
         reviewed_plan(SOURCE, _plan(), Pagination.SAME()),
         tmp_path / profile,
-        RunSettings(profile=profile_named(profile)),
+        RunSettings(profile=Profile.parse(profile)),
+        native_tools=native_fakes(),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert not (tmp_path / profile / "remediated.pdf").exists()
-    if profile == "verify":
-        assert any(stage.status == "not-applicable" for stage in record.stages)
+    if profile == "pdf":
+        assert any(stage.outcome.status == "not-applicable" for stage in record.stages)
 
 
 @pytest.mark.parametrize(

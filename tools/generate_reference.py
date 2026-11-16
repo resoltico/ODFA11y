@@ -28,11 +28,8 @@ from odfa11y.rules.registry import Severity
 from odfa11y.schemas import generated_schemas, registered_contracts
 from odfa11y.status import (
     EXIT_PRECEDENCE,
-    BatchStatus,
     ExitStatus,
-    RunStatus,
     SkipReason,
-    StageStatus,
 )
 from odfa11y.status import Profile as AssuranceProfile
 
@@ -61,9 +58,6 @@ USER_ENUMS = (
     TableKind,
     Status,
     ViolationKind,
-    StageStatus,
-    RunStatus,
-    BatchStatus,
 )
 
 

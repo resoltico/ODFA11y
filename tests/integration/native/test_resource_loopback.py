@@ -11,12 +11,11 @@ from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.declarations import declaration
 from tests.fixtures.native_resources import png_bytes
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 
 
 def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
@@ -60,7 +59,7 @@ def test_healthy_loopback_declarations_refuse_before_real_native_boundary(
                 source,
                 reviewed_plan(source, [], Pagination.SAME()),
                 output,
-                RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
+                RunSettings(tools=Tools(soffice=soffice), profile=Profile.PDF),
             )
             assert record.failed_stage == "export-source"
             assert record.exit_status == 2

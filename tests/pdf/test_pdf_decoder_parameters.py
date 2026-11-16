@@ -9,7 +9,6 @@ import pytest
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, NumberObject
 
 from odfa11y.application.native import NativeTools
-from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailure
 from odfa11y.evidence import check_bundle
@@ -18,11 +17,11 @@ from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
 from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import register, tagged_writer
 from tests.fixtures.plans import plan_header
 from tests.fixtures.probes import conclusive_probe
+from tests.fixtures.runs import RunSettings, run_batch
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.native.libreoffice import ExportSettings
 
@@ -110,18 +109,16 @@ def test_bad_exported_predictor_keeps_batch_failure_evidence_and_continues(
     monkeypatch.setattr(probe_operations, "measure_probe", conclusive_probe)
     native_tools = replace(native_tools, export=export)
     result = run_batch(manifest, tmp_path / "out", RunSettings(), native_tools=native_tools)
-    assert [item.exit_status for item in result.items] == [2, 0]
+    assert [item.exit_status for item in result.items] == [3, 0]
     assert result.items[0].failed_stage == "audit-pdf"
     assert result.items[1].status == "completed"
     bundle = tmp_path / "out" / "refused"
     record = json.loads((bundle / "run.json").read_text())
     audit = next(stage for stage in record["stages"] if stage["name"] == "audit-pdf")
-    assert [f["rule_id"] for f in audit["report"]["findings"]] == [rules.PDF001.id]
-    assert all(
-        stage["status"] == "skipped"
-        for stage in record["stages"]
-        if stage["name"] in {"verapdf", "fidelity"}
-    )
+    assert [f["rule_id"] for f in audit["outcome"]["report"]["findings"]] == [rules.PDF001.id]
+    fidelity = next(stage for stage in record["stages"] if stage["name"] == "fidelity")
+    assert fidelity["outcome"]["status"] == "crashed"
+
     assert (bundle / "remediated.pdf").read_bytes() == bad.read_bytes()
     assert all(check_bundle(tmp_path / "out" / item.id) == [] for item in result.items)
     assert source.read_bytes() == before

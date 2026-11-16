@@ -6,11 +6,12 @@ lazy from pathlib import Path
 
 from odfa11y.concepts import graphics_fingerprint
 from odfa11y.decisions.edit import Status
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from tests.fixtures.answers import graphic_answer, graphic_inputs
+from tests.fixtures.native import export_settings
 from tests.fixtures.native_resources import PIXELS, decoded_images, writer_resource
 from tests.fixtures.operations import apply_answers, assert_refused
 lazy from tests.fixtures.answers import apply_in_memory
@@ -49,9 +50,12 @@ def test_unstyled_native_role_refusal_preserves_original_placement_and_publicati
     assert destination.read_bytes() == b"Existing destination"
     unchanged = document.save(tmp_path / "unchanged.fodt")
     assert unchanged.read_bytes() == original
-    settings = ExportSettings("writer_pdf_Export", external_tool("soffice", "libreoffice"))
+    settings = export_settings("writer_pdf_Export", external_tool("soffice", "libreoffice"))
     baseline = export_pdfua(source, tmp_path / "baseline.pdf", settings)
     actual = export_pdfua(unchanged, tmp_path / "unchanged.pdf", settings)
     assert ((4, 4), PIXELS) in decoded_images(baseline)
     assert decoded_images(actual) == decoded_images(baseline)
-    assert compare_pdfs(baseline, actual, Pagination.SAME(raster_tolerance=0.0)).error_count == 0
+    assert (
+        compare_pdfs(baseline, actual, Pagination.SAME(raster_tolerance=0.0)).report.error_count
+        == 0
+    )

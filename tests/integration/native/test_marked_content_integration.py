@@ -9,10 +9,10 @@ import pytest
 from pypdf import PdfWriter
 from pypdf.generic import ContentStream, DecodedStreamObject
 
-from odfa11y.audit.validation import validate_pdfua
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.pdf import audit_pdfua
 from odfa11y.rules import registry as rules
+from tests.fixtures.native import export_settings, validate_pdfua
 from tests.fixtures.writer import make_minimal_odt
 
 SEQUENCE = re.compile(rb"/[A-Za-z0-9]+\s*<<\s*/MCID\s+(\d+)\s*>>\s*BDC")
@@ -27,7 +27,7 @@ def test_content_errors_agree_with_verapdf_on_a_damaged_real_export(
     baseline = export_pdfua(
         make_minimal_odt(tmp_path / "source.odt"),
         tmp_path / "baseline.pdf",
-        ExportSettings("writer_pdf_Export", soffice=soffice),
+        export_settings("writer_pdf_Export", soffice=soffice),
     )
     assert audit_pdfua(baseline).error_count == 0
     assert validate_pdfua(baseline, executable=verapdf).compliant

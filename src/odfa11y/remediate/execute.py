@@ -28,7 +28,6 @@ from odfa11y.remediate.result import (
 )
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import Finding, Report
-from odfa11y.status import StageStatus
 lazy from odfa11y.odf import SchemaResult
 
 
@@ -199,7 +198,6 @@ def _postconditions(
 ) -> SchemaCheck:
     if not state.usable:
         return SchemaCheck(
-            StageStatus.SKIPPED,
             None,
             schema_before.count if schema_before.available else None,
             None,
@@ -231,7 +229,6 @@ def _schema_check(
 ) -> tuple[SchemaCheck, Violation | None]:
     if not after.available:
         return SchemaCheck(
-            StageStatus.SKIPPED,
             after.version,
             before.count if before.available else None,
             None,
@@ -241,7 +238,6 @@ def _schema_check(
     new = regressions(before, after) if before.available else after.messages()
     count = sum(len(messages) for messages in new.values())
     check = SchemaCheck(
-        StageStatus.FAILED if count else StageStatus.PASSED,
         after.version,
         before.count if before.available else None,
         after.count,

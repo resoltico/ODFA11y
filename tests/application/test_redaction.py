@@ -8,8 +8,10 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
+from odfa11y.errors import DocumentRefusal
 from odfa11y.evidence import Redactor, check_bundle
 from odfa11y.families.text import SPEC
+from odfa11y.status import Refused
 from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.records import record
 
@@ -137,8 +139,15 @@ def test_a_location_matches_whatever_separators_the_text_uses(tmp_path: Path) ->
 )
 def test_review_redacts_paths_before_markdown_escaping(tmp_path: Path, private_path: str) -> None:
     failed = record(status="failed", failed_stage="export-source")
-    failed.stages[-1] = replace(
-        failed.stages[-1], reason=f"Executable not found: {private_path} | failed"
+    failed = replace(
+        failed,
+        stages=(
+            *failed.stages[:-1],
+            replace(
+                failed.stages[-1],
+                outcome=Refused(DocumentRefusal(f"Executable not found: {private_path} | failed")),
+            ),
+        ),
     )
     target = tmp_path / "evidence"
     write_run_bundle(target, failed, {}, Redactor(()))

@@ -7,10 +7,14 @@ from pathlib import Path
 from typing import Literal
 lazy from collections.abc import Callable, Sequence
 
+from odfa11y.application.audit import audit_document
+from odfa11y.application.compare import compare_documents
 from odfa11y.application.doctor import DoctorResult as DoctorResult
 from odfa11y.application.doctor import doctor as doctor
+from odfa11y.application.export import export_document
 from odfa11y.application.native import NativeTools
 from odfa11y.application.remediate import remediate as remediate
+from odfa11y.application.run import run as run
 from odfa11y.application.tools import Tools
 from odfa11y.audit import prepare_plan
 from odfa11y.batch import run_batch as execute_batch
@@ -22,20 +26,13 @@ from odfa11y.plans.fidelity import FidelityPolicy as FidelityPolicy
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.report import exit_status, render_reports
-from odfa11y.run.comparison import compare_documents
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.inspection import audit_document
-from odfa11y.run.native import export_document
-from odfa11y.run.profiles import DEFAULT_PROFILE
-from odfa11y.status import ExitStatus, combine_statuses, failure_status
+from odfa11y.status import ExitStatus, Profile, combine_statuses, failure_status
 lazy from odfa11y.batch.record import BatchRecord
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.remediate import RemediationResult as RemediationResult
 lazy from odfa11y.report import Report
-lazy from odfa11y.run.profiles import Profile
-lazy from odfa11y.run.record import RunRecord
+lazy from odfa11y.run.record import RunRecord as RunRecord
 
 
 def _filesystem_boundary[**P, R](operation: Callable[P, R]) -> Callable[P, R]:
@@ -249,6 +246,8 @@ def audit(
 
     """
     tools = tools or Tools()
+    operations = native_tools or NativeTools()
+    resolved = tools.resolve(verapdf=validate_pdf, native_tools=operations)
     selected = (sources,) if isinstance(sources, str | Path) else tuple(sources)
     inputs = []
     for source in selected:
@@ -259,11 +258,9 @@ def audit(
                 audit_document(
                     source,
                     schema=schema,
-                    verapdf=validate_pdf,
-                    verapdf_path=tools.verapdf,
-                    timeout=tools.timeout,
+                    tools=resolved,
                     on_progress=observer,
-                    native_tools=native_tools,
+                    native_tools=operations,
                 )
             )
         except (OdfA11yError, OSError) as exc:
@@ -295,6 +292,7 @@ def export(
     destination: str | Path,
     *,
     tools: Tools | None = None,
+    replace: bool = False,
     observer: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> ExportResult:
@@ -308,7 +306,12 @@ def export(
     """
     return ExportResult(
         export_document(
-            source, destination, tools or Tools(), on_progress=observer, native_tools=native_tools
+            source,
+            destination,
+            tools or Tools(),
+            replace=replace,
+            on_progress=observer,
+            native_tools=native_tools,
         )
     )
 
@@ -349,40 +352,12 @@ def compare(
 
 
 @_filesystem_boundary
-def run(
-    source: str | Path,
-    plan: Plan | str | Path,
-    output_dir: str | Path,
-    *,
-    tools: Tools | None = None,
-    profile: Profile = DEFAULT_PROFILE,
-    observer: ProgressObserver | None = None,
-    native_tools: NativeTools | None = None,
-) -> RunRecord:
-    """Execute the selected assurance profile and publish reviewable evidence.
-
-    Returns
-    -------
-    RunRecord
-        Typed stages, effective status and retained evidence.
-
-    """
-    return execute(
-        source,
-        _selected_plan(plan),
-        output_dir,
-        RunSettings(tools or Tools(), profile, observer),
-        native_tools=native_tools,
-    )
-
-
-@_filesystem_boundary
 def run_batch(
     manifest: str | Path,
     output_dir: str | Path,
     *,
     tools: Tools | None = None,
-    profile: Profile = DEFAULT_PROFILE,
+    profile: Profile = Profile.PDF,
     observer: ProgressObserver | None = None,
     native_tools: NativeTools | None = None,
 ) -> BatchRecord:
@@ -397,9 +372,16 @@ def run_batch(
     return execute_batch(
         manifest,
         output_dir,
-        RunSettings(tools or Tools(), profile),
+        runner=lambda source, plan, target, item_observer: run(
+            source,
+            plan,
+            target,
+            tools=tools,
+            profile=profile,
+            observer=item_observer,
+            native_tools=native_tools,
+        ),
         on_progress=observer,
-        native_tools=native_tools,
     )
 
 

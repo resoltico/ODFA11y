@@ -7,13 +7,14 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.batch.record import BatchItemResult, BatchRecord
+from odfa11y.batch.record import BatchRecord
 from odfa11y.cli import main
 from odfa11y.errors import PlanError, ToolFailure
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
 from odfa11y.status import ExitStatus, combine_statuses
+from tests.fixtures.records import batch_item
 
 
 @pytest.mark.parametrize(
@@ -33,10 +34,7 @@ def test_exit_precedence_is_independent_of_numeric_order(
     assert combine_statuses(statuses) == expected
     assert (
         BatchRecord(
-            items=[
-                BatchItemResult(str(i), exit_status=ExitStatus(status))
-                for i, status in enumerate(statuses)
-            ]
+            items=tuple(batch_item(str(i), status) for i, status in enumerate(statuses))
         ).exit_status
         == expected
     )

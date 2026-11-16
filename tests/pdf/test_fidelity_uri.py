@@ -39,7 +39,7 @@ def test_base_change_and_equivalent_absolute_destinations(tmp_path: Path) -> Non
     right = _with_base(
         tmp_path / "right.pdf", ["file.pdf"] * 2, TextStringObject("https://example.test/two/")
     )
-    report = compare_pdfs(left, right, Pagination.SAME())
+    report = compare_pdfs(left, right, Pagination.SAME()).report
     assert {f.rule_id for f in report.findings} == {
         rules.FIDELITY004.id,
         rules.FIDELITY006.id,
@@ -49,7 +49,7 @@ def test_base_change_and_equivalent_absolute_destinations(tmp_path: Path) -> Non
         ["https://example.test/one/file.pdf"] * 2,
         TextStringObject("https://irrelevant.test/"),
     )
-    assert compare_pdfs(left, absolute, Pagination.SAME()).findings == []
+    assert compare_pdfs(left, absolute, Pagination.SAME()).report.findings == []
     assert dict(read_snapshot(left).links) == Counter({"https://example.test/one/file.pdf": 2})
 
 
@@ -227,7 +227,7 @@ def test_one_malformed_uri_does_not_abort_other_fidelity_checks(tmp_path: Path) 
     snapshot = read_snapshot(source)
     assert dict(snapshot.links) == {"https://example.test/kept": 1}
     assert snapshot.issues[0].page == 1
-    report = compare_pdfs(source, candidate, Pagination.SAME())
+    report = compare_pdfs(source, candidate, Pagination.SAME()).report
     assert {rules.FIDELITY008.id, rules.FIDELITY003.id, rules.FIDELITY006.id} <= {
         finding.rule_id for finding in report.findings
     }

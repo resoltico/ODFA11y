@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Declared native capability experiments and batch-lifetime identity caching."""
+"""Declared native capability experiments, measured only by doctor."""
 
 import tempfile
 from dataclasses import dataclass
@@ -10,15 +10,16 @@ lazy from collections.abc import Callable
 from odfa11y.contracts import JsonProperty
 from odfa11y.errors import IoFailure, OdfA11yError
 from odfa11y.native.libreoffice import ExportSettings, export_pdfua
-from odfa11y.pdf.validation import PdfValidator
-from odfa11y.progress import ProgressEvent, Step, StepState
+from odfa11y.native.tools import VeraPdf
+from odfa11y.native.verapdf import Validator
+from odfa11y.progress import Step, StepState, step
 from odfa11y.rules.registry import Rule
 from odfa11y.tool_identity import ToolIdentity
 lazy from odfa11y.odf import Family
 lazy from odfa11y.progress import ProgressObserver
 
 SourceWriter = Callable[[Path], Path]
-Evaluation = Callable[[Path, str | Path | None, float, PdfValidator | None], bool]
+Evaluation = Callable[[Path, VeraPdf | None, float, Validator | None], bool]
 Exporter = Callable[[Path, Path, ExportSettings], Path]
 
 
@@ -119,34 +120,31 @@ def measure_probe(
     identity: ToolIdentity,
     settings: ExportSettings,
     *,
-    verapdf_path: str | Path | None = None,
+    verapdf: VeraPdf | None = None,
     observer: ProgressObserver | None = None,
     export: Exporter | None = None,
-    validate: PdfValidator | None = None,
+    validate: Validator | None = None,
 ) -> ProbeExecution:
-    if observer:
-        observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.RUNNING))
-    try:
-        supported = _conduct(
-            probe, settings, verapdf_path, export or export_pdfua, validate=validate
+    with step(observer, Step.PROBE_CAPABILITIES) as progress:
+        try:
+            supported = _conduct(
+                probe, settings, verapdf, export or export_pdfua, validate=validate
+            )
+        except OSError as error:
+            progress.state = StepState.FAILED
+            return _probe_failure(probe, identity, IoFailure.from_oserror(error))
+        except OdfA11yError as error:
+            progress.state = StepState.FAILED
+            return _probe_failure(probe, identity, error)
+        result = CapabilityResult.for_probe(
+            probe,
+            CapabilityStatus.SUPPORTED if supported else CapabilityStatus.UNSUPPORTED,
+            identity,
         )
-    except OSError as error:
-        return _probe_failure(probe, identity, IoFailure.from_oserror(error), observer)
-    except OdfA11yError as error:
-        return _probe_failure(probe, identity, error, observer)
-    result = CapabilityResult.for_probe(
-        probe,
-        CapabilityStatus.SUPPORTED if supported else CapabilityStatus.UNSUPPORTED,
-        identity,
-    )
-    if observer:
-        observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.PASSED))
-    return ProbeExecution(result)
+        return ProbeExecution(result)
 
 
-def _probe_failure(probe, identity, error: OdfA11yError, observer) -> ProbeExecution:
-    if observer:
-        observer(ProgressEvent(Step.PROBE_CAPABILITIES, StepState.FAILED))
+def _probe_failure(probe, identity, error: OdfA11yError) -> ProbeExecution:
     return ProbeExecution(
         CapabilityResult.for_probe(probe, CapabilityStatus.NOT_TESTED, identity, error.message),
         error,
@@ -156,16 +154,16 @@ def _probe_failure(probe, identity, error: OdfA11yError, observer) -> ProbeExecu
 def _conduct(
     probe: CapabilityProbe,
     settings: ExportSettings,
-    verapdf: str | Path | None,
+    verapdf: VeraPdf | None,
     export: Exporter,
     *,
-    validate: PdfValidator | None,
+    validate: Validator | None,
 ) -> bool:
     with tempfile.TemporaryDirectory(prefix=f"odfa11y-probe-{probe.id}-") as directory:
         work = Path(directory)
         source = probe.source_writer(work)
         selected = ExportSettings(
-            probe.export_filter, settings.soffice, settings.timeout, work / "profile"
+            probe.export_filter, settings.office, settings.timeout, work / "profile"
         )
         pdf = export(source, work / "probe.pdf", selected)
         return probe.evaluate(pdf, verapdf, float(settings.timeout), validate)

@@ -17,16 +17,14 @@ from odfa11y.audit import audit_odf
 from odfa11y.evidence import require_free_directory
 from odfa11y.native.libreoffice import (
     EXPORT_OPTIONS,
-    ExportSettings,
     export_pdfua,
     find_soffice,
     identify_soffice,
 )
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.plans import Plan
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
+from tests.fixtures.native import export_settings
 from tests.fixtures.native_resources import (
     PIXELS,
     author_package,
@@ -34,6 +32,7 @@ from tests.fixtures.native_resources import (
     png_bytes,
     writer_resource,
 )
+from tests.fixtures.runs import RunSettings, execute
 
 
 def observe(output: Path, soffice: str) -> dict[str, object]:
@@ -117,7 +116,7 @@ def _layouts(output: Path, soffice: str, port: int, requests: list[str]) -> list
         asset.parent.mkdir(parents=True)
         asset.write_bytes(png_bytes())
         positive = export_pdfua(
-            original, directory / "embedded.pdf", ExportSettings("writer_pdf_Export", soffice)
+            original, directory / "embedded.pdf", export_settings("writer_pdf_Export", soffice)
         )
         images = decoded_images(positive)
         if ((4, 4), PIXELS) not in images:
@@ -134,7 +133,7 @@ def _layouts(output: Path, soffice: str, port: int, requests: list[str]) -> list
             parser_requests = list(requests)
             requests.clear()
             pdf = export_pdfua(
-                source, directory / f"{label}.pdf", ExportSettings("writer_pdf_Export", soffice)
+                source, directory / f"{label}.pdf", export_settings("writer_pdf_Export", soffice)
             )
             actual = decoded_images(pdf)
             item: dict[str, object] = {
@@ -155,7 +154,7 @@ def _layouts(output: Path, soffice: str, port: int, requests: list[str]) -> list
                 source,
                 Plan.for_source(source),
                 evidence,
-                RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
+                RunSettings(tools=Tools(soffice=soffice), profile=Profile.PDF),
             )
             item["pipeline"] = {
                 "exit_status": run.exit_status,

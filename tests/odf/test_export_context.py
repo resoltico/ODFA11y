@@ -7,7 +7,6 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.audit.engine import ExportContextMeasurements
 from odfa11y.errors import DocumentRefusal
@@ -16,12 +15,12 @@ from odfa11y.odf import OdfDocument, Part, qn
 from odfa11y.odf.export_context import native_export_limitations, require_native_context
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile, Refused
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import native_fakes
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -51,12 +50,16 @@ def test_flat_render_dependencies_are_reported_without_fetching(tmp_path: Path, 
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "evidence",
-        RunSettings(tools=Tools(soffice="missing-tool"), profile=profile_named("verify")),
+        RunSettings(profile=Profile.PDF),
+        native_tools=native_fakes(),
     )
     assert result.failed_stage == "export-source"
     assert result.exit_status == 2
-    assert "frame 'Asset'" in (result.stages[4].reason or "")
-    assert "resource" in (result.stages[4].reason or "")
+    stage = next(stage for stage in result.stages if stage.name == "export-source")
+    refusal = stage.outcome
+    assert isinstance(refusal, Refused)
+    assert "frame 'Asset'" in str(refusal.error)
+    assert "resource" in str(refusal.error)
     assert check_bundle(tmp_path / "evidence") == []
     assert not (tmp_path / "evidence" / "source.pdf").exists()
     assert (tmp_path / "evidence" / "remediated.fodt").read_bytes() == source.read_bytes()
@@ -74,7 +77,7 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "evidence",
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     )
     assert result.passed
     published = OdfDocument.open(tmp_path / "evidence" / "remediated.fodt")
@@ -102,7 +105,7 @@ def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         output,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     )
     assert result.passed
     assert (output / "remediated.fodt").read_bytes() == source.read_bytes()

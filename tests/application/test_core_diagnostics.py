@@ -49,7 +49,7 @@ def test_core_inspection_uses_real_registered_probe_and_returns_no_ui(
         visited.append(source)
         document = OdfDocument.open(source)
         assert document.kind is not None
-        assert settings.soffice == "selected-soffice"
+        assert settings.office.executable == "selected-soffice"
         assert settings.timeout == 7
         by_source = {
             "link.odt": ProbeId.LINK_DESCRIPTIONS,

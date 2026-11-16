@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
+from odfa11y.application.compare import compare_documents, is_pdf
+from odfa11y.application.export import export_document
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal, PackageError, ToolFailure
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.comparison import compare_documents, is_pdf
-from odfa11y.run.native import export_document
 from tests.fixtures.native import refusing
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.pdf import text_pdf
@@ -76,7 +76,9 @@ def test_core_odf_comparison_keeps_renders_alive_and_cleans_scratch(
     rendered: list[Path] = []
 
     def render(path: Path, destination: Path, settings: ExportSettings) -> Path:
-        assert path in {source, candidate}
+        assert path not in {source, candidate}
+        assert path.name in {source.name, candidate.name}
+        assert path.read_bytes() == (source if path.name == source.name else candidate).read_bytes()
         assert settings.profile_dir is not None
         profiles.append(Path(settings.profile_dir))
         rendered.append(destination)
@@ -117,7 +119,7 @@ def test_core_comparison_cleans_private_render_after_candidate_export_failure(
     rendered: list[Path] = []
 
     def render(path: Path, destination: Path, _settings: ExportSettings) -> Path:
-        if path == candidate:
+        if destination.name == "candidate.pdf":
             msg = "Candidate native export failed"
             raise ToolFailure(msg)
         rendered.append(destination)

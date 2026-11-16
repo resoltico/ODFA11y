@@ -1,195 +1,96 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Run explicit items serially through the ordinary document pipeline."""
+"""Execute independent prepared runs and publish immutable batch progress snapshots."""
 
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from odfa11y.application.native import NativeTools
 from odfa11y.batch.batch_file import load_manifest, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
-from odfa11y.errors import OdfA11yError
-from odfa11y.evidence import JsonArtifact, Redactor, TextArtifact, write_bundle
-from odfa11y.plans.fidelity import Pagination
-from odfa11y.plans.registry import load_plan
-from odfa11y.progress import ProgressEvent, Stage, Step, StepState
-from odfa11y.records import DocumentIdentity
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.record import RunRecord, StageResult
-from odfa11y.run.review import render_review
-from odfa11y.status import BatchStatus, ExitStatus, StageStatus, failure_status
+from odfa11y.errors import Failure, IoFailure, OdfA11yError
+from odfa11y.evidence.redact import Redactor
+from odfa11y.progress import ProgressObserver, Step, StepState, step
+from odfa11y.run.record import RunRecord
 lazy from odfa11y.batch.batch_file import BatchItem
-lazy from odfa11y.progress import ProgressObserver
+
+type ItemRunner = Callable[[Path, Path, Path, ProgressObserver | None], RunRecord]
 
 
 def run_batch(
     manifest: str | Path,
     output_dir: str | Path,
-    options: RunSettings | None = None,
     *,
     on_progress: ProgressObserver | None = None,
-    native_tools: NativeTools | None = None,
+    runner: ItemRunner,
 ) -> BatchRecord:
-    """Run every item, keeping completed evidence through ordinary failures and interruption.
-
-    Progress observers receive fixed batch-step events only and must not raise.
-
-    Returns
-    -------
-    BatchRecord
-        Aggregate exit status and per-item relative evidence references.
-
-    """
+    """Retain completed runs and preparation errors through failure or interruption."""
     manifest, output = Path(manifest), Path(output_dir)
-    options = options or RunSettings()
-    _ = options.profile  # Validate the profile before effects.
     items = load_manifest(manifest)
     preflight(manifest, output, items)
-    record = BatchRecord(items=[BatchItemResult(item.id) for item in items])
+    record = BatchRecord(tuple(BatchItemResult(item.id) for item in items))
     output.mkdir(parents=True)
     record.publish(output)
     try:
-        _run_items(
-            items,
-            record,
-            output,
-            options,
-            on_progress,
-            native_tools=native_tools or NativeTools(),
-        )
+        for index, item in enumerate(items):
+            started = replace(record.items[index], _started=True)
+            record = _with_item(record, index, started)
+            record.publish(output)
+            with step(on_progress, Step.BATCH_ITEM, item=item.id) as progress:
+                observer = (
+                    (lambda event, identity=item.id: on_progress(replace(event, item=identity)))
+                    if on_progress
+                    else None
+                )
+                result = _run_item(item, output / item.id, observer, runner)
+                record = _with_item(record, index, replace(started, _result=result))
+                record.publish(output)
+                if result.exit_status:
+                    progress.state = StepState.FAILED
     except KeyboardInterrupt:
-        for progress in record.items:
-            if progress.status == BatchStatus.RUNNING:
-                progress.status = BatchStatus.INTERRUPTED
-                progress.exit_status = ExitStatus.EXECUTION_FAILURE
-                if on_progress is not None:
-                    on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.FAILED, progress.id))
-        record.status = BatchStatus.INTERRUPTED
+        record = replace(
+            record,
+            _interrupted=True,
+            items=tuple(
+                replace(item, _interrupted=True) if item._started and item._result is None else item
+                for item in record.items
+            ),
+        )
         record.publish(output)
         raise
-    else:
-        record.status = BatchStatus.FAILED if record.exit_status else BatchStatus.COMPLETED
+    record = replace(record, _complete=True)
     record.publish(output)
     return record
 
 
-def _run_items(
-    items: tuple[BatchItem, ...],
-    record: BatchRecord,
-    output: Path,
-    options: RunSettings,
-    on_progress: ProgressObserver | None,
-    *,
-    native_tools: NativeTools,
-) -> None:
-    for item, progress in zip(items, record.items, strict=True):
-        progress.status = BatchStatus.RUNNING
-        record.publish(output)
-        if on_progress is not None:
-            on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.RUNNING, item.id))
-        observer = on_progress or options.on_progress
-        item_options = replace(
-            options,
-            on_progress=_item_observer(observer, item.id) if observer else None,
-        )
-        _advance_item(
-            item,
-            progress,
-            output / item.id,
-            item_options,
-            native_tools=native_tools,
-        )
-        record.publish(output)
-        if on_progress is not None:
-            on_progress(
-                ProgressEvent(
-                    Step.BATCH_ITEM,
-                    StepState.PASSED
-                    if progress.status == BatchStatus.COMPLETED
-                    else StepState.FAILED,
-                    item.id,
-                )
-            )
-
-
-def _item_observer(observer: ProgressObserver, item_id: str) -> ProgressObserver:
-    return lambda event: observer(replace(event, item=item_id))
-
-
-def _advance_item(
-    item: BatchItem,
-    progress: BatchItemResult,
-    target: Path,
-    options: RunSettings,
-    *,
-    native_tools: NativeTools,
-) -> None:
-    try:
-        result = _run_item(item, target, options, native_tools=native_tools)
-    except (OdfA11yError, OSError) as exc:
-        progress.status = BatchStatus.FAILED
-        progress.exit_status = failure_status(exc)
-        progress.failed_stage = Stage.PUBLISH_EVIDENCE
-        return
-    progress.status = BatchStatus.COMPLETED if result.passed else BatchStatus.FAILED
-    progress.exit_status = result.exit_status
-    progress.failed_stage = result.failed_stage
-    progress.evidence = item.id
+def _with_item(record: BatchRecord, index: int, item: BatchItemResult) -> BatchRecord:
+    return replace(record, items=(*record.items[:index], item, *record.items[index + 1 :]))
 
 
 def _run_item(
-    item: BatchItem,
-    target: Path,
-    options: RunSettings,
-    *,
-    native_tools: NativeTools,
-) -> RunRecord:
+    item: BatchItem, target: Path, observer: ProgressObserver | None, runner: ItemRunner
+) -> RunRecord | Failure:
     try:
-        plan = load_plan(item.plan)
+        return runner(item.source, item.plan, target, observer)
     except (OdfA11yError, OSError) as exc:
-        return _failure(item, target, options, Stage.LOAD_PLAN, exc)
-    try:
-        return execute(
-            item.source,
-            plan,
-            target,
-            options,
-            native_tools=native_tools,
+        error = IoFailure.from_oserror(exc) if isinstance(exc, OSError) else exc
+        redactor = Redactor.for_locations({
+            "source": item.source,
+            "plan": item.plan,
+            "inputs": item.source.parent,
+            "output": target,
+        })
+        failure = error.as_record()
+        remedy = failure.remedy
+        if remedy is not None:
+            remedy = replace(
+                remedy,
+                target=redactor.text(remedy.target) if remedy.target else None,
+                detail=redactor.text(remedy.detail) if remedy.detail else None,
+            )
+        return replace(
+            failure,
+            remedy=remedy,
+            message=redactor.text(failure.message),
+            details=redactor.text(failure.details),
+            problems=tuple(redactor.text(problem) for problem in failure.problems),
         )
-    except (OdfA11yError, OSError) as exc:
-        return _failure(item, target, options, Stage.PIPELINE, exc)
-
-
-def _failure(
-    item: BatchItem,
-    target: Path,
-    options: RunSettings,
-    stage: Stage,
-    exc: OdfA11yError | OSError,
-) -> RunRecord:
-    record = RunRecord(
-        document=DocumentIdentity(item.id),
-        fidelity_policy=Pagination.SAME(),
-        profile=options.profile,
-    )
-    reason = str(exc) if isinstance(exc, OdfA11yError) else "Item execution could not complete"
-    record.stages.append(
-        StageResult(
-            stage, StageStatus.FAILED, reason, _error=True, _failure_status=failure_status(exc)
-        )
-    )
-    redactor = Redactor.for_locations({
-        "plan": item.plan,
-        "inputs": item.plan.parent,
-        "source": item.source.parent,
-        "output": target,
-    })
-    write_bundle(
-        target,
-        {
-            "run.json": JsonArtifact(record.as_dict()),
-            "REVIEW.md": TextArtifact(render_review(record)),
-        },
-        redactor,
-    )
-    return record

@@ -43,7 +43,8 @@ def test_malformed_annotations_fail_cleanly(
     if shape == "action":
         assert read_snapshot(path).issues
         assert rules.FIDELITY008.id in {
-            finding.rule_id for finding in compare_pdfs(path, path, Pagination.SAME()).findings
+            finding.rule_id
+            for finding in compare_pdfs(path, path, Pagination.SAME()).report.findings
         }
         assert main(["compare", str(path), str(path)]) == 2
     else:
@@ -72,6 +73,6 @@ def test_uri_multiplicity_and_change(tmp_path: Path, *, indirect: bool) -> None:
         writer.write(path)
         assert dict(read_snapshot(path).links)[f"https://example.test/{target}"] == 2
         paths.append(path)
-    report = compare_pdfs(paths[0], paths[1], Pagination.SAME())
+    report = compare_pdfs(paths[0], paths[1], Pagination.SAME()).report
     assert report.error_count != 0
     assert any(f.rule_id.startswith("FID") for f in report.findings)

@@ -15,7 +15,7 @@ from pypdf.generic import NameObject, TextStringObject
 from odfa11y import __version__
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
-from odfa11y.errors import ToolFailure, ToolUnavailable
+from odfa11y.errors import IoFailure, ToolFailure
 from odfa11y.families import probes as probe_operations
 from odfa11y.families.probes import (
     CapabilityResult,
@@ -28,6 +28,7 @@ from odfa11y.families.text.probes import PROBES, write_link_probe
 from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import Family, OdfDocument
 from odfa11y.tool_identity import ToolIdentity
+from tests.fixtures.native import export_settings
 from tests.fixtures.pdf import (
     annotation_references,
     dictionary,
@@ -39,7 +40,7 @@ from tests.fixtures.probes import conclusive_probe
 lazy from odfa11y.families.probes import CapabilityProbe
 
 WRITER = "writer_pdf_Export"
-SETTINGS = ExportSettings(WRITER)
+SETTINGS = export_settings(WRITER)
 LINK_BODY = (
     b'<text:p text:style-name="Body">See <text:a xlink:type="simple" '
     b'xlink:href="https://example.test/a">the site</text:a>.</text:p>'
@@ -127,9 +128,9 @@ def test_a_missing_libreoffice_propagates(tmp_path: Path) -> None:
     execution = measure_probe(
         PROBES[0],
         ToolIdentity("LibreOffice", "26.8.1.1"),
-        ExportSettings(WRITER, soffice=tmp_path / "absent"),
+        export_settings(WRITER, soffice=tmp_path / "absent"),
     )
-    assert isinstance(execution.error, ToolUnavailable)
+    assert isinstance(execution.error, IoFailure)
     assert execution.result.status == CapabilityStatus.NOT_TESTED
 
 

@@ -12,10 +12,9 @@ from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -38,7 +37,7 @@ def test_native_published_artifact_syntax_content_and_identity(
             tools=Tools(
                 soffice=external_tool("soffice", "libreoffice"), verapdf=external_tool("verapdf")
             ),
-            profile=profile_named("production"),
+            profile=Profile.parse("production"),
         ),
     )
     assert result.passed, result.as_dict()

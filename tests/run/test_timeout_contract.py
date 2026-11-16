@@ -11,15 +11,16 @@ lazy from pathlib import Path
 import pytest
 from pypdf import PdfWriter
 
+from odfa11y.application.audit import audit_document
+from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
-from odfa11y.audit.validation import check_pdfua, validate_pdfua
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
 from odfa11y.errors import InvalidOption, ToolFailure
-from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.native.process import run_bounded
-from odfa11y.run.inspection import audit_document
+from odfa11y.native.tools import ResolvedTools
 from odfa11y.tool_timeout import Timeout
+from tests.fixtures.native import check_pdfua, export_settings, validate_pdfua, validator_tool
 
 
 @pytest.mark.parametrize(
@@ -48,13 +49,11 @@ def test_invalid_timeouts_launch_nothing(value: object, monkeypatch: pytest.Monk
     with pytest.raises(InvalidOption, match="Timeout"):
         Tools(timeout=invalid_timeout)
     with pytest.raises(InvalidOption, match="Timeout"):
-        ExportSettings("writer_pdf_Export", timeout=invalid_timeout)
+        export_settings("writer_pdf_Export", timeout=invalid_timeout)
     with pytest.raises(InvalidOption, match="Timeout"):
         check_pdfua("missing.pdf", subject="missing.pdf", timeout=invalid_timeout)
     with pytest.raises(InvalidOption, match="Timeout"):
         validate_pdfua("missing.pdf", timeout=invalid_timeout)
-    with pytest.raises(InvalidOption, match="Timeout"):
-        list(audit_document("missing.pdf", timeout=invalid_timeout))
 
 
 @pytest.mark.parametrize(
@@ -93,5 +92,11 @@ def test_selected_validator_timeout_terminates_actual_invocation(tmp_path: Path)
     writer.write(pdf)
     started = time.monotonic()
     with pytest.raises(ToolFailure, match=r"timed out after 0\.1 s"):
-        list(audit_document(pdf, verapdf_path=executable, timeout=0.1))
+        list(
+            audit_document(
+                pdf,
+                tools=ResolvedTools(Timeout(0.1), verapdf=validator_tool(executable)),
+                native_tools=NativeTools(),
+            )
+        )
     assert time.monotonic() - started < 10

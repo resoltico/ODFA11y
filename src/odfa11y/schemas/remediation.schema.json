@@ -14740,6 +14740,38 @@
                 "fidelity"
               ]
             },
+            "review_topics": {
+              "items": {
+                "enum": [
+                  "alt-text",
+                  "chart-meaning",
+                  "colour",
+                  "colour-and-layout",
+                  "database-meaning",
+                  "export-boundary",
+                  "header-cells",
+                  "headings",
+                  "hidden-content",
+                  "image-meaning",
+                  "labels-and-ranges",
+                  "language",
+                  "layers-and-annotations",
+                  "layout",
+                  "link-purpose",
+                  "lists",
+                  "mathematics",
+                  "page-titles",
+                  "privacy-and-execution",
+                  "reading-order",
+                  "sheet-names",
+                  "slides-and-notes",
+                  "source-assurance",
+                  "source-boundary",
+                  "table-headers"
+                ]
+              },
+              "type": "array"
+            },
             "schema_version": {
               "enum": [
                 1
@@ -14774,6 +14806,7 @@
             "subject",
             "findings",
             "facts",
+            "review_topics",
             "decisions",
             "schema_version",
             "summary"
@@ -39245,8 +39278,7 @@
           "enum": [
             "passed",
             "failed",
-            "skipped",
-            "not-applicable"
+            "skipped"
           ]
         },
         "unlocated_count": {
@@ -39271,12 +39303,12 @@
         }
       },
       "required": [
-        "status",
         "version",
         "before_count",
         "after_count",
         "new_count",
-        "unlocated_count"
+        "unlocated_count",
+        "status"
       ],
       "type": "object"
     },

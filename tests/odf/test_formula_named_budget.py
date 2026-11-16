@@ -8,6 +8,7 @@ lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.application.export import export_document
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
 from odfa11y.audit.engine import ExportContextMeasurements
@@ -17,14 +18,12 @@ from odfa11y.odf import OdfDocument, validate
 from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.native import export_document
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.documents import TABLE_BODY, Variant, make_flat
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import recording, refusing
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 
 
 def named_chain(tmp_path: Path, count: int, wrappers: int) -> Path:
@@ -83,7 +82,7 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         tmp_path / "evidence",
-        RunSettings(profile=profile_named("verify")),
+        RunSettings(profile=Profile.PDF),
         native_tools=native_tools,
     )
     assert record.failed_stage == "export-source"

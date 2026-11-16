@@ -4,9 +4,12 @@
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from odfa11y.errors import ToolFailure
 from odfa11y.native.process import find_executable, run_bounded
+from odfa11y.native.tools import VeraPdf
+from odfa11y.tool_identity import ToolIdentity
 from odfa11y.tool_timeout import Timeout
 
 
@@ -14,6 +17,7 @@ from odfa11y.tool_timeout import Timeout
 class ValidationOutput:
     xml: bytes
     diagnostics: str
+    identity: ToolIdentity
 
 
 def find_verapdf(requested: str | Path | None = None) -> str:
@@ -31,7 +35,7 @@ def find_verapdf(requested: str | Path | None = None) -> str:
 def run_verapdf(
     pdf: str | Path,
     *,
-    executable: str | Path | None = None,
+    tool: VeraPdf,
     flavour: str = "ua1",
     timeout: float,
     max_report_bytes: int,
@@ -43,7 +47,7 @@ def run_verapdf(
     """
     timeout = Timeout(timeout)
     command = [
-        find_verapdf(executable),
+        tool.executable,
         "-f",
         flavour,
         "--format",
@@ -63,4 +67,18 @@ def run_verapdf(
     if completed.returncode != 0 and not completed.stdout.strip():
         msg = f"veraPDF failed (exit status {completed.returncode})."
         raise ToolFailure(msg, details=completed.stderr.strip())
-    return ValidationOutput(completed.stdout.encode("utf-8"), completed.stderr)
+    return ValidationOutput(completed.stdout.encode("utf-8"), completed.stderr, tool.identity)
+
+
+class Validator(Protocol):
+    """The raw validator operation accepted by native consumers."""
+
+    def __call__(
+        self,
+        pdf: str | Path,
+        *,
+        tool: VeraPdf,
+        timeout: float,
+        max_report_bytes: int,
+        flavour: str = "ua1",
+    ) -> ValidationOutput: ...

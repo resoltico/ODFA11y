@@ -13,15 +13,13 @@ import pytest
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.decisions.edit import Status
-from odfa11y.errors import PackageError, PlanError, ToolFailure
+from odfa11y.errors import PackageError, PlanError, ToolFailure, ToolUnavailable
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.pdf.fidelity import compare as compare_module
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.status import StageStatus
+from odfa11y.status import Profile
 from tests.fixtures.answers import (
     address_input,
     apply_in_memory,
@@ -34,6 +32,7 @@ from tests.fixtures.answers import (
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 lazy from tests.fixtures.writer import Features
 
@@ -163,7 +162,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
         tmp_path / "v12.odt", version="1.2", features={"with_data_table": True}
     )
     result = apply_answers(valid, tmp_path / "out.odt", [version_input("1.4")])
-    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.status == "passed"
     assert result.schema.version == "1.4"
     package = PackageStorage(valid)
     package.write_member(
@@ -204,14 +203,11 @@ def test_a_non_executable_soffice_fails_the_stage_and_still_publishes_evidence(
     fake = tmp_path / "soffice"
     fake.write_text("#!/bin/sh\n", encoding="utf-8")
     fake.chmod(0o600)
-    record = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        tmp_path / "out",
-        RunSettings(tools=Tools(soffice=str(fake))),
-    )
-    assert record.failed_stage == "export-source"
-    assert (tmp_path / "out" / "run.json").is_file()
+    with pytest.raises(ToolUnavailable):
+        execute(
+            source, reviewed_plan(source), tmp_path / "out", RunSettings(tools=Tools(soffice=fake))
+        )
+    assert not (tmp_path / "out").exists()
 
 
 def test_a_renderer_failure_is_a_tool_error_not_a_traceback(
@@ -237,13 +233,13 @@ def test_published_outputs_honour_the_umask_instead_of_being_owner_only(tmp_path
             source,
             reviewed_plan(source, [], Pagination.SAME()),
             tmp_path / "out",
-            RunSettings(tools=Tools(soffice="missing")),
+            RunSettings(profile=Profile.SOURCE),
         )
         remediated = tmp_path / "remediated.odt"
         apply_answers(source, remediated, [metadata_input(title="Modes")])
     finally:
         os.umask(previous)
-    assert record.failed_stage == "export-source"
+    assert record.failed_stage is None
     assert stat.S_IMODE(remediated.stat().st_mode) == 0o644
     bundle = tmp_path / "out"
     assert stat.S_IMODE(bundle.stat().st_mode) == 0o755

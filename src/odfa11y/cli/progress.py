@@ -7,7 +7,7 @@ from odfa11y import Step, terminal_text
 lazy from odfa11y import ProgressEvent, ProgressObserver
 
 _LABELS = {
-    Step.IDENTIFY_SOURCE: "Identify source",
+    Step.PREPARE: "Prepare inputs",
     Step.AUDIT_SOURCE: "Audit source",
     Step.REMEDIATE: "Apply reviewed decisions",
     Step.AUDIT_REMEDIATED: "Audit remediated source",
@@ -17,14 +17,11 @@ _LABELS = {
     Step.VALIDATE_PDF: "Validate PDF/UA",
     Step.FIDELITY: "Compare fidelity",
     Step.PUBLISH_EVIDENCE: "Publish evidence",
-    Step.LOAD_PLAN: "Load reviewed plan",
-    Step.PIPELINE: "Run assurance workflow",
     Step.AUDIT_DOCUMENT: "Audit document",
     Step.EXPORT_PDF: "Export PDF",
     Step.EXPORT_CANDIDATE: "Export candidate PDF",
     Step.COMPARE_FIDELITY: "Compare fidelity",
     Step.PROBE_CAPABILITIES: "Measure native capabilities",
-    Step.PROBE_TOOLCHAIN: "Inspect tools",
     Step.BATCH_ITEM: "Process batch item",
 }
 

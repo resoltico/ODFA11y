@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Compose independent native acquisition and PDF validation interpretation."""
+"""Compose raw native validation with the independent XML interpreter."""
 
-from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
-from odfa11y.native.verapdf import find_verapdf, run_verapdf
+from odfa11y.native.tools import VeraPdf
+from odfa11y.native.verapdf import Validator, run_verapdf
 from odfa11y.pdf.validation import (
     MAX_REPORT_BYTES,
-    PdfValidator,
     VeraPdfResult,
     add_verapdf_findings,
     parse_validation,
@@ -19,41 +19,25 @@ from odfa11y.tool_timeout import Timeout
 def validate_pdfua(
     pdf: str | Path,
     *,
-    executable: str | Path | None = None,
-    flavour: str = "ua1",
+    tool: VeraPdf,
     timeout: float = Timeout.DEFAULT,
+    validator: Validator = run_verapdf,
 ) -> VeraPdfResult:
-    output = run_verapdf(
-        pdf,
-        executable=executable,
-        flavour=flavour,
-        timeout=timeout,
-        max_report_bytes=MAX_REPORT_BYTES,
-    )
-    return parse_validation(output.xml, output.diagnostics)
+    """Interpret one completed invocation without discovering or identifying tools again."""
+    output = validator(pdf, tool=tool, timeout=timeout, max_report_bytes=MAX_REPORT_BYTES)
+    return replace(parse_validation(output.xml, output.diagnostics), identity=output.identity)
 
 
 def check_pdfua(
     pdf: str | Path,
     *,
     subject: str,
-    executable: str | Path | None = None,
+    tool: VeraPdf,
     timeout: float = Timeout.DEFAULT,
-    validator: PdfValidator | None = None,
-    locate: Callable[[str | Path | None], str] | None = None,
+    validator: Validator = run_verapdf,
 ) -> tuple[Report, VeraPdfResult]:
-    """Validate a PDF and report the outcome, refusing an unavailable validator.
-
-    Returns
-    -------
-    tuple[Report, VeraPdfResult]
-        The PDF validation report and parsed validator result. Tool absence raises
-        ToolUnavailable before a validation report is returned.
-
-    """
-    timeout = Timeout(timeout)
+    """Return findings and parsed XML from the already resolved validator."""
     report = Report(kind=ReportKind.PDF_VALIDATION, subject=subject, _sources=(Path(pdf),))
-    located = (locate or find_verapdf)(executable)
-    result = (validator or validate_pdfua)(pdf, executable=located, timeout=timeout)
+    result = validate_pdfua(pdf, tool=tool, timeout=timeout, validator=validator)
     add_verapdf_findings(report, result)
     return report, result

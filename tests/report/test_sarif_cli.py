@@ -41,7 +41,7 @@ def test_audit_sarif_mixes_odf_pdf_and_validation_reports_without_local_paths(
         "sarif",
         "--source-root",
         str(tmp_path),
-        "--verapdf-path",
+        "--verapdf",
         str(tmp_path / "missing-validator"),
     ]
     assert (

@@ -8,12 +8,12 @@ import pytest
 from lxml import etree
 from pypdf import PdfReader
 
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.visibility.revisions import RevisionMeasurements
 from odfa11y.odf import OdfDocument, Part
 from odfa11y.rules import registry as rules
-from odfa11y.run.native import export_document
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.operations import apply_answers

@@ -12,7 +12,7 @@ from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions import Decision
 from odfa11y.decisions.answers import GraphicAlternativeAnswer
 from odfa11y.decisions.edit import Outcome, Status
-from odfa11y.errors import PlanError
+from odfa11y.errors import PlanError, ToolUnavailable
 from odfa11y.families.spreadsheet.answers import SheetNameAnswer
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
 from odfa11y.plans import Plan
@@ -20,9 +20,6 @@ from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     FaultEdit,
     address_input,
@@ -33,6 +30,7 @@ from tests.fixtures.answers import (
 from tests.fixtures.measurements import measurement
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.spreadsheets import (
     LAYOUTS,
     make_spreadsheet,
@@ -146,7 +144,7 @@ def test_a_plan_renames_sheets_and_describes_pictures_and_is_idempotent(
     output = tmp_path / f"out{source.suffix}"
     result = apply_answers(source, output, plan)
     assert result.changed
-    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.status == "passed"
     assert result.schema.new_count == 0
     assert not {rules.SHEET002.id, rules.GRAPHIC001.id} & ids(output)
     again = apply_answers(output, tmp_path / f"again{source.suffix}", plan)
@@ -230,11 +228,6 @@ def test_a_spreadsheet_pipeline_exports_with_the_calc_filter_and_stops_without_l
         reviewed_sheet_names(source, {"Sheet1": "Budget"}),
         graphic_inputs({"Logo": graphic_answer("Logo")}),
     ]
-    record = execute(
-        source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options
-    )
-    statuses = {stage.name.value: stage.status for stage in record.stages}
-    assert statuses["remediate"] == "passed"
-    assert statuses["export-source"] == "failed"
-    assert statuses["audit-pdf"] == "skipped"
-    assert (tmp_path / "out" / "remediated.ods").is_file()
+    with pytest.raises(ToolUnavailable):
+        execute(source, reviewed_plan(source, plan, Pagination.SAME()), tmp_path / "out", options)
+    assert not (tmp_path / "out").exists()

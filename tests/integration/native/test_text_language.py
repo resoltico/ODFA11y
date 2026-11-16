@@ -8,12 +8,12 @@ import pytest
 from pypdf import PdfReader
 
 from odfa11y import plan, remediate
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.families.text.language.audit import LanguageMeasurements, MeasuredLanguages
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.rules import registry as rules
-from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.paths import TESTS

@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import ClassVar, Literal, Protocol
 
-from odfa11y.errors import InvalidOption, OdfA11yError
+from odfa11y.contracts import JsonProperty
+from odfa11y.errors import Failure, InvalidOption, OdfA11yError
 from odfa11y.exit_codes import EXIT_PRECEDENCE, ExitStatus, combine_statuses
 from odfa11y.progress import Stage
 
@@ -20,61 +21,6 @@ def failure_status(error: BaseException) -> ExitStatus:
 
     """
     return ExitStatus(getattr(error, "exit_status", ExitStatus.EXECUTION_FAILURE))
-
-
-class StageStatus(StrEnum):
-    """The outcome or applicability of one pipeline stage."""
-
-    PASSED = "passed"
-    FAILED = "failed"
-    SKIPPED = "skipped"
-    NOT_APPLICABLE = "not-applicable"
-
-    @property
-    def meaning(self) -> str:
-        """Return the core-owned meaning of this value."""
-        return {
-            self.PASSED: "The stage completed without a rejected finding.",
-            self.FAILED: "The stage failed its acceptance gate or could not execute.",
-            self.SKIPPED: "The stage did not execute.",
-            self.NOT_APPLICABLE: "The document family does not support this stage.",
-        }[self]
-
-
-class RunStatus(StrEnum):
-    """Overall pipeline assurance result."""
-
-    PASSED = StageStatus.PASSED
-    FAILED = StageStatus.FAILED
-
-    @property
-    def meaning(self) -> str:
-        """Return the core-owned meaning of this value."""
-        return {
-            self.PASSED: "The run completed with no rejected stage outcome.",
-            self.FAILED: "At least one run stage failed its selected policy.",
-        }[self]
-
-
-class BatchStatus(StrEnum):
-    """Execution lifetime of a batch or one manifest item."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    INTERRUPTED = "interrupted"
-
-    @property
-    def meaning(self) -> str:
-        """Return the core-owned meaning of this value."""
-        return {
-            self.PENDING: "The batch item has not started.",
-            self.RUNNING: "The batch or item is executing.",
-            self.COMPLETED: "The batch or item completed successfully.",
-            self.FAILED: "The batch or item finished with a rejected outcome.",
-            self.INTERRUPTED: "An interruption prevented the batch or item from completing.",
-        }[self]
 
 
 class Profile(StrEnum):
@@ -175,9 +121,17 @@ class GateFailed[R: GateReport]:
 class Refused:
     """A source, plan or output policy prevented the stage from producing its artifact."""
 
-    error: OdfA11yError
+    _error: OdfA11yError
     status: Literal["refused"] = field(default="refused", init=False)
     blocks_dependants: ClassVar[bool] = True
+
+    @property
+    def error(self) -> OdfA11yError:
+        return self._error
+
+    @JsonProperty
+    def failure(self) -> Failure:
+        return self._error.as_record()
 
     def exit_status(self, strict: bool = False) -> ExitStatus:
         return self.error.exit_status
@@ -187,9 +141,17 @@ class Refused:
 class Crashed:
     """An execution or operating-system failure prevented the stage from completing."""
 
-    error: OdfA11yError
+    _error: OdfA11yError
     status: Literal["crashed"] = field(default="crashed", init=False)
     blocks_dependants: ClassVar[bool] = True
+
+    @property
+    def error(self) -> OdfA11yError:
+        return self._error
+
+    @JsonProperty
+    def failure(self) -> Failure:
+        return self._error.as_record()
 
     def exit_status(self, strict: bool = False) -> ExitStatus:
         return ExitStatus.EXECUTION_FAILURE
@@ -240,7 +202,6 @@ type StageOutcome[R: GateReport] = (
 
 __all__ = [
     "EXIT_PRECEDENCE",
-    "BatchStatus",
     "Crashed",
     "ExitStatus",
     "GateFailed",
@@ -248,11 +209,9 @@ __all__ = [
     "Passed",
     "Profile",
     "Refused",
-    "RunStatus",
     "SkipReason",
     "Skipped",
     "StageOutcome",
-    "StageStatus",
     "combine_statuses",
     "failure_status",
     "gate_outcome",

@@ -7,16 +7,16 @@ lazy from pathlib import Path
 import pytest
 from pypdf import PdfReader
 
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.families.text.tables.audit import MeasuredTable, TableMeasurements
 from odfa11y.pdf import audit_pdfua
 from odfa11y.rules import registry as rules
-from odfa11y.run.native import export_document
 from odfa11y.targets import require_target
 from tests.fixtures.answers import header_answer, header_inputs
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import validate_pdfua
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 

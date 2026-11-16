@@ -14,6 +14,7 @@ from odfa11y.audit.package import (
     audit_versions,
     storage_location,
 )
+from odfa11y.audit.review import review_topics
 from odfa11y.concepts.metadata import read_metadata
 from odfa11y.contracts import Description
 from odfa11y.errors import PackageError
@@ -118,6 +119,7 @@ def audit_document(
     audit_versions(document, report)
     metadata = audit_metadata(analysis, report)
     adapter.audit(document, report, metadata)
+    report.review_topics = review_topics(document)
     _audit_export_context(document, report)
     if schema:
         audit_schema(document, report)

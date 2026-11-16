@@ -10,18 +10,19 @@ import pytest
 from odfa11y.capture import source_digest
 from odfa11y.odf import PackageStorage
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
-@pytest.mark.parametrize("boundary", ["capture_source", "audit_odf", "execute_decisions"])
+@pytest.mark.parametrize("boundary", ["capture_source", "audit_document", "execute_decisions"])
 def test_source_replacement_uses_captured_bytes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, boundary: str
 ) -> None:
-    runner = importlib.import_module("odfa11y.run.engine")
+    runner = importlib.import_module(
+        "odfa11y.application.run" if boundary == "capture_source" else "odfa11y.run.stages"
+    )
     source = make_minimal_odt(tmp_path / "original.odt")
     original = source.read_bytes()
     digest = source_digest(source)
@@ -47,7 +48,7 @@ def test_source_replacement_uses_captured_bytes(
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         target,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     )
     assert result.passed
     assert result.document.sha256 == digest

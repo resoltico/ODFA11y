@@ -13,7 +13,6 @@ from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import OutputOccupied, PlanError
 from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements
 from odfa11y.odf.allowance import Allowance, Attributes
-from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     FaultEdit,
     address_input,
@@ -82,7 +81,7 @@ def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
     assert_record_schema(result)
     assert result.destination == destination
     assert result.changed
-    assert result.schema.status == StageStatus.PASSED
+    assert result.schema.status == "passed"
     assert result.schema.version == "1.4"
     assert result.schema.new_count == 0
     assert {o.status for o in result.outcomes} == {Status.APPLIED}

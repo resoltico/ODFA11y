@@ -16,9 +16,7 @@ from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import (
     FaultEdit,
     apply_in_memory,
@@ -26,9 +24,11 @@ from tests.fixtures.answers import (
     database_inputs,
     metadata_input,
 )
+from tests.fixtures.native import native_fakes
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 
 SOURCE = TESTS / "family_corpus/fruit-database.odb"
 
@@ -183,14 +183,16 @@ def test_base_source_assurance_and_pdf_boundary_are_explicit(tmp_path: Path) -> 
         SOURCE,
         reviewed_plan(SOURCE, operations, Pagination.SAME()),
         tmp_path / "source",
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
+        native_tools=native_fakes(),
     )
     assert inspected.exit_status == 0
     production = execute(
         SOURCE,
         reviewed_plan(SOURCE, operations, Pagination.SAME()),
         tmp_path / "production",
-        RunSettings(profile=profile_named("production")),
+        RunSettings(profile=Profile.parse("production")),
+        native_tools=native_fakes(),
     )
     assert production.exit_status != 0
     assert not (tmp_path / "production/candidate.pdf").exists()

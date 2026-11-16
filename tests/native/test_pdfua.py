@@ -6,8 +6,9 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.errors import OutputOccupied, ToolUnavailable
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua, require_supported_version
+from odfa11y.native.libreoffice import export_pdfua, require_supported_version
 from odfa11y.tool_identity import ToolIdentity
+from tests.fixtures.native import export_settings
 from tests.fixtures.writer import make_minimal_odt
 
 WRITER = "writer_pdf_Export"
@@ -26,14 +27,14 @@ RICH_BODY = (
 def test_export_to_the_source_path_is_refused(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
     with pytest.raises(OutputOccupied):
-        export_pdfua(source, source, ExportSettings(WRITER))
+        export_pdfua(source, source, export_settings(WRITER))
 
 
 def test_export_without_libreoffice_is_a_not_found_error(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
-    with pytest.raises(ToolUnavailable):
+    with pytest.raises(FileNotFoundError):
         export_pdfua(
-            source, tmp_path / "out.pdf", ExportSettings(WRITER, soffice=tmp_path / "absent")
+            source, tmp_path / "out.pdf", export_settings(WRITER, soffice=tmp_path / "absent")
         )
 
 

@@ -8,6 +8,7 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y import audit
+from odfa11y.application.export import export_document
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.errors import PackageError
@@ -15,13 +16,11 @@ from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.native import export_document
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import metadata_input
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 from tests.odf.test_package_protection import encrypted_manifest
 
@@ -108,20 +107,19 @@ def _assert_guarded_refusal(
     pdf = directory / "existing.pdf"
     pdf.write_bytes(b"existing PDF")
     with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
-        export_document(source, pdf, native_tools=native_tools)
+        export_document(source, pdf, replace=True, native_tools=native_tools)
     style_report = audit(source).reports[0]
     assert style_report.error_count > 0
     assert not any(isinstance(record, TextStyleMeasurements) for record in style_report.facts)
-    record = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        directory / "evidence",
-        RunSettings(profile=profile_named("source")),
-        native_tools=native_tools,
-    )
-    assert record.failed_stage == "audit-source"
-    assert record.exit_status == 2
-    assert not (directory / "evidence" / "remediated.odt").exists()
+    with pytest.raises(PackageError, match=r"ambiguous|unsafe"):
+        execute(
+            source,
+            reviewed_plan(source, [], Pagination.SAME()),
+            directory / "evidence",
+            RunSettings(profile=Profile.parse("source")),
+            native_tools=native_tools,
+        )
+    assert not (directory / "evidence").exists()
     assert source.read_bytes() == before
     assert destination.read_bytes() == b"existing output"
     assert pdf.read_bytes() == b"existing PDF"

@@ -8,9 +8,9 @@ lazy from pathlib import Path
 from lxml import etree
 
 from odfa11y.application.tools import Tools
-from odfa11y.run.context import RunSettings
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.evidence.test_bundle_privacy import assert_path_free, run, workspace
+from tests.fixtures.runs import RunSettings
 
 
 def test_raw_tool_reports_of_a_real_run_are_not_leaked(
@@ -21,7 +21,7 @@ def test_raw_tool_reports_of_a_real_run_are_not_leaked(
         tools=Tools(
             soffice=external_tool("soffice", "libreoffice"), verapdf=external_tool("verapdf")
         ),
-        profile=profile_named("production"),
+        profile=Profile.parse("production"),
     )
     bundle = run(directory, options)
     assert_path_free(bundle, tmp_path)

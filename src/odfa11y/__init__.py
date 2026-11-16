@@ -47,20 +47,18 @@ from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
 from odfa11y.remediate import RemediationResult
 from odfa11y.report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
-from odfa11y.run.profiles import DEFAULT_PROFILE, PROFILES, Profile, profile_named
 from odfa11y.run.record import RunRecord, StageResult
-from odfa11y.status import ExitStatus, failure_status
+from odfa11y.status import Crashed, ExitStatus, Profile, Refused, failure_status
 from odfa11y.targets import Fingerprint, Target, TargetPath
 from odfa11y.version import __version__
 
 __all__ = [
-    "DEFAULT_PROFILE",
     "FORMATS",
-    "PROFILES",
     "AuditInput",
     "AuditRun",
     "BatchRecord",
     "ComparisonResult",
+    "Crashed",
     "Decision",
     "DecisionKind",
     "DecisionScope",
@@ -83,6 +81,7 @@ __all__ = [
     "Profile",
     "ProgressEvent",
     "ProgressObserver",
+    "Refused",
     "RemediationResult",
     "Remedy",
     "RemedyAction",
@@ -110,7 +109,6 @@ __all__ = [
     "plan",
     "plan_blockers",
     "preflight_sarif",
-    "profile_named",
     "registered_kinds",
     "remediate",
     "render_reports",

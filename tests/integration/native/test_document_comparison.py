@@ -4,9 +4,9 @@
 from pathlib import Path
 lazy from collections.abc import Callable
 
+from odfa11y.application.compare import is_pdf
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
-from odfa11y.run.comparison import is_pdf
-from odfa11y.run.native import export_document
 from tests.fixtures.writer import make_minimal_odt
 
 

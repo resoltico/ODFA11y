@@ -52,6 +52,6 @@ def test_batch_cli_text_and_global_validation_have_documented_statuses(
     text = capsys.readouterr().out
     assert "Batch: failed" in text
     assert "one: failed" in text
-    assert "evidence=one" in text
+    assert "evidence=None" in text
     assert main(args) == 4
     assert "must not exist" in capsys.readouterr().err

@@ -7,6 +7,7 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
+from odfa11y.application.export import export_document
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf
 from odfa11y.audit.engine import ExportContextMeasurements
@@ -23,7 +24,6 @@ from odfa11y.odf.formula import (
     classify_formula,
 )
 from odfa11y.rules import registry as rules
-from odfa11y.run.native import export_document
 from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.native import refusing
 from tests.fixtures.writer import make_minimal_odt

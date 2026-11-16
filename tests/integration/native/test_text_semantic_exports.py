@@ -6,17 +6,14 @@ lazy from pathlib import Path
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.structure.checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import (
     RawFields,
     header_answer,
@@ -27,9 +24,11 @@ from tests.fixtures.answers import (
 )
 from tests.fixtures.corpus import CORPUS
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import export_settings, validate_pdfua
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -45,13 +44,13 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
         for index, heading in enumerate(headings, 1)
     }
     baseline = export_pdfua(
-        source, tmp_path / "baseline.pdf", ExportSettings("writer_pdf_Export", soffice)
+        source, tmp_path / "baseline.pdf", export_settings("writer_pdf_Export", soffice)
     )
     assert rules.PDF013.id in {f.rule_id for f in audit_pdfua(baseline).findings}
     edited = tmp_path / "headings.odt"
     apply_answers(source, edited, [heading_inputs(decisions)])
     pdf = export_pdfua(
-        edited, tmp_path / "headings.pdf", ExportSettings("writer_pdf_Export", soffice)
+        edited, tmp_path / "headings.pdf", export_settings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
     assert {
@@ -78,7 +77,7 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
     assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
     assert rules.TABLE003.id not in {f.rule_id for f in audit_odf(edited).findings}
     pdf = export_pdfua(
-        edited, tmp_path / "columns.pdf", ExportSettings("writer_pdf_Export", soffice)
+        edited, tmp_path / "columns.pdf", export_settings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
     assert measured(measurement(report, PdfStructureMeasurements).structure_tags).get("TH", 0) == 0
@@ -98,12 +97,12 @@ def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_he
         ),
         tmp_path / "evidence",
         RunSettings(
-            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
         ),
     )
     assert record.failed_stage == "audit-pdf", "\n".join(
         f"{stage.name}: {stage.reason}\n{stage.details or ''}"
         for stage in record.stages
-        if stage.status == "failed"
+        if stage.outcome.status == "failed"
     )
     assert not record.passed

@@ -12,13 +12,12 @@ from lxml import etree
 from odfa11y.evidence import Redactor, check_bundle
 from odfa11y.odf import OdfDocument
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.records import record
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -38,7 +37,7 @@ def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: st
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         target,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     )
     delivered = target / f"remediated{suffix}"
     OdfDocument.open(delivered)
@@ -91,7 +90,7 @@ def test_accepted_package_with_xml_suffix_is_copied_unchanged(tmp_path: Path) ->
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         target,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     )
     OdfDocument.open(target / "remediated.xml")
     assert (target / "remediated.xml").read_bytes() == source.read_bytes()
@@ -112,7 +111,7 @@ def test_flat_document_preserves_declared_encoding(tmp_path: Path) -> None:
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         target,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     )
     assert result.passed
     delivered = target / f"remediated{source.suffix}"

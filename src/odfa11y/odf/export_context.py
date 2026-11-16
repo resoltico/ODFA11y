@@ -103,6 +103,13 @@ def native_export_limitations(document: OdfDocument) -> dict[str, int]:
         Counts of unresolved rendering dependencies and location-sensitive fields.
 
     """
+    document.checkpoint()
+    return dict(
+        document.derived("native-export-context", lambda: _analyze_export_context(document))
+    )
+
+
+def _analyze_export_context(document: OdfDocument) -> dict[str, int]:
     resources = ResourceIdentity(document.storage)
     dependencies = fields = 0
     formulas = FormulaAnalysis()
@@ -216,9 +223,9 @@ def _explicit_base(node: etree._Element) -> bool:
 def require_native_context(document: OdfDocument, *, captured_identity: bool = False) -> None:
     """Refuse unsupported render dependencies or a captured input's location-sensitive fields.
 
-    Direct original exports may retain their logical filename/path. Pipeline captures cannot
-    do so at the current native boundary and explicitly refuse those fields without rewriting
-    authored content. Source-only inspection/remediation remains available.
+    Private captures cannot preserve logical filename/path fields at the native boundary.
+    Captured exports explicitly refuse those fields without rewriting authored content.
+    Source-only inspection and remediation remain available.
 
     Raises
     ------
@@ -246,8 +253,8 @@ def require_native_context(document: OdfDocument, *, captured_identity: bool = F
         )
     if captured_identity and limits["location_fields"]:
         msg = (
-            "Pipeline native export refuses filename/path fields because private staging cannot "
-            "preserve their logical identity; use source-only inspect or direct original export"
+            "Native export refuses filename/path fields because private staging cannot "
+            "preserve their logical identity; review these fields in the authoring application"
         )
         raise DocumentRefusal(
             msg,

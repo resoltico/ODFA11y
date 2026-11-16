@@ -7,7 +7,7 @@ from textwrap import fill
 lazy import argparse
 
 import odfa11y as api
-from odfa11y import Stage, render_reports, terminal_text
+from odfa11y import render_reports, terminal_text
 lazy from odfa11y import RunRecord
 
 from .outcomes import render_command_outcome
@@ -27,7 +27,7 @@ def pipeline_command(args: argparse.Namespace) -> int:
         args.source,
         args.plan,
         args.output_dir,
-        tools=api.Tools(args.soffice, args.verapdf_path, args.timeout),
+        tools=api.Tools(args.soffice, args.verapdf, args.timeout),
         profile=args.profile,
         observer=progress_callback(args.format),
         native_tools=args.native_tools,
@@ -49,41 +49,18 @@ def _render_pipeline(record: RunRecord, output_dir: object) -> str:
 
     """
     lines = [
-        f"Pipeline profile: {record.profile.name}",
+        f"Pipeline profile: {record.profile.value}",
         render_command_outcome(record.exit_status, strict=record.strict),
         f"Evidence: {terminal_text(output_dir)}",
     ]
     for stage in record.stages:
-        detail = f" ({terminal_text(stage.reason)})" if stage.reason else ""
-        lines.append(
-            fill(
-                f"- {stage.status:7} {stage.name}{detail}",
-                width=80,
-                subsequent_indent="  ",
-                break_long_words=False,
-                break_on_hyphens=False,
-            )
-        )
-        if stage.details:
-            lines.append(
-                fill(
-                    f"  Tool details: {terminal_text(stage.details)}",
-                    width=80,
-                    subsequent_indent="  ",
-                    break_long_words=False,
-                    break_on_hyphens=False,
-                )
-            )
-    remediated = any(
-        stage.name == Stage.AUDIT_REMEDIATED and stage.report for stage in record.stages
-    )
-    for stage in record.stages:
-        if not stage.report or not (stage.report.error_count or stage.report.warning_count):
-            continue
-        if not stage.gate and (stage.name != Stage.AUDIT_SOURCE or remediated):
-            continue
-        label = "Before remediation" if not stage.gate else "Gate findings"
-        lines.extend(["", f"{label}: {stage.name}", render_reports([stage.report])])
+        lines.append(f"- {stage.outcome.status:14} {stage.name}")
+        if isinstance(stage.outcome, api.Refused | api.Crashed):
+            lines.append(fill(terminal_text(str(stage.outcome.error)), width=80))
+            if stage.outcome.error.details:
+                lines.append("Tool details: " + terminal_text(stage.outcome.error.details))
+        if stage.report and (stage.report.error_count or stage.report.warning_count):
+            lines.extend(["", f"Findings: {stage.name}", render_reports([stage.report])])
     lines.extend([
         "",
         "Scope: selected automated checks; human review is still required.",

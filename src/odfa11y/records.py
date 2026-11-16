@@ -2,14 +2,14 @@
 """Typed identities and assurance measurements shared by workflow records."""
 
 from dataclasses import dataclass
+from typing import Literal
 
-from odfa11y.contracts import record_dict
+from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.tool_identity import ToolIdentity
 lazy from odfa11y.contracts import JsonObject
-lazy from odfa11y.status import StageStatus
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class DocumentIdentity:
     """Captured source identity and its established document kind."""
 
@@ -35,12 +35,17 @@ class Toolchain:
 class SchemaCheck:
     """The selected schema, before/after counts and established regression count."""
 
-    status: StageStatus
     version: str | None
     before_count: int | None
     after_count: int | None
     new_count: int | None = 0
     unlocated_count: int | None = 0
+
+    @JsonProperty
+    def status(self) -> Literal["passed", "failed", "skipped"]:
+        if self.after_count is None:
+            return "skipped"
+        return "failed" if self.new_count else "passed"
 
     def as_dict(self) -> JsonObject:
         """Serialize schema assurance independently of human-readable prose.

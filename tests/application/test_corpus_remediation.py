@@ -8,7 +8,6 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.odf import OdfDocument, Part, validate
-from odfa11y.status import StageStatus
 from tests.fixtures.answers import (
     Authored,
     address_input,
@@ -51,7 +50,7 @@ def test_a_plan_is_idempotent_and_keeps_text_and_schema_validity(
     once, twice = tmp_path / f"once{suffix}", tmp_path / f"twice{suffix}"
     first = apply_answers(document.path, once, _plan(document))
     assert first.changed
-    assert first.schema.status == StageStatus.PASSED
+    assert first.schema.status == "passed"
     assert first.schema.new_count == 0
     assert visible_text(once) == visible_text(document.path)
     second = apply_answers(once, twice, _plan(document))

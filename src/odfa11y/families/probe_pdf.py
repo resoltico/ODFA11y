@@ -4,8 +4,10 @@
 lazy from pathlib import Path
 
 from odfa11y.errors import ToolFailure
+from odfa11y.native.tools import VeraPdf
+from odfa11y.native.verapdf import Validator
 from odfa11y.pdf.audit import PdfInspection, inspect_pdf
-from odfa11y.pdf.validation import PdfValidator
+from odfa11y.pdf.validation import MAX_REPORT_BYTES, parse_validation
 from odfa11y.report import exit_status
 from odfa11y.rules import registry as rules
 
@@ -23,9 +25,9 @@ def _inspect(pdf: Path) -> PdfInspection:
 
 def link_descriptions(
     pdf: Path,
-    _validator: str | Path | None,
+    _validator: VeraPdf | None,
     _timeout: float,
-    _validate: PdfValidator | None = None,
+    _validate: Validator | None = None,
     *,
     expected: str,
 ) -> bool:
@@ -58,7 +60,7 @@ def link_descriptions(
 
 
 def decorative_role(
-    pdf: Path, _validator: str | Path | None, _timeout: float, _validate: PdfValidator | None = None
+    pdf: Path, _validator: VeraPdf | None, _timeout: float, _validate: Validator | None = None
 ) -> bool:
     """Require two painted images with only the decorative peer marked as an artifact.
 
@@ -81,7 +83,7 @@ def decorative_role(
 
 
 def writer_header_columns(
-    pdf: Path, _validator: str | Path | None, _timeout: float, _validate: PdfValidator | None = None
+    pdf: Path, _validator: VeraPdf | None, _timeout: float, _validate: Validator | None = None
 ) -> bool:
     """Require semantic header cells for both rows of the column-header case.
 
@@ -97,7 +99,7 @@ def writer_header_columns(
 
 
 def math_tagging(
-    pdf: Path, _validator: str | Path | None, _timeout: float, _validate: PdfValidator | None = None
+    pdf: Path, _validator: VeraPdf | None, _timeout: float, _validate: Validator | None = None
 ) -> bool:
     """Require tagged, reconciled content in the expression-only Math case.
 
@@ -113,7 +115,7 @@ def math_tagging(
 
 
 def calc_pdfua(
-    pdf: Path, validator: str | Path | None, timeout: float, validate: PdfValidator | None = None
+    pdf: Path, validator: VeraPdf | None, timeout: float, validate: Validator | None = None
 ) -> bool:
     """Check the small semantic Calc table with PDF inspection and veraPDF.
 
@@ -131,5 +133,13 @@ def calc_pdfua(
     return (
         bool((inspection.structure.tags if inspection.structure is not None else {}).get("Table"))
         and exit_status([report], strict=True) == 0
-        and validate(pdf, executable=validator, timeout=timeout).compliant
+        and _validated(pdf, validator, timeout, validate)
     )
+
+
+def _validated(pdf: Path, tool: VeraPdf | None, timeout: float, validate: Validator) -> bool:
+    if tool is None:
+        message = "The capability experiment requires a resolved veraPDF executable"
+        raise ToolFailure(message)
+    output = validate(pdf, tool=tool, timeout=timeout, max_report_bytes=MAX_REPORT_BYTES)
+    return parse_validation(output.xml, output.diagnostics).compliant

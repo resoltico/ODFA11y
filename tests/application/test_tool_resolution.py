@@ -7,10 +7,9 @@ import pytest
 
 from odfa11y.application.tools import Tools
 from odfa11y.errors import RemedyAction, ToolUnavailable
-from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.tool_identity import ToolIdentity
 from odfa11y.tool_timeout import Timeout
-from tests.fixtures.native import native_fakes, refusing
+from tests.fixtures.native import export_settings, native_fakes, refusing
 
 
 def test_required_tools_are_selected_once_and_share_the_validated_duration() -> None:
@@ -83,4 +82,4 @@ def test_validated_seconds_are_not_converted_back_to_unvalidated_inputs() -> Non
     seconds = Timeout(0.5)
     assert Timeout(seconds) is seconds
     assert Tools(timeout=seconds).timeout is seconds
-    assert ExportSettings("writer_pdf_Export", timeout=seconds).timeout is seconds
+    assert export_settings("writer_pdf_Export", timeout=seconds).timeout is seconds

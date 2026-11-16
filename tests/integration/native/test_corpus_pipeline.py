@@ -7,13 +7,9 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
 from tests.fixtures.answers import (
     Authored,
     address_input,
@@ -22,7 +18,9 @@ from tests.fixtures.answers import (
     metadata_input,
 )
 from tests.fixtures.corpus import CORPUS
+from tests.fixtures.native import validate_pdfua
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import STAGE_NAMES, RunSettings, execute
 
 # Each plan resolves the document's findings that would otherwise fail the audit gate.
 PIPELINE_RUNS: dict[str, list[Authored]] = {
@@ -44,8 +42,8 @@ def test_the_pipeline_records_a_writer_run_and_rejects_invalid_link_exports(
         tmp_path / "out",
         RunSettings(tools=Tools(soffice=soffice)),
     )
-    stages = {stage.name.value: stage.status for stage in record.stages}
-    assert tuple(stages) == PIPELINE_STAGES
+    stages = {stage.name.value: stage.outcome.status for stage in record.stages}
+    assert tuple(stages) == STAGE_NAMES
     diagnostics = [stage.as_dict() for stage in record.stages]
     assert stages["export-remediated"] == "passed", diagnostics
     pdf_stage = next(stage for stage in record.stages if stage.name == "audit-pdf")

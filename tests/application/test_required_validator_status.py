@@ -1,82 +1,53 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Required validator absence is execution failure at its actual pipeline boundary."""
+"""Required validators are resolved during preparation, before stages or evidence."""
 
 import json
 from dataclasses import replace
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 
-from odfa11y.application.native import NativeTools
-from odfa11y.application.tools import Tools
+from odfa11y import Profile, Tools, run
 from odfa11y.cli import main
-from odfa11y.evidence import check_bundle
-from odfa11y.families import probes as probe_operations
-from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
-from odfa11y.tool_identity import ToolIdentity
+from odfa11y.errors import ToolUnavailable
+from odfa11y.native.verapdf import find_verapdf
 from tests.batch.test_batch import manifest_file
+from tests.fixtures.native import native_fakes, recording
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.plans import plan_header, reviewed_plan
-from tests.fixtures.probes import conclusive_probe
 from tests.fixtures.writer import make_minimal_odt
 
 
-@pytest.fixture
-def successful_exports(native_tools: NativeTools, monkeypatch: pytest.MonkeyPatch) -> NativeTools:
-    native_tools = replace(native_tools, locate=lambda _requested: "soffice")
-    native_tools = replace(
-        native_tools, identify=lambda _path, **_options: ToolIdentity("LibreOffice", "26.8.0.3")
-    )
-    monkeypatch.setattr(probe_operations, "measure_probe", conclusive_probe)
-
-    def export(_source: Path, destination: Path, _settings: object) -> Path:
-        tagged_writer(["H1"]).write(destination)
-        return destination
-
-    native_tools = replace(native_tools, export=export)
-    return native_tools
-
-
-@pytest.mark.usefixtures("successful_exports")
-def test_required_validator_failure_reaches_stage_and_retains_evidence(
-    successful_exports: NativeTools, tmp_path: Path
-) -> None:
-    native_tools = successful_exports
+def test_required_validator_absence_runs_no_stage_and_leaves_no_bundle(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
-    target = tmp_path / "evidence"
-    result = execute(
-        source,
-        reviewed_plan(source, [], Pagination.SAME()),
-        target,
-        RunSettings(
-            tools=Tools(verapdf=str(tmp_path / "missing-verapdf")),
-            profile=profile_named("production"),
-        ),
-        native_tools=native_tools,
-    )
-    assert result.failed_stage == "validate-pdf"
-    assert result.exit_status == 3
-    assert all(stage.status == "passed" for stage in result.stages[:7])
-    assert result.stages[-1].status == "skipped"
-    assert result.stages[-1].reason == "not run: validate-pdf failed"
-    assert check_bundle(target) == []
-    assert json.loads((target / "run.json").read_text())["status"] == "failed"
+    exports = []
+    events = []
+    native = replace(native_fakes(), validator=find_verapdf, export=recording(exports))
+    with pytest.raises(ToolUnavailable) as failure:
+        run(
+            source,
+            reviewed_plan(source),
+            tmp_path / "evidence",
+            profile=Profile.PRODUCTION,
+            tools=Tools(verapdf=tmp_path / "missing-validator"),
+            native_tools=native,
+            observer=events.append,
+        )
+    assert failure.value.exit_status == 3
+    assert not exports
+    assert [(event.step, event.state) for event in events] == [
+        ("prepare", "running"),
+        ("prepare", "failed"),
+    ]
+    assert not (tmp_path / "evidence").exists()
 
 
-@pytest.mark.usefixtures("successful_exports")
-def test_cli_and_batch_keep_required_validator_status(
-    successful_exports: NativeTools, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    native_tools = successful_exports
+def test_cli_and_batch_keep_preparation_failure_status(tmp_path: Path, capsys) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     plan = tmp_path / "plan.toml"
-    plan.write_text(
-        plan_header(source) + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en-GB"'
-    )
-    missing = str(tmp_path / "missing-verapdf")
+    plan.write_text(plan_header(source))
+    native = replace(native_fakes(), validator=find_verapdf)
+    missing = str(tmp_path / "missing-validator")
     assert (
         main(
             [
@@ -88,13 +59,14 @@ def test_cli_and_batch_keep_required_validator_status(
                 str(tmp_path / "single"),
                 "--profile",
                 "production",
-                "--verapdf-path",
+                "--verapdf",
                 missing,
             ],
-            native_tools=native_tools,
+            native_tools=native,
         )
         == 3
     )
+    assert not (tmp_path / "single").exists()
     manifest = manifest_file(
         tmp_path, [("first", "source.odt", "plan.toml"), ("second", "source.odt", "plan.toml")]
     )
@@ -107,27 +79,26 @@ def test_cli_and_batch_keep_required_validator_status(
                 str(tmp_path / "batch"),
                 "--profile",
                 "production",
-                "--verapdf-path",
+                "--verapdf",
                 missing,
             ],
-            native_tools=native_tools,
+            native_tools=native,
         )
         == 3
     )
     record = json.loads((tmp_path / "batch" / "batch.json").read_text())
     assert [item["exit_status"] for item in record["items"]] == [3, 3]
-    assert [item["failed_stage"] for item in record["items"]] == ["validate-pdf", "validate-pdf"]
-    for name in ("first", "second"):
-        assert check_bundle(tmp_path / "batch" / name) == []
+    assert all(item["error"]["code"] == "tool-unavailable" for item in record["items"])
+    assert all(item["evidence"] is None for item in record["items"])
+    assert not (tmp_path / "batch" / "first").exists()
     assert "Traceback" not in capsys.readouterr().err
 
 
-def test_requested_audit_validation_requires_the_validator(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_validator_selection_does_not_request_validation(tmp_path: Path, capsys) -> None:
     pdf = tmp_path / "source.pdf"
     tagged_writer(["H1"]).write(pdf)
-    args = ["audit", str(pdf), "--verapdf-path", str(tmp_path / "missing-verapdf")]
-    assert main(args) == 3
-    assert main([*args, "--strict"]) == 3
-    assert "VERA000" not in capsys.readouterr().out
+    args = ["audit", str(pdf), "--verapdf", str(tmp_path / "missing-validator")]
+    assert main(args) == 0
+    assert main([*args, "--validate"]) == 3
+    output = capsys.readouterr()
+    assert "VERA000" not in output.out

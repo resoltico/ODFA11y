@@ -13,6 +13,7 @@ from odfa11y.errors import InvalidOption, PackageError
 from odfa11y.rules.details import bounded_details
 from odfa11y.rules.registry import Severity
 from odfa11y.targets import Location, TargetPath
+lazy from odfa11y.concepts.review import ReviewTopic
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import OpenDecision
 lazy from odfa11y.rules.registry import Rule
@@ -96,6 +97,7 @@ class Report[F = object]:
     subject: str
     findings: list[Finding] = field(default_factory=list)
     facts: tuple[F, ...] = ()
+    review_topics: tuple[ReviewTopic, ...] = ()
     _sources: tuple[Path, ...] = field(default=())
     _question_for: Callable[[Rule], OpenDecision | None] | None = field(default=None, repr=False)
 

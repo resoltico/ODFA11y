@@ -5,33 +5,29 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Never
 
-from lxml import etree
-
 from odfa11y.application.native import NativeTools
+from odfa11y.audit.validation import check_pdfua as check
+from odfa11y.audit.validation import validate_pdfua as validate
 from odfa11y.families.probes import ProbeId
 from odfa11y.native.libreoffice import ExportSettings
-from odfa11y.pdf.validation import FailedRule, VeraPdfResult
+from odfa11y.native.tools import LibreOffice, VeraPdf
+from odfa11y.native.verapdf import ValidationOutput
 from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.probes import fake_export
+from tests.fixtures.verapdf import FAILED_RULE, REPORT
 
 
-def validation_result(compliant: bool = True) -> VeraPdfResult:
-    failures = (
-        ()
-        if compliant
-        else (
-            FailedRule("ISO 14289-1:2014", "7.1", "1", "Controlled validation failure", 1, (), ()),
-        )
+def validation_result(compliant: bool = True):
+    """Return real report bytes so fake execution still exercises the XML interpreter."""
+
+    xml = REPORT.format(
+        status="normal",
+        compliant=str(compliant).lower(),
+        failed=0 if compliant else 1,
+        rules="" if compliant else FAILED_RULE,
     )
-    return VeraPdfResult(
-        ToolIdentity("veraPDF", "test"),
-        "PDF/UA-1",
-        compliant,
-        failures,
-        "<report/>",
-        etree.Element("report"),
-    )
+    return ValidationOutput(xml.encode(), "", ToolIdentity("veraPDF", "test"))
 
 
 def refusing(calls: list[object]) -> Callable[..., Never]:
@@ -74,3 +70,30 @@ def recording(calls: list[object]) -> Callable[[Path, Path, ExportSettings], Pat
         return exporting(source, destination, settings)
 
     return export
+
+
+def export_settings(pdf_filter, soffice=None, timeout=120, profile_dir=None):
+    """Build resolved native settings from test-owned executable selections."""
+
+    return ExportSettings(
+        pdf_filter,
+        LibreOffice(str(soffice or "soffice"), ToolIdentity("LibreOffice", "26.8.0.3")),
+        timeout,
+        profile_dir,
+    )
+
+
+def validator_tool(executable="verapdf"):
+
+    return VeraPdf(str(executable), ToolIdentity("veraPDF", "9.9.9"))
+
+
+def validate_pdfua(pdf, *, executable=None, timeout=120):
+    """Invoke the XML composition using a test-owned resolved validator."""
+
+    return validate(pdf, tool=validator_tool(executable), timeout=timeout)
+
+
+def check_pdfua(pdf, *, subject, executable=None, timeout=120):
+
+    return check(pdf, subject=subject, tool=validator_tool(executable), timeout=timeout)

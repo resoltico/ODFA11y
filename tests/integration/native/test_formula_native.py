@@ -7,10 +7,10 @@ lazy from pathlib import Path
 import pytest
 from pypdf import PdfReader
 
+from odfa11y.application.export import export_document
 from odfa11y.application.tools import Tools
 from odfa11y.odf import OdfDocument
 from odfa11y.odf.export_context import native_export_limitations
-from odfa11y.run.native import export_document
 from tests.fixtures.documents import Variant, make_flat
 
 

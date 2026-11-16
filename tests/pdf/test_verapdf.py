@@ -8,7 +8,6 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.errors import ToolFailure, ToolUnavailable
 from odfa11y.native.verapdf import find_verapdf
 from odfa11y.pdf import add_verapdf_findings
@@ -17,31 +16,8 @@ from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rule_catalogue
 from tests.fixtures.measurements import measured, measurement
-
-REPORT = """<?xml version="1.0" encoding="utf-8"?>
-<report>
-  <buildInformation>
-    <releaseDetails id="core" version="9.9.9" buildDate="x"></releaseDetails>
-  </buildInformation>
-  <jobs><job>
-    <validationReport jobEndStatus="{status}" profileName="PDF/UA-1 validation profile"
-        isCompliant="{compliant}">
-      <details passedRules="1" failedRules="{failed}">
-        {rules}
-      </details>
-    </validationReport>
-  </job></jobs>
-</report>"""
-FAILED_RULE = """<rule specification="ISO 14289-1:2014" clause="7.1" testNumber="10"
-    status="failed" failedChecks="4">
-  <description>The catalog shall include DisplayDocTitle.</description>
-  <check status="failed"><context>root/a</context><errorMessage>one</errorMessage></check>
-  <check status="failed"><context>root/b</context><errorMessage>two</errorMessage></check>
-  <check status="failed"><context>root/c</context><errorMessage>three</errorMessage></check>
-  <check status="failed"><context>root/d</context><errorMessage>four</errorMessage></check>
-</rule>
-<rule specification="ISO 14289-1:2014" clause="6.2" testNumber="1" status="passed"
-    failedChecks="0"><description>Fine.</description></rule>"""
+from tests.fixtures.native import validate_pdfua
+from tests.fixtures.verapdf import FAILED_RULE, REPORT
 
 
 def stub(directory: Path, output: str, *, status: int = 0) -> Path:

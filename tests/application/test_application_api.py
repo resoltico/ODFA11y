@@ -95,10 +95,10 @@ def test_source_profile_is_a_value_and_needs_no_native_tool(tmp_path: Path) -> N
         plan_path,
         tmp_path / "evidence",
         tools=api.Tools(soffice=tmp_path / "missing"),
-        profile=api.PROFILES["source"],
+        profile=api.Profile.SOURCE,
     )
     assert result.exit_status == api.ExitStatus.PASSED
-    assert result.profile is api.PROFILES["source"]
+    assert result.profile is api.Profile.SOURCE
     assert result.toolchain.libreoffice is None
     assert api.verify_evidence(tmp_path / "evidence").exit_status == api.ExitStatus.PASSED
 

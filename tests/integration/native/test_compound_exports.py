@@ -8,9 +8,8 @@ lazy from pathlib import Path
 from lxml import etree
 
 from odfa11y.audit import audit_odf
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.concepts import table_fingerprint
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
 from odfa11y.pdf import audit_pdfua
@@ -27,6 +26,7 @@ from tests.fixtures.answers import (
 )
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import export_settings, validate_pdfua
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.spreadsheets import picture, reviewed_sheet_names, row, sheet, text_cell
 from tests.fixtures.table_formats import NUMERIC_STYLES
@@ -112,7 +112,7 @@ def test_writer_nested_headers_graphic_and_named_link(
         f.rule_id for f in audit_odf(output).findings
     }
     pdf = export_pdfua(
-        output, tmp_path / "writer.pdf", ExportSettings("writer_pdf_Export", soffice)
+        output, tmp_path / "writer.pdf", export_settings("writer_pdf_Export", soffice)
     )
     report = audit_pdfua(pdf)
     assert measured(measurement(report, PdfStructureMeasurements).structure_tags).get("TH", 0) == 0
@@ -174,7 +174,7 @@ def test_calc_formula_graphic_and_printed_header(
         for cell in select_elements(after.tree(Part.CONTENT), "//table:table-cell[@table:formula]")
     ] == formulas
     assert not apply_answers(output, tmp_path / "again.ods", plan).changed
-    pdf = export_pdfua(output, tmp_path / "calc.pdf", ExportSettings("calc_pdf_Export", soffice))
+    pdf = export_pdfua(output, tmp_path / "calc.pdf", export_settings("calc_pdf_Export", soffice))
     report = audit_pdfua(pdf)
     assert {f.rule_id for f in report.findings} == {
         rules.PDF009.id,
@@ -206,6 +206,6 @@ def _resources_preserved(source: Path, output: Path) -> None:
 
 def _assert_fidelity(source: Path, pdf: Path, pdf_filter: str, soffice: str) -> None:
     baseline = export_pdfua(
-        source, pdf.with_name("source-" + pdf.name), ExportSettings(pdf_filter, soffice)
+        source, pdf.with_name("source-" + pdf.name), export_settings(pdf_filter, soffice)
     )
-    assert compare_pdfs(baseline, pdf, Pagination.SAME()).error_count == 0
+    assert compare_pdfs(baseline, pdf, Pagination.SAME()).report.error_count == 0

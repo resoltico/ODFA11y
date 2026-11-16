@@ -10,12 +10,11 @@ from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.declarations import declaration
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 lazy from odfa11y.native.libreoffice import ExportSettings
 
 
@@ -44,13 +43,13 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
             main(["compare", str(left), str(right), "--format", "json"], native_tools=native_tools)
             == 2
         )
-    assert launched == [safe]
+    assert launched == []
     output = tmp_path / "evidence"
     record = execute(
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         output,
-        RunSettings(profile=profile_named("verify")),
+        RunSettings(profile=Profile.PDF),
         native_tools=native_tools,
     )
     assert record.failed_stage == "export-source"
@@ -63,7 +62,7 @@ def test_cli_guards_both_compare_operands_and_pipeline_keeps_completed_artifacts
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         inspected,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
         native_tools=native_tools,
     )
     assert result.passed

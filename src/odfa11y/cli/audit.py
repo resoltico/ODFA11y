@@ -23,9 +23,9 @@ def audit_command(args: argparse.Namespace) -> int:
     """
     result = api.audit(
         args.sources,
-        tools=api.Tools(verapdf=args.verapdf_path, timeout=args.timeout),
+        tools=api.Tools(verapdf=args.verapdf, timeout=args.timeout),
         schema=args.schema,
-        validate_pdf=args.verapdf,
+        validate_pdf=args.validate,
         strict=args.strict,
         observer=progress_callback(args.format),
         native_tools=args.native_tools,

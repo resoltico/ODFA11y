@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Render typed run facts, gate outcomes and outstanding human review."""
+"""Put outstanding human work before gates and source-to-candidate facts."""
 
-from odfa11y.contracts import record_dict
+import json
+
+from odfa11y.contracts import JsonValue, record_dict
 from odfa11y.progress import Stage
-from odfa11y.status import StageStatus
+from odfa11y.status import Crashed, GateFailed, NotApplicable, Passed, Refused, Skipped
 lazy from odfa11y.evidence.redact import Redactor
 lazy from odfa11y.run.record import RunRecord, StageResult
 
@@ -13,56 +15,50 @@ NOT_VALIDATION = (
 
 
 def render_review(record: RunRecord, *, redactor: Redactor | None = None) -> str:
-    """Render REVIEW.md without interpreting serialized dictionary keys.
-
-    Returns
-    -------
-    str
-        Markdown separating measured facts from required human decisions.
-
-    """
-    lines = [
-        f"# Review sheet: {record.document.name}",
+    """Render outstanding decisions, observed review topics and facts without duplicate audits."""
+    lines = [f"# Review sheet: {_cell(record.document.name)}", "", "## Needs a human", ""]
+    lines += _attention(record, redactor) or [
+        "- No outstanding machine finding or unanswered decision."
+    ]
+    lines += ["", "## Human review still required", ""]
+    lines += [f"- [ ] {item.text}" for item in record.human_review]
+    validator = next((stage for stage in record.stages if stage.name == Stage.VALIDATE_PDF), None)
+    if validator is None or not isinstance(validator.outcome, Passed):
+        caveat = (
+            "veraPDF did not pass: PDF/UA conformance was not established."
+            if validator and isinstance(validator.outcome, GateFailed | Refused | Crashed)
+            else NOT_VALIDATION
+        )
+        lines += ["", f"> {caveat}"]
+    lines += [
+        "",
+        "## Gates",
+        "",
+        f"Assurance profile: `{record.profile.value}`",
         "",
         f"Automated gates: **{record.status.upper()}**"
         + (f" (failed at `{record.failed_stage}`)" if record.failed_stage else ""),
-        "",
-        "## Gates",
         "",
         "| Stage | Status | Detail |",
         "| --- | --- | --- |",
     ]
     for stage in record.stages:
-        detail = stage.reason or _summary(stage)
-        if redactor is not None:
+        detail = _detail(stage)
+        if redactor:
             detail = redactor.text(detail)
-        detail = _cell(detail)
-        lines.append(f"| `{stage.name}` | {stage.status} | {detail} |")
-    lines += ["", f"Assurance profile: `{record.profile.name}`"]
-    lines += ["", "## Machine-established facts", ""]
-    lines += _facts(record.stages) or ["- No stage produced facts."]
-    attention = _attention(record.stages)
-    if attention:
-        lines += ["", "## Findings that need attention", "", *attention]
-    validator = next((stage for stage in record.stages if stage.name == Stage.VALIDATE_PDF), None)
-    if validator is None or validator.status != StageStatus.PASSED:
-        caveat = NOT_VALIDATION
-        if validator is not None and validator.status == StageStatus.FAILED:
-            caveat = (
-                "veraPDF did not pass: PDF/UA conformance was not established. "
-                "Review the validator findings or execution failure above."
-            )
-        lines += ["", f"> {caveat}"]
-    lines += ["", "## Human review still required", ""]
-    lines += [f"- [ ] {item.text}" for item in record.human_review]
+        lines.append(f"| `{stage.name}` | {stage.outcome.status} | {_cell(detail)} |")
+    lines += ["", "## Machine-established facts", "", *_facts(record, redactor)]
     return "\n".join(lines) + "\n"
 
 
-def _cell(text: str) -> str:
-    return " ".join(text.split()).replace("\\", "\\\\").replace("|", "\\|")
-
-
-def _summary(stage: StageResult) -> str:
+def _detail(stage: StageResult) -> str:
+    match stage.outcome:
+        case Refused(error=error) | Crashed(error=error):
+            return str(error)
+        case Skipped(reason=reason, stage=producer):
+            return f"{reason.value}" + (f": {producer}" if producer else "")
+        case NotApplicable(reason=reason):
+            return reason
     if stage.report:
         return f"{stage.report.error_count} error(s), {stage.report.warning_count} warning(s)"
     if stage.remediation:
@@ -71,24 +67,63 @@ def _summary(stage: StageResult) -> str:
     return ""
 
 
-def _facts(stages: list[StageResult]) -> list[str]:
-    facts = []
-    for stage in stages:
-        if stage.report:
-            for record in stage.report.facts:
-                values = record_dict(record)
-                producer = values.pop("producer")
-                for name, value in values.items():
-                    if isinstance(value, (str, int, float, bool)):
-                        facts.append(f"- `{stage.name}` {producer}.{name}: {value}")
-    return facts
+def _cell(text: str) -> str:
+    return " ".join(text.split()).replace("\\", "\\\\").replace("|", "\\|")
 
 
-def _attention(stages: list[StageResult]) -> list[str]:
-    return [
-        f"- `{stage.name}` {finding.severity.value} {finding.rule_id}: {finding.message}"
-        for stage in stages
-        if stage.report
-        for finding in stage.report.findings
-        if finding.severity.value in {"error", "warning"}
+def _measurements(stage: StageResult | None) -> dict[str, JsonValue]:
+    result = {}
+    if stage and stage.report:
+        for facts in stage.report.facts:
+            values = record_dict(facts)
+            producer = values.pop("producer")
+            result.update({f"{producer}.{key}": value for key, value in values.items()})
+    return result
+
+
+def _facts(record: RunRecord, redactor: Redactor | None) -> list[str]:
+    stages = {stage.name: stage for stage in record.stages}
+    source = _measurements(stages.get(Stage.AUDIT_SOURCE))
+    candidate = _measurements(stages.get(Stage.AUDIT_REMEDIATED))
+    if redactor:
+        source = redactor.record(source)
+        candidate = redactor.record(candidate)
+    facts = [
+        f"- {key}: {_value(source.get(key))} → {_value(candidate.get(key))}"
+        for key in sorted(source.keys() | candidate.keys())
     ]
+    for name in (Stage.AUDIT_PDF, Stage.VALIDATE_PDF, Stage.FIDELITY):
+        measurements = _measurements(stages.get(name))
+        if redactor:
+            measurements = redactor.record(measurements)
+        facts += [f"- `{name}` {key}: {_value(value)}" for key, value in measurements.items()]
+    return facts or ["- No stage produced facts."]
+
+
+def _value(value: JsonValue) -> str:
+    return "unmeasured" if value is None else json.dumps(value, ensure_ascii=False)
+
+
+def _attention(record: RunRecord, redactor: Redactor | None) -> list[str]:
+    lines = []
+    candidate_exists = any(
+        stage.name == Stage.AUDIT_REMEDIATED and stage.report for stage in record.stages
+    )
+    for stage in record.stages:
+        if isinstance(stage.outcome, Refused | Crashed):
+            detail = str(stage.outcome.error)
+            if redactor:
+                detail = redactor.text(detail)
+            lines.append(f"- `{stage.name}`: {_cell(detail)}")
+        if stage.report and (stage.name != Stage.AUDIT_SOURCE or not candidate_exists):
+            lines += [
+                f"- `{stage.name}` {finding.severity.value} {finding.rule_id}: {finding.message}"
+                for finding in stage.report.findings
+                if finding.severity.value in {"error", "warning"}
+            ]
+        if stage.remediation:
+            lines += [
+                f"- Unanswered: `{item.kind_id}`" + (f" at `{item.target}`" if item.target else "")
+                for item in stage.remediation.unanswered
+            ]
+    return lines

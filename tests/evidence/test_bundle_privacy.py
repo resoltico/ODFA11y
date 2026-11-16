@@ -8,17 +8,18 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
+from odfa11y.errors import IoFailure, PackageError, PlanError, ToolUnavailable
 from odfa11y.evidence import check_bundle
 from odfa11y.evidence.redact import ABSOLUTE_PATH
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
+from odfa11y.status import Profile
 from tests.fixtures.answers import (
     graphic_answer,
     graphic_inputs,
     metadata_input,
 )
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 SENTINEL = "zz-private-person-zz"
@@ -88,7 +89,9 @@ def run(directory: Path, options: RunSettings, source: Path | None = None) -> Pa
 def test_a_missing_tool_path_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     options = RunSettings(tools=Tools(soffice=str(directory / "no-such-soffice")))
-    assert_path_free(run(directory, options), tmp_path)
+    with pytest.raises(ToolUnavailable):
+        run(directory, options)
+    assert not (directory / "evidence").exists()
 
 
 @posix_only
@@ -96,7 +99,9 @@ def test_a_non_executable_tool_path_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     plain = directory / "soffice"
     plain.write_text("not a program", encoding="utf-8")
-    assert_path_free(run(directory, RunSettings(tools=Tools(soffice=str(plain)))), tmp_path)
+    with pytest.raises(ToolUnavailable):
+        run(directory, RunSettings(tools=Tools(soffice=str(plain))))
+    assert not (directory / "evidence").exists()
 
 
 @posix_only
@@ -110,8 +115,10 @@ def test_a_failing_tool_that_prints_every_argument_is_not_leaked(tmp_path: Path)
         for s in __import__("json").loads((bundle / "run.json").read_text())["stages"]
         if s["name"] == "export-source"
     )
-    assert "exit status 1" in stage["reason"]
-    assert "args:" in stage["details"]  # the diagnostic survives, minus the paths
+    assert "exit status 1" in stage["outcome"]["failure"]["message"]
+    assert (
+        "args:" in stage["outcome"]["failure"]["details"]
+    )  # the diagnostic survives, minus the paths
 
 
 @posix_only
@@ -123,15 +130,18 @@ def test_a_tool_that_succeeds_without_output_is_not_leaked(tmp_path: Path) -> No
 
 def test_an_unreadable_source_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
-    bundle = run(directory, RunSettings(), source=directory / "absent.odt")
-    assert_path_free(bundle, tmp_path)
+    with pytest.raises(IoFailure):
+        run(directory, RunSettings(profile=Profile.SOURCE), source=directory / "absent.odt")
+    assert not (directory / "evidence").exists()
 
 
 def test_a_damaged_source_is_not_leaked(tmp_path: Path) -> None:
     directory = workspace(tmp_path)
     broken = directory / "broken.odt"
     broken.write_bytes(b"not a zip")
-    assert_path_free(run(directory, RunSettings(), source=broken), tmp_path)
+    with pytest.raises(PackageError):
+        run(directory, RunSettings(profile=Profile.SOURCE), source=broken)
+    assert not (directory / "evidence").exists()
 
 
 def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
@@ -139,5 +149,11 @@ def test_a_failed_plan_is_not_leaked(tmp_path: Path) -> None:
     source = make_minimal_odt(directory / "input.odt")
     out = directory / "evidence"
     plan = [graphic_inputs({"Missing": graphic_answer("x")})]
-    execute(source, reviewed_plan(source, plan, Pagination.SAME()), out, RunSettings())
-    assert_path_free(out, tmp_path)
+    with pytest.raises(PlanError):
+        execute(
+            source,
+            reviewed_plan(source, plan, Pagination.SAME()),
+            out,
+            RunSettings(profile=Profile.SOURCE),
+        )
+    assert not out.exists()

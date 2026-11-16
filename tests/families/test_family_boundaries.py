@@ -19,17 +19,17 @@ from odfa11y.odf import Family, OdfDocument, Part, qn, select_elements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.report import Location, Severity
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile, Refused
 from tests.fixtures.answers import (
     metadata_input,
     version_input,
 )
 from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import native_fakes
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 lazy from odfa11y.report import Report
 lazy from tests.fixtures.answers import address_input
 
@@ -190,11 +190,13 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
         reviewed_plan(source, [metadata_input(title="T")], Pagination.SAME()),
         tmp_path / "out",
         RunSettings(),
+        native_tools=native_fakes(),
     )
-    statuses = {stage.name.value: stage.status for stage in record.stages}
+    statuses = {stage.name.value: stage.outcome.status for stage in record.stages}
     assert statuses["audit-remediated"] == "passed"
-    for name in ("export-source", "export-remediated", "audit-pdf", "fidelity"):
+    for name in ("export-source", "export-remediated"):
         assert statuses[name] == "not-applicable", name
+    assert statuses["audit-pdf"] == statuses["fidelity"] == "skipped"
     assert statuses["validate-pdf"] == "skipped"  # not part of the verify profile
     assert record.passed
     run = json.loads((tmp_path / "out" / "run.json").read_text())
@@ -220,12 +222,15 @@ def test_the_production_profile_fails_for_a_family_without_pdf_validation(
         make_package(tmp_path, "presentation"),
         reviewed_plan(make_package(tmp_path, "presentation"), [], Pagination.SAME()),
         tmp_path / "out",
-        RunSettings(profile=profile_named("production")),
+        RunSettings(profile=Profile.parse("production")),
+        native_tools=native_fakes(),
     )
     assert not record.passed
-    failed = next(stage for stage in record.stages if stage.status == "failed")
+    failed = next(stage for stage in record.stages if stage.outcome.status == "refused")
     assert failed.name == "export-source"
-    assert "requires PDF validation" in (failed.reason or "")
+    outcome = failed.outcome
+    assert isinstance(outcome, Refused)
+    assert "No PDF export" in str(outcome.error)
 
 
 def test_a_new_family_needs_only_a_registry_entry(

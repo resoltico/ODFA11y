@@ -6,12 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.native.libreoffice import ExportSettings, export_pdfua, find_soffice, identify_soffice
 from odfa11y.native.process import identify as identify_tool
-from odfa11y.native.verapdf import find_verapdf
+from odfa11y.native.verapdf import Validator, find_verapdf, run_verapdf
 from odfa11y.pdf.fidelity.compare import Rasterizer, render_pages
-from odfa11y.pdf.validation import PdfValidator
 from odfa11y.tool_identity import ToolIdentity
 from odfa11y.tool_timeout import Timeout
 
@@ -49,7 +47,7 @@ class NativeTools:
     """Inject native behavior without replacing module attributes."""
 
     export: Exporter = export_pdfua
-    validate: PdfValidator = validate_pdfua
+    validate: Validator = run_verapdf
     identify: OfficeIdentity = identify_soffice
     render: Rasterizer = render_pages
     locate: Locator = find_soffice

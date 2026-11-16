@@ -19,14 +19,14 @@ from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.report import Report, ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import Authored, FaultEdit, metadata_input
 from tests.fixtures.measurements import measurement
+from tests.fixtures.native import native_fakes
 from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 
 SOURCE = TESTS / "family_corpus/fruit-chart.odc"
 
@@ -72,18 +72,19 @@ def test_chart_numeric_change_is_rejected_before_publication(tmp_path: Path) -> 
     assert not destination.exists()
 
 
-@pytest.mark.parametrize("profile", ["source", "verify"])
+@pytest.mark.parametrize("profile", ["source", "pdf"])
 def test_chart_source_profiles_retain_explicit_non_pdf_stages(tmp_path: Path, profile: str) -> None:
     record = execute(
         SOURCE,
         reviewed_plan(SOURCE, _plan(), Pagination.SAME()),
         tmp_path / profile,
-        RunSettings(profile=profile_named(profile)),
+        RunSettings(profile=Profile.parse(profile)),
+        native_tools=native_fakes(),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
     assert not (tmp_path / profile / "remediated.pdf").exists()
-    if profile == "verify":
-        assert any(stage.status == "not-applicable" for stage in record.stages)
+    if profile == "pdf":
+        assert any(stage.outcome.status == "not-applicable" for stage in record.stages)
 
 
 def test_chart_production_cannot_pass_without_pdf_assurance(tmp_path: Path) -> None:
@@ -91,7 +92,8 @@ def test_chart_production_cannot_pass_without_pdf_assurance(tmp_path: Path) -> N
         SOURCE,
         reviewed_plan(SOURCE, _plan(), Pagination.SAME()),
         tmp_path / "production",
-        RunSettings(profile=profile_named("production")),
+        RunSettings(profile=Profile.parse("production")),
+        native_tools=native_fakes(),
     )
     assert not record.passed
     assert record.failed_stage == "export-source"

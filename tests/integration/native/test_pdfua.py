@@ -6,8 +6,7 @@ lazy from pathlib import Path
 
 from pypdf import PdfWriter
 
-from odfa11y.audit.validation import validate_pdfua
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.odf import PackageStorage
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
@@ -15,6 +14,7 @@ from odfa11y.pdf.structure.links import PdfLinkMeasurements
 from odfa11y.pdf.structure.marked_content import MarkedContentMeasurements
 from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import export_settings, validate_pdfua
 from tests.fixtures.writer import make_minimal_odt
 from tests.native.test_pdfua import LINK_DESCRIPTION_RULES, RICH_BODY, WRITER
 
@@ -26,7 +26,7 @@ def test_libreoffice_pdfua_export_has_core_markers(
     pdf = export_pdfua(
         make_minimal_odt(tmp_path / "doc.odt"),
         tmp_path / "doc.pdf",
-        ExportSettings(WRITER, soffice=soffice),
+        export_settings(WRITER, soffice=soffice),
     )
     report = audit_pdfua(pdf)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
@@ -48,7 +48,7 @@ def test_libreoffice_export_content_is_fully_tagged(
         package.read("content.xml").replace(b"<office:text>", b"<office:text>" + RICH_BODY, 1),
     )
     rich = package.save(tmp_path / "rich-doc.odt")
-    pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
+    pdf = export_pdfua(rich, tmp_path / "rich.pdf", export_settings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
     assert not {f.rule_id for f in report.findings} & {
         rules.PDF021.id,
@@ -67,7 +67,7 @@ def test_libreoffice_export_passes_real_verapdf_pdfua_validation(
     pdf = export_pdfua(
         make_minimal_odt(tmp_path / "doc.odt"),
         tmp_path / "doc.pdf",
-        ExportSettings(WRITER, soffice=soffice),
+        export_settings(WRITER, soffice=soffice),
     )
     result = validate_pdfua(pdf, executable=verapdf)
     assert result.compliant, result.raw_xml
@@ -89,7 +89,7 @@ def test_structural_checks_agree_with_verapdf_on_a_document_with_lists_tables_an
     )
     rich = tmp_path / "rich-doc.odt"
     package.save(rich)
-    pdf = export_pdfua(rich, tmp_path / "rich.pdf", ExportSettings(WRITER, soffice=soffice))
+    pdf = export_pdfua(rich, tmp_path / "rich.pdf", export_settings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
     assert not {f.rule_id for f in report.findings} & {
         rules.PDF013.id,
@@ -121,7 +121,7 @@ def test_a_hyperlink_wrapped_over_several_lines_is_one_correct_link(
         package.read("content.xml").replace(b"<office:text>", b"<office:text>" + body, 1),
     )
     wrapped = package.save(tmp_path / "wrapped.odt")
-    pdf = export_pdfua(wrapped, tmp_path / "wrapped.pdf", ExportSettings(WRITER, soffice=soffice))
+    pdf = export_pdfua(wrapped, tmp_path / "wrapped.pdf", export_settings(WRITER, soffice=soffice))
     report = audit_pdfua(pdf)
     assert (
         measured(measurement(report, PdfLinkMeasurements).link_annotation_count) >= 2

@@ -11,6 +11,7 @@ from typing import BinaryIO
 
 from odfa11y.errors import OutputOccupied, Remedy, RemedyAction, ToolFailure, ToolUnavailable
 from odfa11y.native.process import find_executable, identify_running_or_by_file, run_bounded
+from odfa11y.native.tools import LibreOffice
 from odfa11y.publish import publish_file
 from odfa11y.tool_identity import ToolIdentity
 from odfa11y.tool_timeout import Timeout
@@ -27,7 +28,7 @@ EXPORT_OPTIONS: dict[str, dict[str, str]] = {
 
 
 def find_soffice(requested: str | Path | None = None) -> str:
-    """Locate LibreOffice and require the supported minimum version.
+    """Locate LibreOffice; preparation identifies and checks the selected executable.
 
     Returns
     -------
@@ -40,9 +41,7 @@ def find_soffice(requested: str | Path | None = None) -> str:
         LibreOffice is too old or its version cannot be determined.
 
     """
-    executable = find_executable(requested, ("soffice", "libreoffice"))
-    require_supported_version(identify_soffice(executable))
-    return executable
+    return find_executable(requested, ("soffice", "libreoffice"))
 
 
 def require_supported_version(identity: ToolIdentity) -> None:
@@ -80,7 +79,7 @@ class ExportSettings:
     """
 
     pdf_filter: str
-    soffice: str | Path | None = None
+    office: LibreOffice
     timeout: int | float = Timeout.DEFAULT
     profile_dir: str | Path | None = None
 
@@ -116,7 +115,7 @@ def export_pdfua(source: str | Path, destination_pdf: str | Path, settings: Expo
     if source == destination.resolve():
         msg = f"Destination must differ from the source: {destination.name}"
         raise OutputOccupied(msg)
-    executable = find_soffice(settings.soffice)
+    executable = settings.office.executable
     options = f"pdf:{settings.pdf_filter}:" + json.dumps(EXPORT_OPTIONS, separators=(",", ":"))
     with (
         tempfile.TemporaryDirectory(prefix="odfa11y-lo-profile-") as temporary_profile,

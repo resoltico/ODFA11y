@@ -7,17 +7,14 @@ from pathlib import Path
 from typing import Never
 
 from odfa11y import (
-    DEFAULT_PROFILE,
     FORMATS,
-    PROFILES,
     ExitStatus,
     InvalidOption,
+    Profile,
     Tools,
     __version__,
-    profile_named,
     terminal_text,
 )
-lazy from odfa11y import Profile
 
 
 class TerminalParser(argparse.ArgumentParser):
@@ -66,14 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = _command(
         sub,
         "audit",
-        examples=("  odfa11y audit source.odt\n  odfa11y audit exported.pdf --verapdf --strict"),
+        examples=("  odfa11y audit source.odt\n  odfa11y audit exported.pdf --validate --strict"),
         description="Audit ODF or PDF files without changing them.",
     )
     p.add_argument("sources", nargs="+", type=Path)
     p.add_argument(
         "--schema", action="store_true", help="Validate ODF files against the ODF schema."
     )
-    _add_verapdf(p, "Validate PDF files with veraPDF (PDF/UA-1).")
+    p.add_argument("--validate", action="store_true", help="Validate PDFs with veraPDF (PDF/UA-1).")
+    p.add_argument("--verapdf", type=Path, help="Select the veraPDF executable; default: PATH.")
     _add_timeout(p)
     _add_report_options(p)
 
@@ -123,12 +121,13 @@ def build_parser() -> argparse.ArgumentParser:
         sub,
         "export",
         examples=(
-            "  odfa11y export reviewed.odt reviewed.pdf\n  odfa11y audit reviewed.pdf --verapdf"
+            "  odfa11y export reviewed.odt reviewed.pdf\n  odfa11y audit reviewed.pdf --validate"
         ),
         description="Export an ODF document to PDF/UA with LibreOffice.",
     )
     p.add_argument("source", type=Path)
     p.add_argument("destination", type=Path)
+    p.add_argument("--replace", action="store_true", help="Replace an existing regular file.")
     _add_tool_options(p)
 
     p = _command(
@@ -163,14 +162,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-dir", type=Path, required=True, help="Evidence directory to create.")
     p.add_argument(
         "--profile",
-        choices=tuple(PROFILES.values()),
+        choices=tuple(Profile),
         type=_profile_value,
-        default=DEFAULT_PROFILE,
+        default=Profile.PDF,
         help=_profile_help(),
     )
-    p.add_argument(
-        "--verapdf-path", type=Path, help="veraPDF executable for the production profile."
-    )
+    p.add_argument("--verapdf", type=Path, help="veraPDF executable for the production profile.")
     _add_tool_options(p)
     p.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -194,7 +191,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Show tool and dependency versions and what the PDF export supports.",
     )
     _add_tool_options(p)
-    p.add_argument("--verapdf-path", type=Path, help="Selected veraPDF executable.")
+    p.add_argument("--verapdf", type=Path, help="Selected veraPDF executable.")
     p.add_argument("--format", choices=("text", "json"), default="text")
     return parser
 
@@ -234,13 +231,6 @@ def _timeout_seconds(value: str) -> float:
     return seconds
 
 
-def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:
-    parser.add_argument("--verapdf", action="store_true", help=help_text)
-    parser.add_argument(
-        "--verapdf-path", type=Path, help="veraPDF executable (implies --verapdf); default: PATH."
-    )
-
-
 def _add_batch(sub: argparse._SubParsersAction) -> None:
     p = _command(
         sub,
@@ -255,20 +245,20 @@ def _add_batch(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument(
         "--profile",
-        choices=tuple(PROFILES.values()),
+        choices=tuple(Profile),
         type=_profile_value,
-        default=DEFAULT_PROFILE,
+        default=Profile.PDF,
         help=_profile_help(),
     )
-    p.add_argument("--verapdf-path", type=Path)
+    p.add_argument("--verapdf", type=Path)
     _add_tool_options(p)
     p.add_argument("--format", choices=("text", "json"), default="text")
 
 
 def _profile_help() -> str:
     return (
-        f"Assurance profile (default: {DEFAULT_PROFILE}): source checks source/remediation; "
-        "verify adds PDF diagnostics and fidelity; production also requires veraPDF "
+        f"Assurance profile (default: {Profile.PDF}): source checks source/remediation; "
+        "pdf adds PDF diagnostics and fidelity; production also requires veraPDF "
         "and gates warnings."
     )
 
@@ -310,6 +300,6 @@ def _profile_value(value: str) -> Profile:
 
     """
     try:
-        return profile_named(value)
+        return Profile.parse(value)
     except InvalidOption as exc:
         raise argparse.ArgumentTypeError(str(exc)) from exc

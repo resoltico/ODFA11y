@@ -160,12 +160,13 @@ def _export(args: argparse.Namespace) -> int:
         args.source,
         args.destination,
         tools=_tools(args),
+        replace=args.replace,
         observer=progress_callback("text"),
         native_tools=args.native_tools,
     )
     output = result.output
     print(f"Wrote PDF: {terminal_text(output)}")  # noqa: T201  CLI output is the command interface.
-    print("Next: audit the PDF with --verapdf --strict and review its accessibility.")  # noqa: T201  CLI output is the command interface.
+    print("Next: audit the PDF with --validate --strict and review its accessibility.")  # noqa: T201  CLI output is the command interface.
     return result.exit_status
 
 
@@ -188,7 +189,7 @@ def _compare(args: argparse.Namespace) -> int:
 def _tools(args: argparse.Namespace) -> api.Tools:
     return api.Tools(
         soffice=getattr(args, "soffice", None),
-        verapdf=getattr(args, "verapdf_path", None),
+        verapdf=getattr(args, "verapdf", None),
         timeout=args.timeout,
     )
 

@@ -15,16 +15,16 @@ import pytest
 
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.run.context import RunSettings
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.plans import plan_header
+from tests.fixtures.runs import RunSettings, run_batch
 from tests.fixtures.writer import make_minimal_odt
 lazy from odfa11y.plans import Plan
 
 
 def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
-    runner = importlib.import_module("odfa11y.batch.execute")
+    runner = importlib.import_module("odfa11y.application.run")
     original = runner.load_plan
     count = 0
 
@@ -88,7 +88,7 @@ def test_real_process_interruption_keeps_completed_evidence_and_pending_ids(
 
 
 def _blocked_publication(manifest: str, output: str, ready: Event, boundary: str) -> None:
-    runner = importlib.import_module("odfa11y.batch.execute")
+    runner = importlib.import_module("odfa11y.application.run")
     publisher = importlib.import_module("odfa11y.evidence.bundle")
     count = 0
 
@@ -109,7 +109,7 @@ def _blocked_publication(manifest: str, output: str, ready: Event, boundary: str
         patch.setattr(runner, "execute", blocked(runner.execute))
     else:
         patch.setattr(publisher, "write_manifest", blocked(publisher.write_manifest))
-    runner.run_batch(manifest, output, RunSettings(profile=profile_named("source")))
+    run_batch(manifest, output, RunSettings(profile=Profile.SOURCE))
 
 
 @pytest.mark.parametrize("boundary", ["before", "after"])

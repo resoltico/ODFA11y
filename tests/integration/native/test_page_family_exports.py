@@ -7,7 +7,6 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
-from odfa11y.audit.validation import validate_pdfua
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.pdf import audit_pdfua
@@ -15,9 +14,7 @@ from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.structure.checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.families.pages.test_page_family_exports import CORPUS, FAMILIES, _plan
 from tests.fixtures.answers import (
     graphic_answer,
@@ -25,7 +22,9 @@ from tests.fixtures.answers import (
     page_answer,
 )
 from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import validate_pdfua
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 lazy from tests.fixtures.answers import graphic_inputs, page_inputs
 
 
@@ -43,11 +42,11 @@ def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls
         reviewed_plan(source, _plan(), Pagination.SAME()),
         root,
         RunSettings(
-            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
         ),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]
-    assert all(stage.status == "passed" for stage in record.stages)
+    assert all(stage.outcome.status == "passed" for stage in record.stages)
     assert check_bundle(root) == []
     assert rules.PDF008.id in {f.rule_id for f in audit_pdfua(root / "source.pdf").findings}
     damaged = validate_pdfua(root / "source.pdf", executable=verapdf)
@@ -91,7 +90,7 @@ def test_described_illustration_only_draw_export_passes_both_content_checks(
         reviewed_plan(source, plan, Pagination.SAME()),
         root,
         RunSettings(
-            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
         ),
     )
     assert record.passed, [stage.as_dict() for stage in record.stages]

@@ -6,10 +6,10 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y import DocumentRefusal, PlanError, RemedyAction
+from odfa11y.application.export import export_document
 from odfa11y.cli import main
 from odfa11y.plans.codec import parse_tables
 from odfa11y.plans.registry import registered_kinds
-from odfa11y.run.native import export_document
 from tests.fixtures.native import native_fakes
 from tests.fixtures.native_resources import writer_resource
 from tests.fixtures.plans import plan_header

@@ -10,13 +10,13 @@ import pytest
 from lxml import etree
 
 import odfa11y.odf
+from odfa11y.application.export import export_document
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions.edit import EditResult
 from odfa11y.errors import PackageError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, qn
 from odfa11y.rules import registry as rules
-from odfa11y.run.native import export_document
 from tests.fixtures.answers import fault_input, metadata_input
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.writer import make_minimal_odt

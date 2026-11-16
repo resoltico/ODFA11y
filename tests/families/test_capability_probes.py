@@ -14,7 +14,7 @@ from odfa11y.families.probes import CapabilityStatus, ProbeId, measure_probe
 from odfa11y.native.libreoffice import ExportSettings
 from odfa11y.odf import OdfDocument, validate
 from odfa11y.tool_identity import ToolIdentity
-from tests.fixtures.native import validation_result
+from tests.fixtures.native import export_settings, validation_result, validator_tool
 from tests.fixtures.probes import fake_export, pdf_control
 
 PROBES = {probe.id: probe for adapter in REGISTRY.values() for probe in adapter.probes}
@@ -42,9 +42,10 @@ def test_positive_and_negative_exporter_controls(
     execution = measure_probe(
         PROBES[probe_id],
         ToolIdentity("LibreOffice", "26.8.1.1"),
-        ExportSettings(PROBES[probe_id].export_filter),
+        export_settings(PROBES[probe_id].export_filter),
         export=fake_export(probe_id, supported=supported),
         validate=native_tools.validate,
+        verapdf=validator_tool(),
     )
     assert execution.error is None
     assert execution.result.status == (
@@ -65,7 +66,7 @@ def test_untagged_link_export_cannot_report_support() -> None:
     result = measure_probe(
         PROBES[ProbeId.LINK_DESCRIPTIONS],
         ToolIdentity("LibreOffice", "26.8.1.1"),
-        ExportSettings("writer_pdf_Export"),
+        export_settings("writer_pdf_Export"),
         export=export,
     )
     assert result.error is None
@@ -82,9 +83,10 @@ def test_calc_support_requires_independent_validator_acceptance(
     execution = measure_probe(
         PROBES[ProbeId.CALC_PDFUA],
         ToolIdentity("LibreOffice", "26.8.1.1"),
-        ExportSettings("calc_pdf_Export"),
+        export_settings("calc_pdf_Export"),
         export=fake_export(ProbeId.CALC_PDFUA, supported=True),
         validate=native_tools.validate,
+        verapdf=validator_tool(),
     )
     assert execution.error is None
     assert execution.result.status == CapabilityStatus.UNSUPPORTED
@@ -103,7 +105,7 @@ def test_repeating_an_experiment_after_failure_measures_again() -> None:
         return control(source, destination, settings)
 
     identity = ToolIdentity("LibreOffice", "26.8.0.3")
-    settings = ExportSettings(probe.export_filter, "selected-office")
+    settings = export_settings(probe.export_filter, "selected-office")
     failed = measure_probe(probe, identity, settings, export=transient)
     repeated = measure_probe(probe, identity, settings, export=transient)
     assert failed.result.status is CapabilityStatus.NOT_TESTED

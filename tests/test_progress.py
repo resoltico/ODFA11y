@@ -8,7 +8,7 @@ import pytest
 
 from odfa11y import audit, run_batch
 from odfa11y.progress import Step, StepState, step
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
@@ -49,7 +49,7 @@ def test_library_operations_leave_signal_handlers_untouched_and_batch_events_ide
     )
     events = []
     result = run_batch(
-        batch, tmp_path / "output", profile=profile_named("source"), observer=events.append
+        batch, tmp_path / "output", profile=Profile.parse("source"), observer=events.append
     )
     assert result.exit_status == 0
     assert events

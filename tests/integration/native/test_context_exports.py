@@ -9,18 +9,18 @@ from lxml import etree
 
 from odfa11y.application.tools import Tools
 from odfa11y.evidence import check_bundle
-from odfa11y.native.libreoffice import ExportSettings, export_pdfua
+from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.run.context import RunSettings
-from odfa11y.run.engine import execute
-from odfa11y.run.profiles import profile_named
+from odfa11y.status import Profile
 from tests.fixtures.answers import metadata_input
+from tests.fixtures.native import export_settings
 from tests.fixtures.native_resources import PIXELS, author_package, decoded_images, writer_resource
 from tests.fixtures.operations import apply_answers
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -44,7 +44,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         source = alias
     original = source.read_bytes()
     direct = export_pdfua(
-        source, tmp_path / "direct.pdf", ExportSettings("writer_pdf_Export", soffice)
+        source, tmp_path / "direct.pdf", export_settings("writer_pdf_Export", soffice)
     )
     assert ((4, 4), PIXELS) in decoded_images(direct)
     baseline = read_snapshot(direct)
@@ -55,7 +55,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         reviewed_plan(source, [metadata_input(language="en-GB")], Pagination.SAME()),
         output,
         RunSettings(
-            tools=Tools(soffice=soffice, verapdf=verapdf), profile=profile_named("production")
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
         ),
     )
     assert result.passed, result.as_dict()
@@ -65,7 +65,7 @@ def test_supported_context_retains_real_pixels_text_and_relative_navigation(
         actual = read_snapshot(pdf)
         assert actual.links == baseline.links
         assert actual.text == baseline.text
-        assert compare_pdfs(direct, pdf, Pagination.SAME()).error_count == 0
+        assert compare_pdfs(direct, pdf, Pagination.SAME()).report.error_count == 0
     published = output / ("remediated" + source.suffix)
     expected = tmp_path / ("expected" + source.suffix)
     apply_answers(source, expected, [metadata_input(language="en-GB")])
@@ -94,7 +94,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     document.save(source)
     original = source.read_bytes()
     direct = export_pdfua(
-        source, tmp_path / "original.pdf", ExportSettings("writer_pdf_Export", soffice)
+        source, tmp_path / "original.pdf", export_settings("writer_pdf_Export", soffice)
     )
     assert "story.odt" in read_snapshot(direct).text
     assert ".odfa11y-source-" not in read_snapshot(direct).text
@@ -104,7 +104,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
             source,
             reviewed_plan(source, [], Pagination.SAME()),
             output / str(repeat),
-            RunSettings(tools=Tools(soffice=soffice), profile=profile_named("verify")),
+            RunSettings(tools=Tools(soffice=soffice), profile=Profile.PDF),
         )
         assert result.failed_stage == "export-source"
         assert result.exit_status == 2
@@ -115,7 +115,7 @@ def test_native_filename_context_is_refused_without_freezing_fields(
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         inspected,
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
     ).passed
     published = inspected / "remediated.odt"
     assert published.read_bytes() == original
@@ -123,10 +123,10 @@ def test_native_filename_context_is_refused_without_freezing_fields(
     assert not list(tmp_path.glob(".odfa11y-source-*"))
     # A deliberate destination filename is real visible change; fidelity still rejects it.
     renamed_pdf = export_pdfua(
-        published, tmp_path / "candidate.pdf", ExportSettings("writer_pdf_Export", soffice)
+        published, tmp_path / "candidate.pdf", export_settings("writer_pdf_Export", soffice)
     )
     assert "remediated.odt" in read_snapshot(renamed_pdf).text
-    assert compare_pdfs(direct, renamed_pdf, Pagination.SAME()).error_count != 0
+    assert compare_pdfs(direct, renamed_pdf, Pagination.SAME()).report.error_count != 0
 
 
 def _set_navigation_base(source: Path) -> None:

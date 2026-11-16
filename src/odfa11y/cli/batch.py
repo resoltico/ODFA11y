@@ -24,7 +24,7 @@ def batch_command(args: argparse.Namespace) -> int:
     record = api.run_batch(
         args.manifest,
         args.output_dir,
-        tools=api.Tools(args.soffice, args.verapdf_path, args.timeout),
+        tools=api.Tools(args.soffice, args.verapdf, args.timeout),
         profile=args.profile,
         observer=progress_callback(args.format),
         native_tools=args.native_tools,
