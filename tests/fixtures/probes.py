@@ -14,7 +14,8 @@ from pypdf.generic import (
 )
 lazy from pypdf import PdfWriter
 
-from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeExecution, ProbeId
+from odfa11y.families.probes import CapabilityResult, CapabilityStatus, ProbeExecution, ProbeId
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import (
     annotation_references,
     dictionary,
@@ -25,9 +26,8 @@ from tests.fixtures.pdf import (
     set_page_content,
     tagged_writer,
 )
+lazy from odfa11y.families.probes import CapabilityProbe, ProbeCache
 lazy from odfa11y.native.export import ExportSettings
-lazy from odfa11y.native.probes import CapabilityProbe, ProbeCache
-lazy from odfa11y.native.process import ToolIdentity
 
 PURPOSE = "ODFA11y reviewed link purpose."
 

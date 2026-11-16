@@ -9,10 +9,10 @@ import pytest
 from jsonschema import Draft7Validator
 
 from odfa11y.audit import audit_odf
+from odfa11y.audit.validation import check_pdfua
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import mapping_contract
 from odfa11y.errors import InvalidOption, IoFailure, PlanError
-from odfa11y.pdf import check_pdfua
 from odfa11y.report import (
     Finding,
     Location,

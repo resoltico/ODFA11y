@@ -12,12 +12,12 @@ import pytest
 from pypdf import PdfWriter
 
 from odfa11y.application.tools import Tools
+from odfa11y.audit.validation import check_pdfua, validate_pdfua
 from odfa11y.cli import main
 from odfa11y.cli.parser import build_parser
 from odfa11y.errors import InvalidOption, ToolFailure
 from odfa11y.native.export import ExportSettings
 from odfa11y.native.process import MAX_TIMEOUT_SECONDS, run_bounded, validate_timeout
-from odfa11y.pdf import check_pdfua, validate_pdfua
 from odfa11y.run.inspection import audit_document
 
 

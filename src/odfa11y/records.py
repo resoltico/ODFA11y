@@ -7,10 +7,10 @@ from typing import Literal
 from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.errors import Failure
 from odfa11y.status import ExitStatus, failure_status
+from odfa11y.tool_identity import ToolIdentity
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.errors import OdfA11yError
-lazy from odfa11y.native.probes import CapabilityResult
-lazy from odfa11y.native.process import ToolIdentity
+lazy from odfa11y.families.probes import CapabilityResult
 lazy from odfa11y.status import StageStatus
 
 

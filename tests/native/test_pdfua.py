@@ -7,7 +7,7 @@ import pytest
 
 from odfa11y.errors import OutputOccupied, ToolUnavailable
 from odfa11y.native.export import ExportSettings, export_pdfua, require_supported_version
-from odfa11y.native.process import ToolIdentity
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.writer import make_minimal_odt
 
 WRITER = "writer_pdf_Export"

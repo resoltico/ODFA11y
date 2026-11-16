@@ -3,22 +3,12 @@
 
 from odfa11y.pdf.audit import audit_pdfua
 from odfa11y.pdf.fonts import list_fonts
-from odfa11y.pdf.validate import (
-    FailedRule,
-    VeraPdfResult,
-    add_verapdf_findings,
-    check_pdfua,
-    find_verapdf,
-    validate_pdfua,
-)
+from odfa11y.pdf.validation import FailedRule, VeraPdfResult, add_verapdf_findings
 
 __all__ = [
     "FailedRule",
     "VeraPdfResult",
     "add_verapdf_findings",
     "audit_pdfua",
-    "check_pdfua",
-    "find_verapdf",
     "list_fonts",
-    "validate_pdfua",
 ]

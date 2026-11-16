@@ -11,12 +11,12 @@ from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.native.probes import ProbeCache
-from odfa11y.native.process import ToolIdentity
+from odfa11y.families.probes import ProbeCache
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from odfa11y.tool_identity import ToolIdentity
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.plans import plan_header, reviewed_plan

@@ -14,14 +14,14 @@ from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal, ToolUnavailable
 from odfa11y.families import REGISTRY
+from odfa11y.families.probes import CapabilityResult, CapabilityStatus, ProbeCache
 from odfa11y.native.export import ExportSettings
-from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeCache
 from odfa11y.odf import SUPPORTED_VERSIONS
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.records import DoctorRecord, Toolchain
+from odfa11y.tool_identity import ToolIdentity
 from odfa11y.version import __version__
 lazy from odfa11y.errors import OdfA11yError
-lazy from odfa11y.native.process import ToolIdentity
 lazy from odfa11y.progress import ProgressObserver
 
 

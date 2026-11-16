@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import Never
 
 from odfa11y.application.native import NativeTools
+from odfa11y.families.probes import ProbeId
 from odfa11y.native.export import ExportSettings
-from odfa11y.native.probes import ProbeId
-from odfa11y.native.process import ToolIdentity
-from odfa11y.pdf.validate import FailedRule, VeraPdfResult
+from odfa11y.pdf.validation import FailedRule, VeraPdfResult
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.probes import fake_export
 

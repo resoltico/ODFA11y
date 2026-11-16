@@ -5,8 +5,9 @@ lazy from collections.abc import Callable
 lazy from pathlib import Path
 
 from odfa11y.application.tools import Tools
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.native.export import ExportSettings, export_pdfua
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings

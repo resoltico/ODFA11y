@@ -7,8 +7,8 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.evidence import check_bundle
-from odfa11y.pdf import validate_pdfua
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES
 from odfa11y.rules import registry as rules

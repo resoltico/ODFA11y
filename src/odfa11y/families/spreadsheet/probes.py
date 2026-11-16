@@ -3,9 +3,9 @@
 
 lazy from pathlib import Path
 
-from odfa11y.native.probe_pdf import calc_pdfua
-from odfa11y.native.probe_sources import write_probe_package
-from odfa11y.native.probes import CapabilityProbe, ProbeId
+from odfa11y.families.probe_pdf import calc_pdfua
+from odfa11y.families.probe_sources import write_probe_package
+from odfa11y.families.probes import CapabilityProbe, ProbeId
 from odfa11y.odf import Family
 
 

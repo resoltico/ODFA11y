@@ -10,10 +10,10 @@ from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.errors import DocumentRefusal, ToolFailure, ToolUnavailable
 from odfa11y.families import REGISTRY
-from odfa11y.native.probes import CapabilityStatus, ProbeId
-from odfa11y.native.process import ToolIdentity
+from odfa11y.families.probes import CapabilityStatus, ProbeId
 from odfa11y.odf import OdfDocument
 from odfa11y.run import diagnostics
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.native import validation_result
 from tests.fixtures.probes import fake_export
 from tests.fixtures.schema import assert_record_schema

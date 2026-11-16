@@ -10,11 +10,11 @@ from pypdf import PdfReader
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
 from odfa11y.audit.package import PackageMeasurements
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.families.spreadsheet.audit import SpreadsheetMeasurements
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import PIPELINE_STAGES

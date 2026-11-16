@@ -15,7 +15,7 @@ ROOT = REPOSITORY
     "module",
     [
         "odfa11y.pdf.fidelity",
-        "odfa11y.native.probes",
+        "odfa11y.families.probes",
         "odfa11y.concepts",
         "odfa11y.odf.styles",
         "odfa11y.run",

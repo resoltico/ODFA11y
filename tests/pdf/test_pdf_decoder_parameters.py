@@ -13,13 +13,13 @@ from odfa11y.batch import run_batch
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailure
 from odfa11y.evidence import check_bundle
-from odfa11y.native.probes import ProbeCache
-from odfa11y.native.process import ToolIdentity
+from odfa11y.families.probes import ProbeCache
 from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import register, tagged_writer
 from tests.fixtures.plans import plan_header
 from tests.fixtures.probes import conclusive_probe

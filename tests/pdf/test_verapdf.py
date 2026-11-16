@@ -6,10 +6,13 @@ import shlex
 lazy from pathlib import Path
 
 import pytest
+from lxml import etree
 
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.errors import ToolFailure, ToolUnavailable
-from odfa11y.pdf import add_verapdf_findings, find_verapdf, validate_pdfua
-from odfa11y.pdf.validate import ValidationMeasurements
+from odfa11y.native.verapdf import find_verapdf
+from odfa11y.pdf import add_verapdf_findings
+from odfa11y.pdf.validation import ValidationMeasurements, parse_validation
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rule_catalogue
@@ -100,8 +103,8 @@ def test_failed_rules_keep_their_standard_identity_and_sample_contexts(tmp_path:
         "10",
     )
     assert failure.failed_checks == 4
-    assert failure.contexts == ("root/a", "root/b", "root/c")
-    assert failure.messages == ("one", "two", "three")
+    assert failure.contexts == ("root/a", "root/b", "root/c", "root/d")
+    assert failure.messages == ("one", "two", "three", "four")
     report = Report(kind=ReportKind.PDF_VALIDATION, subject="in.pdf")
     add_verapdf_findings(report, result)
     finding = report.findings[0]
@@ -136,3 +139,36 @@ def test_execution_and_report_failures_are_distinct_from_non_compliance(
 def test_missing_validator_is_a_not_found_error(tmp_path: Path) -> None:
     with pytest.raises(ToolUnavailable):
         find_verapdf(tmp_path / "absent")
+
+
+@pytest.mark.parametrize("namespace", ["default", "prefixed"])
+def test_namespaced_report_elements_keep_failure_details(namespace: str) -> None:
+    source = report_xml(compliant=False)
+    uri = "urn:verapdf:report"
+    if namespace == "default":
+        xml = source.replace("<report>", f'<report xmlns="{uri}">').encode()
+    else:
+        root = etree.fromstring(source.encode())
+        for node in root.iter():
+            node.tag = f"{{{uri}}}{node.tag}"
+        xml = etree.tostring(root)
+        assert b"<ns0:" in xml
+    result = parse_validation(xml)
+    assert not result.compliant
+    assert result.identity.version == "9.9.9"
+    assert result.failures[0].description == "The catalog shall include DisplayDocTitle."
+    assert result.failures[0].contexts[0] == "root/a"
+    assert result.failures[0].messages[0] == "one"
+
+
+@pytest.mark.parametrize("value", ["no", "", "-1", "1.5", "\u0661"])
+def test_malformed_failed_check_count_is_a_tool_failure(value: str) -> None:
+    xml = report_xml(compliant=False).replace('failedChecks="4"', f'failedChecks="{value}"')
+    with pytest.raises(ToolFailure, match="malformed failedChecks"):
+        parse_validation(xml.encode())
+
+
+def test_malformed_compliance_boolean_is_a_tool_failure() -> None:
+    xml = report_xml(compliant=True).replace('isCompliant="true"', 'isCompliant="perhaps"')
+    with pytest.raises(ToolFailure, match="malformed isCompliant"):
+        parse_validation(xml.encode())

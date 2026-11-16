@@ -8,14 +8,15 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.cli import main
 from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.evidence import check_bundle
+from odfa11y.families.probes import ProbeId
 from odfa11y.families.text.probes import LINK_PURPOSE, write_link_probe
 from odfa11y.native.export import ExportSettings, export_pdfua, identify_soffice
-from odfa11y.native.probes import ProbeId
 from odfa11y.odf import OdfDocument, PackageStorage, validate
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.rules import registry as rules
 from odfa11y.run.context import RunSettings

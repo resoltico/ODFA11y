@@ -8,12 +8,13 @@ lazy from pathlib import Path
 from lxml import etree
 
 from odfa11y.audit import audit_odf
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.concepts import graphics_fingerprint
 from odfa11y.concepts.links import document_links, link_fingerprint, link_location
 from odfa11y.decisions.edit import Status
 from odfa11y.native.export import ExportSettings, export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.pdf.link_structure import PdfLinkMeasurements

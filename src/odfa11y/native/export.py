@@ -16,7 +16,7 @@ from odfa11y.native.process import (
     validate_timeout,
 )
 from odfa11y.staging import staging_sibling
-lazy from odfa11y.native.process import ToolIdentity
+from odfa11y.tool_identity import ToolIdentity
 
 DEFAULT_TIMEOUT_SECONDS = 120
 MINIMUM_LIBREOFFICE_VERSION = (26, 8)

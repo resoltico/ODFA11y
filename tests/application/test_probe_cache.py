@@ -11,12 +11,12 @@ from odfa11y.application.native import NativeTools
 from odfa11y.batch import run_batch
 from odfa11y.concepts import document_links, link_fingerprint
 from odfa11y.errors import ToolFailure
+from odfa11y.families.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.families.text.probes import PROBES
 from odfa11y.native.export import ExportSettings
-from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
-from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument, PackageStorage
 from odfa11y.run.context import RunSettings
+from odfa11y.tool_identity import ToolIdentity
 from tests.batch.test_batch import manifest_file
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.plans import plan_header

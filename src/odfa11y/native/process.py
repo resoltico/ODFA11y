@@ -19,6 +19,7 @@ lazy from collections.abc import Generator
 lazy from types import FrameType
 
 from odfa11y.errors import InvalidOption, Remedy, RemedyAction, ToolUnavailable
+from odfa11y.tool_identity import ToolIdentity
 
 IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
@@ -169,24 +170,6 @@ def _kill_tree(process: subprocess.Popen[bytes]) -> None:
         except ProcessLookupError:
             return
     process.kill()
-
-
-@dataclass(frozen=True, slots=True)
-class ToolIdentity:
-    """Name and version of an application as it reports itself."""
-
-    name: str
-    version: str
-
-    def as_dict(self) -> dict[str, str]:
-        """Serialize the identity.
-
-        Returns
-        -------
-        dict[str, str]
-            The tool name and version.
-        """
-        return {"name": self.name, "version": self.version}
 
 
 def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -> str:

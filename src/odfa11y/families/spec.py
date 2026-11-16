@@ -9,7 +9,7 @@ from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions import DecisionKind
 from odfa11y.odf import Family, OdfDocument
 from odfa11y.odf.allowance import XmlChange
-lazy from odfa11y.native.probes import CapabilityProbe
+lazy from odfa11y.families.probes import CapabilityProbe
 lazy from odfa11y.report import Report
 
 

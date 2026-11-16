@@ -21,7 +21,7 @@ from odfa11y.status import BatchStatus, ExitStatus
 from tests.fixtures.plans import plan_header
 from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
-lazy from odfa11y.native.probes import ProbeCache
+lazy from odfa11y.families.probes import ProbeCache
 lazy from odfa11y.plans import Plan
 lazy from odfa11y.run.record import RunRecord
 

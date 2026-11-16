@@ -9,8 +9,9 @@ import pytest
 from pypdf import PdfWriter
 from pypdf.generic import ContentStream, DecodedStreamObject
 
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.native.export import ExportSettings, export_pdfua
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.rules import registry as rules
 from tests.fixtures.writer import make_minimal_odt
 

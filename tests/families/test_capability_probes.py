@@ -9,10 +9,10 @@ from pypdf.generic import NameObject
 
 from odfa11y.application.native import NativeTools
 from odfa11y.families import REGISTRY
+from odfa11y.families.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.native.export import ExportSettings
-from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
-from odfa11y.native.process import ToolIdentity
 from odfa11y.odf import OdfDocument, validate
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.native import validation_result
 from tests.fixtures.probes import fake_export, pdf_control
 

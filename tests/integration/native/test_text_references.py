@@ -9,8 +9,9 @@ from pypdf import PdfReader
 
 from odfa11y.application.tools import Tools
 from odfa11y.audit import audit_odf
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.families.text.references.audit import ReferenceMeasurements
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.rules import registry as rules
 from odfa11y.run.native import export_document
 from tests.fixtures.measurements import measured, measurement

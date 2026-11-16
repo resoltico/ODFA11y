@@ -40,7 +40,7 @@ from odfa11y.pdf.fidelity.compare import FidelityMeasurements
 from odfa11y.pdf.link_structure import PdfLinkMeasurements
 from odfa11y.pdf.marked_content import MarkedContentMeasurements
 from odfa11y.pdf.structure_checks import PdfStructureMeasurements
-from odfa11y.pdf.validate import ValidationMeasurements
+from odfa11y.pdf.validation import ValidationMeasurements
 from odfa11y.plans import PlanHeader
 from odfa11y.plans.contracts import decision_contract, file_contract
 from odfa11y.plans.registry import registered_kinds

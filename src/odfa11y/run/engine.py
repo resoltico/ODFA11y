@@ -9,14 +9,15 @@ lazy from collections.abc import Callable
 
 from odfa11y.application.native import NativeTools
 from odfa11y.audit import audit_odf, plan_blockers
+from odfa11y.audit.validation import check_pdfua
 from odfa11y.capture import capture_source, source_digest
 from odfa11y.errors import PackageError
 from odfa11y.evidence import require_free_directory
 from odfa11y.families import spec_for
+from odfa11y.families.probes import ProbeCache
 from odfa11y.families.spec import PdfExport
-from odfa11y.native.probes import ProbeCache
 from odfa11y.odf import OdfDocument, Use, declared_version
-from odfa11y.pdf import audit_pdfua, check_pdfua, list_fonts
+from odfa11y.pdf import audit_pdfua, list_fonts
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.progress import PIPELINE_STAGES, ProgressEvent, Stage, Step, StepState
 from odfa11y.records import DocumentIdentity

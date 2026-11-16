@@ -9,10 +9,10 @@ lazy from collections.abc import Callable, Sequence
 
 from odfa11y.errors import OdfA11yError, ToolFailure
 from odfa11y.native.export import ExportSettings, export_pdfua
-from odfa11y.pdf.validate import PdfValidator
+from odfa11y.pdf.validation import PdfValidator
 from odfa11y.progress import ProgressEvent, Step, StepState
+from odfa11y.tool_identity import ToolIdentity
 lazy from odfa11y.decisions import Decision
-lazy from odfa11y.native.process import ToolIdentity
 lazy from odfa11y.odf import Family
 lazy from odfa11y.progress import ProgressObserver
 

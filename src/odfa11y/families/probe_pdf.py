@@ -8,11 +8,10 @@ from pypdf.generic import ContentStream, StreamObject
 lazy from pypdf.generic import DictionaryObject
 
 from odfa11y.errors import ToolFailure
-from odfa11y.pdf import validate_pdfua
 from odfa11y.pdf.audit import PdfInspection, inspect_pdf
 from odfa11y.pdf.reading.consumption import MAX_FORM_DEPTH, check_consumption
 from odfa11y.pdf.structure_walk import build_tree, pdf_dictionary
-from odfa11y.pdf.validate import PdfValidator
+from odfa11y.pdf.validation import PdfValidator
 from odfa11y.report import exit_status
 from odfa11y.rules import registry as rules
 
@@ -188,10 +187,13 @@ def calc_pdfua(
         Whether this exact Calc export passes both independent checks.
 
     """
+    if validate is None:
+        message = "Independent PDF/UA validation is unavailable for this capability probe."
+        raise ToolFailure(message)
     inspection = _inspect(pdf)
     report = inspection.report
     return (
         bool((inspection.structure.tags if inspection.structure is not None else {}).get("Table"))
         and exit_status([report], strict=True) == 0
-        and (validate or validate_pdfua)(pdf, executable=validator, timeout=timeout).compliant
+        and validate(pdf, executable=validator, timeout=timeout).compliant
     )

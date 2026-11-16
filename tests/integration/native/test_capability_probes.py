@@ -5,8 +5,8 @@ lazy from collections.abc import Callable
 
 import pytest
 
+from odfa11y.families.probes import CapabilityStatus, ProbeCache, ProbeId
 from odfa11y.native.export import ExportSettings, find_soffice, identify_soffice
-from odfa11y.native.probes import CapabilityStatus, ProbeCache, ProbeId
 from tests.families.test_capability_probes import PROBES
 
 

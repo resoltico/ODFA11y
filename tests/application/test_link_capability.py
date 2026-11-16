@@ -16,17 +16,17 @@ from odfa11y import __version__
 from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
 from odfa11y.errors import ToolFailure, ToolUnavailable
-from odfa11y.families.text.probes import PROBES, write_link_probe
-from odfa11y.native.export import ExportSettings
-from odfa11y.native.probes import (
+from odfa11y.families.probes import (
     CapabilityResult,
     CapabilityStatus,
     ProbeCache,
     ProbeExecution,
     ProbeId,
 )
-from odfa11y.native.process import ToolIdentity
+from odfa11y.families.text.probes import PROBES, write_link_probe
+from odfa11y.native.export import ExportSettings
 from odfa11y.odf import Family, OdfDocument
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import (
     annotation_references,
     dictionary,
@@ -35,7 +35,7 @@ from tests.fixtures.pdf import (
     tagged_writer,
 )
 from tests.fixtures.probes import conclusive_probe
-lazy from odfa11y.native.probes import CapabilityProbe
+lazy from odfa11y.families.probes import CapabilityProbe
 
 WRITER = "writer_pdf_Export"
 SETTINGS = ExportSettings(WRITER)

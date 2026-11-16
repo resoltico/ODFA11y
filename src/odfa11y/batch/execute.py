@@ -8,7 +8,7 @@ from odfa11y.batch.batch_file import load_manifest, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
-from odfa11y.native.probes import ProbeCache
+from odfa11y.families.probes import ProbeCache
 from odfa11y.native.process import termination_interrupt
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan

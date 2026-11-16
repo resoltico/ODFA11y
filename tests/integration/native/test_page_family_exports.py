@@ -7,9 +7,10 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.application.tools import Tools
+from odfa11y.audit.validation import validate_pdfua
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.pdf import audit_pdfua, validate_pdfua
+from odfa11y.pdf import audit_pdfua
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.pdf.structure_checks import PdfStructureMeasurements
 from odfa11y.plans.fidelity import Pagination
