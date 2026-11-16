@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pypdf.errors import PdfReadError, PyPdfError
-from pypdf.generic import ArrayObject, DictionaryObject, NameObject
+from pypdf.generic import DictionaryObject, NameObject
 lazy from pypdf import PageObject
 
 from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity.uri import effective_uri, uri_base
 from odfa11y.pdf.reading import BoundedPdf, open_pdf
-from odfa11y.pdf.reading.objects import resolve
+from odfa11y.pdf.reading.objects import annotation_objects, resolve
 
 SIZE_PRECISION = 1
 
@@ -94,20 +94,9 @@ def _snapshot(reader: BoundedPdf) -> PdfSnapshot:
 def _link_targets(
     page: PageObject, base: str | None, number: int, issues: list[UriIssue]
 ) -> list[str]:
-    annotations = page.get("/Annots")
-    if annotations is None:
-        return []
     targets = []
-    annotations = resolve(annotations)
-    if not isinstance(annotations, ArrayObject):
-        msg = "Expected a PDF annotation array"
-        raise PdfReadError(msg)
-    for item in annotations:
-        annotation = resolve(item)
-        if not isinstance(annotation, DictionaryObject):
-            msg = "Expected a PDF annotation dictionary"
-            raise PdfReadError(msg)
-        if annotation.get("/Subtype") != "/Link":
+    for _item, annotation in annotation_objects(page):
+        if resolve(annotation.get("/Subtype")) != "/Link":
             continue
         try:
             target = _action_uri(annotation, base)

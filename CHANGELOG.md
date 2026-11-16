@@ -18,6 +18,7 @@
 - Doctor alone measures exporter capabilities, reporting meanings, related rules and unmeasured reasons; document runs and batches no longer probe or cache experiments.
 - Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs now use one condition per concept; see the [mapping](docs/RULES.md#renamed-in-the-next-release).
 - One style resolver and allowance-based preservation proof replace family-specific mechanisms; protected XML, opaque content and schema-regression guards remain independent.
+- Built-in PDF audits report malformed annotation collections/entries as incomplete inspection instead of measuring zero links.
 - PDF checks share one bounded reader/Form walk and typed inspection data. URI issues retain other comparison checks; bitmap-size mismatches are geometry changes.
 - veraPDF parsing refuses incomplete jobs, inconsistent verdicts/rule counts and malformed bytes, including invalid UTF-8; incomplete validation cannot pass production.
 - All nine use cases return frozen contracts with derived exit status. Every command supports JSON; core owns plannability, remedies and SARIF preflight.

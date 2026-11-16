@@ -9,7 +9,6 @@ from pypdf.generic import (
     BooleanObject,
     DictionaryObject,
     NameObject,
-    NumberObject,
     TextStringObject,
 )
 lazy from pypdf import PdfWriter
@@ -252,31 +251,6 @@ def test_a_mapping_declared_on_another_page_is_an_error(tmp_path: Path) -> None:
     finding = next(f for f in audit(tmp_path, writer).findings if f.rule_id == rules.PDF019.id)
     assert finding.severity.value == "error"
     assert finding.details["count"] == 1
-
-
-def test_malformed_annotation_entries_are_skipped_not_fatal(tmp_path: Path) -> None:
-    writer = tagged_writer(["H1"])
-    page = writer.pages[0]
-    page[NameObject("/Annots")] = NumberObject(5)
-    assert rules.PDF001.id not in ids(audit(tmp_path, writer))
-    page[NameObject("/Annots")] = ArrayObject([
-        NumberObject(1),
-        writer._add_object(NumberObject(2)),
-    ])
-    report = audit(tmp_path, writer)
-    assert rules.PDF001.id not in ids(report)
-    assert measured(measurement(report, PdfLinkMeasurements).link_annotation_count) == 0
-
-
-def test_malformed_annotation_entries_do_not_abort_the_audit(tmp_path: Path) -> None:
-    writer = tagged_writer(["H1"], link_annotations=1)
-    writer.pages[0][NameObject("/Annots")] = NumberObject(5)
-    assert rules.PDF001.id not in ids(audit(tmp_path, writer))
-    writer = tagged_writer(["H1"], link_annotations=1)
-    annotations = writer.pages[0]["/Annots"]
-    assert isinstance(annotations, ArrayObject)
-    annotations.insert(0, NumberObject(7))
-    assert rules.PDF001.id not in ids(audit(tmp_path, writer))
 
 
 @pytest.mark.parametrize(

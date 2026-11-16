@@ -5,12 +5,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
-from pypdf.errors import PdfReadError
-from pypdf.generic import ArrayObject
-lazy from pypdf.generic import DictionaryObject
-
 from odfa11y.contracts import Description
-from odfa11y.pdf.reading.objects import dictionary, has_text, text, xref
+from odfa11y.pdf.reading.objects import annotation_objects, has_text, resolve, text, xref
 from odfa11y.rules import registry as rules
 from odfa11y.rules.details import DETAIL_ITEMS
 lazy from odfa11y.pdf.reading import BoundedPdf
@@ -66,30 +62,14 @@ def link_annotations(reader: BoundedPdf) -> list[LinkAnnotation]:
     found = []
     for number, page in enumerate(reader.pages, start=1):
         page_ref = page.indirect_reference
-        raw = page.get("/Annots")
-        items = raw.get_object() if raw is not None else None
-        if not isinstance(items, ArrayObject):
-            continue
-        for item in items:
-            annotation = _link_dictionary(item)
-            if annotation is not None:
+        for item, annotation in annotation_objects(page):
+            if resolve(annotation.get("/Subtype")) == "/Link":
                 found.append(
                     LinkAnnotation(
-                        xref(item),
-                        xref(page_ref),
-                        number,
-                        text(annotation.get("/Contents")),
+                        xref(item), xref(page_ref), number, text(annotation.get("/Contents"))
                     )
                 )
     return found
-
-
-def _link_dictionary(item: object) -> DictionaryObject | None:
-    try:
-        annotation = dictionary(item)
-    except PdfReadError:
-        return None  # a malformed annotation entry is not a link we can correlate
-    return annotation if annotation.get("/Subtype") == "/Link" else None
 
 
 def check_link_structure(
