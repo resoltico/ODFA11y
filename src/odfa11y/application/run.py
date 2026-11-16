@@ -15,8 +15,8 @@ from odfa11y.families import require_spec
 from odfa11y.native.tools import ResolvedTools
 from odfa11y.odf import OdfDocument, Use
 from odfa11y.plans import Plan
-from odfa11y.plans.registry import load_plan
 from odfa11y.progress import ProgressObserver, Step, step
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.run.engine import execute
 from odfa11y.run.record import RunRecord

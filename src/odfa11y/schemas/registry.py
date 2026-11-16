@@ -44,8 +44,8 @@ from odfa11y.pdf.structure.marked_content import MarkedContentMeasurements
 from odfa11y.pdf.validation import ValidationMeasurements
 from odfa11y.plans import PlanHeader
 from odfa11y.plans.contracts import decision_contract, file_contract
-from odfa11y.plans.registry import registered_kinds
 from odfa11y.remediate import RemediationResult
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.report import Finding, Report
 from odfa11y.rules.registry import RULES
 from odfa11y.run.record import RunRecord

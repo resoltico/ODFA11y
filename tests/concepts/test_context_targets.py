@@ -12,7 +12,7 @@ from odfa11y.concepts import link_fingerprint, link_location
 from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.plans import Plan, parse_tables
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 from tests.fixtures.answers import (

@@ -10,7 +10,7 @@ import pytest
 
 from odfa11y.decisions import DecisionScope
 from odfa11y.odf import OdfDocument
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.preservation import answer_values, observation, target_bindings
 

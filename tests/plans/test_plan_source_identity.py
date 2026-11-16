@@ -12,7 +12,7 @@ from odfa11y.application.remediate import remediate
 from odfa11y.audit import prepare_plan
 from odfa11y.errors import PlanError
 from odfa11y.plans import Plan, parse_tables
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.rules import registry as rules
 from tests.fixtures.documents import Variant, make_flat
 from tests.fixtures.writer import make_minimal_odt

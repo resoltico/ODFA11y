@@ -14,7 +14,7 @@ from odfa11y.errors import PlanError
 from odfa11y.families.database.descriptions import fingerprint, targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.rules import registry as rules
 from odfa11y.status import Profile
 from tests.fixtures.answers import (

@@ -12,7 +12,7 @@ from odfa11y.decisions.edit import EditResult, Outcome
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.remediate.execute import execute_decisions
 from odfa11y.targets import Fingerprint, Target, TargetPath

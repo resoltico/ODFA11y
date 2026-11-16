@@ -13,7 +13,7 @@ from odfa11y.errors import PlanError
 from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from odfa11y.plans import parse_tables
-from odfa11y.plans.registry import load_plan, registered_kinds
+from odfa11y.remediate.catalogue import load_plan, registered_kinds
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target

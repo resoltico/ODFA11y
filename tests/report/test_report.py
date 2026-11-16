@@ -10,7 +10,7 @@ from odfa11y import render_json
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions import OpenDecision
 from odfa11y.pdf.fidelity.compare import FidelityMeasurements
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.report import (
     RULES,
     Location,

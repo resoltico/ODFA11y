@@ -10,9 +10,9 @@ from odfa11y.capture import capture_source
 from odfa11y.errors import IoFailure
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan
-from odfa11y.plans.registry import load_plan
 from odfa11y.publish import publish_file, require_distinct, require_file_destination
 from odfa11y.remediate.candidate import Candidate, RefusedCandidate
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.remediate.execute import execute_decisions, require_remediable
 from odfa11y.remediate.result import PublicationState, RemediationResult

@@ -31,6 +31,8 @@ A single style resolver takes explicit scope/family; [XML names](../src/odfa11y/
 have one owner. `DecisionKind[A]` owns the answer, direct edit, target domain and resolved
 rules. Questions are created with raised findings. Target domains own enumeration,
 resolution and fingerprints; content answers remain target-bound.
+`remediate/catalogue.py` composes family/common kinds and loads plans against that catalogue;
+`plans/` contains the model, codec and fidelity contract without workflow imports.
 
 Edits return outcomes plus an `Allowance`. One
 [preservation proof](../src/odfa11y/concepts/preservation.py) masks only those declared effects.

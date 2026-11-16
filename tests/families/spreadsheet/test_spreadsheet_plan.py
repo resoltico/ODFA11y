@@ -17,7 +17,7 @@ from odfa11y.families.spreadsheet.answers import SheetNameAnswer
 from odfa11y.odf import Family, OdfDocument, Part, select_elements
 from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (

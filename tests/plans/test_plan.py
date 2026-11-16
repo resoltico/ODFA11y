@@ -12,7 +12,7 @@ from odfa11y.errors import IoFailure, PlanError
 from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan, PlanHeader, SourceBinding, render_plan
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.plans.registry import load_plan, registered_kinds
+from odfa11y.remediate.catalogue import load_plan, registered_kinds
 from odfa11y.remediate.compile import compile_decisions
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.schema import assert_record_schema

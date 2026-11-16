@@ -19,8 +19,8 @@ from odfa11y.odf import OdfDocument
 from odfa11y.pdf.fidelity import compare_pdfs
 from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
-from odfa11y.plans.registry import load_plan
 from odfa11y.progress import ProgressObserver, Step, step
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.report import Report, SarifOptions, exit_status
 from odfa11y.status import ExitStatus
 lazy from odfa11y.plans.fidelity import FidelityPolicy

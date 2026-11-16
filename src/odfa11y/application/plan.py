@@ -9,7 +9,7 @@ from odfa11y.application.io_errors import translate_io
 from odfa11y.audit import prepare_plan
 from odfa11y.contracts import JsonObject, JsonProperty, record_dict
 from odfa11y.plans import Plan
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.report import Report, exit_status
 from odfa11y.status import ExitStatus
 

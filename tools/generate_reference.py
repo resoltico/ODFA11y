@@ -17,8 +17,8 @@ from odfa11y.families.text.tables.classification import TableKind
 from odfa11y.glossary import TERMS
 from odfa11y.odf import Family, Layout, Part, Use
 from odfa11y.plans.codec import decision_reference
-from odfa11y.plans.registry import registered_kinds
 from odfa11y.progress import Stage, Step, StepState
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.remediate.violations import ViolationKind
 from odfa11y.report import (
     RULES,

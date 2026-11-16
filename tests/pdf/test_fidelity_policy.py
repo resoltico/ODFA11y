@@ -10,7 +10,7 @@ from odfa11y.cli import main
 from odfa11y.contracts import decode
 from odfa11y.errors import PlanError
 from odfa11y.plans.fidelity import FidelityPolicy, Pagination
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt

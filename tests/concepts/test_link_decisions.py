@@ -11,7 +11,7 @@ from odfa11y.concepts.links import link_fingerprint, link_location
 from odfa11y.decisions.edit import Status
 from odfa11y.errors import PlanError
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from tests.concepts.test_graphic_roles_links import _graphic
 from tests.fixtures.answers import (
     graphic_answer,

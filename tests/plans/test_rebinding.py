@@ -16,7 +16,7 @@ from odfa11y.odf import names as xml_names
 from odfa11y.plans import Plan, parse_tables
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.model import UnansweredDecision
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from tests.fixtures.writer import make_minimal_odt
 
 

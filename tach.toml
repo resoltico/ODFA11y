@@ -221,7 +221,7 @@ depends_on = ["odfa11y.native", "odfa11y.native.tools", "odfa11y.native.libreoff
 [[modules]]
 path = "odfa11y.remediate"
 layer = "workflows"
-depends_on = ["odfa11y.remediate.metadata", "odfa11y.remediate.version", "odfa11y.plans.registry", "odfa11y.remediate.document_ops", "odfa11y.audit", "odfa11y.report", "odfa11y.capture", "odfa11y.concepts", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.remediate.violations", "odfa11y.status"]
+depends_on = ["odfa11y.remediate.metadata", "odfa11y.remediate.version", "odfa11y.remediate.catalogue", "odfa11y.remediate.document_ops", "odfa11y.audit", "odfa11y.report", "odfa11y.capture", "odfa11y.concepts", "odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.families.spec", "odfa11y.language_tags", "odfa11y.odf", "odfa11y.plans", "odfa11y.remediate.violations", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.run"
@@ -236,7 +236,7 @@ depends_on = ["odfa11y.contracts", "odfa11y.decisions", "odfa11y.families.spec",
 [[modules]]
 path = "odfa11y.batch"
 layer = "runs"
-depends_on = ["odfa11y.plans.registry", "odfa11y.contracts", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families.probes", "odfa11y.native.process", "odfa11y.plans", "odfa11y.progress", "odfa11y.run", "odfa11y.run.record", "odfa11y.publish", "odfa11y.status"]
+depends_on = ["odfa11y.remediate.catalogue", "odfa11y.contracts", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families.probes", "odfa11y.native.process", "odfa11y.plans", "odfa11y.progress", "odfa11y.run", "odfa11y.run.record", "odfa11y.publish", "odfa11y.status"]
 
 [[modules]]
 path = "odfa11y.evidence"
@@ -287,7 +287,7 @@ layer = "workflows"
 depends_on = ["odfa11y.remediate.metadata", "odfa11y.remediate.version", "odfa11y.report", "odfa11y.rules", "odfa11y.decisions", "odfa11y.odf"]
 
 [[modules]]
-path = "odfa11y.plans.registry"
+path = "odfa11y.remediate.catalogue"
 layer = "workflows"
 depends_on = ["odfa11y.contracts", "odfa11y.decisions", "odfa11y.errors", "odfa11y.families", "odfa11y.plans", "odfa11y.remediate.document_ops"]
 

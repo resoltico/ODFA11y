@@ -15,7 +15,7 @@ from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, qn
 from odfa11y.plans import Plan, parse_tables
-from odfa11y.plans.registry import registered_kinds
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.report import Location
 from odfa11y.rules import registry as rules
 from odfa11y.targets import Fingerprint, Target, TargetPath, require_target

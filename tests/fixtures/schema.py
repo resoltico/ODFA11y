@@ -11,7 +11,7 @@ from jsonschema.protocols import Validator
 from odfa11y.contracts import JsonObject
 from odfa11y.errors import InvalidOption
 from odfa11y.plans import Plan
-from odfa11y.plans.registry import registered_formats
+from odfa11y.remediate.catalogue import registered_formats
 from odfa11y.schemas import registered_contracts
 from tools.generate_reference import FORMATS
 

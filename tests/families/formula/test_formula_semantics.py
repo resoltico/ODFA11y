@@ -13,7 +13,7 @@ from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.errors import PlanError
 from odfa11y.families.formula.expression import fingerprint
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.remediate.compile import compile_decisions
 from odfa11y.rules import registry as rules
 from tests.fixtures.answers import (

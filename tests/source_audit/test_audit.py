@@ -9,7 +9,7 @@ import pytest
 from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.audit.package import PackageMeasurements
 from odfa11y.odf import PackageStorage
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.report import RULES, Location, Severity
 from odfa11y.rules import registry as rules
 from tests.fixtures.measurements import measured, measurement

@@ -10,7 +10,7 @@ from odfa11y.audit.package import PackageMeasurements
 from odfa11y.families.spreadsheet.audit import SpreadsheetMeasurements
 from odfa11y.families.spreadsheet.sheets import cell_text
 from odfa11y.odf import OdfDocument, Part, select_elements
-from odfa11y.plans.registry import load_plan
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.rules import registry as rules
 from odfa11y.targets import require_target
 from tests.fixtures.documents import make_package

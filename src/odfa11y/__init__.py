@@ -42,9 +42,9 @@ from odfa11y.errors import (
     ToolUnavailable,
 )
 from odfa11y.plans import Plan, PlanHeader, SourceBinding
-from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
 from odfa11y.remediate import RemediationResult
+from odfa11y.remediate.catalogue import load_plan, registered_kinds
 from odfa11y.remediate.result import PublicationState
 from odfa11y.report import Location, Report, SarifOptions, render_json, render_sarif
 from odfa11y.report.sarif import sarif_failure

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Published schemas reject invalid formats and facts and match generated authorities."""
 
+import importlib
 from copy import deepcopy
 
 import pytest
@@ -61,5 +62,9 @@ def test_generated_schemas_do_not_depend_on_family_registry_insertion_order(
     before = schemas()
     original = list(REGISTRY.items())
     with monkeypatch.context() as patch:
-        patch.setattr("odfa11y.plans.registry.REGISTRY", dict(reversed(original)))
+        patch.setattr(
+            importlib.import_module("odfa11y.remediate.catalogue"),
+            "REGISTRY",
+            dict(reversed(original)),
+        )
         assert schemas() == before
