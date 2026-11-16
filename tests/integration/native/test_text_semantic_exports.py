@@ -41,15 +41,18 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
     soffice = external_tool("soffice", "libreoffice")
     verapdf = external_tool("verapdf")
     source = CORPUS / "headings-skipped.odt"
-    headings = select_elements(OdfDocument.open(source).tree(Part.CONTENT), "//text:h")
+    document = OdfDocument.open(source)
+    headings = select_elements(document.tree(Part.CONTENT), "//text:h")
     decisions: dict[str, RawFields] = {
-        heading_location(heading, index).path: level_answer(index, heading_fingerprint(heading))
+        heading_location(heading, index).path: level_answer(
+            index, heading_fingerprint(heading, document)
+        )
         for index, heading in enumerate(headings, 1)
     }
     baseline = export_pdfua(
         source, tmp_path / "baseline.pdf", export_settings("writer_pdf_Export", soffice)
     )
-    assert rules.PDF013.id in {f.rule_id for f in audit_pdfua(baseline).findings}
+    assert rules.PDF025.id in {f.rule_id for f in audit_pdfua(baseline).findings}
     edited = tmp_path / "headings.odt"
     apply_answers(source, edited, [heading_inputs(decisions)])
     pdf = export_pdfua(
@@ -64,7 +67,7 @@ def test_explicit_levels_reach_real_writer_pdf_heading_roles(
         "H2": 1,
         "H3": 1,
     }
-    assert rules.PDF013.id not in {f.rule_id for f in report.findings}
+    assert not {rules.PDF013.id, rules.PDF025.id} & {f.rule_id for f in report.findings}
     assert report.error_count == 0
     assert validate_pdfua(pdf, executable=verapdf).compliant
 

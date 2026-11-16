@@ -10,6 +10,7 @@ from lxml import etree
 
 from odfa11y.audit import audit_odf
 from odfa11y.concepts import table_fingerprint
+from odfa11y.errors import PlanError
 from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.native.process import run_bounded
 from odfa11y.odf import NS, OdfDocument, Part, qn, select_elements, validate
@@ -101,7 +102,7 @@ def test_writer_nested_headers_graphic_and_named_link(
     assert len(tables) == 2
     decisions = {
         str(table.get(qn("table", "name"))): header_answer(
-            columns=1, fingerprint=table_fingerprint(table)
+            columns=1, fingerprint=table_fingerprint(table, before)
         )
         for table in tables
     }
@@ -134,7 +135,8 @@ def test_writer_nested_headers_graphic_and_named_link(
     paragraph = select_elements(table, ".//text:p")[0]
     paragraph.text = "Changed protected label"
     snapshot = etree.tostring(before.tree(Part.CONTENT))
-    assert apply_in_memory(before, header_inputs(decisions))[0].status.value == "failed"
+    with pytest.raises(PlanError, match="fingerprint mismatch"):
+        apply_in_memory(before, header_inputs(decisions))
     assert etree.tostring(before.tree(Part.CONTENT)) == snapshot
 
 

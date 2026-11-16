@@ -278,7 +278,8 @@ def test_the_production_profile_rejects_known_invalid_calc_exports(
     assert pdf_rules == {rules.PDF009.id, rules.PDF016.id}, record.as_dict()
     assert failures == {("7.2", "43")}
     assert record.failed_stage == "audit-pdf", record.as_dict()
-    assert reached["validate-pdf"] == reached["fidelity"] == "skipped"
+    assert reached["validate-pdf"] == "gate-failed"
+    assert reached["fidelity"] == "passed"
 
 
 def test_data_sheets_authored_by_libreoffice_keep_their_header_rows(

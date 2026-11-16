@@ -12,6 +12,7 @@ from odfa11y.audit import audit_odf
 from odfa11y.concepts import graphics_fingerprint
 from odfa11y.concepts.links import document_links, link_fingerprint, link_location
 from odfa11y.decisions.edit import Status
+from odfa11y.errors import PlanError
 from odfa11y.native.libreoffice import export_pdfua
 from odfa11y.odf import NS, OdfDocument, Part, qn, validate
 from odfa11y.pdf import audit_pdfua
@@ -195,7 +196,8 @@ def test_native_nested_group_roles_refuse_and_retain_child_alternative_findings(
         )
     })
     before = document.checkpoint()
-    assert apply_in_memory(document, operation)[0].status == Status.FAILED
+    with pytest.raises(PlanError, match="must resolve to exactly one source element"):
+        apply_in_memory(document, operation)
     assert not document.changed_since(before)
     pdf = export_pdfua(
         source, tmp_path / "nested-group.pdf", export_settings("writer_pdf_Export", soffice)
