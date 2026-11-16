@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Check exact changelog-section extraction and meaningful rejection cases."""
 
 import pytest

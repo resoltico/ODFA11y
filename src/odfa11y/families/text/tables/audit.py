@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Report table intent and header relationships from source declarations."""
 
 from dataclasses import dataclass, field

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read and edit ODF documents: storage, parts, kinds, detection, XML and schema validity."""
 
 from odfa11y.odf.access import Use

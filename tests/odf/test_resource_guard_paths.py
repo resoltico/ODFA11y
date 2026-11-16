@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """All guarded native entry points refuse offending declarations before application launch."""
 
 from dataclasses import replace

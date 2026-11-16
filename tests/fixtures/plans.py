@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Create source-bound production plans from explicit raw fixture answers."""
 
 from collections.abc import Sequence

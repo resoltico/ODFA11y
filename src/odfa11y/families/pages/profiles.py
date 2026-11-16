@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native page-family differences: hidden content, skipped shapes and review scope."""
 
 from dataclasses import dataclass

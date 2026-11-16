@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """PDF structural inspection, veraPDF validation and fidelity reading support."""
 
 from odfa11y.pdf.audit import audit_pdfua

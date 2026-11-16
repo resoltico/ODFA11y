@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Exercise validated edit inputs and inject faults into the actual decision executor."""
 
 import re

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Validate canonical bindings and order registered decisions for direct execution."""
 
 from odfa11y.decisions import Decision

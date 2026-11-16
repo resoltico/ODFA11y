@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read-only ODF accessibility audit and configuration templates."""
 
 from odfa11y.audit.engine import BLOCKING_RULES, audit_odf

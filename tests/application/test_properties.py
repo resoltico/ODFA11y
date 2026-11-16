@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """State invariants that must hold for every input, not just hand-picked examples."""
 
 import contextlib

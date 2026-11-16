@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve scoped paragraph styles and derive verifiable spacing styles."""
 
 import base64

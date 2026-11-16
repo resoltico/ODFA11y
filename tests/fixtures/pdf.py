@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Build small synthetic PDFs: tagged structure trees, and text pages with links."""
 
 from typing import Any, cast

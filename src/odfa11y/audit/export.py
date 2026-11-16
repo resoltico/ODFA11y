@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Guard document-family native export before entering the application boundary."""
 
 lazy from pathlib import Path

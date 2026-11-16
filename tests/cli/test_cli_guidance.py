@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Help and next actions preserve reviewed plans and remain safe to copy."""
 
 import shlex

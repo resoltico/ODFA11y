@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read-only language inspection reports unresolved declarations without guessing a remedy."""
 
 from copy import deepcopy

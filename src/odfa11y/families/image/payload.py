@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Verify locally supplied image data without fetching resources or decoding full pixels."""
 
 import base64

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Fidelity comparison: each kind of difference fails with the right rule; equal renders pass."""
 
 from dataclasses import replace

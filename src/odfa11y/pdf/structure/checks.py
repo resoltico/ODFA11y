@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Check a PDF's logical structure: roles, headings, lists, tables, figures, links, content."""
 
 from collections import Counter

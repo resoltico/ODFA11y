@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Compose raw native validation with the independent XML interpreter."""
 
 from dataclasses import replace

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Every family uses real source-bound questions, guarded publication and explicit rebinding."""
 
 import hashlib

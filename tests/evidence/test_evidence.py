@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Evidence bundles: atomic publication, safe verification, path hygiene, honest review sheets."""
 
 from dataclasses import replace

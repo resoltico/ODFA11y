@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Keep local paths out of evidence: known locations become placeholders, the rest `<path>/name`."""
 
 import re

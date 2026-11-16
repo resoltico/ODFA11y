@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """An accepted human answer can leave findings in the unpublished candidate."""
 
 from pathlib import Path

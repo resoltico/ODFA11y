@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Check declared grid occupancy independently of semantic table intent."""
 
 from dataclasses import dataclass

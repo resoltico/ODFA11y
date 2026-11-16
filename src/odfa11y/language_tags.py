@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Validate and represent lossless RFC 5646 language-tag values without XML dependencies."""
 
 import re

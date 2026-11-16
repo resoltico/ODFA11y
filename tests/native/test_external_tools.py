@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Bounded tool execution: limited output, timeouts, and no process left behind."""
 
 import multiprocessing

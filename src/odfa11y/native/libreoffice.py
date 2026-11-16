@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Export ODF documents to PDF/UA through LibreOffice."""
 
 import json

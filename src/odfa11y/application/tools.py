@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """One immutable selection of native executables and execution timeout."""
 
 from dataclasses import dataclass

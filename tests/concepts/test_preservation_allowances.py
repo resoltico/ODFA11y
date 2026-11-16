@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The common masked proof rejects undeclared XML changes across every part."""
 
 from pathlib import Path

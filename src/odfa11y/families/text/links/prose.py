@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Walk the prose of a paragraph: the text a reader sees, excluding link text and metadata."""
 
 lazy from collections.abc import Iterator

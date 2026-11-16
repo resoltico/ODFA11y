@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Image descriptions preserve actual graphic resources and reject uninspectable inputs."""
 
 from dataclasses import dataclass

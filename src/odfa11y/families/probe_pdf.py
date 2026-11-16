@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Evaluate precisely scoped exported-PDF capability observations."""
 
 lazy from pathlib import Path

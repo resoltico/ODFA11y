@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Explicit batch-file document workflows with durable progress evidence."""
 
 from odfa11y.batch.batch_file import BatchItem, load_batch_file

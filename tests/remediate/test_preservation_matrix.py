@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Replay the old proof's fixed edit intents against the recorded corpus bytes."""
 
 import hashlib

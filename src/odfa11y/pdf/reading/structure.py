@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Walk the PDF structure tree into nodes with resolved standard roles."""
 
 from dataclasses import dataclass, field

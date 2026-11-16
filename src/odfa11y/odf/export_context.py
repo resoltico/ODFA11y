@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Identify declared rendering dependencies and location-sensitive document fields."""
 
 import re

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Render typed facts for people and escape untrusted terminal fields."""
 
 import shlex

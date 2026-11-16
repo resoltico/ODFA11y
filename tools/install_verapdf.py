@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Install the pinned veraPDF release on any runner and print the directory to put on PATH."""
 
 import argparse

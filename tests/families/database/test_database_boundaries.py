@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Independent Base controls cover nested review identity and flat settings boundaries."""
 
 from copy import deepcopy

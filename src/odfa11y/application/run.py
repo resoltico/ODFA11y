@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Prepare one captured, parsed run before creating user-visible output."""
 
 import tempfile

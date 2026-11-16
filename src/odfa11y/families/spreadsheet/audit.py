@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Audit a spreadsheet: sheet names, header rows, merged cells, graphics, links and clutter."""
 
 import re

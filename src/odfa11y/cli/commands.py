@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Adapt command arguments to the nine use cases and render their typed results."""
 
 import argparse

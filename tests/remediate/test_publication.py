@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The application publishes explicitly; core candidates cannot change after verification."""
 
 from pathlib import Path

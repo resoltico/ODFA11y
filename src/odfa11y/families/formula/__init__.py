@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native formula semantics and explicit spoken alternatives."""
 
 from odfa11y.families.formula.spec import SPEC

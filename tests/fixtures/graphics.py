@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Author explicit graphic style contexts for positive and adversarial source fixtures."""
 
 from lxml import etree

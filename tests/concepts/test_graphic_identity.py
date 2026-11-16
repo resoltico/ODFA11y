@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Graphic review binds real resources while repeated audit work stays bounded."""
 
 from copy import deepcopy

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read the Writer corpus manifest: each document's expectations and recorded identity."""
 
 import tomllib

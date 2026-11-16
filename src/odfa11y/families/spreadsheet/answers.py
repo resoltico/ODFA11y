@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Validated human answers about spreadsheet sheet names."""
 
 from dataclasses import dataclass

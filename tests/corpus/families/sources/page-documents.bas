@@ -1,4 +1,4 @@
-' SPDX-License-Identifier: MPL-2.0
+' SPDX-License-Identifier: AGPL-3.0-only
 Sub Main
 Dim doc As Object, page As Object, first As Object, second As Object, navigation As Object, illustration As Object
 Dim graphicProps(0) As New com.sun.star.beans.PropertyValue

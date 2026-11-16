@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Negative controls challenge normalization for actual supported operations."""
 
 from collections.abc import Sequence

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Cross-family decision kinds with one shared answer contract."""
 
 from odfa11y.concepts.domains import GRAPHICS, LINKS, PAGES

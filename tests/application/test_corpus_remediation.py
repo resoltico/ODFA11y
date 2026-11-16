@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Remediating real Writer documents: a plan is idempotent and never harms text or schema."""
 
 lazy from pathlib import Path

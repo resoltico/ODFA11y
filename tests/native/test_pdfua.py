@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """LibreOffice export against the built-in inspector and against real veraPDF."""
 
 lazy from pathlib import Path

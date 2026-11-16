@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer retains valid complex table structure and exposes ambiguous intent for review."""
 
 lazy from collections.abc import Callable

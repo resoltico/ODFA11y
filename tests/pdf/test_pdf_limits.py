@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """PDF size, page-count and structure limits are enforced at their inspection boundaries."""
 
 lazy from pathlib import Path

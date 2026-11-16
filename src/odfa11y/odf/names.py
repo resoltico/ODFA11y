@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """ODF XML namespace prefixes and qualified-name construction."""
 
 lazy from lxml import etree

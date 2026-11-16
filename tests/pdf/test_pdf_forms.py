@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Invoked Forms have independent MCIDs and actual content-presence controls."""
 
 lazy from pathlib import Path

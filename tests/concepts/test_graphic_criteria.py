@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Missing authored graphic text has one acceptance criterion across source families."""
 
 lazy from pathlib import Path

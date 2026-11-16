@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The bounded acquisition boundary shared by every PDF consumer."""
 
 from odfa11y.pdf.reading.limits import Limits, default_limits

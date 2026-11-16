@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Required native tools are identified once before execution and unused selections stay inert."""
 
 import json

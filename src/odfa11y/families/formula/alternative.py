@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Set a supplied spoken formula alternative without rewriting mathematics."""
 
 from odfa11y.decisions import Decision

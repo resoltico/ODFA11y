@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Which adapter serves which kind of document."""
 
 from odfa11y.errors import DocumentRefusal, Remedy, RemedyAction

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native sheet-name syntax shared by answer contracts and source checks."""
 
 FORBIDDEN_CHARACTERS = frozenset("[]*?:/\\")

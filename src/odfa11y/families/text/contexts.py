@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Views of established current Writer flow and excluded authored contexts."""
 
 lazy from lxml import etree

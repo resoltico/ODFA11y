@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Decode a registered answer through the shared contract engine."""
 
 from collections.abc import Mapping

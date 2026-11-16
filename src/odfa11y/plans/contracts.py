@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Annotated file and decision projections derived from the kind catalogue."""
 
 from collections.abc import Mapping

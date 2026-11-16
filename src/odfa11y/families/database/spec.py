@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Database declarations and opaque storage remain offline and unchanged."""
 
 from odfa11y.concepts.review import ReviewTopic

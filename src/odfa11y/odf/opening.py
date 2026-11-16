@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Open an ODF file as the storage layout it actually has."""
 
 from pathlib import Path

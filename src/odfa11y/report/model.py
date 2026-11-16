@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Findings and the report container shared by every check."""
 
 from collections.abc import Iterable

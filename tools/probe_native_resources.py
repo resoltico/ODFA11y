@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Observe native resources using synthetic assets and a healthy loopback server."""
 
 import argparse

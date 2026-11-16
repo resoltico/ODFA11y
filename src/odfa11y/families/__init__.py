@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Explicit supported document-family records."""
 
 from odfa11y.families.catalogue import REGISTRY, require_spec, spec_for

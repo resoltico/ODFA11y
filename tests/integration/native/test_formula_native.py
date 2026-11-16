@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Invented local Calc formulas retain source bytes and real exported results."""
 
 lazy from collections.abc import Callable

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Remediation refuses documents it cannot edit safely and keeps what it does not touch."""
 
 import zipfile

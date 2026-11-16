@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Kinds are judged by what documents say they are; families never leak into each other."""
 
 import json

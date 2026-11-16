@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Raise source metadata findings from a typed read-only analysis."""
 
 from odfa11y.concepts.metadata import DocumentMetadata, MetadataAnalysis

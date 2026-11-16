@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Unestablished paragraph overlay precedence never authorizes spacing edits."""
 
 lazy from collections.abc import Callable

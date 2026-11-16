@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """New source-bound plans carry only answers whose reviewed identities survive."""
 
 import tomllib

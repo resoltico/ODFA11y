@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Hash every file of an evidence bundle and verify the hashes later."""
 
 import json

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Correlate link annotations with the Link structure elements that should represent them."""
 
 from collections import defaultdict

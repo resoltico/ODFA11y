@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Typed findings, rules and machine-readable rendering."""
 
 from odfa11y.report.json import render_json

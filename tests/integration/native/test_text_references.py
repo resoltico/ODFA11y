@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer reference fixtures retain link wording and expose note reading-order review."""
 
 lazy from collections.abc import Callable

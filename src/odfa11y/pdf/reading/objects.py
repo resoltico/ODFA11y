@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve PDF objects and their typed scalar identities in one place."""
 
 from collections.abc import Iterator

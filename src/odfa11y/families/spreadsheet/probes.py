@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Calc's declared PDF/UA experiment uses an explicit semantic header row."""
 
 lazy from pathlib import Path

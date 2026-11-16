@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer-produced revision fixture retains word boundaries and excluded contexts."""
 
 import re

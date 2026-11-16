@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Physical capture bounds and descriptor-kind checks precede document parsing."""
 
 import hashlib

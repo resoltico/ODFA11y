@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Check SARIF schema, source identity, logical semantics and disclosure boundaries."""
 
 import hashlib

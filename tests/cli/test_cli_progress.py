@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Progress reaches interactive stderr before work and never changes evidence facts."""
 
 import importlib

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """One strict plan codec derives parsing, templates and schema from registered answers."""
 
 import dataclasses

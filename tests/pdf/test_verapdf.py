@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Validator process and report handling with stub executables (no real veraPDF needed)."""
 
 import os

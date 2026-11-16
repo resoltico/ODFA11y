@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """A flat ODF document: all parts in one XML file."""
 
 from pathlib import Path

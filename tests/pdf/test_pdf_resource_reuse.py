@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Shared font resources are inspected once without skipping distinct CMap streams."""
 
 from dataclasses import replace

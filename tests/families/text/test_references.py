@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Anchors resolve by declared identity, with explicit refusal to infer repairs."""
 
 lazy from pathlib import Path

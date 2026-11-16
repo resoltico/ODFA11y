@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Spreadsheet sheet identities shared by planning and editing."""
 
 from collections.abc import Iterator

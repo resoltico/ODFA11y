@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Chart source assurance, using standard document metadata for its alternative."""
 
 from odfa11y.concepts.review import ReviewTopic

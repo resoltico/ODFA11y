@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native asset positives, document-base parity and deliberate filename limitations."""
 
 lazy from collections.abc import Callable

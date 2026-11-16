@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Real current Impress/Draw documents prove source repair and complete PDF assurance."""
 
 import hashlib

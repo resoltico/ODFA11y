@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Target language follows scoped styles while retaining text and unrelated overrides."""
 
 from typing import cast

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native chart metadata edits preserve its data, references and source-only boundary."""
 
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The spreadsheet family: audit rules, operations and plan tables for Calc documents."""
 
 from odfa11y.families.spreadsheet.name_rules import invalid_name_reason

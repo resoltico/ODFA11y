@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """One stdlib contract engine for annotated request and result types."""
 
 from odfa11y.contracts.constraints import (

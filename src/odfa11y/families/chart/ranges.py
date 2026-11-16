@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Prove local cached chart-range boundaries without materializing repeated table data."""
 
 import re

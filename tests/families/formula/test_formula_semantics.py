@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native mathematics remains unchanged while alternatives/language are edited explicitly."""
 
 from dataclasses import dataclass

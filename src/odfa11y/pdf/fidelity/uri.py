@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve supported PDF URI actions without accessing their destinations."""
 
 import re

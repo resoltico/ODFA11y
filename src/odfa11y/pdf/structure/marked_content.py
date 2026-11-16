@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reconcile the marked content of each page with the structure tree that should own it."""
 
 from collections import Counter, defaultdict

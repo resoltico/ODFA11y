@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The nine application use cases and their immutable result contracts."""
 
 from odfa11y.application.audit import AuditInput, AuditResult, audit

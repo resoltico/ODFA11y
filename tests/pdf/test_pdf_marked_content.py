@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Marked-content reconciliation, verified against independently built content streams."""
 
 from typing import cast

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Set reviewed leading row and column header boundaries in text tables."""
 
 from odfa11y.concepts import axis_count, header_count, require_safe_boundary

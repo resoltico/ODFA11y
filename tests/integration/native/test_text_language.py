@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer retains language-tagged text and exports explicit paragraph/inline language tags."""
 
 lazy from collections.abc import Callable

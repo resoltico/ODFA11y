@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Inputs that are malformed, adversarial or merely unusual must not crash or corrupt output."""
 
 import os

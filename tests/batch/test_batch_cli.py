@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The public batch command uses ordinary pipeline options and exit statuses."""
 
 import json

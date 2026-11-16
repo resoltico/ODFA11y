@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Preparation is effect-free; completed artifacts drive independent run stages."""
 
 from dataclasses import replace

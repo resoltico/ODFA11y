@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Pin legal scopes and provenance at all four style call sites before consolidation."""
 
 from copy import deepcopy

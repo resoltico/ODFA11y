@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Capture bounded regular input bytes in a controlled document directory."""
 
 import errno

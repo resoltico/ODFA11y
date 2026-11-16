@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve Writer anchors and references without inventing missing destinations."""
 
 from collections import Counter, defaultdict

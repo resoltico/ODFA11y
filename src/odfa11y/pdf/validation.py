@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Interpret bounded veraPDF XML independently of native process execution."""
 
 import re

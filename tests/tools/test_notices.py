@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Legal compliance: bundled OASIS files ship unmodified, with their notice and terms."""
 
 import tomllib
@@ -49,7 +49,7 @@ def test_the_notice_names_every_bundled_file_and_its_source() -> None:
 
 def test_the_package_declares_the_third_party_terms_in_its_metadata() -> None:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    assert project["license"] == "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
+    assert project["license"] == "AGPL-3.0-only AND LicenseRef-OASIS-ODF-Notice AND W3C"
     assert "src/odfa11y/odf/schemas/NOTICE.txt" in project["license-files"]
     assert "LICENSE" in project["license-files"]
 

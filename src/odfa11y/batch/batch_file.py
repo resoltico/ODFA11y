@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Parse explicit batch inputs and reject ambiguous destinations before execution."""
 
 import re

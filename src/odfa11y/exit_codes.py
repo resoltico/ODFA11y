@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Exit-code values and their explicit precedence, shared by errors and outcomes."""
 
 from collections.abc import Iterable

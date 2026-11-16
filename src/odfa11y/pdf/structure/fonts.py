@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Name fonts in the bounded reader's inspected page and Form resource scopes."""
 
 import re

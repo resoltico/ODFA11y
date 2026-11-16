@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """A verified in-memory candidate and an explicit refusal without an artifact."""
 
 from dataclasses import dataclass

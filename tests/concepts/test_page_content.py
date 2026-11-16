@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Page mechanics preserve content and require complete, globally unambiguous navigation."""
 
 from copy import deepcopy

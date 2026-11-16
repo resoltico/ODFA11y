@@ -6,3 +6,7 @@
 - [ ] Preservation/refusal controls and any claimed native behavior have direct evidence.
 - [ ] Generated references are current; guides and draft changelog describe shipped behavior.
 - [ ] Fixtures and reports contain only invented, nonconfidential material.
+
+## Contribution terms
+
+- [ ] I agree to the [contribution terms](https://github.com/resoltico/ODFA11y/blob/main/PROJECT-NOTICE.md#contribution-terms) for this contribution.

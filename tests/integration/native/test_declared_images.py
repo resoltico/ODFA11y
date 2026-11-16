@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Supported Draw fills and Writer image bullets retain independently known pixels."""
 
 import base64

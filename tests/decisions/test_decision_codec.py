@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Decision parsing, templates and schemas share one strict registered answer contract."""
 
 import tomllib

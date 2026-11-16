@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Missing native tools must fail required integration, including in distributed runs."""
 
 lazy from collections.abc import Callable

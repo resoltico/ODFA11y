@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Inspect producer-owned measurement records in result assertions."""
 
 from odfa11y.report import Report

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The root use cases own continuation, effective policy and native tool selection."""
 
 import ast

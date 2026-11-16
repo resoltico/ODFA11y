@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """List relationships are inspected without changing authored typography or content."""
 
 lazy from pathlib import Path

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Empty text does not make identities, references or metadata removable."""
 
 from collections.abc import Callable

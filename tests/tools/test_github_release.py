@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Failed state queries and identity mismatches must never authorize releases."""
 
 from types import SimpleNamespace

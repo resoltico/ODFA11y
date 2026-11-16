@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Identify what kind of document a storage holds and which ODF version it declares."""
 
 from dataclasses import dataclass

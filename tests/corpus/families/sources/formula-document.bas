@@ -1,4 +1,4 @@
-' SPDX-License-Identifier: MPL-2.0
+' SPDX-License-Identifier: AGPL-3.0-only
 Sub Main
 Dim doc As Object
 Dim props(0) As New com.sun.star.beans.PropertyValue

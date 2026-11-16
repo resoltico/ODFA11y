@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Every ODF kind, in both layouts, is recognised, audited and kept apart from other families."""
 
 import zipfile

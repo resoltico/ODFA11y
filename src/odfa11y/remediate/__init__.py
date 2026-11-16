@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Guarded in-memory candidates and typed remediation evidence."""
 
 lazy from odfa11y.remediate.candidate import Candidate, RefusedCandidate

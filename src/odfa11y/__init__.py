@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """ODFA11y's application API: explicit decisions, guarded workflows and typed results."""
 
 from odfa11y.application import (

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Schema-valid named inputs cannot silently bypass the native declaration boundary."""
 
 from dataclasses import replace

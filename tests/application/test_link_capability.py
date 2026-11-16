@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Link-description self-test, native Name controls and pipeline evidence."""
 
 import json

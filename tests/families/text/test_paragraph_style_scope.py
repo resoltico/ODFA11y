@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Paragraph style scopes establish safe break and spacing decisions before mutations."""
 
 import zipfile

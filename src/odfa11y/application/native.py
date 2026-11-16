@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The explicit native operations selected by an application use case."""
 
 from collections.abc import Callable

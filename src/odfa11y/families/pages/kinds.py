@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reviewed page, navigation, graphic and link answers for presentation and drawing documents."""
 
 from odfa11y.concepts.kinds import (

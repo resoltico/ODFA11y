@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reconcile described Figures with graphical operations on their declared pages."""
 
 lazy from odfa11y.pdf.reading.structure import StructureNode

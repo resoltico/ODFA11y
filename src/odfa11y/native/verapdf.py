@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Acquire bounded veraPDF XML without interpreting PDF validation semantics."""
 
 import subprocess

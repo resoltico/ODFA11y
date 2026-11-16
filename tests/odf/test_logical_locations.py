@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Finding locations are logical: the same document audits alike as a package or flat XML."""
 
 import json

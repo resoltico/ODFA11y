@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Apply and verify paragraph spacing through isolated derived styles."""
 
 from collections.abc import Mapping

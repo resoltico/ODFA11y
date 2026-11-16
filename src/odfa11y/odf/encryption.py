@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Immutable declarations of package protection, independent of body parsing."""
 
 from collections import Counter

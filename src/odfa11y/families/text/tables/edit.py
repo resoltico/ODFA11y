@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Wrap explicit leading header declarations without losing repeated data or groups."""
 
 from copy import deepcopy

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Stored Writer structure and authoring bytes share the unified corpus authority."""
 
 import hashlib

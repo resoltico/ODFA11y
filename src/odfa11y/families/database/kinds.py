@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reviewed database-object description answers and operation translation."""
 
 from odfa11y.decisions import DecisionKind, DecisionScope

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Check project, installed metadata and runtime version reporting agree."""
 
 import importlib.metadata

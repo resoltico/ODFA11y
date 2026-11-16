@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Materialize fixed edit intents for the preservation characterisation matrix."""
 
 from collections.abc import Iterator

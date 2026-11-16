@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The one required check: the ruleset, the gate job and the jobs it waits for must agree."""
 
 import json

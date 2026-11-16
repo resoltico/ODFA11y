@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Parser nesting and named dependency nesting must not multiply Python stack depth."""
 
 import json

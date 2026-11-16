@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Renaming sheets: explicit, fail-closed, collision-safe, and never at the cost of a reference."""
 
 from pathlib import Path

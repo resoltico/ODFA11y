@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 "Each split finding has a triggering fixture and a repaired negative control."
 
 from pathlib import Path

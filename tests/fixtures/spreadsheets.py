@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Build synthetic spreadsheets, as packages or flat XML, with selected structural features."""
 
 lazy from collections.abc import Mapping

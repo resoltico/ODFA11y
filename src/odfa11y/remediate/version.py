@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Declare a different ODF version on every part of a document."""
 
 from odfa11y.decisions import Decision

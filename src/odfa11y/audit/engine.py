@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Run the read-only audit of an ODF document and collect its findings."""
 
 from dataclasses import dataclass, field

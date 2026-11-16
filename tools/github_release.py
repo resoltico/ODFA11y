@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Fail-closed inspection of exact GitHub release state and preserved asset bytes."""
 
 import argparse

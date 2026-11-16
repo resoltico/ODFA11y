@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Each spreadsheet rule fires where it should and stays quiet where it should, in both layouts."""
 
 lazy from pathlib import Path

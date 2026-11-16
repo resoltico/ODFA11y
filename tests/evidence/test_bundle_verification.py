@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Verifying a bundle treats its manifest and its directory as untrusted."""
 
 import json

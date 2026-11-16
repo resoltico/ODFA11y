@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The veraPDF installer refuses a download that is not the pinned release."""
 
 import hashlib

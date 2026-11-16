@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Small native fakes passed explicitly to application and workflow entry points."""
 
 from collections.abc import Callable

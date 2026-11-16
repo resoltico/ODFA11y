@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Find empty body paragraphs that may only be visual spacers."""
 
 lazy from lxml import etree

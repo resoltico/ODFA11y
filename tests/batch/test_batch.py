@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Batch continuation, strict inputs, confined publication and privacy."""
 
 import importlib

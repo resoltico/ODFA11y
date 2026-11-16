@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Document workflows never conduct synthetic exporter capability experiments."""
 
 from dataclasses import replace

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Expose authored visibility declarations without evaluating conditions or cached state."""
 
 from typing import Annotated, Literal

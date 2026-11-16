@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Decide which document uses declared protection and package names permit."""
 
 from enum import StrEnum

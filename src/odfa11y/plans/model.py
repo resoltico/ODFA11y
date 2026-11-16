@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Source-bound plans of answered human decisions and fidelity policy."""
 
 from dataclasses import dataclass, field

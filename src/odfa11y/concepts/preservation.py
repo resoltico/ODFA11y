@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Preserve opaque package resources and flat embedded binary content across source edits."""
 
 import hashlib

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Binding verifies the same private input bytes that were audited and edited."""
 
 import hashlib

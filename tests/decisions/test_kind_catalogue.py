@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Kinds own answer meaning; family registration and rules derive from that ownership."""
 
 from copy import deepcopy

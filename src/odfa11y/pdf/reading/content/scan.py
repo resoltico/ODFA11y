@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Scan a page content stream for marked-content identifiers and unmarked text."""
 
 import re

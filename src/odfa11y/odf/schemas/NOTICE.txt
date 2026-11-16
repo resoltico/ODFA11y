@@ -2,7 +2,7 @@ Third-party notice: OASIS OpenDocument (ODF) Relax NG schemas
 =============================================================
 
 This directory contains unmodified copies of schema files published by OASIS Open,
-which are NOT covered by this project's MPL-2.0 license. They are licensed by OASIS
+which are NOT covered by this project's AGPL-3.0-only license. They are licensed by OASIS
 under the terms reproduced verbatim below, which permit them to be copied and
 distributed provided the copyright notice and the "Notices" section are included on
 all copies, and provided the files themselves are not modified.

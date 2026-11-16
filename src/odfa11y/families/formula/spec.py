@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native MathML source semantics and the measured untagged Math PDF boundary."""
 
 from odfa11y.concepts.review import ReviewTopic

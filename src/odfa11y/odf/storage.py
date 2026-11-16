@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """How an ODF document is stored, and the logical parts every layout provides."""
 
 from abc import ABC, abstractmethod

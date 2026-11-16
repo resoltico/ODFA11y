@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Digest protected XML while a family declares exactly which metadata it may edit."""
 
 import hashlib

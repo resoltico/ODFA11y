@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Executable root-API examples, including outside-checkout installed-wheel qualification."""
 
 lazy from pathlib import Path

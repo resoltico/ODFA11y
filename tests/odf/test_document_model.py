@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Live XML changes, cache generations and access policy do not rely on edit declarations."""
 
 from pathlib import Path

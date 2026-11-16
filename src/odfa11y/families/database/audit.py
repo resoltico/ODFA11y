@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Inspect database privacy, declared bindings and descriptions without executing anything."""
 
 import re

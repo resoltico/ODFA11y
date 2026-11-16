@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Semantic expression presence is stronger than valid nonempty MathML structure."""
 
 lazy from pathlib import Path

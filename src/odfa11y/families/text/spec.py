@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The text family's adapter: how text documents are audited, planned and preserved."""
 
 from odfa11y.concepts.review import ReviewTopic

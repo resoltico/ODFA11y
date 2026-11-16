@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Review targets compose within established current contexts across both ODF layouts."""
 
 from collections.abc import Callable

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer default and effective language in all three script channels."""
 
 from odfa11y.families.text.language.defaults import default_language, set_default_language

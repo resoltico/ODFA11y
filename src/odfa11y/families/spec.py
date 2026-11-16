@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Frozen source-family audits, decisions and optional native capabilities."""
 
 from collections.abc import Callable

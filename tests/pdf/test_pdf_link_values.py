@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Real parser objects exercise fidelity's annotation boundary."""
 
 lazy from pathlib import Path

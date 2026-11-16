@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Audit native MathML structure and supplied spoken alternatives."""
 
 from typing import Annotated, Literal

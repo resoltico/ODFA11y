@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Alt text on spreadsheet frames, and the fingerprint that guards what a sheet shows."""
 
 from pathlib import Path

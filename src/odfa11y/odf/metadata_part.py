@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Create an explicitly requested standard optional metadata part without replacing data."""
 
 from lxml import etree

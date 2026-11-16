@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Each annotation rejects an independently specified invalid value."""
 
 from dataclasses import dataclass, make_dataclass

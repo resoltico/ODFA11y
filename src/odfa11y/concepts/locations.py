@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Canonical page and sheet locations shared by audits and operation preflight."""
 
 lazy from lxml import etree

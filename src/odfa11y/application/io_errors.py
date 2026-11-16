@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Translate filesystem exceptions at application boundaries."""
 
 from collections.abc import Callable

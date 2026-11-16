@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The one supported native mathematical-expression target."""
 
 from collections.abc import Iterator

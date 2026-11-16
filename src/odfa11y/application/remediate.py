@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Prepare reviewed source edits and publish only a verified candidate."""
 
 import shutil

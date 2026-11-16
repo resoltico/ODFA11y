@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Bound plan files validate registered answers and compile in dependency order."""
 
 from pathlib import Path

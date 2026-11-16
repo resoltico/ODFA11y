@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Identify authored layout conditions whose reading order needs native human review."""
 
 from collections import Counter

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Compare a candidate render with its source render."""
 
 from odfa11y.pdf.fidelity.compare import compare_pdfs

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Own every decoded stream and one bounded walk of invoked page and Form content."""
 
 import os

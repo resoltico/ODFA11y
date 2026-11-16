@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Schema-defined declaration fixtures with real package members and inline image data."""
 
 import base64

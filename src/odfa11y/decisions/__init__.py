@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The shared vocabulary for registered human decisions."""
 
 from odfa11y.decisions.codec import decode_answer

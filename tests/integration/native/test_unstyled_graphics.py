@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native implicit Writer placement cannot be replaced by an unproven graphic style."""
 
 from collections.abc import Callable

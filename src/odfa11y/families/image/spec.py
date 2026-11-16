@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Standard image source semantics with explicit unsupported native PDF export."""
 
 from odfa11y.concepts import (

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The OpenDocument document kinds: media types, families and body elements.
 
 Pure data about the standard. What a family's documents *mean* belongs to the family's

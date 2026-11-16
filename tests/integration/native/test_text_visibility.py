@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer visibility fixtures preserve revision history and disclose actual exported content."""
 
 lazy from collections.abc import Callable

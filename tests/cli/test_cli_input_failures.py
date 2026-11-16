@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """CLI input refusals terminate promptly and preserve independent audit results."""
 
 import json

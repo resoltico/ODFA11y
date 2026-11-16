@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Redaction keeps local paths out of everything a bundle publishes."""
 
 import json

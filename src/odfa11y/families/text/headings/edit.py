@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reviewed, explicit semantic heading levels with stable logical targets."""
 
 from urllib.parse import quote

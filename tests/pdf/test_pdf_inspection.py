@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Verify parsed PDF diagnostics with independent synthetic PDF objects."""
 
 lazy from pathlib import Path

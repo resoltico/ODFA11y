@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read the structure of a spreadsheet: sheets, rows, cells and what each one shows."""
 
 lazy from collections.abc import Iterator

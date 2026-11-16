@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Expose effective script-channel languages and safe target-specific review questions."""
 
 from dataclasses import dataclass, field

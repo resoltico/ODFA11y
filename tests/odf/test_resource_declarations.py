@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Declaration recognition and addressing have independent schema/audit/refusal oracles."""
 
 lazy from pathlib import Path

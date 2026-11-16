@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Nested table identity retains protected contents across legal header representations."""
 
 lazy from pathlib import Path

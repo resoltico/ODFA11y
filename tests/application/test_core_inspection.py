@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Core document inspection preserves content dispatch and incremental audit reports."""
 
 from dataclasses import replace

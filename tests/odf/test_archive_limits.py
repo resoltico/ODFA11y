@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reject corrupt, ambiguous and resource-exhausting ZIP inputs at their real boundary."""
 
 import zipfile

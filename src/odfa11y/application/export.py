@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Capture an original document and explicitly publish its guarded native export."""
 
 import shutil

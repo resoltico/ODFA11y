@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Spreadsheets authored by LibreOffice itself: audited, edited, reloaded, exported and compared."""
 
 import json

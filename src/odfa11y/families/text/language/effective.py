@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve paragraph and nested inline language through scoped ODF styles."""
 
 lazy from lxml import etree

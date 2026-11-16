@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Negative controls prove that silent payload/data damage cannot be published."""
 
 from dataclasses import dataclass

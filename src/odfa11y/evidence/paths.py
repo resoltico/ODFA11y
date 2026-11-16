@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The one definition of a safe bundle-relative file name, shared by writer and verifier."""
 
 import re

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Compare original ODF/PDF documents through temporary native renders when needed."""
 
 import os

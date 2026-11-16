@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Each operation: applies once, then reports unchanged; every failure is explicit."""
 
 from typing import Unpack

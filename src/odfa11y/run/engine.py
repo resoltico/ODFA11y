@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Execute the stage table and derive an immutable record from completed outcomes."""
 
 from dataclasses import replace

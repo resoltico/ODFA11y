@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Put outstanding human work before gates and source-to-candidate facts."""
 
 import json

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer exports establish heading behavior and the header-column capability boundary."""
 
 lazy from collections.abc import Callable

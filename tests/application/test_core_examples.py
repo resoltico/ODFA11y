@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Execute public library examples against real source fixtures and native boundaries."""
 
 import sys

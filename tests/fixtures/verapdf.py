@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reviewed validator XML examples shared by transport and composition controls."""
 
 REPORT = """<?xml version="1.0" encoding="utf-8"?>

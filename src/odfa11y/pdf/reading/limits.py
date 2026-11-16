@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Stored-size and traversal limits for PDF inspection; OS isolation remains necessary."""
 
 from dataclasses import dataclass

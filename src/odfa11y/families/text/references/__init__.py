@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer destination, cross-reference and note relationships."""
 
 from odfa11y.families.text.references.audit import audit_references

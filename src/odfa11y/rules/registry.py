@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Rule identities, severities and the meanings of observed conditions."""
 
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read what a comparison needs from a PDF: page sizes, text and link targets."""
 
 from collections import Counter

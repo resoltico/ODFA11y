@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Build minimal synthetic ODF documents of every kind, as packages or flat XML files."""
 
 import zipfile

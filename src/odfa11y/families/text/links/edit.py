@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Wrap visible addresses in hyperlinks without changing their text."""
 
 from lxml import etree

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The text family: audit rules, operations and plan tables for text documents."""
 
 from odfa11y.families.text.links.edit import linkify_plain_addresses

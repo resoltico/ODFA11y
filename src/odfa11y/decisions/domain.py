@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Canonical target enumeration, exact resolution and content identity."""
 
 from collections.abc import Callable, Iterable

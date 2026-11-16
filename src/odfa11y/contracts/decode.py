@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Walk declared contracts for strict decoding, validation and encoding."""
 
 import dataclasses

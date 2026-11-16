@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Typed kind constraints established against the complete plan before mutation."""
 
 from collections.abc import Callable, Sequence

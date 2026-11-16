@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Require version tags and distribution metadata to agree before a draft release."""
 
 import argparse

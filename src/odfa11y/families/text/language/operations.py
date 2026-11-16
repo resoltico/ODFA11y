@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Apply reviewed target-local language without rewriting text or shared styles."""
 
 import json

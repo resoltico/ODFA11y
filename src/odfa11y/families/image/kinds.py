@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Image alternative answers translated into guarded graphic edits."""
 
 from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE

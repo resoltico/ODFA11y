@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Progress carries item identity and signal policy belongs only to the CLI."""
 
 import signal

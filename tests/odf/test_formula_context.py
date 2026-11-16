@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Independent declaration controls for formula-aware native preflight."""
 
 from dataclasses import replace

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Available source questions and authored context for planning and rebinding."""
 
 from dataclasses import replace

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Published schemas reject invalid formats and facts and match generated authorities."""
 
 import importlib

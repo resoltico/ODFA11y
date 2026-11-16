@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Only legal applicable style containers can establish graphic roles."""
 
 from copy import deepcopy

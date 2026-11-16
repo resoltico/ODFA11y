@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Capture and inspect each input with tools resolved by the use case."""
 
 from collections.abc import Iterator, Sequence

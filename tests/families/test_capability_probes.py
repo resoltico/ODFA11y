@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Exporter capability verdicts require positive/negative evidence and scoped identities."""
 
 from dataclasses import replace

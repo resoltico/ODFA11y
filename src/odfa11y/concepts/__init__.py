@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Shared ODF content vocabulary, without document-family decisions."""
 
 from odfa11y.concepts.graphic_identity import (

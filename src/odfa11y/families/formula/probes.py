@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Math's declared experiment checks tagging of an expression-only native document."""
 
 lazy from pathlib import Path

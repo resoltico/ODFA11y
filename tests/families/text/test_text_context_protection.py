@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Current flow and protected references are independent of displayed word equality."""
 
 from dataclasses import dataclass

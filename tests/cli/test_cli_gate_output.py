@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Human command outcomes describe the actual gate and retain actionable evidence."""
 
 import json

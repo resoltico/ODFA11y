@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Refusals retain actionable targets and distinguish source from tool failures."""
 
 lazy from pathlib import Path

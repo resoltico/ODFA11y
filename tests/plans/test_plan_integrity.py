@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """A plan must mean what its author reviewed: selector conflicts, fingerprints, style identity."""
 
 from typing import Unpack

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer-authored real lists retain list tags; typed markers remain ordinary text."""
 
 lazy from collections.abc import Callable

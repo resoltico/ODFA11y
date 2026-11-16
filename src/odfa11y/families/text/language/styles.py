@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Derive and independently recognize target-local language styles."""
 
 from collections.abc import Mapping

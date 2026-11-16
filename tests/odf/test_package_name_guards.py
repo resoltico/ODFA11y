@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Ambiguous and unsafe ZIP names never establish a native or editing package view."""
 
 import zipfile

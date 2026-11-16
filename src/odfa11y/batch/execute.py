@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Execute independent prepared runs and publish immutable batch progress snapshots."""
 
 from collections.abc import Callable

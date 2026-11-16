@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Typed metadata distinguishes original declarations from normalized language meaning."""
 
 from pathlib import Path

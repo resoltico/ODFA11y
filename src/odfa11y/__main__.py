@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Run the command-line interface with ``python -m odfa11y``."""
 
 from odfa11y.cli import main

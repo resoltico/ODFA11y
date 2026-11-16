@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Author run-owned metadata explicitly when testing the generic evidence writer."""
 
 import json

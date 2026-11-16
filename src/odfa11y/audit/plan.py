@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Prepare source-bound plans from the first-class questions an audit leaves open."""
 
 import tempfile

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Explicit XML permissions returned by an edit, independent of decision dispatch."""
 
 from copy import deepcopy

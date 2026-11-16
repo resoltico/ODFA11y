@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer's declared link, decorative-image and header-column experiments."""
 
 from functools import partial

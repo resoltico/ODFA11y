@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Shared answer fields, constraints and help for cross-family human decisions."""
 
 from dataclasses import dataclass

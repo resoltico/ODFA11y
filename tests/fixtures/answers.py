@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Author raw human answers, then exercise validated decisions through the real executor."""
 
 from abc import ABC, abstractmethod

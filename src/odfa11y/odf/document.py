@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Detect live XML changes by content and keep derived state coherent between operations."""
 
 import hashlib

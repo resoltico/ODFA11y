@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Family analyses compose observed review guidance and omit absent optional content."""
 
 import pytest
