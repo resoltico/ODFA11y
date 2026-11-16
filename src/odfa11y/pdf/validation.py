@@ -123,15 +123,25 @@ def parse_validation(xml: bytes, stderr: str = "") -> VeraPdfResult:
         ),
         profile=reports[0].get("profileName") or "unknown",
         compliant=all(r.get("isCompliant") == "true" for r in reports),
-        failures=tuple(
-            _failed_rule(rule)
-            for report in reports
-            for rule in _elements(report, "rule")
-            if rule.get("status") == "failed"
-        ),
+        failures=tuple(failure for report in reports for failure in _report_failures(report)),
         raw_xml=raw_xml,
         xml_root=root,
     )
+
+
+def _report_failures(report: etree._Element) -> tuple[FailedRule, ...]:
+    details = list(_elements(report, "details"))
+    if len(details) != 1 or details[0].get("failedRules") is None:
+        message = "veraPDF report has incomplete rule details."
+        raise ToolFailure(message)
+    failures = tuple(
+        _failed_rule(rule) for rule in _elements(report, "rule") if rule.get("status") == "failed"
+    )
+    declared = _failed_count(details[0].get("failedRules"), len(failures), "failedRules")
+    if declared != len(failures) or (report.get("isCompliant") == "true") != (declared == 0):
+        message = "veraPDF verdict, failedRules count and failed rule details are inconsistent."
+        raise ToolFailure(message)
+    return failures
 
 
 def _failed_rule(rule: etree._Element) -> FailedRule:
@@ -163,7 +173,7 @@ def _child_text(root: etree._Element, local_name: str) -> str:
     )
 
 
-def _failed_count(value: str | None, observed: int) -> int:
+def _failed_count(value: str | None, observed: int, field: str = "failedChecks") -> int:
     if value is None:
         return observed
     try:
@@ -172,5 +182,5 @@ def _failed_count(value: str | None, observed: int) -> int:
             return result
     except ValueError:
         pass
-    message = "veraPDF report has a malformed failedChecks value."
+    message = f"veraPDF report has a malformed {field} value."
     raise ToolFailure(message)

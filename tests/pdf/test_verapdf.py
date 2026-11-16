@@ -163,3 +163,20 @@ def test_native_report_bytes_are_not_repaired_before_xml_validation(tmp_path: Pa
     )
     with pytest.raises(ToolFailure, match="parse the veraPDF report as XML"):
         validate_pdfua(tmp_path / "input.pdf", executable=executable)
+
+
+@pytest.mark.parametrize(
+    ("compliant", "failed", "rules"),
+    [("false", 1, ""), ("false", 0, ""), ("true", 1, FAILED_RULE), ("false", 2, FAILED_RULE)],
+)
+def test_verdict_counts_and_failed_rule_details_must_agree(compliant, failed, rules) -> None:
+    xml = REPORT.format(status="normal", compliant=compliant, failed=failed, rules=rules)
+    with pytest.raises(ToolFailure, match="inconsistent"):
+        parse_validation(xml.encode())
+
+
+@pytest.mark.parametrize("value", ["no", "", "-1", "1.5", "\u0661"])
+def test_failed_rule_count_is_validated(value: str) -> None:
+    xml = REPORT.format(status="normal", compliant="false", failed=value, rules=FAILED_RULE)
+    with pytest.raises(ToolFailure, match="malformed failedRules"):
+        parse_validation(xml.encode())

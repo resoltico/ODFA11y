@@ -17,7 +17,7 @@
 - Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs now use one condition per concept; see the [mapping](docs/RULES.md#renamed-in-the-next-release).
 - One style resolver and allowance-based preservation proof replace family-specific mechanisms; protected XML, opaque content and schema-regression guards remain independent.
 - PDF checks share one bounded reader/Form walk and typed inspection data. URI issues retain other comparison checks; bitmap-size mismatches are geometry changes.
-- veraPDF parsing refuses incomplete/inconsistent jobs and malformed report bytes, including invalid UTF-8; raw bytes are never repaired into a passing validation.
+- veraPDF parsing refuses incomplete jobs, inconsistent verdicts/rule counts and malformed bytes, including invalid UTF-8; incomplete validation cannot pass production.
 - All nine use cases return frozen contracts with derived exit status. Every command supports JSON; core owns plannability, remedies and SARIF preflight.
 - CLI text renders core facts before one verdict, with terminal escaping and one output writer. SIGTERM handling belongs to the CLI; library interruption propagates.
 - Requires pypdf 6.21.4 or newer for security fixes; restore the refreshed lockfile, including the patched audit dependency set.

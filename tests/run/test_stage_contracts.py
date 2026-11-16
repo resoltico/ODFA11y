@@ -11,19 +11,32 @@ import pytest
 from odfa11y.application import run
 from odfa11y.concepts.review import ReviewTopic
 from odfa11y.decisions.edit import EditResult, Outcome, Status
+from odfa11y.errors import ToolFailure
 from odfa11y.evidence import check_bundle
+from odfa11y.native.verapdf import ValidationOutput
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
 from odfa11y.progress import Stage
 from odfa11y.remediate.execute import execute_decisions
 from odfa11y.remediate.result import PublicationState
 from odfa11y.rules import registry as rules
 from odfa11y.run.record import StageResult
-from odfa11y.status import GateFailed, NotApplicable, Profile, Refused, Skipped, SkipReason
+from odfa11y.status import (
+    Crashed,
+    GateFailed,
+    NotApplicable,
+    Passed,
+    Profile,
+    Refused,
+    Skipped,
+    SkipReason,
+)
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.answers import fault_input, materialize, metadata_input
 from tests.fixtures.native import native_fakes, recording
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.records import record
+from tests.fixtures.verapdf import REPORT
 from tests.fixtures.writer import make_minimal_odt
 
 
@@ -202,3 +215,27 @@ def test_run_record_describes_the_published_candidate_not_an_internal_preview(
     assert remediation.publication is PublicationState.PUBLISHED
     assert remediation.destination == tmp_path / "bundle" / "remediated.odt"
     assert remediation.destination.is_file()
+
+
+def test_incomplete_noncompliant_validation_cannot_pass_production(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    xml = REPORT.format(status="normal", compliant="false", failed=1, rules="").encode()
+    native = replace(
+        native_fakes(),
+        validate=lambda *args, **kwargs: ValidationOutput(xml, "", ToolIdentity("veraPDF", "test")),
+    )
+    result = run(
+        source,
+        reviewed_plan(source),
+        tmp_path / "bundle",
+        profile=Profile.PRODUCTION,
+        native_tools=native,
+    )
+    outcomes = {stage.name: stage.outcome for stage in result.stages}
+    validation = outcomes[Stage.VALIDATE_PDF]
+    assert isinstance(validation, Crashed)
+    assert isinstance(validation.error, ToolFailure)
+    assert isinstance(outcomes[Stage.FIDELITY], Passed)
+    assert result.exit_status == 3
+    assert result.failed_stage is Stage.VALIDATE_PDF
+    assert "PDF/UA conformance was not established" in (tmp_path / "bundle/REVIEW.md").read_text()
