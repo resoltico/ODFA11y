@@ -1,45 +1,46 @@
 # Fidelity comparison
 
-Compare the original and candidate independently of accessibility checks:
-
 ```sh
-odfa11y compare original.odt reviewed.odt --diff-dir differences --plan reviewed.toml
+odfa11y compare original.odt reviewed.odt --diff-dir differences --plan plan.toml
 ```
 
-ODF inputs use the same LibreOffice executable/profile within a run; PDF inputs are read
-directly. Text and URI targets always gate. With `pagination = "same"`, page counts,
-page sizes and rendered ink also gate. Text extraction follows page order, not logical
-structure reading order. The [human checklist](ACCESSIBILITY.md#human-acceptance) remains necessary.
+Each input is captured once. ODF inputs use one resolved LibreOffice and shared private
+profile; PDFs use the bounded reader. Private export cannot establish filename/path fields
+or relative hyperlink destinations: see [native context](ACCESSIBILITY.md#native-document-context-and-declared-dependencies).
+Text and external URI targets always gate independently of accessibility checks.
 
 ## Set the policy
 
 ```toml
 [fidelity]
-pagination = "same"        # or "may-change"
+pagination = "same"
 raster_tolerance = 0.15
 ink_threshold = 200
-dpi = 72
 ```
 
-Choose `may-change` only after reviewing intended repagination/spacing: it skips page-count,
-size and raster checks, while preserving text/URI gates. The typed `FidelityPolicy` and
-TOML share validation. Tolerance is finite/non-negative, threshold is integer 0–255 and
-DPI is a positive integer; booleans, NaN and infinities refuse before export/publication.
+`Pagination.SAME(...)` retains page geometry and ink checks. Its tolerance must be finite
+and nonnegative; threshold is an integer 0–255. Raster scale is fixed at 72 dpi, not a plan
+option. `pagination = "may-change"` permits repagination but still protects text/URIs and
+refuses ignored raster parameters. Booleans, NaN and infinities are invalid answers.
 
 ## Interpret differences
 
-`FID001`/`FID002` identify page count/size changes, `FID003` text changes and `FID004`
-missing URI targets. Added targets are informational `FID006`. URI actions compare as a
-multiset; relative references require a valid absolute catalog URI base. Grammar, query,
-fragment, percent encoding and duplicate targets remain significant; no target is fetched.
-Internal destinations, bookmarks, launch actions and hidden references are outside this comparison.
+`FIDELITY001` reports page-count changes, `FIDELITY002` geometry changes and `FIDELITY003`
+text changes. Missing URI targets are `FIDELITY004`; added targets are informational
+`FIDELITY006`. URI actions compare as a multiset with standard reference resolution under
+an established absolute catalog base. Query, fragment, encoding and duplicate targets remain
+significant. Malformed/unestablished URI context is `FIDELITY008`; other comparison checks
+continue. No target is fetched. Internal destinations, bookmarks, launch actions and hidden
+references are outside this URI comparison.
 
-pdfium classifies pixels below `ink_threshold` as ink. The symmetric difference divided
-by `max(source ink, candidate ink, 1)` is compared with tolerance (`FID005`); the ratio can
-exceed 1. Pure colour changes on the same threshold side are invisible. Diff images mark
-changed ink in white. Pages exceeding 20 million pixels produce `FID007`; unrepresentable
-DPI fails before conversion. See [PDF limits](ACCESSIBILITY.md#threat-model).
+Rendered pixels below `ink_threshold` are ink. Symmetric difference divided by
+`max(source ink, candidate ink, 1)` is compared with tolerance (`FIDELITY005`); ratios can
+exceed 1. Colour changes on the same threshold side are invisible. Difference images mark
+changed ink in white and are declared evidence artifacts. Actual cropped/rounded bitmap
+geometry is checked before allocation; a size mismatch is geometry, not a fabricated ratio.
+Pages exceeding the existing 20-million-pixel limit produce `FIDELITY007`.
 
-Measurements and skipped checks are recorded in [evidence](EVIDENCE.md). A skipped raster
-check supplies no measured difference. Compare within one machine/run; neither extraction,
-binary ink nor URI preservation establishes intended appearance or cross-machine identity.
+A skipped/incomplete raster check has no measured difference. Text extraction follows page
+order, not semantic reading order. Compare within one machine/run; neither extraction, ink
+nor URI equality establishes appearance, cross-machine identity or accessibility. Complete
+the [human review](ACCESSIBILITY.md#human-acceptance).

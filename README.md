@@ -14,10 +14,10 @@ source checkout's locked environment:
 uv sync --locked
 uv run --no-sync odfa11y audit original.odt --schema
 uv run --no-sync odfa11y plan original.odt > reviewed.toml
-# Supply answers and uncomment only the tables/fields you have reviewed.
+# Uncomment only reviewed answer fields; unanswered tables are inert.
 uv run --no-sync odfa11y remediate original.odt reviewed.odt --plan reviewed.toml --dry-run
 uv run --no-sync odfa11y run original.odt --plan reviewed.toml \
-  --output-dir evidence --profile production
+  --output-dir evidence --profile pdf
 uv run --no-sync odfa11y verify-evidence evidence
 ```
 
@@ -27,12 +27,13 @@ LibreOffice 26.8 or newer; PDF validation needs [veraPDF](https://verapdf.org/) 
 Run `uv run --no-sync odfa11y doctor` to identify tools and measure exporter capabilities.
 
 Plans bind to the exact reviewed source. Remediation preserves protected content and
-publishes only passing candidates to a separate destination. A successful dry run writes
+publishes candidates passing preservation/schema guards to a separate destination. A successful dry run writes
 no destination. Production runs reject warnings and require veraPDF; review the retained
 `REVIEW.md` and actual publication before distribution. Machine checks do not certify accessibility.
 
 ## Choose a task
 
+- [Worked example](docs/WALKTHROUGH.md): a real plan and remaining-finding prediction.
 - [Workflow](docs/WORKFLOW.md): audit, review, remediate, export and compare.
 - [Plans](docs/PLAN.md): source binding, fingerprints and generated answer reference.
 - [Commands and exit statuses](docs/CLI.md): generated options for every CLI command.

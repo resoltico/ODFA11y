@@ -344,16 +344,45 @@ def decision_reference(kinds: Mapping[str, DecisionKind]) -> str:
         lines += ["| Field | Required | Value constraints | Help |", "| --- | --- | --- | --- |"]
         properties = cast("dict[str, JsonObject]", schema["properties"])
         for name, field_schema in properties.items():
-            constraints = {
-                key: value for key, value in field_schema.items() if key != "description"
-            }
-            value = json.dumps(constraints, ensure_ascii=False, separators=(",", ":"))
+            value = _constraint_prose(field_schema)
             help_text = str(field_schema.get("description", "")).replace("|", "\\|")
             lines.append(
-                f"| `{name}` | {'yes' if name in required else 'no'} | `{value}` | {help_text} |"
+                f"| `{name}` | {'yes' if name in required else 'no'} | {value} | {help_text} |"
             )
         if alternatives := schema.get("anyOf"):
-            lines += ["", "Required-field alternatives: `" + json.dumps(alternatives) + "`."]
+            choices = cast("list[JsonObject]", alternatives)
+            names = dict.fromkeys(
+                name for choice in choices for name in cast("list[str]", choice["required"])
+            )
+            lines += [
+                "",
+                "Supply at least one of: " + ", ".join(f"`{name}`" for name in names) + ".",
+            ]
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _constraint_prose(schema: JsonObject) -> str:
+    """Describe the answer schema in the plan field tables."""
+    if alternatives := schema.get("anyOf"):
+        choices = cast("list[JsonObject]", alternatives)
+        return " or ".join(
+            _constraint_prose(choice) for choice in choices if choice.get("type") != "null"
+        )
+    if values := schema.get("enum"):
+        return "One of " + ", ".join(f"`{value}`" for value in cast("list[object]", values))
+    kind = schema.get("type")
+    if kind == "array":
+        item = cast("JsonObject", schema["items"])
+        minimum = schema.get("minItems", 0)
+        return f"List of {_constraint_prose(item)}; at least {minimum} items."
+    parts = [str(kind)]
+    if format_name := schema.get("format"):
+        parts.append(str(format_name).removeprefix("odfa11y-").replace("-", " "))
+    if schema.get("pattern") == r"\S":
+        parts.append("nonblank")
+    for key, phrase in (("minimum", "at least"), ("maximum", "at most")):
+        if key in schema:
+            parts.append(f"{phrase} {schema[key]}")
+    return "; ".join(parts)

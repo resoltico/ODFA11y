@@ -1,6 +1,6 @@
 # Evidence bundles
 
-Use `pipeline --output-dir DIR` to retain decisions, stage outcomes and human-review needs.
+Use `run --output-dir DIR` to retain decisions, stage outcomes and human-review needs.
 A failed run can produce a valid bundle; integrity does not imply passing gates.
 
 ```text
@@ -66,7 +66,7 @@ destinations or source-only inspection/remediation. See
 ## Verify recorded files
 
 ```sh
-uv run --no-sync odfa11y verify evidence
+uv run --no-sync odfa11y verify-evidence evidence
 ```
 
 The manifest has exactly `{"bundle_version": 1, "files": {…}}`, with normalized relative

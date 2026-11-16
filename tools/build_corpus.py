@@ -55,38 +55,81 @@ def _convert(source: Path, destination: Path, format_filter: str, office: LibreO
 
 def _profile(profile: Path, module: Path, output: Path) -> None:
     """Install only the repository's trusted fixture macro in a disposable user profile."""
-    standard = profile / "user/basic/Standard"
-    standard.mkdir(parents=True)
+    standard = profile / "user/basic/CorpusAuthoring"
+    standard.mkdir(parents=True, exist_ok=True)
     source = module.read_text().replace(
         'Environ("ODFA11Y_FIXTURE_ROOT")', '"' + str(output).replace('"', '""') + '"'
     )
-    (standard / "Module1.xba").write_text(
-        f'<script:module xmlns:script="{SCRIPT}" script:name="Module1" '
+    (standard / "Author.xba").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<!DOCTYPE script:module"
+        ' PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">\n'
+        f'<script:module xmlns:script="{SCRIPT}" script:name="Author" '
         f'script:language="StarBasic">{escape(source)}</script:module>'
     )
     (standard / "script.xlb").write_text(
-        f'<library:library xmlns:library="{LIBRARY}" library:name="Standard" '
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<!DOCTYPE library:library"
+        ' PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "library.dtd">\n'
+        f'<library:library xmlns:library="{LIBRARY}" library:name="CorpusAuthoring" '
         'library:readonly="false" library:passwordprotected="false">'
-        '<library:element library:name="Module1"/></library:library>'
+        '<library:element library:name="Author"/></library:library>'
     )
     (profile / "user/basic/script.xlc").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<!DOCTYPE library:libraries"
+        ' PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "libraries.dtd">\n'
         f'<library:libraries xmlns:library="{LIBRARY}" xmlns:xlink="http://www.w3.org/1999/xlink">'
-        '<library:library library:name="Standard" xlink:href="$(USER)/basic/Standard/script.xlb/" '
-        'xlink:type="simple" library:link="false"/></library:libraries>'
+        '<library:library library:name="Standard" library:link="false"/>'
+        '<library:library library:name="CorpusAuthoring" '
+        f'xlink:href="{(standard / "script.xlb").as_uri()}" '
+        'xlink:type="simple" library:link="true" library:readonly="false"/></library:libraries>'
     )
-    (profile / "user/registrymodifications.xcu").write_text(
-        '<oor:items xmlns:oor="http://openoffice.org/2001/registry">'
-        '<item oor:path="/org.openoffice.Office.Common/Security/Scripting">'
-        '<prop oor:name="MacroSecurityLevel" oor:op="fuse"><value>0</value></prop></item>'
-        '<item oor:path="/org.openoffice.Office.Common/Save/ODF">'
-        '<prop oor:name="DefaultVersion" oor:op="fuse"><value>12</value></prop></item>'
-        "</oor:items>"
+    (standard / "dialog.xlb").write_text(
+        f'<library:library xmlns:library="{LIBRARY}" library:name="CorpusAuthoring" '
+        'library:readonly="false" library:passwordprotected="false"/>'
     )
+    (profile / "user/basic/dialog.xlc").write_text(
+        f'<library:libraries xmlns:library="{LIBRARY}" xmlns:xlink="http://www.w3.org/1999/xlink">'
+        '<library:library library:name="Standard" library:link="false"/>'
+        '<library:library library:name="CorpusAuthoring" '
+        f'xlink:href="{(standard / "dialog.xlb").as_uri()}" '
+        'xlink:type="simple" library:link="true" library:readonly="false"/></library:libraries>'
+    )
+    registry = profile / "user/registrymodifications.xcu"
+    settings = etree.parse(registry).getroot()
+    oor = "http://openoffice.org/2001/registry"
+    for path, name, value in (
+        ("/org.openoffice.Office.Common/Security/Scripting", "MacroSecurityLevel", "0"),
+        ("/org.openoffice.Office.Common/Save/ODF", "DefaultVersion", "12"),
+    ):
+        item = next((node for node in settings if node.get(f"{{{oor}}}path") == path), None)
+        if item is None:
+            item = etree.SubElement(settings, "item", {f"{{{oor}}}path": path})
+        prop = next((node for node in item if node.get(f"{{{oor}}}name") == name), None)
+        if prop is None:
+            prop = etree.SubElement(item, "prop", {f"{{{oor}}}name": name, f"{{{oor}}}op": "fuse"})
+        for node in tuple(prop):
+            prop.remove(node)
+        etree.SubElement(prop, "value").text = value
+    registry.write_bytes(etree.tostring(settings, xml_declaration=True, encoding="UTF-8"))
 
 
 def _macro(name: str, output: Path, office: LibreOffice) -> None:
     with tempfile.TemporaryDirectory(prefix="odfa11y-corpus-macro-") as temporary:
         profile = Path(temporary) / "profile"
+        initialized = run_bounded(
+            [
+                office.executable,
+                f"-env:UserInstallation={profile.as_uri()}",
+                "--headless",
+                "--terminate_after_init",
+            ],
+            timeout=TIMEOUT,
+        )
+        if initialized.returncode:
+            message = "LibreOffice could not initialize the disposable authoring profile"
+            raise RuntimeError(message)
         _profile(profile, ROOT / "families/sources" / name, output)
         result = run_bounded(
             [
@@ -96,7 +139,7 @@ def _macro(name: str, output: Path, office: LibreOffice) -> None:
                 "--nologo",
                 "--nodefault",
                 "--nofirststartwizard",
-                "macro:///Standard.Module1.Main",
+                "macro:///CorpusAuthoring.Author.Main",
             ],
             timeout=TIMEOUT,
         )

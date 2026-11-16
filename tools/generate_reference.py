@@ -192,7 +192,7 @@ def cli_reference() -> str:
         "",
         f"Aggregation precedence: **{precedence}**.",
         "",
-        "A passing dry run can have `published=false`; a refused candidate exits 2.",
+        'A passing dry run can have `publication="preview"`; a refused candidate exits 2.',
         "Execution errors retain status 3; invalid arguments/plans use 4.",
         "",
     ]

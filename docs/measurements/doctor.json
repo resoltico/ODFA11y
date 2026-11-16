@@ -79,7 +79,7 @@
   "libraries": {
     "lxml": "6.1.3",
     "pillow": "13.0.0",
-    "pypdf": "6.21.3",
+    "pypdf": "6.21.4",
     "pypdfium2": "5.14.0"
   },
   "odfa11y": "0.8.0",
@@ -96,5 +96,15 @@
       "version": "26.8.3.1"
     },
     "verapdf": null
-  }
+  },
+  "unavailable": [
+    {
+      "blocks": [
+        "Production runs",
+        "Independent PDF validation"
+      ],
+      "selection": "verapdf",
+      "tool": "veraPDF"
+    }
+  ]
 }

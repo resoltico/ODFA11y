@@ -18,7 +18,7 @@ are separate conclusions. A clean automated report is not an accessibility certi
 
 Kinds follow declared media types, independently of filename extension. Valid family
 representations remain required; an office-body Formula wrapper is not supported.
-Source-only profiles can record PDF stages as not-applicable; production fails missing
+Source-only profiles skip stages above their level; unsupported family exports are not-applicable. Production refuses missing
 required PDF assurance. Opaque embedded internals are not certified by source success.
 
 ## Writer text structure
@@ -53,25 +53,25 @@ inspection is bounded to 100,000 cells; simple repeats remain arithmetic. The le
 API cannot rewrite unsupported group-level choices.
 
 Row/column header markup is separate from PDF roles. Tested Writer header-column edits
-retain valid source but export no `TH`: built-in `PDF015` blocks strict production although
+retain valid source but export no `TH`: built-in `PDF016` blocks strict production although
 veraPDF accepts that PDF. Valid merged row headers pass the measured validator case;
 that alone does not establish correct human header associations.
 
 ## Spreadsheet PDF exports
 
-Calc's measured data export lacks `TH` (`PDF015`) and has inconsistent column counts
+Calc's measured data export lacks `TH` (`PDF016`) and has inconsistent column counts
 (veraPDF 7.2-43). Production retains these failures. A sheet rename can also change its
-printed header and fail text fidelity (`FID003`); review/edit that header in Calc first.
+printed header and fail text fidelity (`FIDELITY003`); review/edit that header in Calc first.
 Source changes never rewrite cell values/formulas, headers, merges or hidden state.
 
 ## Link descriptions
 
 Readable labels, graphic alternatives or `office:title` can establish source purpose.
 Supplied descriptions preserve visible text and target names. The measured Writer
-`office:title` probe remains unsupported on 26.8.1.1; source success does not clear `PDF019`.
+`office:title` probe remains unsupported on 26.8.1.1; source success does not clear `PDF020`.
 Its internal-bookmark fixture has a real destination/readable label but exported annotation
-Contents/Alt is absent (`PDF019`, veraPDF 7.18.1-2/7.18.5-2). Conversely the broken-target
-control triggers built-in `PDF017` while veraPDF accepts it. Never rely on one layer alone.
+Contents/Alt is absent (`PDF020`, veraPDF 7.18.1-2/7.18.5-2). Conversely the broken-target
+control triggers built-in `PDF018` while veraPDF accepts it. Never rely on one layer alone.
 
 ## Graphic roles
 
@@ -80,7 +80,7 @@ Explicit ODF 1.4 `draw:decorative` changes derive isolated styles; ambiguous con
 A role never hides invalid payloads, external resources, scripts or navigation failures.
 Groups retain child checks; authored alternatives on decorative objects still need review.
 The measured standard decorative property exports an undescribed Figure on 26.8.1.1,
-retaining `PDF007`/veraPDF failures. An all-decorative image cannot establish meaningful content.
+retaining `PDF008`/veraPDF failures. An all-decorative image cannot establish meaningful content.
 
 [Generated capabilities](CAPABILITIES.md) link exact tool identities/probe observations;
 [text fixture measurements](measurements/text-exports.json) retain narrower results.
@@ -99,15 +99,17 @@ not complete conformance. `document.odf_version` relabels; it does not convert m
 
 ## Preservation boundaries
 
-Only permitted effects normalize for protection checks. Wording/order, logical grids,
+One allowance-based proof masks only explicitly permitted edit effects. Its characterization
+matrix covers every applicable corpus/kind pair; protected content and schema/opaque guards
+remain independent. Only permitted effects normalize for protection checks. Wording/order, logical grids,
 references, fields, anchors, geometry, comments/processing instructions, foreign XML,
 payloads and unrelated styles remain protected. Other families also protect their data,
 formulas, navigation, MathML, chart ranges and database bindings. Unchanged members retain
 bytes. These checks complement [render fidelity](FIDELITY.md).
 
-Declared signatures are unverified (`PKG008`); all guarded remediation refuses, including
-no-op/dry runs. Original export makes no signature claim. Encryption (`PKG009`), duplicate
-ZIP names (`PKG006`), unsafe paths (`PKG007`) or malformed manifests block complete access.
+Declared signatures are unverified (`PKG011`); all guarded remediation refuses, including
+no-op/dry runs. Native export makes no signature claim. Encryption (`PKG012`), duplicate
+ZIP names (`PKG009`), unsafe paths (`PKG010`) or malformed manifests block complete access.
 Planning/remediation/native work do not select a protected body through those failures.
 
 Tracked changes permit title/description metadata only; language/version/structural edits
@@ -181,7 +183,7 @@ Inspected painted graphics are not proof of pixel visibility or correct artifact
 
 Unsupported filtered inline-image/color-space boundaries, whole-Form StructParent ownership,
 malformed decoding, cycles and exhausted budgets cause explicit incomplete inspection or
-`PDF000`/comparison failure. Decoded content and repeated work each have 64 MiB budgets;
+`PDF001`/comparison failure. Decoded content and repeated work each have 64 MiB budgets;
 arrays permit 10,000 streams, with 5,000 Form invocations/depth 50. Decoder/final-byte checks
 do not bound peak memory or raster allocations.
 
