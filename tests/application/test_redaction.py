@@ -8,8 +8,9 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.evidence import Redactor, check_bundle, write_bundle
+from odfa11y.evidence import Redactor, check_bundle
 from odfa11y.families.text import SPEC
+from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.records import record
 
 REVIEW_ITEMS = SPEC.review_items
@@ -31,7 +32,7 @@ def bundle(tmp_path: Path, artifacts: dict[str, bytes] | None = None) -> Path:
         source.write_bytes(data)
         sources[name] = source
     target = tmp_path / "bundle"
-    write_bundle(target, record(), sources, NO_REDACTION)
+    write_run_bundle(target, record(), sources, NO_REDACTION)
     return target
 
 
@@ -107,7 +108,7 @@ def test_text_artifacts_are_redacted_and_binary_ones_are_not(tmp_path: Path) -> 
     binary.write_bytes(str(work).encode())
     redactor = Redactor.for_locations({"work": work})
     target = tmp_path / "bundle"
-    write_bundle(
+    write_run_bundle(
         target,
         record(),
         {"report.xml": xml, "data.bin": binary},
@@ -140,7 +141,7 @@ def test_review_redacts_paths_before_markdown_escaping(tmp_path: Path, private_p
         failed.stages[-1], reason=f"Executable not found: {private_path} | failed"
     )
     target = tmp_path / "evidence"
-    write_bundle(target, failed, {}, Redactor(()))
+    write_run_bundle(target, failed, {}, Redactor(()))
     review = (target / "REVIEW.md").read_text()
     assert "zz-private-person-zz" not in review
     assert "<path>/no-such-soffice" in review

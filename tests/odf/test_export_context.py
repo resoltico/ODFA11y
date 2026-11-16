@@ -79,7 +79,7 @@ def test_embedded_bytes_and_navigation_are_supported_and_portable(tmp_path: Path
     assert result.passed
     published = OdfDocument.open(tmp_path / "evidence" / "remediated.fodt")
     assert native_export_limitations(published)["rendering_dependencies"] == 0
-    assert result.outputs == json.loads((tmp_path / "evidence" / "run.json").read_text())["outputs"]
+    assert "outputs" not in json.loads((tmp_path / "evidence" / "run.json").read_text())
 
 
 def test_filename_fields_stay_authored_in_source_only_workflow(tmp_path: Path) -> None:

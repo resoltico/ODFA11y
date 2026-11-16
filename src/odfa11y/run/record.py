@@ -88,7 +88,6 @@ class RunRecord:
     toolchain: Toolchain = field(default_factory=Toolchain)
     fonts: dict[str, tuple[Font, ...] | None] = field(default_factory=dict)
     human_review: tuple[ReviewItem, ...] = ()
-    outputs: dict[str, str] = field(default_factory=dict)
     plan: PlanHeader | None = None
     decisions: tuple[Decision, ...] = ()
 

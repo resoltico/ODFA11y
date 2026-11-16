@@ -6,11 +6,13 @@ lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.errors import OutputOccupied
-from odfa11y.evidence import Redactor, render_review, require_free_directory, write_bundle
+from odfa11y.errors import IoFailure, OutputOccupied
+from odfa11y.evidence import Redactor, require_free_directory
 from odfa11y.families.text import SPEC
 from odfa11y.rules import registry as rules
+from odfa11y.run.review import render_review
 from odfa11y.status import StageStatus
+from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.records import record
 
@@ -33,7 +35,7 @@ def bundle(tmp_path: Path, artifacts: dict[str, bytes] | None = None) -> Path:
         source.write_bytes(data)
         sources[name] = source
     target = tmp_path / "bundle"
-    write_bundle(target, record(), sources, NO_REDACTION)
+    write_run_bundle(target, record(), sources, NO_REDACTION)
     return target
 
 
@@ -41,9 +43,9 @@ def test_occupied_directories_are_refused_but_empty_ones_are_reused(tmp_path: Pa
     target = tmp_path / "bundle"
     target.mkdir()
     require_free_directory(target)
-    write_bundle(target, record(), {}, NO_REDACTION)
+    write_run_bundle(target, record(), {}, NO_REDACTION)
     with pytest.raises(OutputOccupied):
-        write_bundle(target, record(), {}, NO_REDACTION)
+        write_run_bundle(target, record(), {}, NO_REDACTION)
     file_path = tmp_path / "file"
     file_path.write_text("x")
     with pytest.raises(OutputOccupied):
@@ -52,8 +54,8 @@ def test_occupied_directories_are_refused_but_empty_ones_are_reused(tmp_path: Pa
 
 def test_failed_publication_leaves_no_partial_bundle(tmp_path: Path) -> None:
     target = tmp_path / "bundle"
-    with pytest.raises(FileNotFoundError):
-        write_bundle(target, record(), {"x": tmp_path / "missing"}, NO_REDACTION)
+    with pytest.raises(IoFailure):
+        write_run_bundle(target, record(), {"x": tmp_path / "missing"}, NO_REDACTION)
     assert not target.exists()
     assert list(tmp_path.iterdir()) == []
 

@@ -9,12 +9,13 @@ lazy from pathlib import Path
 import pytest
 from lxml import etree
 
-from odfa11y.evidence import Redactor, check_bundle, write_bundle
+from odfa11y.evidence import Redactor, check_bundle
 from odfa11y.odf import OdfDocument
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.profiles import profile_named
+from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import reviewed_plan
 from tests.fixtures.records import record
@@ -33,7 +34,7 @@ def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: st
             source.read_bytes().replace(b"</text:p>", b" /private/person/file</text:p>", 1)
         )
     target = tmp_path / "bundle"
-    result = execute(
+    execute(
         source,
         reviewed_plan(source, [], Pagination.SAME()),
         target,
@@ -42,7 +43,10 @@ def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: st
     delivered = target / f"remediated{suffix}"
     OdfDocument.open(delivered)
     assert delivered.read_bytes() == source.read_bytes()
-    assert result.outputs[delivered.name] == hashlib.sha256(delivered.read_bytes()).hexdigest()
+    assert (
+        json.loads((target / "manifest.json").read_text())["files"][delivered.name]
+        == hashlib.sha256(delivered.read_bytes()).hexdigest()
+    )
     assert check_bundle(target) == []
 
 
@@ -50,13 +54,15 @@ def test_structured_diagnostics_and_final_hashes(tmp_path: Path) -> None:
     xml = tmp_path / "report.xml"
     xml.write_text('<report path="/private/person/a&amp;b">C:\\Users\\Person\\f.pdf</report>')
     target = tmp_path / "bundle"
-    write_bundle(target, record(), {"report.xml": xml}, Redactor(()), diagnostics={"report.xml"})
+    write_run_bundle(
+        target, record(), {"report.xml": xml}, Redactor(()), diagnostics={"report.xml"}
+    )
     root = etree.parse(target / "report.xml").getroot()
     assert root.get("path") == "<path>/a&b"
     assert root.text == "<path>/f.pdf"
-    published = json.loads((target / "run.json").read_text())
+    published = json.loads((target / "manifest.json").read_text())
     assert (
-        published["outputs"]["report.xml"]
+        published["files"]["report.xml"]
         == hashlib.sha256((target / "report.xml").read_bytes()).hexdigest()
     )
     assert check_bundle(target) == []
@@ -72,7 +78,7 @@ def test_unwritable_publication_has_no_partial_directory(tmp_path: Path) -> None
         if os.access(parent, os.W_OK):
             pytest.skip("The platform does not enforce POSIX directory modes for this user")
         with pytest.raises(PermissionError):
-            write_bundle(parent / "bundle", record(), {"artifact": source}, Redactor(()))
+            write_run_bundle(parent / "bundle", record(), {"artifact": source}, Redactor(()))
         assert not list(parent.iterdir())
     finally:
         parent.chmod(0o700)

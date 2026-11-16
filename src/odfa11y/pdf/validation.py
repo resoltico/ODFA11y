@@ -60,6 +60,7 @@ class VeraPdfResult:
     compliant: bool
     failures: tuple[FailedRule, ...]
     raw_xml: str
+    xml_root: etree._Element
 
 
 class PdfValidator(Protocol):
@@ -143,6 +144,7 @@ def parse_validation(xml: bytes, stderr: str = "") -> VeraPdfResult:
             if rule.get("status") == "failed"
         ),
         raw_xml=raw_xml,
+        xml_root=root,
     )
 
 

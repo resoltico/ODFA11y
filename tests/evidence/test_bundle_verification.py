@@ -9,8 +9,9 @@ lazy from pathlib import Path
 import pytest
 
 from odfa11y.errors import OutputOccupied
-from odfa11y.evidence import Redactor, check_bundle, write_bundle
+from odfa11y.evidence import BinaryArtifact, Redactor, TextArtifact, check_bundle, write_bundle
 from odfa11y.families.text import SPEC
+from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.records import record
 
 REVIEW_ITEMS = SPEC.review_items
@@ -32,7 +33,7 @@ def bundle(tmp_path: Path, artifacts: dict[str, bytes] | None = None) -> Path:
         source.write_bytes(data)
         sources[name] = source
     target = tmp_path / "bundle"
-    write_bundle(target, record(), sources, NO_REDACTION)
+    write_run_bundle(target, record(), sources, NO_REDACTION)
     return target
 
 
@@ -159,8 +160,8 @@ def test_the_writer_rejects_names_the_verifier_would_reject(tmp_path: Path) -> N
     source = tmp_path / "s.bin"
     source.write_bytes(b"x")
     for name in ("../escape", "/abs", "a//b", "manifest.json"):
-        with pytest.raises(OutputOccupied, match="Unsafe bundle file name"):
-            write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
+        with pytest.raises(OutputOccupied, match="Unsafe evidence artifact name"):
+            write_bundle(tmp_path / "bundle", {name: BinaryArtifact(source)}, NO_REDACTION)
     assert not (tmp_path / "bundle").exists()
 
 
@@ -179,24 +180,22 @@ def test_a_manifest_name_that_is_not_valid_text_is_reported_not_fatal(tmp_path: 
     assert any("unsafe name" in problem for problem in problems)
 
 
-@pytest.mark.parametrize(
-    "name", ["run.json", "Run.JSON", "review.md", "Manifest.json", "MANIFEST.JSON"]
-)
+@pytest.mark.parametrize("name", ["manifest.json", "Manifest.json", "MANIFEST.JSON"])
 def test_an_artifact_cannot_take_the_name_of_a_file_the_bundle_writes(
     tmp_path: Path, name: str
 ) -> None:
     source = tmp_path / "s.bin"
     source.write_bytes(b"x")
-    with pytest.raises(OutputOccupied, match="Unsafe bundle file name"):
-        write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
+    with pytest.raises(OutputOccupied, match="Unsafe evidence artifact name"):
+        write_bundle(tmp_path / "bundle", {name: BinaryArtifact(source)}, NO_REDACTION)
 
 
 @pytest.mark.parametrize("name", ["NUL.txt", "a.", "a ", "a:b", "dir/con", "x" * 256])
 def test_names_other_filesystems_cannot_hold_are_rejected(tmp_path: Path, name: str) -> None:
     source = tmp_path / "s.bin"
     source.write_bytes(b"x")
-    with pytest.raises(OutputOccupied, match="Unsafe bundle file name"):
-        write_bundle(tmp_path / "bundle", record(), {name: source}, NO_REDACTION)
+    with pytest.raises(OutputOccupied, match="Unsafe evidence artifact name"):
+        write_bundle(tmp_path / "bundle", {name: BinaryArtifact(source)}, NO_REDACTION)
 
 
 def test_a_very_long_manifest_name_is_not_echoed_in_full(tmp_path: Path) -> None:
@@ -214,3 +213,17 @@ def test_a_manifest_that_is_a_link_is_not_followed(tmp_path: Path) -> None:
     (directory / "manifest.json").rename(real)
     (directory / "manifest.json").symlink_to(real)
     assert any("symbolic link" in problem for problem in check_bundle(directory))
+
+
+def test_generic_bundle_contains_only_declared_artifacts(tmp_path: Path) -> None:
+    target = tmp_path / "bundle"
+    write_bundle(target, {"notes.txt": TextArtifact("plain evidence")}, NO_REDACTION)
+    assert {path.name for path in target.iterdir()} == {"notes.txt", "manifest.json"}
+    assert check_bundle(target) == []
+
+
+def test_run_filenames_are_ordinary_declared_artifacts(tmp_path: Path) -> None:
+    target = tmp_path / "bundle"
+    write_bundle(target, {"run.json": TextArtifact("producer-owned")}, NO_REDACTION)
+    assert (target / "run.json").read_text() == "producer-owned"
+    assert check_bundle(target) == []

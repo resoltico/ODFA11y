@@ -3,9 +3,18 @@
 
 lazy from pathlib import Path
 
-from odfa11y.errors import OdfA11yError
-from odfa11y.evidence import Redactor, write_bundle
-from odfa11y.progress import ProgressEvent, Step, StepState
+from odfa11y.evidence import (
+    BinaryArtifact,
+    BundleArtifact,
+    JsonArtifact,
+    Redactor,
+    TextArtifact,
+    XmlArtifact,
+    write_bundle,
+)
+from odfa11y.progress import Step, step
+from odfa11y.run.review import render_review
+from odfa11y.safe_xml import parse_secure
 lazy from odfa11y.progress import ProgressObserver
 lazy from odfa11y.run.record import RunRecord
 
@@ -32,30 +41,30 @@ def publish_evidence(
         Publication is interrupted.
 
     """
-    if observer is not None:
-        observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.RUNNING))
-    try:
-        artifacts = {
-            path.relative_to(work).as_posix(): path
-            for path in sorted(work.rglob("*"))
-            if path.is_file() and path.relative_to(work).parts[0] != "profile"
+    with step(observer, Step.PUBLISH_EVIDENCE):
+        names = ("remediated" + source.suffix, "source.pdf", "remediated.pdf", "verapdf.xml")
+        artifacts: dict[str, BundleArtifact] = {
+            name: BinaryArtifact(work / name) for name in names if (work / name).is_file()
         }
+        # The fidelity producer declares each difference image in its structured finding.
+        for stage in record.stages:
+            if stage.report is not None:
+                for finding in stage.report.findings:
+                    name = finding.details.get("diff_image")
+                    if isinstance(name, str):
+                        path = work / "diff" / name
+                        if path.is_file():
+                            artifacts["diff/" + name] = BinaryArtifact(path)
+        if "verapdf.xml" in artifacts:
+            artifacts["verapdf.xml"] = XmlArtifact(
+                parse_secure((work / "verapdf.xml").read_bytes())
+            )
         redactor = Redactor.for_locations({
             "profile": work / "profile",
             "work": work,
             "source": source.parent,
             "output": target,
         })
-        record.outputs = write_bundle(
-            target, record, artifacts, redactor, diagnostics={"verapdf.xml"}
-        )
-    except OdfA11yError, OSError:
-        if observer is not None:
-            observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.FAILED))
-        raise
-    except KeyboardInterrupt:
-        if observer is not None:
-            observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.FAILED))
-        raise
-    if observer is not None:
-        observer(ProgressEvent(Step.PUBLISH_EVIDENCE, StepState.PASSED))
+        artifacts["run.json"] = JsonArtifact(record.as_dict())
+        artifacts["REVIEW.md"] = TextArtifact(render_review(record, redactor=redactor))
+        write_bundle(target, artifacts, redactor)

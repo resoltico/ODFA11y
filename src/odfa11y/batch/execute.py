@@ -8,7 +8,7 @@ from odfa11y.application.native import NativeTools
 from odfa11y.batch.batch_file import load_manifest, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OdfA11yError
-from odfa11y.evidence import Redactor, write_bundle
+from odfa11y.evidence import JsonArtifact, Redactor, TextArtifact, write_bundle
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.progress import ProgressEvent, Stage, Step, StepState
@@ -16,6 +16,7 @@ from odfa11y.records import DocumentIdentity
 from odfa11y.run.context import RunSettings
 from odfa11y.run.engine import execute
 from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.run.review import render_review
 from odfa11y.status import BatchStatus, ExitStatus, StageStatus, failure_status
 lazy from odfa11y.batch.batch_file import BatchItem
 lazy from odfa11y.progress import ProgressObserver
@@ -183,5 +184,12 @@ def _failure(
         "source": item.source.parent,
         "output": target,
     })
-    write_bundle(target, record, {}, redactor)
+    write_bundle(
+        target,
+        {
+            "run.json": JsonArtifact(record.as_dict()),
+            "REVIEW.md": TextArtifact(render_review(record)),
+        },
+        redactor,
+    )
     return record

@@ -5,6 +5,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Never
 
+from lxml import etree
+
 from odfa11y.application.native import NativeTools
 from odfa11y.families.probes import ProbeId
 from odfa11y.native.libreoffice import ExportSettings
@@ -22,7 +24,14 @@ def validation_result(compliant: bool = True) -> VeraPdfResult:
             FailedRule("ISO 14289-1:2014", "7.1", "1", "Controlled validation failure", 1, (), ()),
         )
     )
-    return VeraPdfResult(ToolIdentity("veraPDF", "test"), "PDF/UA-1", compliant, failures, "")
+    return VeraPdfResult(
+        ToolIdentity("veraPDF", "test"),
+        "PDF/UA-1",
+        compliant,
+        failures,
+        "<report/>",
+        etree.Element("report"),
+    )
 
 
 def refusing(calls: list[object]) -> Callable[..., Never]:

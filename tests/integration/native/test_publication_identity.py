@@ -48,9 +48,9 @@ def test_native_published_artifact_syntax_content_and_identity(
     etree.parse(target / "verapdf.xml")
     published = json.loads((target / "run.json").read_text())
     manifest = json.loads((target / "manifest.json").read_text())["files"]
-    assert result.outputs == published["outputs"]
+    assert "outputs" not in published
     for name, digest in manifest.items():
         assert hashlib.sha256((target / name).read_bytes()).hexdigest() == digest
-    for name, digest in result.outputs.items():
+    for name, digest in json.loads((target / "manifest.json").read_text())["files"].items():
         assert digest == manifest[name]
     assert check_bundle(target) == []

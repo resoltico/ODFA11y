@@ -5,20 +5,22 @@ import json
 import os
 import re
 import stat
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 from odfa11y.capture import source_digest
 from odfa11y.errors import OutputOccupied, PackageError
 from odfa11y.evidence.paths import MANIFEST_NAME, unsafe_reason
+from odfa11y.publish import publish_file
 
 BUNDLE_VERSION = 1
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 MAX_SHOWN_NAME = 120
 
 
-def write_manifest(directory: Path) -> None:
-    """Record the SHA-256 of every file in a directory except the root manifest itself.
+def write_manifest(directory: Path, names: Iterable[str]) -> None:
+    """Record the SHA-256 of the explicitly declared bundle files.
 
     Raises
     ------
@@ -27,10 +29,8 @@ def write_manifest(directory: Path) -> None:
 
     """
     files: dict[str, str] = {}
-    for path in sorted(directory.rglob("*")):
-        relative = path.relative_to(directory).as_posix()
-        if path.is_dir() and not path.is_symlink():
-            continue
+    for relative in sorted(names):
+        path = directory / relative
         if relative == MANIFEST_NAME:
             continue
         if reason := unsafe_reason(relative) or _kind_problem(path):
@@ -38,9 +38,8 @@ def write_manifest(directory: Path) -> None:
             raise OutputOccupied(msg)
         files[relative] = source_digest(path)
     payload = {"bundle_version": BUNDLE_VERSION, "files": files}
-    (directory / MANIFEST_NAME).write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    encoded = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    publish_file(directory / MANIFEST_NAME, lambda stream: stream.write(encoded))
 
 
 def check_bundle(directory: str | Path) -> list[str]:

@@ -8,7 +8,6 @@ MANIFEST_NAME = "manifest.json"
 FORBIDDEN_CHARACTERS = re.compile(r'[\x00-\x1f\x7f\\\ud800-\udfff<>:"|?*]')
 WINDOWS_DEVICE = re.compile(r"(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?")
 MAX_COMPONENT_BYTES = 255
-RESERVED_BUNDLE_FILES = frozenset({MANIFEST_NAME, "run.json", "review.md"})
 
 
 def unsafe_reason(name: str) -> str | None:
@@ -54,15 +53,3 @@ def unsafe_reason(name: str) -> str | None:
         ),
     )
     return next((reason for failed, reason in checks if failed), None)
-
-
-def is_reserved_bundle_file(name: str) -> bool:
-    """Tell whether a name belongs to the bundle itself rather than to an artifact.
-
-    Returns
-    -------
-    bool
-        True for ``manifest.json``, ``run.json`` and ``REVIEW.md`` in any letter case.
-
-    """
-    return name.casefold() in RESERVED_BUNDLE_FILES

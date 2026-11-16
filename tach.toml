@@ -231,7 +231,7 @@ depends_on = ["odfa11y.remediate.metadata", "odfa11y.remediate.version", "odfa11
 [[modules]]
 path = "odfa11y.run"
 # Temporary until WP9: target layer runs; upward edges odfa11y.application.native, odfa11y.application.tools.
-depends_on = ["odfa11y.tool_timeout", "odfa11y.tool_identity", "odfa11y.application.native", "odfa11y.application.tools", "odfa11y.audit", "odfa11y.capture", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families", "odfa11y.families.spec", "odfa11y.native.libreoffice", "odfa11y.families.probes", "odfa11y.native.process", "odfa11y.odf", "odfa11y.pdf", "odfa11y.pdf.fidelity", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.remediate", "odfa11y.report", "odfa11y.run.profiles", "odfa11y.run.record", "odfa11y.status", "odfa11y.version"]
+depends_on = ["odfa11y.contracts", "odfa11y.evidence.redact", "odfa11y.safe_xml", "odfa11y.tool_timeout", "odfa11y.tool_identity", "odfa11y.application.native", "odfa11y.application.tools", "odfa11y.audit", "odfa11y.capture", "odfa11y.errors", "odfa11y.evidence", "odfa11y.families", "odfa11y.families.spec", "odfa11y.native.libreoffice", "odfa11y.families.probes", "odfa11y.native.process", "odfa11y.odf", "odfa11y.pdf", "odfa11y.pdf.fidelity", "odfa11y.plans", "odfa11y.progress", "odfa11y.records", "odfa11y.remediate", "odfa11y.report", "odfa11y.run.profiles", "odfa11y.run.record", "odfa11y.status", "odfa11y.version"]
 
 [[modules]]
 path = "odfa11y.run.record"
@@ -251,7 +251,9 @@ depends_on = ["odfa11y.plans.registry", "odfa11y.application.native", "odfa11y.c
 [[modules]]
 path = "odfa11y.evidence"
 layer = "runs"
-depends_on = ["odfa11y.capture", "odfa11y.errors", "odfa11y.progress", "odfa11y.run.record", "odfa11y.safe_xml", "odfa11y.publish", "odfa11y.status"]
+depends_on = ["odfa11y.capture", "odfa11y.errors", "odfa11y.progress",  "odfa11y.safe_xml", "odfa11y.publish", "odfa11y.status"]
+
+cannot_depend_on = ["odfa11y.run", "odfa11y.families"]
 
 [[modules]]
 path = "odfa11y.application"
