@@ -4,11 +4,11 @@
 from dataclasses import replace
 from pathlib import Path
 
+from odfa11y.native.tools import Toolchain
 from odfa11y.odf import declared_version
-from odfa11y.records import DocumentIdentity, Toolchain
 from odfa11y.remediate.result import PublicationState
 from odfa11y.run.publication import publish_evidence
-from odfa11y.run.record import RunRecord
+from odfa11y.run.record import DocumentIdentity, RunRecord
 from odfa11y.run.stages import STAGES, run_stage
 from odfa11y.run.state import RunState
 
@@ -22,7 +22,6 @@ def execute(state: RunState, target: Path) -> RunRecord:
         media_type=document.detection.media_type,
         layout=document.layout,
         family=state.family.family.value,
-        adapter=state.family.family.value,
         odf_version=declared_version(document),
     )
     stages = []

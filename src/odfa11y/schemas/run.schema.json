@@ -1017,16 +1017,6 @@
     "document": {
       "additionalProperties": false,
       "properties": {
-        "adapter": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "family": {
           "anyOf": [
             {
@@ -1098,7 +1088,6 @@
         "media_type",
         "layout",
         "family",
-        "adapter",
         "odf_version"
       ],
       "type": "object"

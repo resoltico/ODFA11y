@@ -2,6 +2,7 @@
 """The root use cases own continuation, effective policy and native tool selection."""
 
 import ast
+import importlib
 import json
 from dataclasses import replace
 lazy from collections.abc import Iterator
@@ -50,12 +51,14 @@ def test_multi_input_audit_retains_success_after_execution_failure(tmp_path: Pat
     first = inputs[0]
     assert isinstance(first, dict)
     assert "error" not in first
-    rendered = result.render("json")
+    rendered = api.render_json(result.as_dict())
     assert rendered is not None
     assert (
-        next(item for item in json.loads(rendered)["facts"] if item["producer"] == "odf-metadata")[
-            "title"
-        ]
+        next(
+            item
+            for item in json.loads(rendered)["inputs"][1]["reports"][0]["facts"]
+            if item["producer"] == "odf-metadata"
+        )["title"]
         == "Synthetic accessible document"
     )
 
@@ -71,16 +74,18 @@ def test_partial_input_reports_survive_later_failure_and_sarif_is_fail_closed(
         yield report
         raise failure
 
-    monkeypatch.setattr("odfa11y.application.audit_document", inspect)
+    monkeypatch.setattr(
+        importlib.import_module("odfa11y.application.audit"), "audit_document", inspect
+    )
     source = tmp_path / "source.pdf"
     source.write_bytes(b"%PDF")
     result = api.audit(source)
     assert len(result.reports) == 1
     assert result.failures[0].error is failure
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
-    assert result.render("json") is not None
+    assert api.render_json(result.as_dict()) is not None
     with pytest.raises(ToolFailure, match="Controlled validator failure"):
-        result.render("sarif", source_root=tmp_path)
+        result.as_sarif(api.SarifOptions(tmp_path))
 
 
 def test_source_profile_is_a_value_and_needs_no_native_tool(tmp_path: Path) -> None:

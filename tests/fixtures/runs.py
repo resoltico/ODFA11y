@@ -3,8 +3,8 @@
 
 from dataclasses import dataclass, field
 
+from odfa11y.application import batch as application_batch
 from odfa11y.application import run
-from odfa11y.application import run_batch as application_batch
 from odfa11y.application.tools import Tools
 from odfa11y.progress import ProgressObserver
 from odfa11y.run.stages import STAGES

@@ -3,8 +3,11 @@
 
 import sys
 
-from odfa11y import Step, terminal_text
+from odfa11y import Step
 lazy from odfa11y import ProgressEvent, ProgressObserver
+
+from .text import terminal_text
+from .writer import err
 
 _LABELS = {
     Step.PREPARE: "Prepare inputs",
@@ -48,8 +51,11 @@ def progress_callback(output_format: str) -> ProgressObserver | None:
         if enabled:
             try:
                 label = _LABELS[event.step]
-                stream.write(f"Progress: {terminal_text(label)}: {terminal_text(event.state)}\n")
-                stream.flush()
+                err(
+                    f"Progress: {terminal_text(label)}: {terminal_text(event.state)}",
+                    stream=stream,
+                    flush=True,
+                )
             except OSError:
                 enabled = False
 

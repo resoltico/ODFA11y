@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Exit aggregation honors severity across inputs, stages and batch items."""
 
+import importlib
 from itertools import permutations
 lazy from collections.abc import Iterator
 lazy from pathlib import Path
@@ -13,7 +14,7 @@ from odfa11y.errors import PlanError, ToolFailure
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.status import ExitStatus, combine_statuses
+from odfa11y.status import ExitStatus, Profile, combine_statuses
 from tests.fixtures.records import batch_item
 
 
@@ -34,7 +35,8 @@ def test_exit_precedence_is_independent_of_numeric_order(
     assert combine_statuses(statuses) == expected
     assert (
         BatchRecord(
-            items=tuple(batch_item(str(i), status) for i, status in enumerate(statuses))
+            profile=Profile.PRODUCTION,
+            items=tuple(batch_item(str(i), status) for i, status in enumerate(statuses)),
         ).exit_status
         == expected
     )
@@ -65,7 +67,9 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
         report.raise_(rules.META001)
         yield report
 
-    monkeypatch.setattr("odfa11y.application.audit_document", audit)
+    monkeypatch.setattr(
+        importlib.import_module("odfa11y.application.audit"), "audit_document", audit
+    )
     sources = ["invalid", "findings"]
     if execution_failure:
         sources.append("unreadable")

@@ -272,6 +272,38 @@
         "verapdf"
       ],
       "type": "object"
+    },
+    "unavailable": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "selection": {
+            "enum": [
+              "soffice",
+              "verapdf"
+            ]
+          },
+          "tool": {
+            "enum": [
+              "LibreOffice",
+              "veraPDF"
+            ]
+          }
+        },
+        "required": [
+          "tool",
+          "blocks",
+          "selection"
+        ],
+        "type": "object"
+      },
+      "type": "array"
     }
   },
   "required": [
@@ -283,6 +315,7 @@
     "toolchain",
     "capabilities",
     "schema_version",
+    "unavailable",
     "exit_status",
     "failure"
   ],

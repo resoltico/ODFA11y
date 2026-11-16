@@ -216,7 +216,7 @@ def test_missing_source_fails_without_fake_findings_or_traceback(
     "arguments",
     [
         ["remediate", "source", "destination", "--plan", "plan"],
-        ["pipeline", "source", "--plan", "plan", "--output-dir", "output"],
+        ["run", "source", "--plan", "plan", "--output-dir", "output"],
         ["batch", "manifest", "--output-dir", "output"],
         ["styles", "source"],
         ["doctor"],

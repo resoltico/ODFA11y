@@ -11,7 +11,7 @@ from odfa11y import Profile, Tools, run
 from odfa11y.cli import main
 from odfa11y.errors import ToolUnavailable
 from odfa11y.native.verapdf import find_verapdf
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.native import native_fakes, recording
 from tests.fixtures.pdf import tagged_writer
 from tests.fixtures.plans import plan_header, reviewed_plan
@@ -51,7 +51,7 @@ def test_cli_and_batch_keep_preparation_failure_status(tmp_path: Path, capsys) -
     assert (
         main(
             [
-                "pipeline",
+                "run",
                 str(source),
                 "--plan",
                 str(plan),
@@ -67,7 +67,7 @@ def test_cli_and_batch_keep_preparation_failure_status(tmp_path: Path, capsys) -
         == 3
     )
     assert not (tmp_path / "single").exists()
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [("first", "source.odt", "plan.toml"), ("second", "source.odt", "plan.toml")]
     )
     assert (

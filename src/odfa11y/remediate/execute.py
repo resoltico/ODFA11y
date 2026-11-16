@@ -16,13 +16,13 @@ from odfa11y.families import require_spec
 from odfa11y.odf import OdfDocument, Use, regressions, validate
 from odfa11y.odf.allowance import Allowance
 from odfa11y.plans import Plan
-from odfa11y.records import SchemaCheck
 from odfa11y.remediate.candidate import Candidate, RefusedCandidate
 from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.remediate.result import (
     DecisionPrediction,
     PublicationState,
     RemediationResult,
+    SchemaCheck,
     UnansweredReview,
     Violation,
 )

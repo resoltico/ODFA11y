@@ -3,7 +3,7 @@
 
 from odfa11y.application import (
     AuditInput,
-    AuditRun,
+    AuditResult,
     ComparisonResult,
     ExportResult,
     PlanResult,
@@ -12,7 +12,6 @@ from odfa11y.application import (
     doctor,
     export,
     plan,
-    run_batch,
     verify_evidence,
 )
 from odfa11y.application import (
@@ -24,10 +23,10 @@ from odfa11y.application import (
 from odfa11y.application import (
     run as _run,
 )
+from odfa11y.application.batch import batch as _batch
 from odfa11y.application.doctor import DoctorResult
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
-from odfa11y.audit import plan_blockers
 from odfa11y.batch import BatchRecord
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
 from odfa11y.errors import (
@@ -46,16 +45,26 @@ from odfa11y.plans import Plan, PlanHeader, SourceBinding
 from odfa11y.plans.registry import load_plan, registered_kinds
 from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
 from odfa11y.remediate import RemediationResult
-from odfa11y.report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
+from odfa11y.remediate.result import PublicationState
+from odfa11y.report import Location, Report, SarifOptions, render_json, render_sarif
+from odfa11y.report.sarif import sarif_failure
 from odfa11y.run.record import RunRecord, StageResult
-from odfa11y.status import Crashed, ExitStatus, Profile, Refused, failure_status
+from odfa11y.status import (
+    Crashed,
+    ExitStatus,
+    GateFailed,
+    NotApplicable,
+    Passed,
+    Profile,
+    Refused,
+    Skipped,
+)
 from odfa11y.targets import Fingerprint, Target, TargetPath
 from odfa11y.version import __version__
 
 __all__ = [
-    "FORMATS",
     "AuditInput",
-    "AuditRun",
+    "AuditResult",
     "BatchRecord",
     "ComparisonResult",
     "Crashed",
@@ -67,13 +76,16 @@ __all__ = [
     "ExitStatus",
     "ExportResult",
     "Fingerprint",
+    "GateFailed",
     "InvalidOption",
     "IoFailure",
     "Location",
     "NativeTools",
+    "NotApplicable",
     "OdfA11yError",
     "OpenDecision",
     "OutputOccupied",
+    "Passed",
     "Plan",
     "PlanError",
     "PlanHeader",
@@ -81,12 +93,15 @@ __all__ = [
     "Profile",
     "ProgressEvent",
     "ProgressObserver",
+    "PublicationState",
     "Refused",
     "RemediationResult",
     "Remedy",
     "RemedyAction",
     "Report",
     "RunRecord",
+    "SarifOptions",
+    "Skipped",
     "SourceBinding",
     "Stage",
     "StageResult",
@@ -100,24 +115,25 @@ __all__ = [
     "VerificationResult",
     "__version__",
     "audit",
+    "batch",
     "compare",
     "decode_answer",
     "doctor",
     "export",
-    "failure_status",
     "load_plan",
     "plan",
-    "plan_blockers",
-    "preflight_sarif",
     "registered_kinds",
     "remediate",
-    "render_reports",
+    "render_json",
+    "render_sarif",
     "run",
-    "run_batch",
-    "terminal_text",
+    "sarif_failure",
     "verify_evidence",
 ]
 
 audit = _audit
 remediate = _remediate
 run = _run
+
+
+batch = _batch

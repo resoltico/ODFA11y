@@ -201,7 +201,7 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     assert record.passed
     run = json.loads((tmp_path / "out" / "run.json").read_text())
     assert run["document"]["kind"] == "presentation"
-    assert run["document"]["adapter"] == "presentation"
+    assert run["document"]["family"] == "presentation"
     assert (tmp_path / "out" / "remediated.odp").is_file()
 
 

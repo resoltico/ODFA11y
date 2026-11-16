@@ -54,7 +54,7 @@ def test_fifo_refuses_before_deadline(tmp_path: Path, operand: str) -> None:
     assert "regular file" in result.stderr
     assert "Traceback" not in result.stderr
     if operand == "audit":
-        assert "Command: failed (exit 2" in result.stdout
+        assert "Result: failed (exit 2" in result.stdout
     else:
         assert not result.stdout
     assert not diff.exists()
@@ -75,13 +75,15 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
     output = capsys.readouterr()
     assert str(missing) in output.err
     if output_format == "json":
-        assert "Command gate (--strict): FAIL (exit 3)" in output.err
-        reports = json.loads(output.out)
+        payload = json.loads(output.out)
+        assert payload["exit_status"] == 3
+        assert payload["inputs"][1]["failure"]["code"] == "io-failure"
+        reports = [report for item in payload["inputs"] for report in item["reports"]]
         assert [report["subject"] for report in reports] == [str(first), str(last)]
         assert reports[0]["summary"]["errors"] == 0
         assert reports[1]["summary"]["errors"] > 0
     else:
-        assert "Command: failed (exit 3" in output.out
+        assert "Result: failed (exit 3" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
         assert rules.GRAPHIC001.id in output.out
@@ -109,8 +111,10 @@ def test_strict_gate_is_separate_from_json_report(
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     assert main(["audit", str(source), "--strict", "--format", "json"]) == 1
     output = capsys.readouterr()
-    assert json.loads(output.out)["summary"]["errors"] == 0
-    assert "Command gate (--strict): FAIL (exit 1)" in output.err
+    payload = json.loads(output.out)
+    assert payload["inputs"][0]["reports"][0]["summary"]["errors"] == 0
+    assert payload["exit_status"] == 1
+    assert not output.err
 
 
 def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_failure(
@@ -126,7 +130,7 @@ def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_fa
     before = source.read_bytes()
     assert main(["audit", str(source), "--format", "json"]) == 2
     output = capsys.readouterr()
-    report = json.loads(output.out)
+    report = json.loads(output.out)["inputs"][0]["reports"][0]
     assert [finding["rule_id"] for finding in report["findings"]] == [rules.PDF001.id]
     assert "Unsupported PDF stream decoding" in report["findings"][0]["message"]
     assert not output.err
@@ -166,10 +170,10 @@ def test_unreadable_input_continues_to_next_audit(
     output = capsys.readouterr()
     assert "Permission denied" in output.err
     assert str(blocked) in output.err
-    assert json.loads(output.out)["subject"] == str(good)
+    assert json.loads(output.out)["inputs"][1]["reports"][0]["subject"] == str(good)
 
 
-@pytest.mark.parametrize("command", ["pipeline", "batch"])
+@pytest.mark.parametrize("command", ["run", "batch"])
 def test_help_explains_profiles_and_timeout(
     capsys: pytest.CaptureFixture[str], command: str
 ) -> None:
@@ -178,5 +182,5 @@ def test_help_explains_profiles_and_timeout(
     assert exited.value.code == 0
     output = " ".join(capsys.readouterr().out.split())
     assert "default: pdf" in output
-    assert "production also requires veraPDF and gates warnings" in output
-    assert "seconds (default: 120)" in output
+    assert "Require PDF/UA validation and reject warnings as well as errors." in output
+    assert "Seconds per native call (default: 120)" in output

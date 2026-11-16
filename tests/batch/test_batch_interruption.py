@@ -16,7 +16,7 @@ import pytest
 from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.status import Profile
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.runs import RunSettings, run_batch
 from tests.fixtures.writer import make_minimal_odt
@@ -51,7 +51,7 @@ def test_real_process_interruption_keeps_completed_evidence_and_pending_ids(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("first", "second", "third")]
     )
     context = multiprocessing.get_context("spawn")
@@ -123,7 +123,7 @@ def test_forced_kill_at_publication_preserves_completed_bundles(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("first", "second", "third")]
     )
     context = multiprocessing.get_context("spawn")

@@ -135,6 +135,7 @@ notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
 min-file-size = 0
 
 [tool.ruff.lint.per-file-ignores]
+"src/odfa11y/cli/writer.py" = ["T20"]
 # Only the root API and application use cases require public docstrings.
 "!src/odfa11y/{application/**,__init__.py}" = ["D"]
 # Pytest assertions, descriptive test names, literal expectations and exact render comparisons.

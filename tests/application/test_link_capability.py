@@ -172,7 +172,7 @@ def test_doctor_reports_the_capability(
         == expected
     )
     assert main(["doctor"], native_tools=native_tools) == 0
-    assert f"text.link-descriptions: {expected}" in capsys.readouterr().out
+    assert f"link-descriptions: {expected}" in capsys.readouterr().out
 
 
 def test_doctor_without_libreoffice_still_reports_and_fails(

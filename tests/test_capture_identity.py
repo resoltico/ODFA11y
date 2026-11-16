@@ -11,7 +11,7 @@ from odfa11y.errors import PackageError
 from odfa11y.evidence import check_bundle
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.status import Profile
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.runs import RunSettings, execute, run_batch
@@ -76,7 +76,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
         return original_open(path, flags, mode, dir_fd=dir_fd)
 
     monkeypatch.setattr(capture.os, "open", exchange)
-    output = tmp_path / "pipeline"
+    output = tmp_path / "run"
     with pytest.raises(PackageError, match="identity changed"):
         execute(
             source,
@@ -94,7 +94,7 @@ def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
     (tmp_path / "plan.toml").write_text(
         plan_header(valid) + '[decisions."document.metadata"]\nlanguage="en-GB"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path,
         [
             ("changed", source.name, "plan.toml"),

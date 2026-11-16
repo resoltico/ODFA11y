@@ -1,13 +1,17 @@
 # SPDX-License-Identifier: MPL-2.0
 """Render privacy-preserving SARIF using explicit physical source identities."""
 
+import json
 import re
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote
 lazy from collections.abc import Iterable
 
-from odfa11y.errors import InvalidOption, IoFailure
+from odfa11y.contracts import JsonObject
+from odfa11y.errors import Failure, InvalidOption, IoFailure, OdfA11yError
+from odfa11y.evidence.redact import Redactor
 from odfa11y.rules.registry import RULES, Severity
 lazy from odfa11y.report.model import Finding, Report
 
@@ -28,7 +32,7 @@ def preflight_sarif(sources: Iterable[str | Path], source_root: str | Path | Non
 
     """
     if source_root is None:
-        message = "SARIF requires an explicit source root (--source-root)."
+        message = "SARIF requires an explicit source root."
         raise InvalidOption(message)
     root = _resolved(Path(source_root))
     if not root.is_dir():
@@ -168,3 +172,39 @@ def _resolved(source: Path) -> Path:
     except OSError:
         msg = "SARIF source identity cannot be resolved."
         raise IoFailure(msg) from None
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class SarifOptions:
+    """An explicit source-root selection for a SARIF-producing use case."""
+
+    source_root: Path
+
+    def __init__(self, source_root: str | Path | None) -> None:
+        if source_root is None:
+            message = "SARIF requires an explicit source root."
+            raise InvalidOption(message)
+        object.__setattr__(self, "source_root", Path(source_root))
+
+    def preflight(self, sources: Iterable[str | Path]) -> None:
+        """Validate the selected identities before the use case performs work."""
+        preflight_sarif(sources, self.source_root)
+
+    def log(self, reports: Iterable[Report]) -> JsonObject:
+        """Render registered findings with only confined physical identities."""
+        return sarif_log(reports, source_root=self.source_root)
+
+
+def render_sarif(reports: Iterable[Report], *, source_root: Path) -> str:
+    """Render a SARIF log without exposing source contents or local directories."""
+    return json.dumps(sarif_log(reports, source_root=source_root), indent=2, ensure_ascii=False)
+
+
+def sarif_failure(error: OdfA11yError) -> Failure:
+    """Keep the specific core reason without local directories, credentials or raw diagnostics."""
+    message = re.sub(
+        r"([a-z][a-z0-9+.-]*://)[^/\s]*@", r"\1<credentials>@", error.message, flags=re.IGNORECASE
+    )
+    return replace(
+        error.as_record(), message=Redactor(()).text(message), problems=(), details="", remedy=None
+    )

@@ -156,7 +156,7 @@ def _layouts(output: Path, soffice: str, port: int, requests: list[str]) -> list
                 evidence,
                 RunSettings(tools=Tools(soffice=soffice), profile=Profile.PDF),
             )
-            item["pipeline"] = {
+            item["run"] = {
                 "exit_status": run.exit_status,
                 "failed_stage": run.failed_stage,
                 "requests": list(requests),

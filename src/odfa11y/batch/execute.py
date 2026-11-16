@@ -5,29 +5,31 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from odfa11y.batch.batch_file import load_manifest, preflight
+from odfa11y.batch.batch_file import load_batch_file, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import Failure, IoFailure, OdfA11yError
 from odfa11y.evidence.redact import Redactor
 from odfa11y.progress import ProgressObserver, Step, StepState, step
 from odfa11y.run.record import RunRecord
+from odfa11y.status import Profile
 lazy from odfa11y.batch.batch_file import BatchItem
 
 type ItemRunner = Callable[[Path, Path, Path, ProgressObserver | None], RunRecord]
 
 
-def run_batch(
-    manifest: str | Path,
+def execute(
+    batch_file: str | Path,
     output_dir: str | Path,
     *,
     on_progress: ProgressObserver | None = None,
     runner: ItemRunner,
+    profile: Profile,
 ) -> BatchRecord:
     """Retain completed runs and preparation errors through failure or interruption."""
-    manifest, output = Path(manifest), Path(output_dir)
-    items = load_manifest(manifest)
-    preflight(manifest, output, items)
-    record = BatchRecord(tuple(BatchItemResult(item.id) for item in items))
+    batch_file, output = Path(batch_file), Path(output_dir)
+    items = load_batch_file(batch_file)
+    preflight(batch_file, output, items)
+    record = BatchRecord(profile, tuple(BatchItemResult(item.id) for item in items))
     output.mkdir(parents=True)
     record.publish(output)
     try:

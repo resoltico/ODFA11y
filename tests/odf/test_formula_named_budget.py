@@ -95,7 +95,9 @@ def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
     assert "RecursionError" not in completed.stderr
     assert completed.returncode in {0, 1, 2}
     payload = json.loads(completed.stdout)
-    assert rules.NATIVE001.id in {finding["rule_id"] for finding in payload["findings"]}
+    assert rules.NATIVE001.id in {
+        finding["rule_id"] for finding in payload["inputs"][0]["reports"][0]["findings"]
+    }
 
 
 def test_remaining_python_stack_exhaustion_is_explicitly_incomplete() -> None:

@@ -225,7 +225,7 @@ def test_the_pipeline_exports_a_calc_spreadsheet_and_audits_its_pdf(
     }
     assert reached["audit-pdf"] == reached["fidelity"] == "passed"
     run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert run["document"]["adapter"] == "spreadsheet"
+    assert run["document"]["family"] == "spreadsheet"
     assert {"source.pdf", "remediated.pdf", "remediated.ods"} <= set(
         json.loads((tmp_path / "out" / "manifest.json").read_text())["files"]
     )

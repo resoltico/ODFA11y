@@ -16,9 +16,9 @@ uv run --no-sync odfa11y audit original.odt --schema
 uv run --no-sync odfa11y plan original.odt > reviewed.toml
 # Supply answers and uncomment only the tables/fields you have reviewed.
 uv run --no-sync odfa11y remediate original.odt reviewed.odt --plan reviewed.toml --dry-run
-uv run --no-sync odfa11y pipeline original.odt --plan reviewed.toml \
+uv run --no-sync odfa11y run original.odt --plan reviewed.toml \
   --output-dir evidence --profile production
-uv run --no-sync odfa11y verify evidence
+uv run --no-sync odfa11y verify-evidence evidence
 ```
 
 Python 3.15 or newer is required; [.python-version](.python-version) selects the development

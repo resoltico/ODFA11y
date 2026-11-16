@@ -30,7 +30,7 @@ flowchart LR
 | `source_audit`, `remediation` | Read-only audit/plan preparation and guarded candidate execution. |
 | `native` | Bounded process control, resource/formula preflight, export and scoped capability probes. |
 | `pdf.reading`, `pdf.fidelity`, `pdf` | Shared bounded consumption, structural PDF inspection, comparison and independent validation. |
-| `pipeline`, `batch`, `evidence` | Assurance stages, serial items, review records, redaction and atomic publication/integrity checks. |
+| `run`, `batch`, `evidence` | Assurance stages, serial items, review records, redaction and atomic publication/integrity checks. |
 | `report`, `cli` | Registered rules/facts and rendering; argument translation and terminal presentation. |
 
 [tach.toml](../tach.toml) owns dependency/interface edges. The CLI imports the root API,

@@ -29,7 +29,7 @@ def test_nonfinite_policy_refuses_cli_before_publication(
     output = tmp_path / "evidence"
     assert (
         main([
-            "pipeline",
+            "run",
             str(source),
             "--plan",
             str(plan),

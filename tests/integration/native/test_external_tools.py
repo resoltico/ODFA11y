@@ -13,7 +13,7 @@ import pytest
 
 from odfa11y.evidence import check_bundle
 from odfa11y.odf import PackageStorage
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
 from tests.native.test_external_tools import _native_command
@@ -48,7 +48,7 @@ def test_real_native_termination_cleans_tool_and_preserves_completed_batch(
         (tmp_path / "second.plan.toml").write_text(
             plan_header(source) + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
         )
-        source = manifest_file(
+        source = write_batch_file(
             tmp_path,
             [
                 ("first", "first.odt", "plan.toml"),

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Findings and the report container shared by every check."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field, fields, is_dataclass, replace
 from enum import StrEnum
 from typing import Literal
@@ -12,6 +13,7 @@ from odfa11y.decisions.decision import QuestionContext
 from odfa11y.errors import InvalidOption, PackageError
 from odfa11y.rules.details import bounded_details
 from odfa11y.rules.registry import Severity
+from odfa11y.status import ExitStatus, combine_statuses, gate_outcome
 from odfa11y.targets import Location, TargetPath
 lazy from odfa11y.concepts.review import ReviewTopic
 lazy from odfa11y.contracts import JsonObject
@@ -241,3 +243,17 @@ class Report[F = object]:
     @sources.setter
     def sources(self, value: tuple[Path, ...]) -> None:
         self._sources = value
+
+
+def exit_status(reports: Iterable[Report], *, strict: bool = False) -> ExitStatus:
+    """Map findings to a command exit status: 2 for errors, 1 for strict warnings.
+
+    Returns
+    -------
+    int
+        Zero on success, 1 when strict and a warning exists, or 2 when an error exists.
+
+    """
+    return combine_statuses(
+        gate_outcome(report, strict=strict).exit_status(strict) for report in reports
+    )

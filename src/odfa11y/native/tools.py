@@ -8,6 +8,14 @@ from odfa11y.tool_timeout import Timeout
 
 
 @dataclass(frozen=True, slots=True)
+class Toolchain:
+    """Native tool identities without executable paths or environment experiments."""
+
+    libreoffice: ToolIdentity | None = None
+    verapdf: ToolIdentity | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class LibreOffice:
     executable: str
     identity: ToolIdentity

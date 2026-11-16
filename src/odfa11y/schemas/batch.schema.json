@@ -184,6 +184,13 @@
       },
       "type": "array"
     },
+    "profile": {
+      "enum": [
+        "source",
+        "pdf",
+        "production"
+      ]
+    },
     "schema_version": {
       "enum": [
         1
@@ -199,6 +206,7 @@
     }
   },
   "required": [
+    "profile",
     "items",
     "exit_status",
     "status",

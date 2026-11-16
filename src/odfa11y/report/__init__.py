@@ -1,25 +1,24 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Rules, findings and report rendering shared by every check."""
+"""Typed findings, rules and machine-readable rendering."""
 
-from odfa11y.report.model import Finding, Location, Report, ReportKind
-from odfa11y.report.render import FORMATS, exit_status, render_reports
-from odfa11y.report.sarif import preflight_sarif
-from odfa11y.report.terminal import terminal_text
+from odfa11y.report.json import render_json
+from odfa11y.report.model import Finding, Location, Report, ReportKind, exit_status
+from odfa11y.report.sarif import SarifOptions, preflight_sarif, render_sarif
 from odfa11y.rules import registry as rules
 from odfa11y.rules.registry import RULES, Rule, Severity
 
 __all__ = [
-    "FORMATS",
     "RULES",
     "Finding",
     "Location",
     "Report",
     "ReportKind",
     "Rule",
+    "SarifOptions",
     "Severity",
     "exit_status",
     "preflight_sarif",
-    "render_reports",
+    "render_json",
+    "render_sarif",
     "rules",
-    "terminal_text",
 ]

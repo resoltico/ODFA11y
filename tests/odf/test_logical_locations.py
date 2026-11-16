@@ -125,7 +125,7 @@ def test_json_report_serializes_the_path_and_the_member(
 ) -> None:
     source = make_package(tmp_path, "text", Variant(body=BODY, manifest_media_type="text/plain"))
     main(["audit", str(source), "--format", "json"])
-    report = json.loads(capsys.readouterr().out)
+    report = json.loads(capsys.readouterr().out)["inputs"][0]["reports"][0]
     locations = {f["rule_id"]: f["location"] for f in reversed(report["findings"])}
     assert report["schema_version"] == 1
     assert locations[rules.LINK001.id] == {"path": "content/paragraph[1]", "member": None}

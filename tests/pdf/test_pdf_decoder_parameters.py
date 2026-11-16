@@ -59,7 +59,9 @@ def test_invalid_predictor_refuses_and_retains_mixed_audits(
     assert main(["audit", str(good), str(bad), str(good), "--format", "json"]) == 2
     output = capsys.readouterr()
     assert not output.err
-    reports = json.loads(output.out)
+    payload = json.loads(output.out)
+    assert payload["exit_status"] == 2
+    reports = [report for item in payload["inputs"] for report in item["reports"]]
     assert len(reports) == 3
     assert all(
         f["rule_id"] != rules.PDF001.id for r in (reports[0], reports[2]) for f in r["findings"]

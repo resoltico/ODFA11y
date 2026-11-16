@@ -7,7 +7,7 @@ lazy from pathlib import Path
 lazy import pytest
 
 from odfa11y.cli import main
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
 
@@ -20,7 +20,7 @@ def test_batch_cli_publishes_json_and_returns_aggregate_status(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [("valid", "doc.odt", "plan.toml"), ("bad", "missing.odt", "plan.toml")]
     )
     status = main([
@@ -46,12 +46,12 @@ def test_batch_cli_publishes_json_and_returns_aggregate_status(
 def test_batch_cli_text_and_global_validation_have_documented_statuses(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    manifest = manifest_file(tmp_path, [("one", "missing.odt", "missing.toml")])
+    manifest = write_batch_file(tmp_path, [("one", "missing.odt", "missing.toml")])
     args = ["batch", str(manifest), "--output-dir", str(tmp_path / "out"), "--profile", "source"]
     assert main(args) == 3
     text = capsys.readouterr().out
-    assert "Batch: failed" in text
+    assert "Result: failed (exit 3)" in text
     assert "one: failed" in text
-    assert "evidence=None" in text
+    assert "evidence None" in text
     assert main(args) == 4
     assert "must not exist" in capsys.readouterr().err

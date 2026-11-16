@@ -12,9 +12,9 @@ from typing import Literal
 
 from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.native.libreoffice import EXPORT_OPTIONS
+from odfa11y.native.tools import Toolchain
 from odfa11y.odf import provenance
 from odfa11y.plans import Plan
-from odfa11y.records import Toolchain
 from odfa11y.status import (
     ExitStatus,
     GateFailed,
@@ -31,13 +31,25 @@ lazy from odfa11y.pdf.structure.fonts import Font
 lazy from odfa11y.plans import PlanHeader
 lazy from odfa11y.plans.fidelity import FidelityPolicy
 lazy from odfa11y.progress import Stage
-lazy from odfa11y.records import DocumentIdentity
 lazy from odfa11y.remediate import RemediationResult
 lazy from odfa11y.report import Report
 
 RECORD_SCHEMA_VERSION = 1
 LOCALE_VARIABLES = ("LANG", "LC_ALL", "LC_MESSAGES")
 LIBRARIES = ("lxml", "pillow", "pypdf", "pypdfium2")
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentIdentity:
+    """Captured source identity and its established document kind."""
+
+    name: str
+    sha256: str | None = None
+    kind: str | None = None
+    media_type: str | None = None
+    layout: str | None = None
+    family: str | None = None
+    odf_version: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

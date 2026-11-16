@@ -8,6 +8,7 @@ lazy from pathlib import Path
 import pytest
 from jsonschema import Draft7Validator
 
+from odfa11y import SarifOptions, render_sarif
 from odfa11y.audit import audit_odf
 from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.contracts import mapping_contract
@@ -18,7 +19,6 @@ from odfa11y.report import (
     Report,
     Rule,
     Severity,
-    render_reports,
 )
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
@@ -38,7 +38,7 @@ def _source(root: Path, name: str) -> Path:
 
 
 def _render(reports: list[Report], root: Path) -> dict:
-    payload = json.loads(render_reports(reports, output_format="sarif", source_root=root))
+    payload = json.loads(render_sarif(reports, source_root=root))
     schema = json.loads(SCHEMA.read_bytes())
     Draft7Validator.check_schema(schema)
     Draft7Validator(schema, format_checker=Draft7Validator.FORMAT_CHECKER).validate(payload)
@@ -137,7 +137,7 @@ def test_sarif_excludes_arbitrary_content_paths_and_credentials(tmp_path: Path) 
         facts=(DocumentMetadata(description=connection),),
     )
     report.raise_(rules.META001, f"{connection} at {source}", details={})
-    rendered = render_reports([report], output_format="sarif", source_root=tmp_path)
+    rendered = render_sarif([report], source_root=tmp_path)
     assert connection not in rendered
     assert "super-secret" not in rendered
     assert str(tmp_path) not in rendered
@@ -174,7 +174,7 @@ def test_sources_outside_root_and_symlink_escape_are_rejected(tmp_path: Path) ->
 
 def test_missing_root_source_identity_and_unregistered_rules_are_rejected(tmp_path: Path) -> None:
     with pytest.raises(InvalidOption, match="explicit source root"):
-        render_reports([], output_format="sarif")
+        SarifOptions(None)
     with pytest.raises(InvalidOption, match="explicit source identities"):
         _render([Report(kind=ReportKind.ODF, subject="sample.odt")], tmp_path)
     report = Report(kind=ReportKind.ODF, subject="x", _sources=(_source(tmp_path, "x.odt"),))

@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 """Help and next actions preserve reviewed plans and remain safe to copy."""
 
-import argparse
 import shlex
 import tomllib
 from pathlib import Path
 
 import pytest
 
+from odfa11y import AuditInput, AuditResult
 from odfa11y.audit import audit_odf
 from odfa11y.cli import main
-from odfa11y.cli.guidance import audit_next_step, error_hint
 from odfa11y.cli.parser import build_parser
+from odfa11y.cli.text import audit_next_step, remedy_hint
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import OutputOccupied, PlanError, Remedy, RemedyAction, ToolUnavailable
+from odfa11y.errors import OutputOccupied, PlanError, Remedy, RemedyAction
 from odfa11y.plans import PlanHeader, SourceBinding, render_plan
 from odfa11y.remediate.document_ops import COMMON_KINDS
 from odfa11y.report import Report
@@ -30,9 +30,9 @@ from tests.fixtures.writer import make_minimal_odt
         "remediate",
         "export",
         "compare",
-        "pipeline",
+        "run",
         "batch",
-        "verify",
+        "verify-evidence",
         "doctor",
     ],
 )
@@ -87,7 +87,7 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
     source = Path("-a document; $(touch unwanted).odt")
     report = Report(kind=ReportKind.ODF, subject=source.name, _sources=(source,))
     report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
-    hint = audit_next_step(argparse.Namespace(format="text"), [report])
+    hint = audit_next_step(AuditResult((AuditInput(report.sources[0], (report,)),)))
     assert hint is not None
     command = hint.splitlines()[0].removeprefix("Next: ")
     assert shlex.split(command) == ["odfa11y", "plan", "--", str(source)]
@@ -98,15 +98,14 @@ def test_next_command_handles_shell_names_and_leading_dash() -> None:
 def test_no_invalid_or_unfaithful_copyable_next_commands(kind: str, source: str) -> None:
     report = Report(kind=ReportKind(kind), subject=source, _sources=(Path(source),))
     report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
-    assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
-    assert audit_next_step(argparse.Namespace(format="json"), [report]) is None
+    assert audit_next_step(AuditResult((AuditInput(report.sources[0], (report,)),))) is None
 
 
 def test_unreadable_document_does_not_offer_template() -> None:
     report = Report(kind=ReportKind.ODF, subject="bad.odt", _sources=(Path("bad.odt"),))
     report.raise_(rules.META001, decision=OpenDecision(COMMON_KINDS[1], None, {}))
     report.raise_(rules.PKG001)
-    assert audit_next_step(argparse.Namespace(format="text"), [report]) is None
+    assert audit_next_step(AuditResult((AuditInput(report.sources[0], (report,)),))) is None
 
 
 def test_template_header_escapes_untrusted_subject_without_active_toml(tmp_path: Path) -> None:
@@ -121,19 +120,18 @@ def test_template_header_escapes_untrusted_subject_without_active_toml(tmp_path:
     assert "fingerprint" in template
 
 
-def test_recovery_preserves_configuration_and_existing_output() -> None:
-    args = argparse.Namespace(command="remediate", config=Path("reviewed.toml"))
-    assert "generate a fresh plan" in (error_hint(args, PlanError("wrong type")) or "")
-    assert "preserve" in (error_hint(args, OutputOccupied("occupied")) or "")
-    assert error_hint(args, ValueError("unexpected")) is None
+def test_recovery_renders_core_remedies() -> None:
+    plan = PlanError("wrong type")
+    occupied = OutputOccupied("occupied")
+    assert plan.remedy is not None
+    assert occupied.remedy is not None
+    assert "generate a fresh plan" in remedy_hint(plan.remedy)
+    assert "available destination" in remedy_hint(occupied.remedy)
 
 
 def test_tool_recovery_renders_the_producer_owned_remedy() -> None:
-    for command in ("audit", "export"):
-        remedy = Remedy(RemedyAction.INSTALL_TOOL, "veraPDF")
-        error = ToolUnavailable("missing", remedy=remedy)
-        hint = error_hint(argparse.Namespace(command=command), error)
-        assert hint == "Next: install or select veraPDF."
+    remedy = Remedy(RemedyAction.INSTALL_TOOL, "veraPDF")
+    assert remedy_hint(remedy) == "Next: install or select veraPDF."
 
 
 @pytest.mark.parametrize(

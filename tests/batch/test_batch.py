@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.batch import load_manifest
+from odfa11y.batch import load_batch_file
 from odfa11y.batch.batch_file import preflight
 from odfa11y.batch.record import BatchRecord
 from odfa11y.errors import IoFailure, OutputOccupied, PlanError
@@ -22,7 +22,7 @@ from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
 
 
-def manifest_file(tmp_path: Path, entries: list[tuple[str, str, str]]) -> Path:
+def write_batch_file(tmp_path: Path, entries: list[tuple[str, str, str]]) -> Path:
     """Create independently specified batch inputs.
 
     Returns
@@ -49,7 +49,7 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
     )
     (tmp_path / "bad.toml").write_text("[misspelled]\nx = 1")
     (tmp_path / "broken.odt").write_bytes(b"invalid document")
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path,
         [
             ("badplan", "doc.odt", "bad.toml"),
@@ -77,14 +77,14 @@ def test_batch_continues_after_bad_plan_missing_source_and_gate_failure(tmp_path
     "identity", ["../escape", "CON", "nul", "A.B", "space name", "x" * 65, "é", "batch.json"]
 )
 def test_unsafe_ids_rejected_without_output(tmp_path: Path, identity: str) -> None:
-    manifest = manifest_file(tmp_path, [(identity, "doc.odt", "plan.toml")])
+    manifest = write_batch_file(tmp_path, [(identity, "doc.odt", "plan.toml")])
     with pytest.raises(PlanError):
         run_batch(manifest, tmp_path / "out")
     assert not (tmp_path / "out").exists()
 
 
 def test_case_collision_is_global_preflight(tmp_path: Path) -> None:
-    manifest = manifest_file(tmp_path, [("Doc", "a", "p"), ("doc", "b", "q")])
+    manifest = write_batch_file(tmp_path, [("Doc", "a", "p"), ("doc", "b", "q")])
     with pytest.raises(PlanError, match="unique"):
         run_batch(manifest, tmp_path / "out")
     assert not (tmp_path / "out").exists()
@@ -108,11 +108,11 @@ def test_strict_manifest_rejects_wrong_shapes(tmp_path: Path, contents: str) -> 
     manifest = tmp_path / "batch.toml"
     manifest.write_text(contents)
     with pytest.raises(PlanError):
-        load_manifest(manifest)
+        load_batch_file(manifest)
 
 
 def test_occupied_output_and_hardlink_are_preserved(tmp_path: Path) -> None:
-    manifest = manifest_file(tmp_path, [("doc", "a", "p")])
+    manifest = write_batch_file(tmp_path, [("doc", "a", "p")])
     output = tmp_path / "out"
     os.link(manifest, output)
     before = manifest.read_bytes()
@@ -122,7 +122,7 @@ def test_occupied_output_and_hardlink_are_preserved(tmp_path: Path) -> None:
 
 
 def test_symlink_output_and_ancestor_are_rejected(tmp_path: Path) -> None:
-    manifest = manifest_file(tmp_path, [("doc", "a", "p")])
+    manifest = write_batch_file(tmp_path, [("doc", "a", "p")])
     real = tmp_path / "real"
     real.mkdir()
     alias = tmp_path / "alias"
@@ -134,9 +134,9 @@ def test_symlink_output_and_ancestor_are_rejected(tmp_path: Path) -> None:
 
 
 def test_input_under_future_output_is_rejected_before_creation(tmp_path: Path) -> None:
-    manifest = manifest_file(tmp_path, [("doc", "out/document.odt", "p")])
+    manifest = write_batch_file(tmp_path, [("doc", "out/document.odt", "p")])
     with pytest.raises(OutputOccupied, match="contain"):
-        preflight(manifest, tmp_path / "out", load_manifest(manifest))
+        preflight(manifest, tmp_path / "out", load_batch_file(manifest))
     assert not (tmp_path / "out").exists()
 
 
@@ -149,7 +149,7 @@ def test_repeated_sources_and_hardlinked_plans_are_read_only(tmp_path: Path) -> 
     )
     os.link(plan, tmp_path / "alias.toml")
     before = source.read_bytes()
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [("one", "doc.odt", "plan.toml"), ("two", "doc.odt", "alias.toml")]
     )
     record = run_batch(manifest, tmp_path / "out", RunSettings(profile=Profile.parse("source")))
@@ -168,7 +168,7 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("broken", "valid")]
     )
 
@@ -190,7 +190,7 @@ def test_execution_and_publication_failures_do_not_stop_later_items(
 def test_aggregate_precedence_and_atomic_summary_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    record = BatchRecord(items=(batch_item("one", 1),))
+    record = BatchRecord(profile=Profile.PRODUCTION, items=(batch_item("one", 1),))
     record.publish(tmp_path)
     previous = (tmp_path / "batch.json").read_bytes()
     original = Path.replace
@@ -219,7 +219,7 @@ def test_preparation_failure_never_calls_bundle_writer(
     original = publisher.write_bundle
     source = make_minimal_odt(tmp_path / "doc.odt")
     (tmp_path / "plan.toml").write_text(plan_header(source))
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [("failed", "doc.odt", "missing.toml"), ("valid", "doc.odt", "plan.toml")]
     )
     calls = []

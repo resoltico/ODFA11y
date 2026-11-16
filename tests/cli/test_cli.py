@@ -36,24 +36,26 @@ def config(tmp_path: Path, text: str = CONFIG) -> Path:
     return path
 
 
-def test_audit_prints_json_for_one_file_and_an_array_for_several(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+def test_audit_has_one_result_contract_for_single_and_multiple_inputs(
+    tmp_path: Path, capsys
 ) -> None:
     first = make_minimal_odt(tmp_path / "a.odt")
     second = make_minimal_odt(tmp_path / "b.odt")
     assert main(["audit", str(first), "--format", "json"]) == 0
     one = json.loads(capsys.readouterr().out)
+    assert one["schema_version"] == 1
+    assert len(one["inputs"]) == 1
+    report = one["inputs"][0]["reports"][0]
+    assert report["kind"] == "odf"
+    assert report["summary"]["errors"] == 0
     assert (
-        one["kind"],
-        one["summary"]["errors"] == 0,
-        next(item for item in one["facts"] if item["producer"] == "odf-metadata")["title"],
-    ) == (
-        "odf",
-        True,
-        "Synthetic accessible document",
+        next(item for item in report["facts"] if item["producer"] == "odf-metadata")["title"]
+        == "Synthetic accessible document"
     )
     assert main(["audit", str(first), str(second), "--format", "json"]) == 0
-    assert len(json.loads(capsys.readouterr().out)) == FINDINGS
+    many = json.loads(capsys.readouterr().out)
+    assert one.keys() == many.keys()
+    assert len(many["inputs"]) == 2
 
 
 def test_audit_dispatches_on_file_content_and_mixes_kinds(
@@ -63,7 +65,11 @@ def test_audit_dispatches_on_file_content_and_mixes_kinds(
     pdf = tmp_path / "t.pdf"
     tagged_writer().write(pdf)
     assert main(["audit", str(odt), str(pdf), "--format", "json"]) == 0
-    assert [report["kind"] for report in json.loads(capsys.readouterr().out)] == ["odf", "pdf"]
+    assert [
+        report["kind"]
+        for item in json.loads(capsys.readouterr().out)["inputs"]
+        for report in item["reports"]
+    ] == ["odf", "pdf"]
 
 
 def test_audit_text_exit_status_and_strict_mode(
@@ -72,7 +78,7 @@ def test_audit_text_exit_status_and_strict_mode(
     failing = make_minimal_odt(tmp_path / "bad.odt", features={"with_image_without_alt": True})
     assert main(["audit", str(failing)]) == FINDINGS
     output = capsys.readouterr().out
-    assert "Check: errors found" in output
+    assert "Result: failed (exit 2)" in output
     assert "graphic.alternative" in output
     warned = make_minimal_odt(tmp_path / "warn.odt", features={"with_plain_email": True})
     assert main(["audit", str(warned)]) == 0
@@ -87,7 +93,7 @@ def test_audit_with_schema_flag_validates(
     assert (
         next(
             item
-            for item in json.loads(capsys.readouterr().out)["facts"]
+            for item in json.loads(capsys.readouterr().out)["inputs"][0]["reports"][0]["facts"]
             if item["producer"] == "odf-package"
         )["violation_count"]
         == 0
@@ -130,12 +136,12 @@ def test_remediate_reports_each_outcome_and_dry_run_writes_nothing(
     arguments = ["remediate", str(source), str(destination), "--plan", str(config(tmp_path))]
     assert main([*arguments, "--dry-run"]) == 0
     dry = capsys.readouterr().out
-    assert "Dry run; proposed changes only. Nothing written." in dry
+    assert "Preview; nothing written." in dry
     assert not destination.exists()
     assert main(arguments) == 0
     output = capsys.readouterr().out
     assert f"Wrote: {destination}" in output
-    assert "applied   document.metadata [title]" in output
+    assert "applied document.metadata [title]" in output
     assert "Schema: passed; ODF 1.4; 0 before, 0 after, 0 new" in output
     assert destination.is_file()
 
@@ -206,7 +212,7 @@ def test_styles_prints_usage(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert main(["audit", str(source), "--format", "json"]) == 0
     rows = next(
         item
-        for item in json.loads(capsys.readouterr().out)["facts"]
+        for item in json.loads(capsys.readouterr().out)["inputs"][0]["reports"][0]["facts"]
         if item["producer"] == "text-styles"
     )["paragraph_styles"]
     assert any(row["style"] == "Body" for row in rows)
@@ -233,7 +239,7 @@ def test_compare_pdfs_directly_gates_on_the_policy(
 def test_check_evidence_reports_integrity(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert main(["verify", str(tmp_path)]) == FINDINGS
+    assert main(["verify-evidence", str(tmp_path)]) == FINDINGS
     assert "Cannot read manifest.json" in capsys.readouterr().out
 
 
@@ -249,7 +255,7 @@ def test_pipeline_command_without_libreoffice_fails_with_evidence_and_exit_3(
 ) -> None:
     source = make_minimal_odt(tmp_path / "a.odt")
     arguments = [
-        "pipeline",
+        "run",
         str(source),
         "--plan",
         str(config(tmp_path)),

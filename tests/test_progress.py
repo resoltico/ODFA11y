@@ -6,10 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y import audit, run_batch
+from odfa11y import audit
+from odfa11y import batch as execute_batch
 from odfa11y.progress import Step, StepState, step
 from odfa11y.status import Profile
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header
 from tests.fixtures.writer import make_minimal_odt
 
@@ -44,11 +45,11 @@ def test_library_operations_leave_signal_handlers_untouched_and_batch_events_ide
     source = make_minimal_odt(tmp_path / "source.odt")
     assert audit(source).exit_status == 0
     (tmp_path / "plan.toml").write_text(plan_header(source))
-    batch = manifest_file(
+    batch = write_batch_file(
         tmp_path, [("one", "source.odt", "plan.toml"), ("two", "source.odt", "plan.toml")]
     )
     events = []
-    result = run_batch(
+    result = execute_batch(
         batch, tmp_path / "output", profile=Profile.parse("source"), observer=events.append
     )
     assert result.exit_status == 0

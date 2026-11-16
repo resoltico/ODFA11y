@@ -14,7 +14,7 @@ from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import ProgressEvent, Step, StepState
 from odfa11y.run import publication as run_publication
 from odfa11y.status import Profile
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.runs import RunSettings, execute, run_batch
 from tests.fixtures.writer import make_minimal_odt
@@ -128,7 +128,7 @@ def test_batch_progress_contains_fixed_steps_and_published_status_only(tmp_path:
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
+    manifest = write_batch_file(tmp_path, [("one", "doc.odt", "plan.toml")])
     events: list[tuple[str, str]] = []
     record = run_batch(
         manifest,
@@ -176,7 +176,7 @@ def test_batch_interruption_emits_no_completion(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
+    manifest = write_batch_file(tmp_path, [("one", "doc.odt", "plan.toml")])
     events: list[tuple[str, str]] = []
 
     def interrupted_pipeline(*_args: object, **_kwargs: object) -> None:

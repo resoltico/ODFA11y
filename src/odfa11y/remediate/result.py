@@ -11,10 +11,37 @@ from odfa11y.decisions.edit import Outcome, Status
 from odfa11y.status import ExitStatus
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.decisions import Decision
-lazy from odfa11y.records import SchemaCheck
 lazy from odfa11y.remediate.violations import ViolationKind
 lazy from odfa11y.report import Finding, Report
 lazy from odfa11y.targets import TargetPath
+
+
+@dataclass(frozen=True, slots=True)
+class SchemaCheck:
+    """The selected schema, before/after counts and established regression count."""
+
+    version: str | None
+    before_count: int | None
+    after_count: int | None
+    new_count: int | None = 0
+    unlocated_count: int | None = 0
+
+    @JsonProperty
+    def status(self) -> Literal["passed", "failed", "skipped"]:
+        if self.after_count is None:
+            return "skipped"
+        return "failed" if self.new_count else "passed"
+
+    def as_dict(self) -> JsonObject:
+        """Serialize schema assurance independently of human-readable prose.
+
+        Returns
+        -------
+        JsonObject
+            Version, status and violation counts.
+
+        """
+        return record_dict(self)
 
 
 @dataclass(frozen=True, slots=True)

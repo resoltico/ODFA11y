@@ -28,28 +28,28 @@ class BatchItem:
     plan: Path
 
 
-def load_manifest(manifest: Path) -> tuple[BatchItem, ...]:
-    """Load a strict manifest with portable, case-insensitively unique IDs.
+def load_batch_file(batch_file: Path) -> tuple[BatchItem, ...]:
+    """Load a strict batch file with portable, case-insensitively unique IDs.
 
     Returns
     -------
     tuple[BatchItem, ...]
-        Inputs in manifest order, resolved relative to its directory.
+        Inputs in batch file order, resolved relative to its directory.
 
     Raises
     ------
     PlanError
-        The manifest or an entry is invalid.
+        The batch file or an entry is invalid.
 
     """
     try:
-        data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        data = tomllib.loads(batch_file.read_text(encoding="utf-8"))
     except (tomllib.TOMLDecodeError, UnicodeError) as exc:
-        msg = "Invalid batch TOML manifest"
+        msg = "Invalid batch TOML batch file"
         raise PlanError(msg) from exc
     entries = data.get("documents")
     if set(data) != {"documents"} or not isinstance(entries, list) or not entries:
-        msg = "Batch manifest must contain a nonempty [[documents]] list only"
+        msg = "Batch batch file must contain a nonempty [[documents]] list only"
         raise PlanError(msg)
     items = []
     seen = set()
@@ -72,8 +72,8 @@ def load_manifest(manifest: Path) -> tuple[BatchItem, ...]:
         items.append(
             BatchItem(
                 identity,
-                _input(manifest.parent, entry["source"]),
-                _input(manifest.parent, entry["plan"]),
+                _input(batch_file.parent, entry["source"]),
+                _input(batch_file.parent, entry["plan"]),
             )
         )
     return tuple(items)
@@ -85,12 +85,12 @@ def _input(base: Path, value: object) -> Path:
         raise PlanError(msg)
     path = Path(value)
     if path.is_absolute() or re.match(r"^[A-Za-z]:", value) or value.startswith(("/", "\\")):
-        msg = "Batch source and plan paths must be relative to the manifest"
+        msg = "Batch source and plan paths must be relative to the batch file"
         raise PlanError(msg)
     return base / path
 
 
-def preflight(manifest: Path, output: Path, items: tuple[BatchItem, ...]) -> None:
+def preflight(batch_file: Path, output: Path, items: tuple[BatchItem, ...]) -> None:
     """Reject occupied, aliased or overlapping output paths before any writes.
 
     Raises
@@ -107,7 +107,7 @@ def preflight(manifest: Path, output: Path, items: tuple[BatchItem, ...]) -> Non
         msg = "Batch output directory must not exist"
         raise OutputOccupied(msg)
     root = absolute.resolve()
-    for path in (manifest, *(item.source for item in items), *(item.plan for item in items)):
+    for path in (batch_file, *(item.source for item in items), *(item.plan for item in items)):
         if path.absolute().is_relative_to(absolute) or path.resolve().is_relative_to(root):
-            msg = "Batch output must not contain a manifest, source or plan"
+            msg = "Batch output must not contain a batch file, source or plan"
             raise OutputOccupied(msg)

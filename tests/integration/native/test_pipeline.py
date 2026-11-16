@@ -64,7 +64,7 @@ def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
     assert run["profile"] == "production"
     assert run["document"]["kind"] == "text"
     assert run["document"]["layout"] == "package"
-    assert run["document"]["adapter"] == "text"
+    assert run["document"]["family"] == "text"
     assert len(run["plan_sha256"]) == 64
     assert {font["name"] for font in run["fonts"]["remediated"]}
     assert set(json.loads((tmp_path / "out" / "manifest.json").read_text())["files"]) >= {

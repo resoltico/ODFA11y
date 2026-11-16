@@ -15,17 +15,25 @@ from lxml import etree
 from odfa11y.application.native import NativeTools
 from odfa11y.application.tools import Tools
 from odfa11y.contracts import JsonObject, JsonProperty, record_dict
-from odfa11y.errors import Failure, IoFailure, OdfA11yError
+from odfa11y.errors import Failure, IoFailure, OdfA11yError, ToolUnavailable
 from odfa11y.families import REGISTRY
 from odfa11y.families import probes as probe_operations
 from odfa11y.families.probes import CapabilityResult, CapabilityStatus
 from odfa11y.native.libreoffice import ExportSettings, require_supported_version
-from odfa11y.native.tools import LibreOffice
+from odfa11y.native.tools import LibreOffice, Toolchain
 from odfa11y.odf import SUPPORTED_VERSIONS
 from odfa11y.progress import ProgressObserver
-from odfa11y.records import Toolchain
 from odfa11y.status import ExitStatus, failure_status
 from odfa11y.version import __version__
+
+
+@dataclass(frozen=True, slots=True)
+class UnavailableTool:
+    """Operations blocked by one missing tool in this observed environment."""
+
+    tool: Literal["LibreOffice", "veraPDF"]
+    blocks: tuple[str, ...]
+    selection: Literal["soffice", "verapdf"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +49,37 @@ class DoctorResult:
     capabilities: tuple[CapabilityResult, ...]
     schema_version: Literal[1] = field(default=1, init=False)
     _error: OdfA11yError | None = field(default=None, repr=False)
+
+    @JsonProperty
+    def unavailable(self) -> tuple[UnavailableTool, ...]:
+        """Explain the use cases that need identities not established by doctor."""
+        missing = []
+        office = self.toolchain.libreoffice
+        usable = office is not None
+        if office is not None:
+            try:
+                require_supported_version(office)
+            except ToolUnavailable:
+                usable = False
+        if not usable:
+            missing.append(
+                UnavailableTool(
+                    "LibreOffice",
+                    (
+                        "Native PDF export",
+                        "ODF comparison",
+                        "PDF and production runs",
+                    ),
+                    "soffice",
+                )
+            )
+        if self.toolchain.verapdf is None:
+            missing.append(
+                UnavailableTool(
+                    "veraPDF", ("Production runs", "Independent PDF validation"), "verapdf"
+                )
+            )
+        return tuple(missing)
 
     @JsonProperty
     def exit_status(self) -> ExitStatus:

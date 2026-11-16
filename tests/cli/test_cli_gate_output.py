@@ -7,16 +7,15 @@ lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.cli import commands as cli_pipeline
 from odfa11y.cli import main
-from odfa11y.cli import pipeline as cli_pipeline
 from odfa11y.errors import DocumentRefusal, ToolFailure
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
-from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.run.record import DocumentIdentity, RunRecord, StageResult
 from odfa11y.run.review import render_review
 from odfa11y.status import Crashed, Passed, Profile, Refused
 from tests.fixtures.plans import plan_header
@@ -30,8 +29,8 @@ def test_strict_text_warning_has_one_authoritative_failed_outcome(
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     assert main(["audit", str(source), "--strict"]) == 1
     output = capsys.readouterr()
-    assert "Check: no errors" in output.out
-    assert "Command: failed (exit 1; warnings rejected" in output.out
+    assert "Findings: 0 error(s)" in output.out
+    assert "Result: failed (exit 1)" in output.out
     assert rules.LINK001.id in output.out
     assert "PASS" not in output.out
     assert not output.err
@@ -43,8 +42,8 @@ def test_partial_audit_ends_with_execution_failure(
     source = make_minimal_odt(tmp_path / "clean.odt")
     assert main(["audit", str(source), str(tmp_path / "missing.odt")]) == 3
     output = capsys.readouterr()
-    assert "Check: no errors" in output.out
-    assert "Command: failed (exit 3; execution failure; checks may be incomplete)" in output.out
+    assert "Findings: 0 error(s)" in output.out
+    assert "Result: failed (exit 3)" in output.out
     assert "Cannot audit" in output.err
 
 
@@ -59,7 +58,7 @@ def test_production_warning_failure_preserves_findings_and_schema(
     assert (
         main(
             [
-                "pipeline",
+                "run",
                 str(source),
                 "--plan",
                 str(config),
@@ -81,10 +80,10 @@ def test_production_warning_failure_preserves_findings_and_schema(
     if output_format == "json":
         assert json.loads(output.out)["failed_stage"] == "audit-remediated"
     else:
-        assert "Pipeline profile: production" in output.out
-        assert "Command: failed (exit 1" in output.out
-        assert "Findings: audit-remediated" in output.out
-        assert rules.LINK001.id in output.out
+        assert "Profile: production" in output.out
+        assert "Result: failed (exit 1" in output.out
+        assert "audit-remediated: gate-failed" in output.out
+        assert rules.LINK001.id in (evidence / "REVIEW.md").read_text()
         assert "REVIEW.md" in output.out
     assert not output.err
 
@@ -97,7 +96,7 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
     config.write_text(plan_header(source) + "", encoding="utf-8")
     assert (
         main([
-            "pipeline",
+            "run",
             str(source),
             "--plan",
             str(config),
@@ -109,9 +108,9 @@ def test_inspect_success_still_surfaces_warning_and_review_scope(
         == 0
     )
     output = capsys.readouterr().out
-    assert "Command: completed (exit 0" in output
-    assert rules.LINK001.id in output
-    assert "human review is still required" in output
+    assert "Result: passed (exit 0" in output
+    assert "1 warnings" in output
+    assert "REVIEW.md" in output
 
 
 @pytest.mark.parametrize("failure", ["validation failed", "executable unavailable"])
@@ -157,11 +156,10 @@ def test_pipeline_failure_shows_source_findings_and_safe_tool_details(
     config = tmp_path / "plan.toml"
     config.write_text(plan_header(tmp_path / "source.odt") + "", encoding="utf-8")
     monkeypatch.setattr(cli_pipeline.api, "run", lambda *_args, **_kwargs: data)
-    assert main(["pipeline", "source.odt", "--plan", str(config), "--output-dir", "evidence"]) == 3
+    assert main(["run", "source.odt", "--plan", str(config), "--output-dir", "evidence"]) == 3
     text = capsys.readouterr().out
-    assert "Findings: audit-source" in text
-    assert rules.LINK001.id in text
-    assert "Command: failed (exit 3" in text
-    assert "Tool details:" in text
+    assert "audit-source: passed; 0 errors; 1 warnings" in text
+    assert "Result: failed (exit 3" in text
+    assert "native tool failed" in text
     assert "\x1b" not in text
     assert "\nCommand: completed" not in text

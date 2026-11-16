@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from odfa11y.application import run, run_batch
+from odfa11y.application import batch, run
 from odfa11y.application.native import NativeTools
 from odfa11y.families import probes
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.native import recording
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.writer import make_minimal_odt
@@ -42,11 +42,11 @@ def test_batch_items_do_not_share_or_conduct_experiments(
     monkeypatch.setattr(probes, "measure_probe", forbidden)
     source = make_minimal_odt(tmp_path / "source.odt")
     (tmp_path / "plan.toml").write_text(plan_header(source))
-    batch = manifest_file(
+    batch_file = write_batch_file(
         tmp_path, [("first", "source.odt", "plan.toml"), ("second", "source.odt", "plan.toml")]
     )
     exports = []
     native = replace(native_tools, export=recording(exports))
-    result = run_batch(batch, tmp_path / "evidence", native_tools=native)
+    result = batch(batch_file, tmp_path / "evidence", native_tools=native)
     assert result.exit_status == 0
     assert len(exports) == 4

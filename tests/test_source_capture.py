@@ -17,7 +17,7 @@ from odfa11y.odf import OdfDocument
 from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.status import Profile
-from tests.batch.test_batch import manifest_file
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.documents import make_flat
 from tests.fixtures.plans import plan_header, reviewed_plan
 from tests.fixtures.runs import RunSettings, execute, run_batch
@@ -196,7 +196,7 @@ def test_batch_continues_after_physical_capture_refusal(tmp_path: Path) -> None:
     (tmp_path / "plan.toml").write_text(
         plan_header(normal) + '[decisions."document.metadata"]\nlanguage="en-GB"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [("oversized", source.name, "plan.toml"), ("valid", normal.name, "plan.toml")]
     )
     result = run_batch(

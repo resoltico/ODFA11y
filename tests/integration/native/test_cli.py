@@ -29,6 +29,6 @@ def test_export_compare_and_pipeline_with_real_libreoffice(
     assert fidelity["raster_max_changed_ratio"] == 0.0
     assert main(["audit", str(pdf)]) == 0
     capsys.readouterr()
-    arguments = ["pipeline", str(source), "--plan", str(config(tmp_path)), "--soffice", soffice]
+    arguments = ["run", str(source), "--plan", str(config(tmp_path)), "--soffice", soffice]
     assert main([*arguments, "--output-dir", str(tmp_path / "ev")]) == 0
-    assert main(["verify", str(tmp_path / "ev")]) == 0
+    assert main(["verify-evidence", str(tmp_path / "ev")]) == 0

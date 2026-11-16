@@ -9,11 +9,10 @@ from odfa11y.families.text import SPEC
 from odfa11y.pdf.audit import PdfMeasurements
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.progress import Stage
-from odfa11y.records import DocumentIdentity
 from odfa11y.report import Report
 from odfa11y.report.model import ReportKind
 from odfa11y.rules import registry as rules
-from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.run.record import DocumentIdentity, RunRecord, StageResult
 from odfa11y.status import GateFailed, Passed, Profile, Refused, Skipped, SkipReason
 
 

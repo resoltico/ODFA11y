@@ -28,7 +28,7 @@ def inspect_source(source: Path, work: Path) -> list[api.Report]:
     if prepared.template is not None:
         (work / "decisions.toml").write_text(prepared.template, encoding="utf-8")
     kind = api.registered_kinds()["document.metadata"]
-    answer = api.decode_answer(kind.answer_type, {"title": "Reviewed example"}, kind.id)
+    answer = kind.answer_type(title="Reviewed example")
     decision = api.Decision(kind, None, answer)
     reviewed = api.Plan.for_source(source, [decision])
     result = api.remediate(source, work / ("reviewed" + source.suffix), reviewed)

@@ -107,6 +107,9 @@
               }
             ]
           },
+          "plannable": {
+            "type": "boolean"
+          },
           "reports": {
             "items": {
               "additionalProperties": false,
@@ -14998,6 +15001,7 @@
         "required": [
           "reports",
           "failure",
+          "plannable",
           "source_name"
         ],
         "type": "object"

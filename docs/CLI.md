@@ -13,126 +13,129 @@ Values: 0 means a flag, 1 one value, + one or more, ? optional, * zero or more.
 
 ## audit
 
-Audit ODF or PDF files without changing them.
+Inspect ODF or PDF inputs without changing them.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `sources` | + | yes |  |  |
-| `--schema` | 0 | no | False | Validate ODF files against the ODF schema. |
-| `--validate` | 0 | no | False | Validate PDFs with veraPDF (PDF/UA-1). |
-| `--verapdf` | 1 | no |  | Select the veraPDF executable; default: PATH. |
-| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
-| `--format` | 1 | no | text; choices: text, json, sarif |  |
-| `--source-root` | 1 | no |  | Confined source root, required for SARIF. |
-| `--strict` | 0 | no | False | Fail on warnings too. |
+| `sources` | + | yes |  | One or more input documents. |
+| `--schema` | 0 | no | False | Validate ODF against its declared schema. |
+| `--validate` | 0 | no | False | Request independent PDF/UA validation. |
+| `--verapdf` | 1 | no |  | veraPDF executable (default: PATH). |
+| `--timeout` | 1 | no | 120.0 | Seconds per native call (default: 120). |
+| `--format` | 1 | no | text; choices: text, json, sarif | Output representation (default: text). |
+| `--strict` | 0 | no | False | Reject warning findings as well as errors. |
+| `--source-root` | 1 | no |  | Confined source root, required for SARIF output. |
 
 ## plan
 
-Print a source-bound plan of disabled human answers.
+Prepare source-bound questions with inert unanswered blocks.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `source` | 1 | yes |  |  |
-| `--from` | 1 | no |  | Carry matching reviewed answers into a newly bound plan. |
-| `--all` | 0 | no | False | Include optional overrides for every available decision. |
+| `source` | 1 | yes |  | Input document. |
+| `--from` | 1 | no |  | Carry answers whose bindings still match. |
+| `--all` | 0 | no | False | Include optional overrides not raised by findings. |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
 ## remediate
 
-Apply reviewed decisions to a separate ODF document.
+Apply reviewed answers under preservation and schema guards.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `source` | 1 | yes |  |  |
-| `destination` | 1 | yes |  |  |
-| `--plan` | 1 | yes |  | Source-bound TOML plan. |
-| `--dry-run` | 0 | no | False | Report outcomes without writing. |
-| `--replace` | 0 | no | False | Atomically replace an existing regular file. |
-| `--format` | 1 | no | text; choices: text, json |  |
+| `source` | 1 | yes |  | Input document. |
+| `destination` | 1 | yes |  | Output file, distinct from the source. |
+| `--plan` | 1 | yes |  | TOML plan with reviewed answers and a fidelity policy. |
+| `--dry-run` | 0 | no | False | Preview changes and remaining findings without publishing. |
+| `--replace` | 0 | no | False | Atomically replace an existing regular output file. |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
 ## export
 
-Export an ODF document to PDF/UA with LibreOffice.
+Publish a guarded native PDF export.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `source` | 1 | yes |  |  |
-| `destination` | 1 | yes |  |  |
-| `--replace` | 0 | no | False | Replace an existing regular file. |
-| `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
+| `source` | 1 | yes |  | Input document. |
+| `destination` | 1 | yes |  | Output file, distinct from the source. |
+| `--soffice` | 1 | no |  | LibreOffice executable (default: PATH). |
+| `--timeout` | 1 | no | 120.0 | Seconds per native call (default: 120). |
+| `--replace` | 0 | no | False | Atomically replace an existing regular output file. |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
 ## compare
 
-Compare two ODF or PDF files for fidelity.
+Compare source and candidate fidelity under an explicit policy.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `source` | 1 | yes |  |  |
-| `candidate` | 1 | yes |  |  |
-| `--plan` | 1 | no |  | TOML file whose [fidelity] table sets the policy. |
-| `--diff-dir` | 1 | no |  | Write images of pages that differ here. |
-| `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
-| `--format` | 1 | no | text; choices: text, json, sarif |  |
-| `--source-root` | 1 | no |  | Confined source root, required for SARIF. |
-| `--strict` | 0 | no | False | Fail on warnings too. |
+| `source` | 1 | yes |  | Input document. |
+| `candidate` | 1 | yes |  | Candidate document to compare with the source. |
+| `--plan` | 1 | no |  | TOML plan with reviewed answers and a fidelity policy. |
+| `--diff-dir` | 1 | no |  | Directory for declared difference images. |
+| `--soffice` | 1 | no |  | LibreOffice executable (default: PATH). |
+| `--timeout` | 1 | no | 120.0 | Seconds per native call (default: 120). |
+| `--format` | 1 | no | text; choices: text, json, sarif | Output representation (default: text). |
+| `--strict` | 0 | no | False | Reject warning findings as well as errors. |
+| `--source-root` | 1 | no |  | Confined source root, required for SARIF output. |
 
-## pipeline
+## run
 
-Remediate, export, validate, compare and keep evidence.
+Prepare, remediate and retain selected assurance evidence.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `source` | 1 | yes |  |  |
-| `--plan` | 1 | yes |  | Source-bound TOML plan. |
-| `--output-dir` | 1 | yes |  | Evidence directory to create. |
-| `--profile` | 1 | no | pdf; choices: source, pdf, production | Assurance profile (default: pdf): source checks source/remediation; pdf adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
-| `--verapdf` | 1 | no |  | veraPDF executable for the production profile. |
-| `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
-| `--format` | 1 | no | text; choices: text, json |  |
+| `source` | 1 | yes |  | Input document. |
+| `--plan` | 1 | yes |  | TOML plan with reviewed answers and a fidelity policy. |
+| `--output-dir` | 1 | yes |  | Evidence output directory. |
+| `--profile` | 1 | no | pdf; choices: source, pdf, production | Assurance profile (default: pdf): source: Inspect and remediate the OpenDocument source without native export.; pdf: Inspect source, native PDF export and fidelity without requiring veraPDF.; production: Require PDF/UA validation and reject warnings as well as errors. |
+| `--soffice` | 1 | no |  | LibreOffice executable (default: PATH). |
+| `--timeout` | 1 | no | 120.0 | Seconds per native call (default: 120). |
+| `--verapdf` | 1 | no |  | veraPDF executable (default: PATH). |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
 ## batch
 
-Run independent manifest items and retain aggregate evidence.
+Execute independent batch-file items and retain progress.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `manifest` | 1 | yes |  |  |
-| `--output-dir` | 1 | yes |  |  |
-| `--profile` | 1 | no | pdf; choices: source, pdf, production | Assurance profile (default: pdf): source checks source/remediation; pdf adds PDF diagnostics and fidelity; production also requires veraPDF and gates warnings. |
-| `--verapdf` | 1 | no |  |  |
-| `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
-| `--format` | 1 | no | text; choices: text, json |  |
+| `batch_file` | 1 | yes |  | Batch file listing document IDs, source paths and plans. |
+| `--output-dir` | 1 | yes |  | Evidence output directory. |
+| `--profile` | 1 | no | pdf; choices: source, pdf, production | Assurance profile (default: pdf): source: Inspect and remediate the OpenDocument source without native export.; pdf: Inspect source, native PDF export and fidelity without requiring veraPDF.; production: Require PDF/UA validation and reject warnings as well as errors. |
+| `--soffice` | 1 | no |  | LibreOffice executable (default: PATH). |
+| `--timeout` | 1 | no | 120.0 | Seconds per native call (default: 120). |
+| `--verapdf` | 1 | no |  | veraPDF executable (default: PATH). |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
-## verify
+## verify-evidence
 
-Verify an evidence directory against its manifest.
+Check recorded-file integrity without asserting accessibility.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `directory` | 1 | yes |  |  |
+| `directory` | 1 | yes |  | Evidence bundle directory to verify. |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
 ## doctor
 
-Show tool and dependency versions and what the PDF export supports.
+Measure native tool identities and scoped capability experiments.
 
 | Argument | Values | Required | Default / choices | Help |
 | --- | --- | --- | --- | --- |
 | `-h, --help` | 0 | no |  | show this help message and exit |
-| `--soffice` | 1 | no |  | LibreOffice executable. |
-| `--timeout` | 1 | no | 120.0 | Native tool timeout in seconds (default: 120). |
-| `--verapdf` | 1 | no |  | Selected veraPDF executable. |
-| `--format` | 1 | no | text; choices: text, json |  |
+| `--soffice` | 1 | no |  | LibreOffice executable (default: PATH). |
+| `--timeout` | 1 | no | 120.0 | Seconds per native call (default: 120). |
+| `--verapdf` | 1 | no |  | veraPDF executable (default: PATH). |
+| `--format` | 1 | no | text; choices: text, json | Output representation (default: text). |
 
 ## Exit statuses
 

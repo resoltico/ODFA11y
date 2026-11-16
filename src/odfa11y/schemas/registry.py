@@ -7,7 +7,7 @@ from operator import or_
 from typing import Literal, get_args
 
 from odfa11y.application import (
-    AuditRun,
+    AuditResult,
     ComparisonResult,
     ExportResult,
     PlanResult,
@@ -75,7 +75,7 @@ class RecordContract:
 def registered_contracts() -> tuple[RecordContract, ...]:
     """Return schemas for every use case, the shared report and the plan file."""
     return (
-        RecordContract("audit", AuditRun),
+        RecordContract("audit", AuditResult),
         RecordContract("plan", PlanResult),
         RecordContract("remediation", RemediationResult),
         RecordContract("export", ExportResult),

@@ -10,7 +10,7 @@ from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.errors import Failure
 from odfa11y.publish import publish_file
 from odfa11y.run.record import RunRecord
-from odfa11y.status import ExitStatus, combine_statuses
+from odfa11y.status import ExitStatus, Profile, combine_statuses
 lazy from odfa11y.contracts import JsonObject
 lazy from odfa11y.progress import Stage
 
@@ -56,6 +56,7 @@ class BatchItemResult:
 class BatchRecord:
     """One durable snapshot of independently executed batch items."""
 
+    profile: Profile
     items: tuple[BatchItemResult, ...] = ()
     _complete: bool = False
     _interrupted: bool = False
