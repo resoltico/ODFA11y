@@ -200,7 +200,9 @@ def test_a_pipeline_for_a_family_without_export_marks_pdf_stages_not_applicable(
     assert statuses["validate-pdf"] == "skipped"  # not part of the verify profile
     assert record.passed
     run = json.loads((tmp_path / "out" / "run.json").read_text())
-    assert run["document"]["kind"]["family"] == "presentation"
+    assert (
+        run["document"]["kind"]["media_type"] == "application/vnd.oasis.opendocument.presentation"
+    )
     assert run["document"]["kind"]["family"] == "presentation"
     assert (tmp_path / "out" / "remediated.odp").is_file()
 
