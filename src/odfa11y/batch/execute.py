@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 """Run explicit items serially through the ordinary document pipeline."""
 
+from dataclasses import replace
 from pathlib import Path
 
 from odfa11y.application.native import NativeTools
@@ -8,7 +9,6 @@ from odfa11y.batch.batch_file import load_manifest, preflight
 from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.errors import OdfA11yError
 from odfa11y.evidence import Redactor, write_bundle
-from odfa11y.native.process import termination_interrupt
 from odfa11y.plans.fidelity import Pagination
 from odfa11y.plans.registry import load_plan
 from odfa11y.progress import ProgressEvent, Stage, Step, StepState
@@ -47,27 +47,28 @@ def run_batch(
     record = BatchRecord(items=[BatchItemResult(item.id) for item in items])
     output.mkdir(parents=True)
     record.publish(output)
-    with termination_interrupt():
-        try:
-            _run_items(
-                items,
-                record,
-                output,
-                options,
-                on_progress,
-                native_tools=native_tools or NativeTools(),
-            )
-        except KeyboardInterrupt:
-            for progress in record.items:
-                if progress.status == BatchStatus.RUNNING:
-                    progress.status = BatchStatus.INTERRUPTED
-                    progress.exit_status = ExitStatus.EXECUTION_FAILURE
-                    if on_progress is not None:
-                        on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.FAILED))
-            record.status = BatchStatus.INTERRUPTED
-        else:
-            record.status = BatchStatus.FAILED if record.exit_status else BatchStatus.COMPLETED
+    try:
+        _run_items(
+            items,
+            record,
+            output,
+            options,
+            on_progress,
+            native_tools=native_tools or NativeTools(),
+        )
+    except KeyboardInterrupt:
+        for progress in record.items:
+            if progress.status == BatchStatus.RUNNING:
+                progress.status = BatchStatus.INTERRUPTED
+                progress.exit_status = ExitStatus.EXECUTION_FAILURE
+                if on_progress is not None:
+                    on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.FAILED, progress.id))
+        record.status = BatchStatus.INTERRUPTED
         record.publish(output)
+        raise
+    else:
+        record.status = BatchStatus.FAILED if record.exit_status else BatchStatus.COMPLETED
+    record.publish(output)
     return record
 
 
@@ -84,12 +85,17 @@ def _run_items(
         progress.status = BatchStatus.RUNNING
         record.publish(output)
         if on_progress is not None:
-            on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.RUNNING))
+            on_progress(ProgressEvent(Step.BATCH_ITEM, StepState.RUNNING, item.id))
+        observer = on_progress or options.on_progress
+        item_options = replace(
+            options,
+            on_progress=_item_observer(observer, item.id) if observer else None,
+        )
         _advance_item(
             item,
             progress,
             output / item.id,
-            options,
+            item_options,
             native_tools=native_tools,
         )
         record.publish(output)
@@ -100,8 +106,13 @@ def _run_items(
                     StepState.PASSED
                     if progress.status == BatchStatus.COMPLETED
                     else StepState.FAILED,
+                    item.id,
                 )
             )
+
+
+def _item_observer(observer: ProgressObserver, item_id: str) -> ProgressObserver:
+    return lambda event: observer(replace(event, item=item_id))
 
 
 def _advance_item(

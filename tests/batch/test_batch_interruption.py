@@ -13,6 +13,7 @@ lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
 from odfa11y.run.context import RunSettings
 from odfa11y.run.profiles import profile_named
@@ -37,8 +38,7 @@ def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
 
     patch = pytest.MonkeyPatch()
     patch.setattr(runner, "load_plan", block_second)
-    result = runner.run_batch(manifest, output, RunSettings(profile=profile_named("source")))
-    sys.exit(result.exit_status)
+    sys.exit(main(["batch", manifest, "--output-dir", output, "--profile", "source"]))
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows terminate forcibly kills the process")

@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """progress vocabulary."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -9,6 +10,7 @@ from enum import StrEnum
 class Step(StrEnum):
     """Fixed progress identities, independent of presenter labels."""
 
+    PREPARE = "prepare"
     IDENTIFY_SOURCE = "identify-source"
     AUDIT_SOURCE = "audit-source"
     REMEDIATE = "remediate"
@@ -33,6 +35,7 @@ class Step(StrEnum):
     def meaning(self) -> str:
         """Return the core-owned meaning of this value."""
         return {
+            self.PREPARE: "Validate inputs, capture source and resolve the required tools.",
             self.IDENTIFY_SOURCE: "Establish the captured source document identity.",
             self.AUDIT_SOURCE: "Inspect accessibility conditions in the source document.",
             self.REMEDIATE: "Apply the reviewed decisions under preservation guards.",
@@ -66,6 +69,7 @@ class _StageMeaning:
 
 
 _NON_STAGE_STEPS = {
+    Step.PREPARE,
     Step.AUDIT_DOCUMENT,
     Step.EXPORT_PDF,
     Step.EXPORT_CANDIDATE,
@@ -119,6 +123,29 @@ class ProgressEvent:
 
     step: Step
     state: StepState
+    item: str | None = None
 
 
 ProgressObserver = Callable[[ProgressEvent], None]
+
+
+@dataclass(slots=True)
+class StepProgress:
+    state: StepState = StepState.PASSED
+
+
+@contextmanager
+def step(
+    observer: ProgressObserver | None, kind: Step, *, item: str | None = None
+) -> Generator[StepProgress]:
+    if observer:
+        observer(ProgressEvent(kind, StepState.RUNNING, item))
+    progress = StepProgress()
+    try:
+        yield progress
+    except BaseException:
+        progress.state = StepState.FAILED
+        raise
+    finally:
+        if observer:
+            observer(ProgressEvent(kind, progress.state, item))

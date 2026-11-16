@@ -10,12 +10,9 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
-lazy from collections.abc import Generator
-lazy from types import FrameType
 
 from odfa11y.errors import Remedy, RemedyAction, ToolUnavailable
 from odfa11y.tool_identity import ToolIdentity
@@ -240,26 +237,3 @@ def identify_running_or_by_file(
     if sys.platform == "win32":
         return identify_by_file_version(name, executable, runner=runner, timeout=timeout)
     return identify(name, executable, version_args, timeout=timeout, runner=runner)
-
-
-def _interrupt(_signum: int, _frame: FrameType | None) -> None:
-    raise KeyboardInterrupt
-
-
-@contextmanager
-def termination_interrupt() -> Generator[None]:
-    """Temporarily translate SIGTERM into interruption on the main thread.
-
-    Yields
-    ------
-    None
-        A scope whose original signal handler is restored on exit.
-    """
-    if threading.current_thread() is not threading.main_thread():
-        yield
-        return
-    previous = signal.signal(signal.SIGTERM, _interrupt)
-    try:
-        yield
-    finally:
-        signal.signal(signal.SIGTERM, previous)

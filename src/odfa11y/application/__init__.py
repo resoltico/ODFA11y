@@ -16,7 +16,6 @@ from odfa11y.batch import run_batch as execute_batch
 from odfa11y.contracts import JsonProperty, record_dict
 from odfa11y.errors import Failure, IoFailure, OdfA11yError
 from odfa11y.evidence import check_bundle
-from odfa11y.native.process import termination_interrupt
 from odfa11y.plans import Plan
 from odfa11y.plans.fidelity import FidelityPolicy as FidelityPolicy
 from odfa11y.plans.fidelity import Pagination
@@ -39,14 +38,13 @@ lazy from odfa11y.run.profiles import Profile
 lazy from odfa11y.run.record import RunRecord
 
 
-def _interruptible[**P, R](operation: Callable[P, R]) -> Callable[P, R]:
+def _filesystem_boundary[**P, R](operation: Callable[P, R]) -> Callable[P, R]:
     @wraps(operation)
     def invoke(*args: P.args, **kwargs: P.kwargs) -> R:
-        with termination_interrupt():
-            try:
-                return operation(*args, **kwargs)
-            except OSError as error:
-                raise IoFailure.from_oserror(error) from error
+        try:
+            return operation(*args, **kwargs)
+        except OSError as error:
+            raise IoFailure.from_oserror(error) from error
 
     return invoke
 
@@ -231,7 +229,7 @@ def _selected_plan(value: Plan | str | Path) -> Plan:
     return value if isinstance(value, Plan) else load_plan(value)
 
 
-@_interruptible
+@_filesystem_boundary
 def audit(
     sources: str | Path | Sequence[str | Path],
     *,
@@ -274,7 +272,7 @@ def audit(
     return AuditRun(tuple(inputs), strict)
 
 
-@_interruptible
+@_filesystem_boundary
 def plan(
     source: str | Path, *, from_plan: Plan | str | Path | None = None, include_all: bool = False
 ) -> PlanResult:
@@ -291,7 +289,7 @@ def plan(
     return PlanResult(report, template)
 
 
-@_interruptible
+@_filesystem_boundary
 def remediate(
     source: str | Path,
     destination: str | Path,
@@ -310,7 +308,7 @@ def remediate(
     return apply_plan(source, destination, plan, dry_run=dry_run)
 
 
-@_interruptible
+@_filesystem_boundary
 def export(
     source: str | Path,
     destination: str | Path,
@@ -334,7 +332,7 @@ def export(
     )
 
 
-@_interruptible
+@_filesystem_boundary
 def compare(
     source: str | Path,
     candidate: str | Path,
@@ -369,7 +367,7 @@ def compare(
     )
 
 
-@_interruptible
+@_filesystem_boundary
 def run(
     source: str | Path,
     plan: Plan | str | Path,
@@ -397,7 +395,7 @@ def run(
     )
 
 
-@_interruptible
+@_filesystem_boundary
 def run_batch(
     manifest: str | Path,
     output_dir: str | Path,
@@ -424,7 +422,7 @@ def run_batch(
     )
 
 
-@_interruptible
+@_filesystem_boundary
 def verify_evidence(directory: str | Path) -> VerificationResult:
     """Check recorded file integrity without claiming document accessibility.
 
