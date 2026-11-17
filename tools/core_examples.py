@@ -1,14 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Executable root-API examples, including outside-checkout installed-wheel qualification."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import odfa11y as api
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def inspect_source(source: Path, work: Path) -> list[api.Report]:
@@ -33,8 +28,8 @@ def inspect_source(source: Path, work: Path) -> list[api.Report]:
     if prepared.template is not None:
         (work / "decisions.toml").write_text(prepared.template, encoding="utf-8")
     kind = api.registered_kinds()["document.metadata"]
-    answer = api.decode_answer(kind.answer_type, {"title": "Reviewed example"}, kind.id)
-    decision = api.Decision(kind, None, None, answer)
+    answer = kind.answer_type(title="Reviewed example")
+    decision = api.Decision(kind, None, answer)
     reviewed = api.Plan.for_source(source, [decision])
     result = api.remediate(source, work / ("reviewed" + source.suffix), reviewed)
     if result.exit_status != api.ExitStatus.PASSED:

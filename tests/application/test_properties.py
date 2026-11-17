@@ -1,42 +1,41 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """State invariants that must hold for every input, not just hand-picked examples."""
-
-from __future__ import annotations
 
 import contextlib
 import json
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from hypothesis import example, given
 from hypothesis import strategies as st
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative
+from odfa11y.concepts.preservation import ProtectedPackage
+from odfa11y.decisions.edit import Status
 from odfa11y.errors import PackageError, PlanError
 from odfa11y.families.text import (
     URI_RE,
-    LinkifyAddresses,
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    SetGraphicAlternatives,
-    TableHeaders,
     linkify_plain_addresses,
     split_trailing_punctuation,
-    text_is_preserved,
 )
-from odfa11y.odf import OdfDocument, PackageStorage, is_unsafe_member_name, qn, validate
-from odfa11y.plans import load_plan
-from odfa11y.remediation import SetMetadata
+from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, is_unsafe_member_name, qn, validate
+from odfa11y.odf.allowance import Allowance, Removed
+from odfa11y.remediate.catalogue import load_plan
 from odfa11y.report import RULES, Report
-from tests.fixtures.operations import execute_operations
+from odfa11y.report.model import ReportKind
+from tests.fixtures.answers import (
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+)
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.writer import TEXT_MEDIA_TYPE, make_minimal_odt
-
-if TYPE_CHECKING:
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 PROSE = st.text(alphabet="abc XYZ.,;:()[]{}/@-_&", max_size=12)
 ADDRESSES = st.sampled_from([
@@ -82,15 +81,30 @@ def test_linkification_preserves_visible_text_and_is_idempotent(fragments: list[
 
 
 @given(st.lists(st.text(alphabet="ab ", max_size=4), max_size=8), st.data())
-def test_text_preservation_accepts_exactly_the_removed_empty_blocks(
+def test_masked_proof_requires_every_removed_empty_block(
     after: list[str], data: st.DataObject
 ) -> None:
-    blocks = list(after)
-    removed = data.draw(st.integers(min_value=0, max_value=4))
-    for _ in range(removed):
-        blocks.insert(data.draw(st.integers(min_value=0, max_value=len(blocks))), "")
-    assert text_is_preserved(tuple(blocks), tuple(after), removed_empty_blocks=removed)
-    assert not text_is_preserved(tuple(blocks), tuple(after), removed_empty_blocks=removed + 1)
+    with tempfile.TemporaryDirectory() as directory:
+        source = make_minimal_odt(Path(directory) / "source.odt")
+        document = OdfDocument.open(source)
+        body = document.tree(Part.CONTENT).find("office:body/office:text", namespaces=NS)
+        assert body is not None
+        for child in list(body):
+            body.remove(child)
+        for text in after:
+            etree.SubElement(body, qn("text", "p")).text = text
+        removed = []
+        for _ in range(data.draw(st.integers(min_value=1, max_value=4))):
+            node = etree.Element(qn("text", "p"))
+            body.insert(data.draw(st.integers(min_value=0, max_value=len(body))), node)
+            removed.append(node)
+        before = ProtectedPackage.capture(document)
+        for node in removed:
+            body.remove(node)
+        candidate = ProtectedPackage.capture(document)
+        permissions = tuple(Removed(Part.CONTENT, node) for node in removed)
+        assert before.preserved(candidate, Allowance(permissions))
+        assert not before.preserved(candidate, Allowance(permissions[:-1]))
 
 
 @given(MEMBERS)
@@ -148,11 +162,10 @@ def test_arbitrary_configuration_bytes_are_accepted_or_rejected_with_a_config_er
 
 @given(st.lists(st.sampled_from(sorted(RULES)), max_size=10))
 def test_report_counts_partition_findings(rule_ids: list[str]) -> None:
-    report = Report(kind="odt", subject="synthetic")
+    report = Report(kind=ReportKind.ODF, subject="synthetic")
     for rule_id in rule_ids:
-        report.add(RULES[rule_id])
+        report.raise_(RULES[rule_id])
     assert report.error_count + report.warning_count + report.info_count == len(rule_ids)
-    assert report.passed is (report.error_count == 0)
     assert json.loads(json.dumps(report.as_dict()))["summary"]["errors"] == report.error_count
 
 
@@ -177,26 +190,27 @@ def test_any_applicable_operation_subset_keeps_the_schema_valid_and_is_idempoten
     features: Features, choices: dict[str, bool]
 ) -> None:
     operations = []
-    if choices["title"]:
-        operations.append(SetMetadata(title="Generated title"))
-    if choices["language"]:
-        operations.append(SetMetadata(language="de-AT"))
-    if choices["alt"] and features.get("with_image_without_alt"):
+    if choices["title"] or choices["language"]:
         operations.append(
-            SetGraphicAlternatives({"Logo": GraphicAlternative("Logo", "Description")})
+            metadata_input(
+                title="Generated title" if choices["title"] else None,
+                language="de-AT" if choices["language"] else None,
+            )
         )
+    if choices["alt"] and features.get("with_image_without_alt"):
+        operations.append(graphic_inputs({"Logo": graphic_answer("Logo", "Description")}))
     if choices["headers"] and features.get("with_data_table"):
-        operations.append(MarkTableHeaders({"Data": TableHeaders(1)}))
+        operations.append(header_inputs({"Data": header_answer(1)}))
     if choices["linkify"]:
-        operations.append(LinkifyAddresses())
+        operations.append(address_input())
     if choices["spacers"]:
-        operations.append(RemoveEmptySpacers())
+        operations.append(spacer_input())
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         source = make_minimal_odt(root / "source.odt", features=features)
-        first = execute_operations(source, root / "first.odt", operations)
+        first = apply_answers(source, root / "first.odt", operations)
         assert validate(OdfDocument.open(root / "first.odt")).violations == {}
-        second = execute_operations(root / "first.odt", root / "second.odt", operations)
+        second = apply_answers(root / "first.odt", root / "second.odt", operations)
         assert all(outcome.status is not Status.APPLIED for outcome in second.outcomes)
         first_package = PackageStorage(root / "first.odt")
         second_package = PackageStorage(root / "second.odt")

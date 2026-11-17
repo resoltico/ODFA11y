@@ -1,24 +1,22 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Exercise SARIF through CLI dispatch and real document/PDF boundaries."""
 
-from __future__ import annotations
-
 import json
-from typing import TYPE_CHECKING
+from dataclasses import replace
+lazy from pathlib import Path
 
 import pytest
 from jsonschema import Draft7Validator
 
+from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
+from odfa11y.rules import registry as rules
+from tests.fixtures.native import native_fakes, validation_result
 from tests.fixtures.pdf import tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
 from tests.report.test_sarif import SCHEMA
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.native.export import ExportSettings
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 
 def _run_log(output: str) -> dict:
@@ -29,7 +27,7 @@ def _run_log(output: str) -> dict:
     return payload["runs"][0]
 
 
-def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
+def test_audit_sarif_mixes_odf_pdf_and_validation_reports_without_local_paths(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     odf = make_minimal_odt(tmp_path / "document.odt", features={"with_image_without_alt": True})
@@ -43,10 +41,19 @@ def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
         "sarif",
         "--source-root",
         str(tmp_path),
-        "--verapdf-path",
+        "--validate",
+        "--verapdf",
         str(tmp_path / "missing-validator"),
     ]
-    assert main(arguments) == 2
+    assert (
+        main(
+            arguments,
+            native_tools=replace(
+                native_fakes(), validate=lambda *_args, **_kwargs: validation_result(False)
+            ),
+        )
+        == 2
+    )
     output = capsys.readouterr()
     assert not output.err
     assert str(tmp_path) not in output.out
@@ -58,36 +65,49 @@ def test_audit_sarif_mixes_real_odf_pdf_and_verapdf_reports_without_local_paths(
     ]
     by_rule = {result["ruleId"]: result for result in run["results"]}
     assert (
-        by_rule["GRAPHIC003"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 0
+        by_rule[rules.GRAPHIC001.id]["locations"][0]["physicalLocation"]["artifactLocation"][
+            "index"
+        ]
+        == 0
     )
-    assert by_rule["VERA000"]["locations"][0]["physicalLocation"]["artifactLocation"]["index"] == 1
-    assert by_rule["VERA000"]["level"] == "warning"
+    assert (
+        by_rule[rules.PDFUA001.id]["locations"][0]["physicalLocation"]["artifactLocation"]["index"]
+        == 1
+    )
+    assert by_rule[rules.PDFUA001.id]["level"] == "error"
 
 
 def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_deleted(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     candidate = make_minimal_odt(tmp_path / "candidate.odt")
     generated: list[Path] = []
 
     def exporter(input_path: Path, destination: Path, _settings: ExportSettings) -> Path:
-        assert input_path in {source, candidate}
+        assert input_path not in {source, candidate}
+        assert input_path.name in {source.name, candidate.name}
         generated.append(destination)
-        line = "Unchanged" if input_path == source else "Changed"
+        line = "Unchanged" if input_path.name == source.name else "Changed"
         return text_pdf(destination, [[line]])
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
+    native_tools = replace(native_tools, export=exporter)
     assert (
-        main([
-            "compare",
-            str(source),
-            str(candidate),
-            "--format",
-            "sarif",
-            "--source-root",
-            str(tmp_path),
-        ])
+        main(
+            [
+                "compare",
+                str(source),
+                str(candidate),
+                "--format",
+                "sarif",
+                "--source-root",
+                str(tmp_path),
+            ],
+            native_tools=native_tools,
+        )
         == 2
     )
     output = capsys.readouterr()
@@ -100,7 +120,7 @@ def test_compare_odf_sarif_refers_to_original_inputs_after_temporary_pdfs_are_de
         {"location": {"uri": "candidate.odt"}},
         {"location": {"uri": "source.odt"}},
     ]
-    finding = next(result for result in run["results"] if result["ruleId"] == "FID003")
+    finding = next(result for result in run["results"] if result["ruleId"] == rules.FIDELITY003.id)
     assert [
         loc["physicalLocation"]["artifactLocation"]["index"] for loc in finding["locations"]
     ] == [0, 1]
@@ -127,7 +147,7 @@ def test_compare_real_pdfs_has_candidate_then_source_artifact_identity(
     run = _run_log(capsys.readouterr().out)
     assert run["artifacts"][0]["location"]["uri"] == "candidate.pdf"
     assert run["artifacts"][1]["location"]["uri"] == "source.pdf"
-    assert any(result["ruleId"] == "FID003" for result in run["results"])
+    assert any(result["ruleId"] == rules.FIDELITY003.id for result in run["results"])
 
 
 @pytest.mark.parametrize("suffix", ["odt", "pdf"])
@@ -135,7 +155,7 @@ def test_malformed_existing_inputs_still_produce_valid_private_sarif(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], suffix: str
 ) -> None:
     source = tmp_path / f"malformed.{suffix}"
-    source.write_bytes(b"%PDF-invalid" if suffix == "pdf" else b"invalid ZIP document")
+    source.write_bytes(b"%PDF-invalid" if suffix == "pdf" else b"PK\x03\x04invalid ZIP document")
     assert (
         main([
             "audit",
@@ -151,7 +171,10 @@ def test_malformed_existing_inputs_still_produce_valid_private_sarif(
     run = _run_log(output.out)
     assert run["results"]
     assert str(tmp_path) not in output.out
-    assert {item["ruleId"] for item in run["results"]} <= {"PDF000", "PKG000"}
+    assert {item["ruleId"] for item in run["results"]} <= {
+        rules.PDF001.id,
+        rules.PKG001.id,
+    }
 
 
 def test_missing_explicit_root_and_outside_sources_fail_without_emitting_partial_log(
@@ -193,7 +216,7 @@ def test_missing_source_fails_without_fake_findings_or_traceback(
     "arguments",
     [
         ["remediate", "source", "destination", "--plan", "plan"],
-        ["pipeline", "source", "--plan", "plan", "--output-dir", "output"],
+        ["run", "source", "--plan", "plan", "--output-dir", "output"],
         ["batch", "manifest", "--output-dir", "output"],
         ["styles", "source"],
         ["doctor"],
@@ -222,6 +245,7 @@ def test_sarif_preserves_strict_warning_exit_status(
 
 @pytest.mark.parametrize("outside", [False, True])
 def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
+    native_tools: NativeTools,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -236,7 +260,7 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
         calls.append(input_path)
         return text_pdf(destination, [["Actual comparison"]])
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
+    native_tools = replace(native_tools, export=exporter)
     diff = tmp_path / "diff"
     extra: list[str] = []
     if outside:
@@ -244,16 +268,19 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
         root.mkdir()
         extra = ["--source-root", str(root)]
     assert (
-        main([
-            "compare",
-            str(source),
-            str(candidate),
-            "--format",
-            "sarif",
-            "--diff-dir",
-            str(diff),
-            *extra,
-        ])
+        main(
+            [
+                "compare",
+                str(source),
+                str(candidate),
+                "--format",
+                "sarif",
+                "--diff-dir",
+                str(diff),
+                *extra,
+            ],
+            native_tools=native_tools,
+        )
         == 4
     )
     assert not calls
@@ -262,7 +289,10 @@ def test_invalid_sarif_root_is_rejected_before_export_or_diff_output(
 
 
 def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     candidate = make_minimal_odt(tmp_path / "candidate.odt")
@@ -270,14 +300,20 @@ def test_sarif_tool_failure_omits_private_diagnostics_but_text_keeps_them(
 
     def exporter(_input: Path, _destination: Path, _settings: ExportSettings) -> Path:
         message = "Conversion failed"
-        raise ToolFailedError(message, details=diagnostic)
+        raise ToolFailure(message, details=diagnostic)
 
-    monkeypatch.setattr("odfa11y.pipeline.comparison.export_pdfua", exporter)
+    native_tools = replace(native_tools, export=exporter)
     arguments = ["compare", str(source), str(candidate)]
-    assert main([*arguments, "--format", "sarif", "--source-root", str(tmp_path)]) == 3
+    assert (
+        main(
+            [*arguments, "--format", "sarif", "--source-root", str(tmp_path)],
+            native_tools=native_tools,
+        )
+        == 3
+    )
     sarif_output = capsys.readouterr()
     assert not sarif_output.out
     assert "unpublishable" not in sarif_output.err
     assert str(tmp_path) not in sarif_output.err
-    assert main(arguments) == 3
+    assert main(arguments, native_tools=native_tools) == 3
     assert diagnostic in capsys.readouterr().err

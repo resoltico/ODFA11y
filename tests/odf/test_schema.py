@@ -1,13 +1,12 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Bundled schemas: integrity, validation of synthetic documents and the differential rule."""
-
-from __future__ import annotations
 
 import itertools
 import shutil
 import tomllib
+from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import pytest
 from lxml import etree
@@ -28,9 +27,7 @@ from odfa11y.odf import (
 )
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 FEATURES = [
     "with_plain_email",
@@ -172,3 +169,26 @@ def test_an_unrelated_edit_does_not_turn_an_old_violation_into_a_new_one(tmp_pat
     body = select_elements(after.tree(Part.CONTENT), "//office:text")[0]
     body.insert(0, etree.Element(qn("text", "p")))  # far from the violation
     assert regressions(validate(before), validate(after)) == {}
+
+
+def test_equal_message_on_another_live_node_is_a_new_schema_defect(tmp_path: Path) -> None:
+    document = OdfDocument.open(
+        make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
+    )
+    tree = document.tree(Part.CONTENT)
+    first = select_elements(tree, "//draw:frame")[0]
+    paragraph = first.getparent()
+    assert paragraph is not None
+    body = paragraph.getparent()
+    assert body is not None
+    body.append(deepcopy(paragraph))
+    assert validate(document).count == 0
+    images = select_elements(tree, "//draw:image")
+    images[0].set(qn("xlink", "type"), "bad")
+    before = validate(document)
+    images[0].set(qn("xlink", "type"), "simple")
+    images[1].set(qn("xlink", "type"), "bad")
+    after = validate(document)
+    assert before.count == after.count == 1
+    assert before.messages() == after.messages()
+    assert regressions(before, after) == after.messages()

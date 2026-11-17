@@ -1,11 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Fail-closed inspection of exact GitHub release state and preserved asset bytes."""
-
-from __future__ import annotations
 
 import argparse
 import json
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path

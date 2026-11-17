@@ -1,31 +1,43 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Audit the standard image body without fetching or converting its graphic."""
 
-from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
-from typing import TYPE_CHECKING
+from odfa11y.concepts import GraphicIdentity, audit_graphic_role
+from odfa11y.concepts.domains import GRAPHICS
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
+from odfa11y.contracts import Description
+from odfa11y.families.image.payload import inspect_payload
+from odfa11y.odf import NS, Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.resources import local_resource_path
+from odfa11y.report import Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
-from odfa11y.content import GraphicIdentity, audit_graphic_role
-from odfa11y.native.resources import local_resource_path
-from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
 
-from .payload import inspect_payload
+@dataclass(frozen=True, slots=True)
+class ImageMeasurements:
+    """Measurements produced by image analysis; None denotes unmeasured data."""
 
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+    producer: Literal["image"] = field(default="image", init=False)
+    graphic_count: Annotated[int | None, Description("Graphic frames in an Image document.")] = None
 
 
-def audit_image(document: OdfDocument, report: Report) -> None:
+def audit_image(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Check the mandatory frame, description and local/embedded resource boundary."""
-    frames = select_elements(document.tree(Part.CONTENT), "//office:body/office:image/draw:frame")
-    report.facts[FactKeys.IMAGE_GRAPHIC_COUNT] = len(frames)
+    frames = [node for _, node in GRAPHICS.enumerate(document)]
+    report.measure(ImageMeasurements(graphic_count=len(frames)))
     if len(frames) != 1:
-        report.add(rules.IMAGE001, location=Location(f"{Part.CONTENT}/image"))
+        report.raise_(rules.IMAGE003, location=Location(f"{Part.CONTENT}/image"))
         return
     frame = frames[0]
-    name = frame.get(qn("draw", "name"))
+    report.observe_review(Topic.IMAGE_MEANING, Topic.SOURCE_BOUNDARY)
+    name = frame.get(xml_names.DRAW_NAME)
     location = (
         Location.named(Part.CONTENT, "frame", name)
         if name
@@ -33,30 +45,32 @@ def audit_image(document: OdfDocument, report: Report) -> None:
     )
     images = select_elements(frame, "./draw:image")
     if not images:
-        report.add(rules.IMAGE001, "Image frame has no image payload.", location=location)
+        report.raise_(rules.IMAGE004, "Image frame has no image payload.", location=location)
     description = (frame.findtext("svg:title", namespaces=NS) or "") + (
         frame.findtext("svg:desc", namespaces=NS) or ""
     )
-    href = images[0].get(qn("xlink", "href")) if images else None
+    href = images[0].get(xml_names.XLINK_HREF) if images else None
     identity = GraphicIdentity(document, frames)
     decorative = audit_graphic_role(document, frame, report)
     if not description.strip() and not decorative:
-        report.add(
-            rules.GRAPHIC003, location=Location(identity.target(frame)), details={"frame": name}
+        report.raise_(
+            rules.GRAPHIC001,
+            location=Location(identity.target(frame)),
+            details={"frame": name},
+            decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE),
         )
-        report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
     for image in images:
         problem, review = inspect_payload(document, image)
         if problem:
-            report.add(rules.IMAGE004, problem, location=location)
+            report.raise_(rules.IMAGE002, problem, location=location)
         if review:
-            report.add(rules.IMAGE005, location=location)
-        href = image.get(qn("xlink", "href"))
+            report.raise_(rules.IMAGE001, location=location)
+        href = image.get(xml_names.XLINK_HREF)
         embedded = image.find("office:binary-data", NS)
         local = local_resource_path(href) if href else None
         if embedded is None and (local is None or not document.storage.has(local)):
-            report.add(
-                rules.IMAGE003,
+            report.raise_(
+                rules.IMAGE005,
                 "Image resource is external, unavailable or not embedded; it was not fetched.",
                 location=location,
             )

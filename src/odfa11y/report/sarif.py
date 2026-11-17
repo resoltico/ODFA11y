@@ -1,21 +1,19 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Render privacy-preserving SARIF using explicit physical source identities."""
 
-from __future__ import annotations
-
+import json
 import re
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import quote, unquote
+lazy from collections.abc import Iterable
 
-from odfa11y.errors import PackageError, ReportError
-
-from .rules import RULES, Severity
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-    from .models import Finding, Report
+from odfa11y.contracts import JsonObject
+from odfa11y.errors import Failure, InvalidOption, IoFailure, OdfA11yError
+from odfa11y.evidence.redact import Redactor
+from odfa11y.rules.registry import RULES, Severity
+lazy from odfa11y.report.model import Finding, Report
 
 SCHEMA_URI = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json"
 _LEVELS = {Severity.ERROR: "error", Severity.WARNING: "warning", Severity.INFO: "note"}
@@ -29,22 +27,22 @@ def preflight_sarif(sources: Iterable[str | Path], source_root: str | Path | Non
 
     Raises
     ------
-    ReportError
+    InvalidOption
         The root is missing or an input is outside it.
 
     """
     if source_root is None:
-        message = "SARIF requires an explicit source root (--source-root)."
-        raise ReportError(message)
+        message = "SARIF requires an explicit source root."
+        raise InvalidOption(message)
     root = _resolved(Path(source_root))
     if not root.is_dir():
         message = "SARIF source root must be an existing directory."
-        raise ReportError(message)
+        raise InvalidOption(message)
     for source in sources:
         selected = _resolved(Path(source))
         if not selected.is_file() or not selected.is_relative_to(root):
             message = "SARIF source must be a file within the source root."
-            raise ReportError(message)
+            raise InvalidOption(message)
 
 
 def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]:
@@ -53,7 +51,7 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
     Free-form messages, display subjects and metadata are intentionally excluded: they
     may contain source content, credentials or local paths. Logical locations are kept;
     filesystem locations never invent line numbers for document elements.
-    Delegated path resolution raises PackageError for unavailable source/root paths.
+    Delegated path resolution raises IoFailure for unavailable source/root paths.
 
     Returns
     -------
@@ -62,14 +60,14 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
 
     Raises
     ------
-    ReportError
+    InvalidOption
         A source is outside the root, or a finding has unsafe identity data.
 
     """
     root = _resolved(source_root)
     if not root.is_dir():
         msg = "SARIF source root must be an existing directory."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     items = list(reports)
     preflight_sarif((source for report in items for source in report.sources), source_root)
     artifacts: dict[Path, int] = {}
@@ -78,14 +76,14 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
     for report in items:
         if not report.sources:
             msg = "SARIF requires explicit source identities for every report."
-            raise ReportError(msg)
+            raise InvalidOption(msg)
         for source in report.sources:
             if source in source_indices:
                 continue
             resolved = _resolved(source)
             if not resolved.is_file() or not resolved.is_relative_to(root):
                 msg = "SARIF source must be a file within the source root."
-                raise ReportError(msg)
+                raise InvalidOption(msg)
             if resolved not in artifacts:
                 artifacts[resolved] = len(artifacts)
                 uri = quote(resolved.relative_to(root).as_posix(), safe="/")
@@ -98,7 +96,7 @@ def sarif_log(reports: Iterable[Report], *, source_root: Path) -> dict[str, Any]
         for finding in report.findings
     ):
         msg = "SARIF findings must reference registered rules."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
     descriptors = [_descriptor(rule_id) for rule_id in ids]
     rule_indices = {rule_id: index for index, rule_id in enumerate(ids)}
     results = [
@@ -125,7 +123,7 @@ def _descriptor(rule_id: str) -> dict[str, Any]:
         "id": rule.id,
         "shortDescription": {"text": rule.title},
         "defaultConfiguration": {"level": _LEVELS[rule.severity]},
-        "properties": {"category": rule.category.value},
+        "properties": {"category": rule.category},
     }
     return result
 
@@ -152,7 +150,7 @@ def _result(
         "level": _LEVELS[finding.severity],
         "message": {"text": rule.title},
         "locations": locations,
-        "properties": {"category": rule.category.value},
+        "properties": {"category": rule.category},
     }
     return result
 
@@ -165,7 +163,7 @@ def _safe_label(value: str) -> None:
         or re.search(r"[=\s](?:/|[A-Za-z]:[\\/])", decoded)
     ):
         msg = "SARIF logical location contains unsafe path or credential information."
-        raise ReportError(msg)
+        raise InvalidOption(msg)
 
 
 def _resolved(source: Path) -> Path:
@@ -173,4 +171,40 @@ def _resolved(source: Path) -> Path:
         return source.resolve(strict=True)
     except OSError:
         msg = "SARIF source identity cannot be resolved."
-        raise PackageError(msg) from None
+        raise IoFailure(msg) from None
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class SarifOptions:
+    """An explicit source-root selection for a SARIF-producing use case."""
+
+    source_root: Path
+
+    def __init__(self, source_root: str | Path | None) -> None:
+        if source_root is None:
+            message = "SARIF requires an explicit source root."
+            raise InvalidOption(message)
+        object.__setattr__(self, "source_root", Path(source_root))
+
+    def preflight(self, sources: Iterable[str | Path]) -> None:
+        """Validate the selected identities before the use case performs work."""
+        preflight_sarif(sources, self.source_root)
+
+    def log(self, reports: Iterable[Report]) -> JsonObject:
+        """Render registered findings with only confined physical identities."""
+        return sarif_log(reports, source_root=self.source_root)
+
+
+def render_sarif(reports: Iterable[Report], *, source_root: Path) -> str:
+    """Render a SARIF log without exposing source contents or local directories."""
+    return json.dumps(sarif_log(reports, source_root=source_root), indent=2, ensure_ascii=False)
+
+
+def sarif_failure(error: OdfA11yError) -> Failure:
+    """Keep the specific core reason without local directories, credentials or raw diagnostics."""
+    message = re.sub(
+        r"([a-z][a-z0-9+.-]*://)[^/\s]*@", r"\1<credentials>@", error.message, flags=re.IGNORECASE
+    )
+    return replace(
+        error.as_record(), message=Redactor(()).text(message), problems=(), details="", remedy=None
+    )

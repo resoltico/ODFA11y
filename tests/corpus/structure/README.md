@@ -1,0 +1,21 @@
+# Writer text-structure corpus
+
+These invented inputs were saved by the LibreOffice version in [unified manifest](../manifest.toml).
+The manifest binds each ODT and its [authoring source](sources) by SHA-256 and records its
+strict-schema violation baseline. Tests verify inventory, producer, bytes and actual behavior.
+
+| Feature | Positive / negative scope |
+| --- | --- |
+| Lists | Real nested/continued lists versus typed numeric paragraphs. |
+| References | Existing bookmark/footnote relationships versus a missing internal destination. |
+| Language | English/French local declarations versus explicitly unspecified channels. |
+| Tables | Valid merged headers, ambiguous intent and declared data lacking headers. |
+| Visibility | Plain current text versus tracked deletion, hidden section and uncertain layout. |
+
+Regenerate a selected feature with
+`uv run --no-sync python -m tools.build_corpus /absolute/new-output --purpose text-structure`.
+
+Positive/negative refer to the feature under test. Short fixtures still have an informational PDF heading
+finding; source-valid reference relationships can have failing exported annotations.
+Use the actual native integration results and [accessibility boundaries](../../../docs/ACCESSIBILITY.md)
+to interpret these fixtures. No fixture is an accessibility certificate.

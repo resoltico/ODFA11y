@@ -1,7 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Real CLI termination unwinds a running tool and its process group."""
-
-from __future__ import annotations
 
 import multiprocessing
 import os
@@ -9,10 +7,7 @@ import signal
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pathlib import Path
+lazy from pathlib import Path
 
 import pytest
 

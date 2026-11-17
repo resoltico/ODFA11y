@@ -1,17 +1,35 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Construct typed assurance records for evidence publication tests."""
-
-from __future__ import annotations
 
 from dataclasses import replace
 
-from odfa11y.families.text import ADAPTER
-from odfa11y.outcomes import StageName, StageStatus
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.profiles import PROFILES
-from odfa11y.pipeline.record import RunRecord, StageResult
-from odfa11y.records import DocumentIdentity
-from odfa11y.report import FactKeys, FactSet, Report, rules
+from odfa11y.batch.record import BatchItemResult
+from odfa11y.errors import DocumentRefusal, PlanError, ToolFailure
+from odfa11y.families.text import SPEC
+from odfa11y.odf import Detection, Layout
+from odfa11y.odf.kinds import KINDS
+from odfa11y.pdf.audit import PdfMeasurements
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.progress import Stage
+from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rules
+from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.status import GateFailed, Passed, Profile, Refused, Skipped, SkipReason
+
+
+def document_detection() -> Detection:
+    kind = KINDS["application/vnd.oasis.opendocument.text"]
+    return Detection(
+        kind=kind,
+        layout=Layout.PACKAGE,
+        odf_version="1.4",
+        media_type=kind.media_type,
+        declared_by="mimetype",
+        manifest_media_type=kind.media_type,
+        body_element="office:text",
+        extension=".odt",
+    )
 
 
 def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRecord:
@@ -23,24 +41,52 @@ def record(*, status: str = "passed", failed_stage: str | None = None) -> RunRec
         A typed pipeline record, ready for publication or review rendering.
 
     """
-    report = Report(kind="pdf", subject="doc.pdf", facts=FactSet({FactKeys.PDF_PAGE_COUNT: 2}))
-    report.add(rules.PDF005, "No title display.")
+    report = Report[object](
+        kind=ReportKind.PDF, subject="doc.pdf", facts=(PdfMeasurements(page_count=2),)
+    )
+    report.raise_(rules.PDF006, "No title display.")
     stages = [
-        StageResult(StageName.AUDIT_PDF, StageStatus.PASSED, report=report),
-        StageResult(StageName.VALIDATE_PDF, StageStatus.SKIPPED, "not requested"),
+        StageResult(Stage.AUDIT_PDF, Passed(report)),
+        StageResult(Stage.VALIDATE_PDF, Skipped(SkipReason.PROFILE)),
     ]
     if status == "failed":
-        name = StageName(failed_stage or StageName.REMEDIATE)
+        name = Stage(failed_stage or Stage.REMEDIATE)
         index = next((i for i, stage in enumerate(stages) if stage.name == name), None)
         if index is None:
-            stages.append(StageResult(name, StageStatus.FAILED))
+            stages.append(StageResult(name, Refused(DocumentRefusal("Controlled refusal"))))
         else:
-            stages[index] = replace(stages[index], status=StageStatus.FAILED)
+            stages[index] = replace(
+                stages[index], outcome=Refused(DocumentRefusal("Controlled refusal"))
+            )
     return RunRecord(
-        document=DocumentIdentity("doc.odt", "0" * 64),
-        operations=(),
-        policy=FidelityPolicy(),
-        profile=PROFILES["verify"],
-        stages=stages,
-        human_review=ADAPTER.review_items,
+        document=document_detection(),
+        source_name="doc.odt",
+        source_sha256="0" * 64,
+        fidelity_policy=Pagination.SAME(),
+        profile=Profile.PDF,
+        stages=tuple(stages),
+        human_review=SPEC.review_items,
     )
+
+
+def batch_item(identity: str, status: int):
+    """Build aggregate inputs from actual report gates and typed preparation failures."""
+
+    if status in (3, 4):
+        error = (
+            ToolFailure("Controlled execution failure")
+            if status == 3
+            else PlanError("Controlled plan failure")
+        )
+        return BatchItemResult(identity, error.as_record(), _started=True)
+    result = record()
+    report = Report(kind=ReportKind.ODF, subject="fixture.odt")
+    if status == 1:
+        report.raise_(rules.LINK001)
+    elif status == 2:
+        report.raise_(rules.PKG001)
+    outcome = GateFailed(report) if status else Passed(report)
+    result = replace(
+        result, profile=Profile.PRODUCTION, stages=(StageResult(Stage.AUDIT_REMEDIATED, outcome),)
+    )
+    return BatchItemResult(identity, result, _started=True)

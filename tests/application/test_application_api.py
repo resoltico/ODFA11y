@@ -1,25 +1,24 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The root use cases own continuation, effective policy and native tool selection."""
 
-from __future__ import annotations
-
 import ast
+import importlib
 import json
-from typing import TYPE_CHECKING
+from dataclasses import replace
+lazy from collections.abc import Iterator
 lazy from pathlib import Path
 
 import pytest
 
 import odfa11y as api
-from odfa11y.errors import ToolFailedError
-from odfa11y.records import DoctorRecord, Toolchain
-from odfa11y.report import rules
+from odfa11y.errors import IoFailure, ToolFailure
+from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rules
+from tests.fixtures.native import native_fakes
 from tests.fixtures.paths import REPOSITORY
 from tests.fixtures.pdf import text_pdf
+from tests.fixtures.schema import assert_record_schema
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 def test_cli_imports_only_the_root_application_surface() -> None:
@@ -41,43 +40,52 @@ def test_multi_input_audit_retains_success_after_execution_failure(tmp_path: Pat
     missing = tmp_path / "missing.odt"
     result = api.audit([missing, source])
     assert len(result.inputs) == 2
-    assert isinstance(result.inputs[0].error, FileNotFoundError)
+    assert isinstance(result.inputs[0].error, IoFailure)
     assert result.inputs[1].error is None
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
     assert len(result.reports) == 1
-    serialized = result.as_dict()
+    serialized = assert_record_schema(result)
     assert serialized["exit_status"] == 3
     inputs = serialized["inputs"]
     assert isinstance(inputs, list)
     first = inputs[0]
     assert isinstance(first, dict)
     assert "error" not in first
-    rendered = result.render("json")
+    rendered = api.render_json(result.as_dict())
     assert rendered is not None
-    assert json.loads(rendered)["facts"]["document.title"] == "Synthetic accessible document"
+    assert (
+        next(
+            item
+            for item in json.loads(rendered)["inputs"][1]["reports"][0]["facts"]
+            if item["producer"] == "odf-metadata"
+        )["title"]
+        == "Synthetic accessible document"
+    )
 
 
 def test_partial_input_reports_survive_later_failure_and_sarif_is_fail_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    failure = ToolFailedError("Controlled validator failure")
+    failure = ToolFailure("Controlled validator failure")
 
     def inspect(source: Path, **_options: object) -> Iterator[api.Report]:
-        report = api.Report(kind="pdf", subject=source.name, sources=(source,))
-        report.add(rules.PDF005)
+        report = api.Report(kind=ReportKind.PDF, subject=source.name, _sources=(source,))
+        report.raise_(rules.PDF006)
         yield report
         raise failure
 
-    monkeypatch.setattr("odfa11y.application.audit_document", inspect)
+    monkeypatch.setattr(
+        importlib.import_module("odfa11y.application.audit"), "audit_document", inspect
+    )
     source = tmp_path / "source.pdf"
     source.write_bytes(b"%PDF")
     result = api.audit(source)
     assert len(result.reports) == 1
     assert result.failures[0].error is failure
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
-    assert result.render("json") is not None
-    with pytest.raises(ToolFailedError, match="Controlled validator failure"):
-        result.render("sarif", source_root=tmp_path)
+    assert api.render_json(result.as_dict()) is not None
+    with pytest.raises(ToolFailure, match="Controlled validator failure"):
+        result.as_sarif(api.SarifOptions(tmp_path))
 
 
 def test_source_profile_is_a_value_and_needs_no_native_tool(tmp_path: Path) -> None:
@@ -92,10 +100,10 @@ def test_source_profile_is_a_value_and_needs_no_native_tool(tmp_path: Path) -> N
         plan_path,
         tmp_path / "evidence",
         tools=api.Tools(soffice=tmp_path / "missing"),
-        profile=api.PROFILES["source"],
+        profile=api.Profile.SOURCE,
     )
     assert result.exit_status == api.ExitStatus.PASSED
-    assert result.profile is api.PROFILES["source"]
+    assert result.profile is api.Profile.SOURCE
     assert result.toolchain.libreoffice is None
     assert api.verify_evidence(tmp_path / "evidence").exit_status == api.ExitStatus.PASSED
 
@@ -104,7 +112,7 @@ def test_compare_and_integrity_results_own_their_status(tmp_path: Path) -> None:
     source = text_pdf(tmp_path / "source.pdf", [["Example"]])
     result = api.compare(source, source)
     assert result.exit_status == api.ExitStatus.PASSED
-    assert result.report.passed
+    assert result.report.error_count == 0
     integrity = api.verify_evidence(tmp_path / "missing")
     assert integrity.exit_status == api.ExitStatus.ERRORS
     assert integrity.problems
@@ -113,17 +121,17 @@ def test_compare_and_integrity_results_own_their_status(tmp_path: Path) -> None:
 def test_doctor_retains_controlled_error_and_uses_shared_tools(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    failure = ToolFailedError("Controlled environment failure")
+    failure = ToolFailure("Controlled environment failure")
     selected = api.Tools("office", "validator", 7)
     visited = []
 
-    def inspect(tools: api.Tools, **_options: object) -> tuple[DoctorRecord, ToolFailedError]:
-        visited.append(tools)
-        return DoctorRecord("test", "3.15.2", "test", {}, (), Toolchain()), failure
+    def unavailable(requested: str | Path | None) -> str:
+        visited.append(requested)
+        raise failure
 
-    monkeypatch.setattr("odfa11y.application.inspect_tools", inspect)
-    result = api.doctor(tools=selected)
-    assert visited == [selected]
+    native = replace(native_fakes(), locate=unavailable)
+    result = api.doctor(tools=selected, native_tools=native)
+    assert visited == ["office"]
     assert result.error is failure
     assert result.exit_status == api.ExitStatus.EXECUTION_FAILURE
     assert result.as_dict()["exit_status"] == 3

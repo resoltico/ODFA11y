@@ -1,39 +1,36 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Exercise the actual operation engine separately from plan authoring and binding."""
-
-from __future__ import annotations
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Exercise validated edit inputs and inject faults into the actual decision executor."""
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from odfa11y.remediation.apply import _document, _execute  # noqa: PLC2701  Test the actual internal engine.
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from odfa11y.adapter import Operation
-    from odfa11y.remediation import RemediationResult
+from odfa11y.application.remediate import finish_candidate, remediate
+from odfa11y.odf import OdfDocument
+from odfa11y.remediate import RemediationResult
+from odfa11y.remediate.execute import execute_decisions, require_remediable
+from tests.fixtures.answers import Authored, contains_fault, materialize
+from tests.fixtures.plans import reviewed_plan
 
 
-def execute_operations(
+def apply_answers(
     source: str | Path,
     destination: str | Path,
-    operations: Sequence[Operation],
+    inputs: Sequence[Authored],
     *,
     dry_run: bool = False,
 ) -> RemediationResult:
-    """Exercise the same guarded engine called after production plan compilation.
-
-    Returns
-    -------
-    RemediationResult
-        Actual outcomes and guard results, not an exception compatibility adapter.
-
-    """
+    """Use the application path except for explicitly injected unregistered fault callbacks."""
     source, destination = Path(source), Path(destination)
-    return _execute(
-        _document(source, destination), source, destination, operations, dry_run=dry_run
+    if contains_fault(inputs):
+        document = OdfDocument.open(source)
+        require_remediable(document, source)
+        candidate = execute_decisions(document, source, materialize(document, inputs))
+        return finish_candidate(
+            candidate, source, destination, dry_run=dry_run, replace_existing=True
+        )
+    return remediate(
+        source, destination, reviewed_plan(source, inputs), dry_run=dry_run, replace=True
     )
 
 
@@ -50,7 +47,7 @@ def assert_refused(result: RemediationResult, *, match: str | None = None) -> st
     assert result.exit_status == 2
     assert result.violations
     text = "\n".join(
-        f"{violation.operation or ''} [{violation.key or ''}]: {violation.message}"
+        f"{violation.kind_id or ''} [{violation.target or ''}]: {violation.message}"
         for violation in result.violations
     )
     if match is not None:

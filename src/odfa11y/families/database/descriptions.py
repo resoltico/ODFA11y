@@ -1,23 +1,21 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Describe declared database objects without opening connections or changing bindings."""
 
-from __future__ import annotations
-
 import re
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, override
 
-from odfa11y.adapter import Operation, Outcome, Status
-from odfa11y.content import protected_xml
-from odfa11y.odf import Family, Part, qn, select_elements
+lazy from lxml import etree
+
+from odfa11y.concepts import protected_xml
+from odfa11y.decisions import Decision
+from odfa11y.decisions.answers import DatabaseDescriptionAnswer
+from odfa11y.decisions.domain import resolved_node
+from odfa11y.decisions.edit import EditResult, Outcome, Status
+from odfa11y.odf import Part, qn, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes
 from odfa11y.report import Location
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
+from odfa11y.targets import Fingerprint
+lazy from odfa11y.odf import OdfDocument
 
 OBJECTS = {
     qn("db", name)
@@ -62,10 +60,10 @@ def description_attribute(node: etree._Element) -> str:
         ``db:description`` or a form control's ``form:title``.
 
     """
-    return qn("form", "title") if _form_target(node) else qn("db", "description")
+    return xml_names.FORM_TITLE if _form_target(node) else xml_names.DB_DESCRIPTION
 
 
-def fingerprint(node: etree._Element) -> str:
+def fingerprint(node: etree._Element) -> Fingerprint:
     """Bind the description decision to SQL, bindings and all other object content.
 
     Returns
@@ -74,7 +72,9 @@ def fingerprint(node: etree._Element) -> str:
         A reviewed digest excluding only the object's description.
 
     """
-    return protected_xml(node, omitted_element_attributes=description_attributes(node))[:16]
+    return Fingerprint.from_digest(
+        protected_xml(node, omitted_element_attributes=description_attributes(node))
+    )
 
 
 def description_attributes(root: etree._Element) -> dict[str, tuple[str, ...]]:
@@ -86,18 +86,18 @@ def description_attributes(root: etree._Element) -> dict[str, tuple[str, ...]]:
         Standard object attributes, including independently described descendants.
 
     """
-    attributes: dict[str, tuple[str, ...]] = {tag: (qn("db", "description"),) for tag in OBJECTS}
+    attributes: dict[str, tuple[str, ...]] = {tag: (xml_names.DB_DESCRIPTION,) for tag in OBJECTS}
     for node in root.iter():
         if _form_target(node):
-            attributes[str(node.tag)] = (qn("form", "title"),)
+            attributes[str(node.tag)] = (xml_names.FORM_TITLE,)
     return attributes
 
 
 def _form_target(node: etree._Element) -> bool:
     return (
         isinstance(node.tag, str)
-        and node.tag.startswith(qn("form", ""))
-        and bool(node.get(qn("form", "name")))
+        and node.tag.startswith(xml_names.FORM_)
+        and bool(node.get(xml_names.FORM_NAME))
     )
 
 
@@ -107,7 +107,7 @@ def _path(node: etree._Element, positions: dict[etree._Element, dict[etree._Elem
         if item.tag not in OBJECTS and not _form_target(item):
             continue
         kind = str(item.tag).rpartition("}")[2]
-        name = item.get(qn("db", "name")) or item.get(qn("form", "name"))
+        name = item.get(xml_names.DB_NAME) or item.get(xml_names.FORM_NAME)
         segment = (
             Location.named("content", kind, name).path
             if name
@@ -133,63 +133,30 @@ def _ordinal(
     return positions[parent][node]
 
 
-@dataclass(frozen=True, slots=True)
-class DatabaseDescription:
-    """One supplied description and its optional reviewed object identity."""
-
-    text: str
-    fingerprint: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class SetObjectDescriptions(Operation):
-    """Preflight descriptions for all declared objects before editing any field."""
-
-    entries: Mapping[str, DatabaseDescription]
-    name: ClassVar[str] = "set_object_descriptions"
-    families: ClassVar[frozenset[Family] | None] = frozenset({Family.DATABASE})
-
-    @override
-    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
-        available = targets(document)
-        decisions = []
-        failures = []
-        for target, value in self.entries.items():
-            matches = available.get(target, [])
-            problem = _problem(target, matches, value)
-            if problem:
-                failures.append(Outcome(self.name, Status.FAILED, problem, key=target))
-            else:
-                decisions.append((target, matches[0], value.text.strip()))
-        if failures:
-            return tuple(failures)
-        outcomes = []
-        for target, node, text in decisions:
-            attribute = description_attribute(node)
-            changed = node.get(attribute) != text
-            if changed:
-                node.set(attribute, text)
-            outcomes.append(
-                Outcome(
-                    self.name,
-                    Status.APPLIED if changed else Status.UNCHANGED,
-                    "Set supplied database object description."
-                    if changed
-                    else "Database object description already matches.",
-                    key=target,
-                    count=int(changed),
-                )
-            )
-        return tuple(outcomes)
-
-
-def _problem(target: str, matches: list[etree._Element], value: DatabaseDescription) -> str | None:
-    if len(matches) != 1:
-        return "A database object target must resolve to exactly one declaration."
-    if not isinstance(value.text, str) or not value.text.strip():
-        return "A database description must be a nonblank string."
-    if ORDINAL.search(target) and value.fingerprint is None:
-        return "An ordinal database target requires its reviewed fingerprint."
-    if value.fingerprint is not None and value.fingerprint != fingerprint(matches[0]):
-        return "The database object changed since the plan was reviewed."
-    return None
+def edit_description(
+    document: OdfDocument, decision: Decision[DatabaseDescriptionAnswer]
+) -> EditResult:
+    """Set a supplied description while preserving connections, SQL and object content."""
+    node = resolved_node(document, decision)
+    attribute = description_attribute(node)
+    allowance = Allowance((
+        Attributes(Part.CONTENT, node, frozenset({description_attribute(node)})),
+    ))
+    value = decision.answer.text.strip()
+    changed = node.get(attribute) != value
+    if changed:
+        node.set(attribute, value)
+    return EditResult(
+        (
+            Outcome(
+                decision.kind.id,
+                Status.APPLIED if changed else Status.UNCHANGED,
+                "Applied database object description."
+                if changed
+                else "Database object description already matches.",
+                target=decision.target_path,
+                count=int(changed),
+            ),
+        ),
+        allowance,
+    )

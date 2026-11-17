@@ -1,21 +1,24 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Schema-defined declaration fixtures with real package members and inline image data."""
 
-from __future__ import annotations
-
 import base64
-lazy from pathlib import Path
+from pathlib import Path
 
 from lxml import etree
 
-from odfa11y.content import GraphicAlternative, PageDecision
-from odfa11y.families.pages import SetGraphicAlternatives, SetPageSemantics
 from odfa11y.odf import OdfDocument, Part, qn
-from odfa11y.remediation import SetMetadata
+from tests.fixtures.answers import (
+    graphic_answer,
+    graphic_inputs,
+    metadata_input,
+    page_answer,
+    page_inputs,
+)
 from tests.fixtures.native_resources import png_bytes
 from tests.fixtures.paths import TESTS
+lazy from tests.fixtures.answers import apply_in_memory
 
-DRAWING = TESTS / "family_corpus" / "fruit-drawing.odg"
+DRAWING = TESTS / "corpus/families" / "fruit-drawing.odg"
 
 
 def declaration(directory: Path, kind: str, href: str | None, *, active: bool = False) -> Path:
@@ -29,13 +32,11 @@ def declaration(directory: Path, kind: str, href: str | None, *, active: bool = 
     """
     document = OdfDocument.open(DRAWING)
     for operation in [
-        SetMetadata(language="en-GB"),
-        SetGraphicAlternatives({
-            "Fruit illustration": GraphicAlternative(description="Fruit drawing")
-        }),
-        SetPageSemantics({"Fruit overview": PageDecision(title="Fruit overview")}),
+        metadata_input(language="en-GB"),
+        graphic_inputs({"Fruit illustration": graphic_answer(description="Fruit drawing")}),
+        page_inputs({"Fruit overview": page_answer(title="Fruit overview")}),
     ]:
-        operation.apply(document)
+        apply_in_memory(document, operation)
     node = (
         _style_resource(document, kind, active=active)
         if kind in {"fill", "bullet", "symbol", "font"}

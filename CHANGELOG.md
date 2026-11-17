@@ -2,7 +2,40 @@
 
 ## [Unreleased]
 
-- Requires pypdf 6.21.4 or newer for security fixes; restore the lockfile for patched pypdf and the audit toolchain’s soupsieve.
+## [0.9.0] - 2026-11-17
+
+- Owner-authored code is AGPL-3.0-only; standards keep their terms. Contributions require the commercial-licensing grant in [PROJECT-NOTICE.md](PROJECT-NOTICE.md).
+- Use `run`, `verify-evidence`, Python `batch()` and profile `pdf`; retired command/API aliases and the `verify` profile are refused.
+- Regenerate old plans and record consumers: `schema_version` replaces `format`, audit JSON always has `inputs`, and run records no longer contain `outputs` or capabilities.
+- Run records carry typed document detection; captured identity uses `source_name` and `source_sha256`. Update readers of the former flat document identity.
+- Use `plan NEW_SOURCE --from OLD_PLAN` after source changes; only matching kind/path/fingerprint answers carry live. `--rebind` is removed.
+- Plans contain finding-driven questions with context, live headers and inert unanswered blocks; `--all` adds optional overrides. Blank alternative text is refused.
+- Preview resolved and remaining findings with `remediate --dry-run`; successful edits can leave accessibility errors. Decorative intent requires an explicit reviewed role.
+- Remediation and export refuse existing files unless `--replace`; sources, symlink destinations and occupied evidence directories remain protected.
+- Required tools resolve before output: production and `audit --validate` require veraPDF. `--verapdf PATH` selects a tool without requesting audit validation.
+- All use cases capture privately without writing beside sources. Native work refuses filename/path fields and relative hyperlinks; make link destinations absolute.
+- Unknown ODF media types retain package and structure diagnostics in public audits; unsupported planning/edits and unrelated inputs remain refused.
+- Runs execute from available artifacts after finding/validator failures; unreadable sources and guard-refused candidates never supply export inputs.
+- Batch preparation failures appear only in `batch.json`; completed runs retain independent bundles and later items continue. Progress events include item IDs.
+- Human-review topics now come from concept/family observations, including database privacy, MathML language and source/native assurance boundaries.
+- `REVIEW.md` starts with human work, limits its checklist to observed topics and shows source → candidate facts. The manifest alone owns file hashes.
+- Review sheets escape authored names, metadata and diagnostics as literal text after path redaction, preventing active HTML, images and links.
+- Doctor alone measures exporter capabilities, reporting meanings, related rules and unmeasured reasons; document runs and batches no longer probe or cache experiments.
+- Typed decision kinds own answer contracts, target domains and direct edits. Rule IDs use one condition per concept; update integrations against the [rule catalogue](docs/RULES.md).
+- Schema regression checks keep existing defects stable through in-memory metadata edits and still reject equal-message defects introduced on other nodes.
+- One style resolver and allowance-based preservation proof replace family-specific mechanisms; protected XML, opaque content and schema-regression guards remain independent.
+- Built-in PDF audits report malformed annotation collections/entries as incomplete inspection instead of measuring zero links.
+- PDF checks share one bounded reader/Form walk and typed inspection data. URI issues retain other comparison checks; bitmap-size mismatches are geometry changes.
+- veraPDF parsing refuses incomplete jobs, inconsistent verdicts/rule counts and malformed bytes, including invalid UTF-8; incomplete validation cannot pass production.
+- All nine use cases return frozen contracts with derived exit status. Every command supports JSON; core owns plannability, remedies and SARIF preflight.
+- Interactive batch progress identifies each item; scalar contract errors use plain expected types, and timeout guidance follows the shared policy.
+- CLI text renders core facts before one verdict, with terminal escaping and one output writer. SIGTERM handling belongs to the CLI; library interruption propagates.
+- Run and batch text retain recorded refusal/preparation problems and typed recovery remedies.
+- Requires pypdf 7.1.0 or newer for security fixes; restore the refreshed runtime, development and audit lockfile, including pypdfium2 5.15.2.
+- CI pins veraPDF 1.30.4 and updated build/analysis tools; restore the declared toolchain before running contributor commands.
+- Use `python -m tools.check` for checks and dependency audits. CI verifies all stages with LibreOffice and veraPDF on Linux, macOS and Windows.
+- Source archives now contain only build metadata, README/license and runtime source/notices; clean rebuilds and installed-wheel examples qualify distributions.
+- The invented corpus has one family/purpose manifest and builder; fixture bytes and preservation expectations remain intact. See the [walkthrough](docs/WALKTHROUGH.md).
 
 ## [0.8.0] - 2026-10-28
 

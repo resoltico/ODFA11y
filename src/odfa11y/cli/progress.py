@@ -1,37 +1,31 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Append terminal-only progress without contaminating machine output."""
 
-from __future__ import annotations
-
 import sys
-from typing import TYPE_CHECKING
 
-from odfa11y import StepName, terminal_text
+from odfa11y import Step
+lazy from odfa11y import ProgressEvent, ProgressObserver
 
-if TYPE_CHECKING:
-    from odfa11y import ProgressEvent, ProgressObserver
-
+from .text import terminal_text
+from .writer import err
 
 _LABELS = {
-    StepName.IDENTIFY_SOURCE: "Identify source",
-    StepName.AUDIT_SOURCE: "Audit source",
-    StepName.REMEDIATE: "Apply reviewed decisions",
-    StepName.AUDIT_REMEDIATED: "Audit remediated source",
-    StepName.EXPORT_SOURCE: "Export source PDF",
-    StepName.EXPORT_REMEDIATED: "Export remediated PDF",
-    StepName.AUDIT_PDF: "Inspect PDF",
-    StepName.VALIDATE_PDF: "Validate PDF/UA",
-    StepName.FIDELITY: "Compare fidelity",
-    StepName.PUBLISH_EVIDENCE: "Publish evidence",
-    StepName.LOAD_PLAN: "Load reviewed plan",
-    StepName.PIPELINE: "Run assurance workflow",
-    StepName.AUDIT_DOCUMENT: "Audit document",
-    StepName.EXPORT_PDF: "Export PDF",
-    StepName.EXPORT_CANDIDATE: "Export candidate PDF",
-    StepName.COMPARE_FIDELITY: "Compare fidelity",
-    StepName.PROBE_CAPABILITIES: "Measure native capabilities",
-    StepName.PROBE_TOOLCHAIN: "Inspect tools",
-    StepName.BATCH_ITEM: "Process batch item",
+    Step.PREPARE: "Prepare inputs",
+    Step.AUDIT_SOURCE: "Audit source",
+    Step.REMEDIATE: "Apply reviewed decisions",
+    Step.AUDIT_REMEDIATED: "Audit remediated source",
+    Step.EXPORT_SOURCE: "Export source PDF",
+    Step.EXPORT_REMEDIATED: "Export remediated PDF",
+    Step.AUDIT_PDF: "Inspect PDF",
+    Step.VALIDATE_PDF: "Validate PDF/UA",
+    Step.FIDELITY: "Compare fidelity",
+    Step.PUBLISH_EVIDENCE: "Publish evidence",
+    Step.AUDIT_DOCUMENT: "Audit document",
+    Step.EXPORT_PDF: "Export PDF",
+    Step.EXPORT_CANDIDATE: "Export candidate PDF",
+    Step.COMPARE_FIDELITY: "Compare fidelity",
+    Step.PROBE_CAPABILITIES: "Measure native capabilities",
+    Step.BATCH_ITEM: "Process batch item",
 }
 
 
@@ -57,8 +51,12 @@ def progress_callback(output_format: str) -> ProgressObserver | None:
         if enabled:
             try:
                 label = _LABELS[event.step]
-                stream.write(f"Progress: {terminal_text(label)}: {terminal_text(event.state)}\n")
-                stream.flush()
+                item = f"[{terminal_text(event.item)}] " if event.item is not None else ""
+                err(
+                    f"Progress: {item}{terminal_text(label)}: {terminal_text(event.state)}",
+                    stream=stream,
+                    flush=True,
+                )
             except OSError:
                 enabled = False
 

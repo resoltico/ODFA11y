@@ -1,9 +1,7 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Invoked Forms have independent MCIDs and actual content-presence controls."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import (
@@ -13,16 +11,13 @@ from pypdf.generic import (
     NameObject,
     NumberObject,
 )
+lazy from pypdf import PdfWriter
+lazy from pypdf.generic import IndirectObject
 
 from odfa11y.pdf import audit_pdfua
+from odfa11y.rules import registry as rule_catalogue
 from tests.fixtures.pdf import dictionary, marked_text, register, set_page_content, tagged_writer
 from tests.pdf.test_pdf_marked_content import leaves
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-    from pypdf.generic import IndirectObject
 
 
 def add_form(writer: PdfWriter, data: str) -> IndirectObject:
@@ -64,13 +59,19 @@ def test_form_content_correspondence(tmp_path: Path, case: str) -> None:
         owner[NameObject("/K")] = NumberObject(1)
     rules = findings(tmp_path, writer)
     expected = {
-        "unmarked": "PDF023",
-        "orphan": "PDF020",
-        "dangling": "PDF021",
-        "duplicate": "PDF022",
+        "unmarked": rule_catalogue.PDF024.id,
+        "orphan": rule_catalogue.PDF021.id,
+        "dangling": rule_catalogue.PDF022.id,
+        "duplicate": rule_catalogue.PDF023.id,
     }
     if case == "owned":
-        assert not rules & {"PDF000", "PDF020", "PDF021", "PDF022", "PDF023"}
+        assert not rules & {
+            rule_catalogue.PDF001.id,
+            rule_catalogue.PDF021.id,
+            rule_catalogue.PDF022.id,
+            rule_catalogue.PDF023.id,
+            rule_catalogue.PDF024.id,
+        }
     else:
         assert expected[case] in rules
 
@@ -81,15 +82,15 @@ def test_form_graphics_require_actual_nonartifact_content(tmp_path: Path, conten
     set_page_content(writer, writer.pages[0], "/Figure <</MCID 0>> BDC /Fm Do EMC")
     add_form(writer, content)
     rules = findings(tmp_path, writer)
-    assert ("PDF010" in rules) == (not content or "Artifact" in content)
-    assert "PDF000" not in rules
+    assert (rule_catalogue.PDF011.id in rules) == (not content or "Artifact" in content)
+    assert rule_catalogue.PDF001.id not in rules
 
 
 def test_form_cycles_fail_explicitly(tmp_path: Path) -> None:
     writer = tagged_writer(["H1"])
     set_page_content(writer, writer.pages[0], "/Fm Do")
     add_form(writer, "/Fm Do")
-    assert "PDF000" in findings(tmp_path, writer)
+    assert rule_catalogue.PDF001.id in findings(tmp_path, writer)
 
 
 def test_page_and_two_form_mcids_are_distinct(tmp_path: Path) -> None:
@@ -109,7 +110,13 @@ def test_page_and_two_form_mcids_are_distinct(tmp_path: Path) -> None:
             NameObject("/MCID"): NumberObject(0),
             NameObject("/Stm"): stream,
         })
-    assert not findings(tmp_path, writer) & {"PDF000", "PDF020", "PDF021", "PDF022", "PDF023"}
+    assert not findings(tmp_path, writer) & {
+        rule_catalogue.PDF001.id,
+        rule_catalogue.PDF021.id,
+        rule_catalogue.PDF022.id,
+        rule_catalogue.PDF023.id,
+        rule_catalogue.PDF024.id,
+    }
 
 
 @pytest.mark.parametrize("artifact", [False, True])
@@ -127,8 +134,8 @@ def test_nested_reused_forms_resolve_shadowed_resources(tmp_path: Path, *, artif
     assert isinstance(resources, DictionaryObject)
     resources[NameObject("/XObject")] = DictionaryObject({NameObject("/Fm"): outer})
     rules = findings(tmp_path, writer)
-    assert "PDF000" not in rules
-    assert ("PDF010" in rules) == artifact
+    assert rule_catalogue.PDF001.id not in rules
+    assert (rule_catalogue.PDF011.id in rules) == artifact
 
 
 def test_whole_object_form_ownership_is_explicitly_incomplete(tmp_path: Path) -> None:
@@ -136,4 +143,4 @@ def test_whole_object_form_ownership_is_explicitly_incomplete(tmp_path: Path) ->
     set_page_content(writer, writer.pages[0], "/Fm Do")
     form = add_form(writer, "BT (x) Tj ET")
     dictionary(form)[NameObject("/StructParent")] = NumberObject(0)
-    assert "PDF000" in findings(tmp_path, writer)
+    assert rule_catalogue.PDF001.id in findings(tmp_path, writer)

@@ -1,6 +1,6 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Published JSON schemas shipped with the installed package."""
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Published contract registry and generated JSON Schema resources."""
 
-from .reading import read_schema
+from odfa11y.schemas.registry import RecordContract, generated_schemas, registered_contracts
 
-__all__ = ["read_schema"]
+__all__ = ["RecordContract", "generated_schemas", "registered_contracts"]

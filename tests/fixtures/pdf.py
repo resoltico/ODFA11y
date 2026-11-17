@@ -1,9 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Build small synthetic PDFs: tagged structure trees, and text pages with links."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
+lazy from collections.abc import Sequence
+lazy from pathlib import Path
 
 from pypdf import PdfWriter
 from pypdf.generic import (
@@ -16,13 +16,8 @@ from pypdf.generic import (
     NumberObject,
     TextStringObject,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-    from pathlib import Path
-
-    from pypdf import PageObject
-    from pypdf.generic import IndirectObject, PdfObject
+lazy from pypdf import PageObject
+lazy from pypdf.generic import IndirectObject, PdfObject
 
 Spec = str | tuple[str, "Sequence[Spec]"]
 

@@ -1,35 +1,36 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Target language follows scoped styles while retaining text and unrelated overrides."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.families.text import (
-    LinkifyAddresses,
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    SetTargetLanguages,
-    TableHeaders,
-    TargetLanguage,
-)
+from odfa11y.audit import audit_odf
+from odfa11y.decisions import Decision
+from odfa11y.errors import PlanError
+from odfa11y.families.text.kinds import TARGET_LANGUAGE
 from odfa11y.families.text.language import effective_languages
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import (
+    Authored,
+    address_input,
+    fault_input,
+    header_answer,
+    header_inputs,
+    language_answer,
+    language_inputs,
+    spacer_input,
+)
 from tests.fixtures.documents import Variant, make_flat, make_package
-from tests.fixtures.operations import assert_refused, execute_operations
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation, Outcome
+lazy from odfa11y.decisions.edit import EditResult
 
 STYLES = (
     '<style:style style:name="Body" style:family="paragraph"><style:text-properties '
@@ -56,11 +57,9 @@ def test_effective_channels_and_isolated_target_edit(
     assert effective_languages(document, inline) == ("fr-FR", "ja", "ar")
     fingerprint = language_fingerprint(document, paragraph)
     target = next(iter(targets))
-    operation = SetTargetLanguages({
-        target: TargetLanguage(western="de-DE", fingerprint=fingerprint)
-    })
+    operation = language_inputs({target: language_answer(western="de-DE", fingerprint=fingerprint)})
     output = tmp_path / ("edited" + source.suffix)
-    result = execute_operations(source, output, [operation])
+    result = apply_answers(source, output, [operation])
     assert result.published, result.as_dict()
     after = OdfDocument.open(output)
     edited_paragraph, edited_inline = language_targets(after).values()
@@ -72,7 +71,7 @@ def test_effective_channels_and_isolated_target_edit(
         etree.tostring(select_elements(after.tree(Part.CONTENT), "//style:style")[0])
     )
     repeated = tmp_path / ("repeated" + source.suffix)
-    again = execute_operations(output, repeated, [operation])
+    again = apply_answers(output, repeated, [operation])
     assert again.published
     assert not again.changed
 
@@ -81,11 +80,13 @@ def test_inline_language_keeps_other_channels_and_font_overrides(tmp_path: Path)
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=STYLES))
     document = OdfDocument.open(source)
     target, node = list(language_targets(document).items())[1]
-    operation = SetTargetLanguages({
-        target: TargetLanguage(asian="zh-Hant-TW", fingerprint=language_fingerprint(document, node))
+    operation = language_inputs({
+        target: language_answer(
+            asian="zh-Hant-TW", fingerprint=language_fingerprint(document, node)
+        )
     })
     output = tmp_path / "inline.fodt"
-    result = execute_operations(source, output, [operation])
+    result = apply_answers(source, output, [operation])
     assert result.published, result.as_dict()
     after = OdfDocument.open(output)
     inline = list(language_targets(after).values())[1]
@@ -102,21 +103,23 @@ def test_stale_fingerprint_refuses_every_target_before_mutation(tmp_path: Path) 
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=STYLES))
     document = OdfDocument.open(source)
     (first, paragraph), (second, _) = language_targets(document).items()
-    operation = SetTargetLanguages({
-        first: TargetLanguage(western="de", fingerprint=language_fingerprint(document, paragraph)),
-        second: TargetLanguage(western="de", fingerprint="0" * 16),
+    operation = language_inputs({
+        first: language_answer(western="de", fingerprint=language_fingerprint(document, paragraph)),
+        second: language_answer(western="de", fingerprint="0" * 16),
     })
     output = tmp_path / "refused.fodt"
-    assert_refused(execute_operations(source, output, [operation]), match="fingerprint")
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_answers(source, output, [operation])
     assert not output.exists()
 
 
-def test_audit_offers_target_decisions_without_guessing_language(tmp_path: Path) -> None:
+def test_audit_omits_language_questions_when_inherited_language_is_established(
+    tmp_path: Path,
+) -> None:
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=STYLES))
     report = audit_odf(source)
     questions = [question for question in report.decisions if question.kind.id == "language.target"]
-    assert len(questions) == 2
-    assert questions[1].current == {"western": "fr-FR", "asian": "ja", "complex": "ar"}
+    assert questions == []
 
 
 def test_table_language_edit_and_second_channel_preserve_grid_and_words(tmp_path: Path) -> None:
@@ -132,15 +135,15 @@ def test_table_language_edit_and_second_channel_preserve_grid_and_words(tmp_path
     fingerprint = language_fingerprint(document, node)
     first = tmp_path / "first.fodt"
     second = tmp_path / "second.fodt"
-    assert execute_operations(
+    assert apply_answers(
         source,
         first,
-        [SetTargetLanguages({target: TargetLanguage(western="de", fingerprint=fingerprint)})],
+        [language_inputs({target: language_answer(western="de", fingerprint=fingerprint)})],
     ).published
-    result = execute_operations(
+    result = apply_answers(
         first,
         second,
-        [SetTargetLanguages({target: TargetLanguage(asian="zh-Hant", fingerprint=fingerprint)})],
+        [language_inputs({target: language_answer(asian="zh-Hant", fingerprint=fingerprint)})],
     )
     assert result.published, result.as_dict()
     edited = OdfDocument.open(second)
@@ -161,12 +164,12 @@ def test_full_tag_inherited_from_paragraph_refuses_ineffective_inline_override(
     document = OdfDocument.open(source)
     target, node = list(language_targets(document).items())[1]
     output = tmp_path / "refused.fodt"
-    result = execute_operations(
+    result = apply_answers(
         source,
         output,
         [
-            SetTargetLanguages({
-                target: TargetLanguage(
+            language_inputs({
+                target: language_answer(
                     western="de", fingerprint=language_fingerprint(document, node)
                 )
             })
@@ -182,18 +185,18 @@ def test_invalid_language_is_refused_without_output(tmp_path: Path, tag: object)
     document = OdfDocument.open(source)
     target, node = next(iter(language_targets(document).items()))
     output = tmp_path / "refused.fodt"
-    result = execute_operations(
-        source,
-        output,
-        [
-            SetTargetLanguages({
-                target: TargetLanguage(
-                    western=cast("str", tag), fingerprint=language_fingerprint(document, node)
-                )
-            })
-        ],
-    )
-    assert_refused(result, match="language tag")
+    with pytest.raises(PlanError, match="western"):
+        apply_answers(
+            source,
+            output,
+            [
+                language_inputs({
+                    target: language_answer(
+                        western=cast("str", tag), fingerprint=language_fingerprint(document, node)
+                    )
+                })
+            ],
+        )
     assert not output.exists()
 
 
@@ -236,30 +239,32 @@ def test_unrelated_derived_style_change_is_detected_by_publication_guard(
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=STYLES))
     document = OdfDocument.open(source)
     target, node = next(iter(language_targets(document).items()))
-    operation = SetTargetLanguages({
-        target: TargetLanguage(western="de", fingerprint=language_fingerprint(document, node))
+    operation = language_inputs({
+        target: language_answer(western="de", fingerprint=language_fingerprint(document, node))
     })
-    original = SetTargetLanguages.apply
+    original = TARGET_LANGUAGE.edit
 
-    def corrupt_style(self: SetTargetLanguages, document: OdfDocument) -> tuple[Outcome, ...]:
-        outcomes = original(self, document)
+    def corrupt_style(document: OdfDocument, decision: Decision) -> EditResult:
+        outcomes = original(document, decision)
         styles = select_elements(document.tree(Part.CONTENT), "//style:style")
         props = styles[-1].find(qn("style", "text-properties"))
         assert props is not None
         props.set(qn("fo", "font-weight"), "normal")
         return outcomes
 
-    monkeypatch.setattr(SetTargetLanguages, "apply", corrupt_style)
     output = tmp_path / "refused.fodt"
-    assert_refused(execute_operations(source, output, [operation]), match="(?i)protected")
+    assert_refused(
+        apply_answers(source, output, [fault_input(operation, corrupt_style)]),
+        match="(?i)protected",
+    )
     assert not output.exists()
 
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_writer_language_source_controls(case: str) -> None:
-    report = audit_odf(TESTS / "text_corpus" / f"language-{case}.odt")
-    assert ("LANG004" in {f.rule_id for f in report.findings}) is (case == "negative")
-    assert "LANG005" not in {f.rule_id for f in report.findings}
+    report = audit_odf(TESTS / "corpus/structure" / f"language-{case}.odt")
+    assert (rules.LANG001.id in {f.rule_id for f in report.findings}) is (case == "negative")
+    assert rules.LANG002.id not in {f.rule_id for f in report.findings}
 
 
 def test_unresolved_inheritance_is_reviewed_without_an_unsafe_question(tmp_path: Path) -> None:
@@ -268,7 +273,7 @@ def test_unresolved_inheritance_is_reviewed_without_an_unsafe_question(tmp_path:
     )
     source = make_flat(tmp_path, "text", Variant(body=BODY, automatic_styles=styles))
     report = audit_odf(source)
-    assert "LANG005" in {f.rule_id for f in report.findings}
+    assert rules.LANG002.id in {f.rule_id for f in report.findings}
     assert not any(question.kind.id == "language.target" for question in report.decisions)
 
 
@@ -287,7 +292,7 @@ def test_nonwestern_declarations_are_not_misreported_as_absent(
         Variant(body=BODY.replace('text:style-name="French"', ""), automatic_styles=styles),
     )
     report = audit_odf(source)
-    assert "LANG004" not in {finding.rule_id for finding in report.findings}
+    assert rules.LANG001.id not in {finding.rule_id for finding in report.findings}
 
 
 def test_unstyled_target_derivation_uses_document_namespace_bindings(tmp_path: Path) -> None:
@@ -296,23 +301,23 @@ def test_unstyled_target_derivation_uses_document_namespace_bindings(tmp_path: P
     )
     document = OdfDocument.open(source)
     target, node = next(iter(language_targets(document).items()))
-    operation = SetTargetLanguages({
-        target: TargetLanguage(western="fr-FR", fingerprint=language_fingerprint(document, node))
+    operation = language_inputs({
+        target: language_answer(western="fr-FR", fingerprint=language_fingerprint(document, node))
     })
     output = tmp_path / "unstyled.fodt"
-    result = execute_operations(source, output, [operation])
+    result = apply_answers(source, output, [operation])
     assert result.published, result.as_dict()
     after = OdfDocument.open(output)
     assert effective_languages(after, next(iter(language_targets(after).values())))[0] == "fr-FR"
-    assert not execute_operations(output, tmp_path / "again.fodt", [operation]).changed
+    assert not apply_answers(output, tmp_path / "again.fodt", [operation]).changed
 
 
 @pytest.mark.parametrize(
     "structural",
-    [LinkifyAddresses(), RemoveEmptySpacers(), MarkTableHeaders({"Data": TableHeaders(rows=1)})],
+    [address_input(), spacer_input(), header_inputs({"Data": header_answer(rows=1)})],
 )
 def test_ordinal_language_targets_cannot_move_during_a_structural_plan(
-    tmp_path: Path, structural: Operation
+    tmp_path: Path, structural: Authored
 ) -> None:
     link = '<text:a xlink:type="simple" xlink:href="https://example.test/">https://example.test/</text:a>'
     body = (
@@ -326,13 +331,13 @@ def test_ordinal_language_targets_cannot_move_during_a_structural_plan(
     document = OdfDocument.open(source)
     target, node = list(language_targets(document).items())[-1]
     output = tmp_path / "refused.fodt"
-    result = execute_operations(
+    result = apply_answers(
         source,
         output,
         [
             structural,
-            SetTargetLanguages({
-                target: TargetLanguage(
+            language_inputs({
+                target: language_answer(
                     western="fr", fingerprint=language_fingerprint(document, node)
                 )
             }),

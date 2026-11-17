@@ -12,15 +12,101 @@
         4
       ]
     },
-    "format": {
-      "enum": [
-        2
-      ]
-    },
     "items": {
       "items": {
         "additionalProperties": false,
         "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "details": {
+                    "type": "string"
+                  },
+                  "exit_status": {
+                    "enum": [
+                      2,
+                      3,
+                      4
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "problems": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "remedy": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "action": {
+                            "enum": [
+                              "regenerate-plan",
+                              "rebind-plan",
+                              "choose-output",
+                              "install-tool",
+                              "edit-in-application",
+                              "embed-resource"
+                            ]
+                          },
+                          "detail": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "target": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "action",
+                          "target",
+                          "detail"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "code",
+                  "message",
+                  "exit_status",
+                  "remedy",
+                  "problems",
+                  "details"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "evidence": {
             "anyOf": [
               {
@@ -51,7 +137,6 @@
             "anyOf": [
               {
                 "enum": [
-                  "identify-source",
                   "audit-source",
                   "remediate",
                   "audit-remediated",
@@ -60,9 +145,7 @@
                   "audit-pdf",
                   "validate-pdf",
                   "fidelity",
-                  "publish-evidence",
-                  "load-plan",
-                  "pipeline"
+                  "publish-evidence"
                 ]
               },
               {
@@ -85,10 +168,11 @@
         },
         "required": [
           "id",
-          "status",
-          "exit_status",
+          "error",
+          "evidence",
           "failed_stage",
-          "evidence"
+          "exit_status",
+          "status"
         ],
         "type": "object"
       },
@@ -100,9 +184,20 @@
       },
       "type": "array"
     },
+    "profile": {
+      "enum": [
+        "source",
+        "pdf",
+        "production"
+      ]
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
     "status": {
       "enum": [
-        "pending",
         "running",
         "completed",
         "failed",
@@ -111,10 +206,11 @@
     }
   },
   "required": [
+    "profile",
     "items",
-    "status",
     "exit_status",
-    "format",
+    "status",
+    "schema_version",
     "pending_ids"
   ],
   "type": "object"

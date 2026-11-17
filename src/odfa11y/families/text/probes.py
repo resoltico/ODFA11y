@@ -1,7 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Writer's declared link, decorative-image and header-column experiments."""
-
-from __future__ import annotations
 
 from functools import partial
 from io import BytesIO
@@ -9,10 +7,11 @@ lazy from pathlib import Path
 
 from PIL import Image
 
-from odfa11y.native.probe_pdf import decorative_role, link_descriptions, writer_header_columns
-from odfa11y.native.probe_sources import write_probe_package
-from odfa11y.native.probes import CapabilityProbe, ProbeId
+from odfa11y.families.probe_pdf import decorative_role, link_descriptions, writer_header_columns
+from odfa11y.families.probe_sources import write_probe_package
+from odfa11y.families.probes import CapabilityProbe, ProbeId
 from odfa11y.odf import Family
+from odfa11y.rules import registry as rules
 
 LINK_PURPOSE = "ODFA11y reviewed link purpose."
 
@@ -111,7 +110,7 @@ PROBES = (
         write_link_probe,
         "writer_pdf_Export",
         partial(link_descriptions, expected=LINK_PURPOSE),
-        frozenset({"link.description", "text.linkify_addresses"}),
+        (rules.LINK003,),
         "Writer retains the authored link purpose in tagged link metadata.",
     ),
     CapabilityProbe(
@@ -120,7 +119,7 @@ PROBES = (
         write_decorative_probe,
         "writer_pdf_Export",
         decorative_role,
-        frozenset({"graphic.alternative"}),
+        (rules.GRAPHIC001, rules.GRAPHIC003),
         (
             "Writer paints the decorative peer as an artifact and the meaningful "
             "peer as a described Figure."
@@ -132,7 +131,7 @@ PROBES = (
         write_header_column_probe,
         "writer_pdf_Export",
         writer_header_columns,
-        frozenset({"table.headers"}),
+        (rules.TABLE003,),
         "Writer exports both semantic column-header cells as TH.",
     ),
 )

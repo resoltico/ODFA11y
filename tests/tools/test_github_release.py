@@ -1,18 +1,13 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Failed state queries and identity mismatches must never authorize releases."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
 from tools import github_release as releases
 from tools.github_release import ReleaseExpectation, require_absent, verify_release
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 TARGET = "a" * 40
 EXPECTED = ReleaseExpectation(TARGET, {"wheel.whl": b"tested"}, "Exact notes\n")

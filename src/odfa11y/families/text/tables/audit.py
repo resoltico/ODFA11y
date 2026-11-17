@@ -1,62 +1,91 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Report table intent and header relationships from source declarations."""
 
-from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
-from typing import TYPE_CHECKING
-
-from odfa11y.content import table_fingerprint
+from odfa11y.concepts.review import ReviewTopic as Topic
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import RemediationError
-from odfa11y.families.text.contexts import context_location, text_nodes
-from odfa11y.families.text.decisions import TABLE_HEADERS
-from odfa11y.odf import Part, qn
-from odfa11y.report import FactKeys, rules
-
-from .classification import TableKind, classify
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.errors import DocumentRefusal
+from odfa11y.families.text.domains import TABLES
+from odfa11y.families.text.kinds import TABLE_HEADERS
+from odfa11y.families.text.tables.classification import TableKind, classify
+from odfa11y.odf import names as xml_names
+from odfa11y.rules import registry as rules
+from odfa11y.targets import Location, TargetPath
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 NATIVE_GUIDANCE = (
     "Review table intent and header relationships in Writer; no layout/data conversion is inferred."
 )
 
 
+@dataclass(frozen=True, slots=True)
+class MeasuredTable:
+    target: TargetPath
+    classification: TableKind
+    rows: int
+    columns: int
+    header_rows: int
+    header_columns: int
+    state: Literal["measured"] = field(default="measured", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class UnresolvedTable:
+    target: TargetPath
+    reason: str
+    state: Literal["unresolved"] = field(default="unresolved", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class TableMeasurements:
+    """Measurements produced by text-tables analysis; None denotes unmeasured data."""
+
+    producer: Literal["text-tables"] = field(default="text-tables", init=False)
+    table_count: Annotated[int | None, Description("Tables in current reading contexts.")] = None
+    table_classifications: Annotated[
+        list[MeasuredTable | UnresolvedTable] | None,
+        Description("Per-table source-supported intent, grid and semantic header bands."),
+    ] = None
+
+
 def audit_tables(document: OdfDocument, report: Report) -> None:
     """Audit actual grid and band relationships, preserving ambiguous table intent."""
-    tables = text_nodes(document.tree(Part.CONTENT), qn("table", "table"))
-    report.facts[FactKeys.TEXT_TABLE_COUNT] = len(tables)
-    rows: list[dict[str, object]] = []
-    for index, table in enumerate(tables, 1):
-        name = table.get(qn("table", "name"))
-        location = context_location(table, "table", index, name)
+    entries = tuple(TABLES.enumerate(document))
+    tables = [node for _, node in entries]
+    if tables:
+        report.observe_review(Topic.TABLE_HEADERS)
+    report.measure(TableMeasurements(table_count=len(tables)))
+    rows: list[MeasuredTable | UnresolvedTable] = []
+    for path, table in entries:
+        name = table.get(xml_names.TABLE_NAME)
+        location = Location(path)
         try:
             classification = classify(table)
-        except RemediationError as error:
-            report.add(
+        except DocumentRefusal as error:
+            report.raise_(
                 rules.TABLE002,
                 str(error),
                 location=location,
                 details={"native_editing": NATIVE_GUIDANCE},
             )
-            rows.append({
-                "target": location.path,
-                "classification": "unresolved",
-                "reason": str(error),
-            })
+            rows.append(UnresolvedTable(location.path, str(error)))
             continue
-        rows.append({
-            "target": location.path,
-            "classification": classification.kind.value,
-            "rows": classification.grid.rows,
-            "columns": classification.grid.columns,
-            "header_rows": classification.header_rows,
-            "header_columns": classification.header_columns,
-        })
+        rows.append(
+            MeasuredTable(
+                location.path,
+                classification.kind,
+                classification.grid.rows,
+                classification.grid.columns,
+                classification.header_rows,
+                classification.header_columns,
+            )
+        )
         if classification.kind in {TableKind.LAYOUT_CANDIDATE, TableKind.AMBIGUOUS}:
-            report.add(
+            report.raise_(
                 rules.TABLE001,
                 classification.reason,
                 location=location,
@@ -66,18 +95,14 @@ def audit_tables(document: OdfDocument, report: Report) -> None:
                 },
             )
         elif not (classification.header_rows or classification.header_columns):
-            report.add(
+            report.raise_(
                 rules.TABLE003,
                 location=location,
                 details={"table": name, "rows": classification.grid.rows},
-            )
-            report.add_decision(
-                OpenDecision(
+                decision=OpenDecision(
                     TABLE_HEADERS,
-                    location,
-                    table_fingerprint(table, document),
+                    TABLES.binding(document, path),
                     {"rows": 0, "columns": 0},
-                    (rules.TABLE003.id,),
-                )
+                ),
             )
-    report.facts[FactKeys.TEXT_TABLE_CLASSIFICATIONS] = rows
+    report.measure(TableMeasurements(table_classifications=rows))

@@ -1,23 +1,21 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Unestablished paragraph overlay precedence never authorizes spacing edits."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.families.text import NormalizeSpacing, RemoveEmptySpacers, derived_style_name
+from odfa11y.audit import audit_odf
+from odfa11y.families.text import derived_style_name
+from odfa11y.families.text.audit import TextStyleMeasurements
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import spacer_input, spacing_input
 from tests.fixtures.documents import Variant, make_flat, make_package
-from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.operations import apply_answers, assert_refused
 
 STYLES = (
     '<style:style style:name="Base" style:family="paragraph">'
@@ -52,18 +50,18 @@ def test_overlay_on_reference_or_target_refuses_before_mutation(
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"retain destination")
     report = audit_odf(source)
-    assert "STYLE001" in {finding.rule_id for finding in report.findings}
-    rows = report.facts[FactKeys.TEXT_PARAGRAPH_STYLES]
+    assert rules.STYLE001.id in {finding.rule_id for finding in report.findings}
+    rows = measured(measurement(report, TextStyleMeasurements).paragraph_styles)
     total = 0
     for row in rows:
         count = row["count"]
         assert isinstance(count, int)
         total += count
     assert total == 1
-    problem = next(f for f in report.findings if f.rule_id == "STYLE001")
+    problem = next(f for f in report.findings if f.rule_id == rules.STYLE001.id)
     assert "class overlays" in str(problem.details)
     assert_refused(
-        execute_operations(source, destination, [NormalizeSpacing("Reference", ("Base",))]),
+        apply_answers(source, destination, [spacing_input("Reference", ("Base",))]),
         match="class overlays",
     )
     assert source.read_bytes() == original
@@ -84,7 +82,7 @@ def test_break_overlay_is_retained_while_inert_spacer_is_removed(
     before = OdfDocument.open(source).tree(Part.CONTENT)
     original = etree.tostring(select_elements(before, "//text:p[@text:class-names]")[0])
     destination = tmp_path / ("result" + source.suffix)
-    assert execute_operations(source, destination, [RemoveEmptySpacers()]).changed
+    assert apply_answers(source, destination, [spacer_input()]).changed
     after = OdfDocument.open(destination).tree(Part.CONTENT)
     retained = select_elements(after, "//text:p[@text:class-names]")[0]
     assert etree.tostring(retained) == original
@@ -113,9 +111,7 @@ def test_unselected_overlay_consumer_prevents_creating_or_updating_spacing_style
     source = author(tmp_path, "text", Variant(body=body, automatic_styles=styles))
     if existing:
         first = tmp_path / ("first" + source.suffix)
-        assert execute_operations(
-            source, first, [NormalizeSpacing("First reference", ("Base",))]
-        ).changed
+        assert apply_answers(source, first, [spacing_input("First reference", ("Base",))]).changed
         source = first
     document = OdfDocument.open(source)
     root = select_elements(document.tree(Part.CONTENT), "//office:text")[0]
@@ -129,7 +125,7 @@ def test_unselected_overlay_consumer_prevents_creating_or_updating_spacing_style
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"Keep destination")
     assert_refused(
-        execute_operations(source, destination, [NormalizeSpacing("Second reference", ("Base",))]),
+        apply_answers(source, destination, [spacing_input("Second reference", ("Base",))]),
         match="unselected or unestablished consumers",
     )
     assert source.read_bytes() == original
@@ -154,21 +150,21 @@ def test_ordinary_heading_consumer_requires_explicit_heading_selection(
     )
     source = author(tmp_path, "text", Variant(body=body, automatic_styles=styles))
     first = tmp_path / ("first" + source.suffix)
-    assert execute_operations(
-        source, first, [NormalizeSpacing("First reference", ("Base",), include_headings=True)]
+    assert apply_answers(
+        source, first, [spacing_input("First reference", ("Base",), include_headings=True)]
     ).changed
     assert validate(OdfDocument.open(first)).count == 0
     original = first.read_bytes()
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"Keep destination")
     assert_refused(
-        execute_operations(first, destination, [NormalizeSpacing("Second reference", ("Base",))]),
+        apply_answers(first, destination, [spacing_input("Second reference", ("Base",))]),
         match="unselected or unestablished consumers",
     )
     assert first.read_bytes() == original
     assert destination.read_bytes() == b"Keep destination"
-    operation = NormalizeSpacing("Second reference", ("Base",), include_headings=True)
-    assert execute_operations(first, destination, [operation]).changed
+    operation = spacing_input("Second reference", ("Base",), include_headings=True)
+    assert apply_answers(first, destination, [operation]).changed
     document = OdfDocument.open(destination)
     style = select_elements(
         document.tree(Part.CONTENT),
@@ -177,6 +173,4 @@ def test_ordinary_heading_consumer_requires_explicit_heading_selection(
     properties = style.find(qn("style", "paragraph-properties"))
     assert properties is not None
     assert properties.get(qn("fo", "margin-top")) == "2cm"
-    assert not execute_operations(
-        destination, tmp_path / ("again" + source.suffix), [operation]
-    ).changed
+    assert not apply_answers(destination, tmp_path / ("again" + source.suffix), [operation]).changed

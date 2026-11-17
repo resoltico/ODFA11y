@@ -1,52 +1,60 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Decision parsing, templates and schemas share one strict registered answer contract."""
 
-from __future__ import annotations
-
 import tomllib
-from dataclasses import dataclass, field
-from typing import ClassVar, cast
+from dataclasses import dataclass
+from typing import Annotated, ClassVar
 lazy from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 
+from odfa11y.contracts import (
+    Description,
+    NonBlank,
+    Range,
+    RequireAny,
+)
 from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
+from odfa11y.decisions.edit import EditResult
 from odfa11y.errors import PlanError
-from odfa11y.odf import Family
+from odfa11y.families.text.domains import HEADINGS
 from odfa11y.plans import Plan, parse_tables, plan_schema, render_plan
+from odfa11y.plans.fidelity import SamePagination
 from odfa11y.report import Location
+from odfa11y.targets import Fingerprint, Target, TargetPath
 
 
 @dataclass(frozen=True)
 class Level:
     """A constrained answer independent of the codec implementation."""
 
-    level: int = field(
-        metadata={"schema": {"minimum": 1, "maximum": 10, "description": "Intended heading level."}}
-    )
+    level: Annotated[int, Range(minimum=1, maximum=10), Description("Intended heading level.")]
 
 
 @dataclass(frozen=True)
 class Metadata:
     """Optional answer fields still require a real answer."""
 
-    title: str | None = field(default=None, metadata={"schema": {"pattern": r"\S"}})
+    title: Annotated[str | None, NonBlank()] = None
     description: str | None = None
-    required_any: ClassVar[tuple[str, ...]] = ("title", "description")
+    __contract__: ClassVar[Annotated[object, RequireAny(("title", "description"))]]
+
+
+def _not_executed(document: object, decision: object) -> EditResult:
+    message = "Codec fixture kinds must not execute"
+    raise AssertionError(message)
 
 
 HEADING = DecisionKind(
-    "heading.level", DecisionScope.TARGET, Level, frozenset({Family.TEXT}), "set_heading_levels"
+    "heading.level", DecisionScope.TARGET, Level, edit=_not_executed, domain=HEADINGS
 )
-METADATA = DecisionKind(
-    "document.metadata", DecisionScope.DOCUMENT, Metadata, frozenset(Family), "set_metadata"
-)
+METADATA = DecisionKind("document.metadata", DecisionScope.DOCUMENT, Metadata, edit=_not_executed)
 KINDS = {kind.id: kind for kind in [HEADING, METADATA]}
 
 
 def header() -> dict[str, object]:
-    return {"format": 1, "generator": "0.8.0", "source": {"sha256": "a" * 64}}
+    return {"schema_version": 1, "generator": "0.8.0", "source": {"sha256": "a" * 64}}
 
 
 @pytest.mark.parametrize("value", [True, 0, 11, "2", 2.0, None])
@@ -62,7 +70,7 @@ def test_unknown_and_missing_answer_fields_are_rejected() -> None:
         decode_answer(Level, {}, "heading.level")
     with pytest.raises(PlanError, match="at least one"):
         decode_answer(Metadata, {}, "document.metadata")
-    with pytest.raises(PlanError, match="syntax"):
+    with pytest.raises(PlanError, match="non-blank"):
         decode_answer(Metadata, {"title": "  "}, "document.metadata")
 
 
@@ -78,22 +86,30 @@ def test_unknown_and_missing_answer_fields_are_rejected() -> None:
 )
 def test_old_or_noncanonical_targets_are_rejected(target: str) -> None:
     with pytest.raises(PlanError, match=r"target|encoded"):
-        Decision(HEADING, Location(target), "b" * 16, Level(2))
+        Decision(
+            HEADING, Target(TargetPath((Location(target)).path), Fingerprint("b" * 16)), Level(2)
+        )
 
 
 def test_targeted_answers_require_fingerprints_and_document_answers_refuse_targets() -> None:
     with pytest.raises(PlanError, match="fingerprint"):
-        Decision(HEADING, Location("content/heading[1]"), None, Level(2))
+        Decision(HEADING, None, Level(2))
     with pytest.raises(PlanError, match="document-scoped"):
-        Decision(METADATA, Location("content/heading[1]"), None, Metadata(title="Title"))
+        Decision(
+            METADATA,
+            Target(TargetPath("content/heading[1]"), Fingerprint("b" * 16)),
+            Metadata(title="Title"),
+        )
 
 
 def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     plan = parse_tables({"plan": header()}, KINDS)
     open_decision = OpenDecision(
-        HEADING, Location("content/heading[1]"), "b" * 16, {"level": 3}, ("HEADING002",)
+        HEADING,
+        Target(TargetPath((Location("content/heading[1]")).path), Fingerprint("b" * 16)),
+        {"level": 3},
     )
-    template = render_plan(plan.header, [open_decision])
+    template = render_plan(plan.header, (), optional=[open_decision])
     assert not parse_tables(tomllib.loads(template), KINDS).decisions
     answered = (
         template
@@ -103,8 +119,10 @@ def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     )
     values = tomllib.loads(answered)
     result = parse_tables(values, KINDS)
-    assert result.decisions[0].answer_as(Level).level == 2
-    assert result.decisions[0].target == Location("content/heading[1]")
+    assert result.decisions[0].answer.level == 2
+    assert result.decisions[0].target == Target(
+        TargetPath("content/heading[1]"), Fingerprint("b" * 16)
+    )
     Draft202012Validator(plan_schema(KINDS)).validate(result.as_dict())
     values["decisions"]["heading.level"]["content/heading[1]"]["level"] = True
     with pytest.raises(ValidationError):
@@ -116,7 +134,7 @@ def test_template_parse_answer_roundtrip_and_schema_agree() -> None:
     [
         {},
         {"document": {"title": "Old"}},
-        {"plan": {"format": 1}},
+        {"plan": {"schema_version": 1}},
         {"plan": header(), "decisions": {"missing.kind": {}}},
     ],
 )
@@ -125,7 +143,7 @@ def test_header_and_kind_registry_are_mandatory(values: dict[str, object]) -> No
         parse_tables(values, KINDS)
 
 
-def test_source_binding_refuses_another_source_without_explicit_rebind(tmp_path: Path) -> None:
+def test_source_binding_refuses_another_source_and_requests_a_new_plan(tmp_path: Path) -> None:
     source, other = tmp_path / "source", tmp_path / "other"
     source.write_bytes(b"reviewed bytes")
     other.write_bytes(b"other bytes")
@@ -133,7 +151,6 @@ def test_source_binding_refuses_another_source_without_explicit_rebind(tmp_path:
     plan.verify_source(source)
     with pytest.raises(PlanError, match="digest mismatch"):
         plan.verify_source(other)
-    plan.verify_source(other, rebind=True)
 
 
 @pytest.mark.parametrize("digest", ["a" * 63, "a" * 65, "A" * 64, "a" * 64 + "\n"])
@@ -146,23 +163,17 @@ def test_source_hash_is_exact_and_cannot_hide_a_trailing_newline(digest: str) ->
         Draft202012Validator(plan_schema(KINDS)).validate({"plan": binding})
 
 
-@pytest.mark.parametrize("value", [True, float("nan"), float("inf"), -1.0, 10**1000])
+@pytest.mark.parametrize("value", [True, float("nan"), float("inf"), -1.0])
 def test_policy_uses_the_same_strict_numeric_contract(value: object) -> None:
-    with pytest.raises(PlanError, match="finite non-negative"):
+    with pytest.raises(PlanError, match="raster_tolerance"):
         parse_tables({"plan": header(), "fidelity": {"raster_tolerance": value}}, KINDS)
 
 
-def test_policy_numeric_equivalence_has_a_canonical_representation() -> None:
+def test_policy_numeric_input_types_are_preserved_without_coercion() -> None:
     integer = parse_tables({"plan": header(), "fidelity": {"raster_tolerance": 1}}, KINDS)
     floating = parse_tables({"plan": header(), "fidelity": {"raster_tolerance": 1.0}}, KINDS)
     assert integer.as_dict() == floating.as_dict()
-    assert type(integer.fidelity.raster_tolerance) is float
-
-
-@pytest.mark.parametrize("value", [1, "true", "false"])
-def test_truthy_nonboolean_values_cannot_authorize_rebinding(tmp_path: Path, value: object) -> None:
-    source = tmp_path / "source"
-    source.write_bytes(b"reviewed")
-    plan = Plan.for_source(source)
-    with pytest.raises(PlanError, match="explicit boolean"):
-        plan.verify_source(source, rebind=cast("bool", value))
+    assert isinstance(integer.fidelity, SamePagination)
+    assert isinstance(floating.fidelity, SamePagination)
+    assert type(integer.fidelity.raster_tolerance) is int
+    assert type(floating.fidelity.raster_tolerance) is float

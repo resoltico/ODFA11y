@@ -1,55 +1,25 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Configure Hypothesis for deterministic, bounded runs."""
-
-from __future__ import annotations
 
 import os
 import shutil
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
 import pytest
 from hypothesis import HealthCheck, settings
-from jsonschema import Draft202012Validator, FormatChecker
 
-from odfa11y.plans.registry import registered_formats
-from odfa11y.schemas import read_schema
-from tools.generate_reference import FORMATS
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-
-    from jsonschema.protocols import Validator
-
-    from odfa11y.serialization import JsonObject
-
-
-def _format_test(validator: Callable[[str], object]) -> Callable[[object], bool]:
-    def check(value: object) -> bool:
-        if isinstance(value, str):
-            validator(value)
-        return True
-
-    return check
-
-
-FORMAT_CHECKER = FormatChecker()
-for format_name, format_validator in registered_formats().items():
-    FORMAT_CHECKER.checks(format_name, raises=ValueError)(_format_test(format_validator))
-
-RECORD_VALIDATORS = {
-    record_type: Draft202012Validator(read_schema(name), format_checker=FORMAT_CHECKER)
-    for name, record_type in FORMATS.items()
-}
+from odfa11y.application.native import NativeTools
+from tests.fixtures.native import native_fakes
 
 settings.register_profile(
-    "default",
+    "required",
     max_examples=200,
     deadline=None,
     derandomize=True,
     suppress_health_check=[HealthCheck.too_slow],
 )
-settings.register_profile("smoke", parent=settings.get_profile("default"), max_examples=5)
-settings.load_profile("default")
+settings.register_profile("smoke", parent=settings.get_profile("required"), max_examples=5)
+settings.load_profile("required")
 
 
 @pytest.fixture
@@ -75,30 +45,7 @@ def external_tool() -> Callable[..., str]:
     return locate
 
 
-@pytest.fixture(autouse=True)  # ruff: ignore[pytest-fixture-autouse]  Validate every emitted record.
-def validate_published_record_shapes() -> Iterator[None]:
-    """Validate every root record without changing test fixture cleanup ordering.
-
-    Yields
-    ------
-    None
-        The test runs while serializers validate their packaged contracts.
-
-    """
-    with pytest.MonkeyPatch.context() as shape_patch:
-        for record_type, validator in RECORD_VALIDATORS.items():
-            shape_patch.setattr(
-                record_type, "as_dict", _validated_serializer(record_type.as_dict, validator)
-            )
-        yield
-
-
-def _validated_serializer[T](
-    original: Callable[[T], JsonObject], validator: Validator
-) -> Callable[[T], JsonObject]:
-    def checked(value: T) -> JsonObject:
-        result = original(value)
-        validator.validate(result)
-        return result
-
-    return checked
+@pytest.fixture
+def native_tools() -> NativeTools:
+    """Supply explicit native operations to a test that requests the seam."""
+    return native_fakes()

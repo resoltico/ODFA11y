@@ -1,19 +1,16 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Native formula identity, language and mathematical-expression preservation."""
 
-from __future__ import annotations
+lazy from lxml import etree
 
-from typing import TYPE_CHECKING
+from odfa11y.concepts import protected_xml
+from odfa11y.odf import Part
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.allowance import Allowance, Attributes, XmlChange
+from odfa11y.targets import Fingerprint
+lazy from odfa11y.odf import OdfDocument
 
-from odfa11y.content import protected_xml
-from odfa11y.odf import Part, qn
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-
-XML_LANGUAGE = "{http://www.w3.org/XML/1998/namespace}lang"
+XML_LANGUAGE = xml_names.XML_LANG
 EDITABLE = ("alttext", XML_LANGUAGE)
 
 
@@ -27,10 +24,10 @@ def expression(document: OdfDocument) -> etree._Element | None:
 
     """
     root = document.tree(Part.CONTENT).getroot()
-    return root if root.tag == qn("math", "math") else None
+    return root if root.tag == xml_names.MATH_MATH else None
 
 
-def fingerprint(root: etree._Element) -> str:
+def fingerprint(root: etree._Element) -> Fingerprint:
     """Bind an alternative to the expression, annotations and presentation attributes.
 
     Returns
@@ -39,19 +36,7 @@ def fingerprint(root: etree._Element) -> str:
         A reviewed digest excluding only spoken alternative and root language.
 
     """
-    return protected_xml(root, omitted_root_attributes=EDITABLE)[:16]
-
-
-def snapshot(document: OdfDocument) -> tuple[str, ...]:
-    """Protect mathematical structure, annotations, references and every other attribute.
-
-    Returns
-    -------
-    tuple[str, ...]
-        The complete protected expression digest.
-
-    """
-    return (protected_xml(document.tree(Part.CONTENT).getroot(), omitted_root_attributes=EDITABLE),)
+    return Fingerprint.from_digest(protected_xml(root, omitted_root_attributes=EDITABLE))
 
 
 def language(document: OdfDocument) -> str | None:
@@ -67,7 +52,7 @@ def language(document: OdfDocument) -> str | None:
     return root.get(XML_LANGUAGE) if root is not None else None
 
 
-def set_language(document: OdfDocument, tag: str) -> bool:
+def set_language(document: OdfDocument, tag: str) -> XmlChange:
     """Set the formula language without changing the mathematical expression.
 
     Returns
@@ -78,6 +63,6 @@ def set_language(document: OdfDocument, tag: str) -> bool:
     """
     root = expression(document)
     if root is None or root.get(XML_LANGUAGE) == tag:
-        return False
+        return XmlChange(False)
     root.set(XML_LANGUAGE, tag)
-    return True
+    return XmlChange(True, Allowance((Attributes(Part.CONTENT, root, frozenset({XML_LANGUAGE})),)))

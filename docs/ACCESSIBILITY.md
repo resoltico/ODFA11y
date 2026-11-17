@@ -11,14 +11,14 @@ are separate conclusions. A clean automated report is not an accessibility certi
 | Text | Headings, lists, references/notes, language, tables, graphics, links, visibility and spacing. | Writer; actual PDF and human gates still apply. |
 | Spreadsheet | Sheet names, alternatives/roles, supplied link descriptions; data/header/merge/hidden checks. | Calc; header/validator limitations can block production. |
 | Presentation / Drawing | Shared page metadata, graphic decisions and complete navigation order. | Impress/Draw; hidden layers, notes and actual navigation require review. |
-| Formula | Supplied spoken alternative and language on packaged native MathML. | Tested Math export lacks required tagging. |
+| Formula | Supplied spoken alternative and language on packaged native MathML. | Inspect exported math tagging; source alternatives do not establish it. |
 | Chart | Metadata, series/labels and local cached-data/range consistency. | Source assurance only. |
 | Image | Frame/payload integrity and supplied alternatives/roles. | Source assurance only; ODF deprecates image media types. |
 | Database | Offline connection/privacy and supplied declared-object descriptions. | Source assurance only; no SQL, connection or macro execution. |
 
 Kinds follow declared media types, independently of filename extension. Valid family
 representations remain required; an office-body Formula wrapper is not supported.
-Source-only profiles can record PDF stages as not-applicable; production fails missing
+Source-only profiles skip stages above their level; unsupported family exports are not-applicable. Production refuses missing
 required PDF assurance. Opaque embedded internals are not certified by source success.
 
 ## Writer text structure
@@ -35,9 +35,8 @@ relationships require native editing; no retargeting is inferred.
 Effective language resolves paragraph and nested inline styles through named, automatic
 and direct formatting, separately for western/Asian/complex channels. Target decisions
 create isolated verifiable styles and retain wording/unrelated overrides. No registry
-lookup, alias rewriting or language guessing occurs. Native reload can normalize tags:
-26.8.1.1 retained tested `sr-Latn-RS`, `es-419`, `de-1996`, `en-u-ca-buddhist` and private use,
-but normalized tested Chinese/grandfathered forms. Inspect actual PDF language separately.
+lookup, alias rewriting or language guessing occurs. Native reload can normalize language tags. Inspect actual PDF language separately; source
+preservation does not establish exact language-tag retention by the exporter.
 
 Target-language ordinals require a separate reviewed plan from linkification, spacer
 removal or table-header edits. Identical objects can otherwise occupy shifted ordinals.
@@ -52,26 +51,24 @@ replace blanket merge warnings. Valid complex/grouped headers are retained. Comp
 inspection is bounded to 100,000 cells; simple repeats remain arithmetic. The leading-band
 API cannot rewrite unsupported group-level choices.
 
-Row/column header markup is separate from PDF roles. Tested Writer header-column edits
-retain valid source but export no `TH`: built-in `PDF015` blocks strict production although
-veraPDF accepts that PDF. Valid merged row headers pass the measured validator case;
-that alone does not establish correct human header associations.
+Row/column header markup is separate from PDF roles. Source header edits do not establish
+exported `TH` roles: built-in `PDF016` can block production independently of veraPDF.
+Validator compliance alone does not establish correct human header associations.
 
 ## Spreadsheet PDF exports
 
-Calc's measured data export lacks `TH` (`PDF015`) and has inconsistent column counts
-(veraPDF 7.2-43). Production retains these failures. A sheet rename can also change its
-printed header and fail text fidelity (`FID003`); review/edit that header in Calc first.
+Inspect Calc output for header roles (`PDF016`) and validator table relationships;
+production retains actual failures. A sheet rename can also change its
+printed header and fail text fidelity (`FIDELITY003`); review/edit that header in Calc first.
 Source changes never rewrite cell values/formulas, headers, merges or hidden state.
 
 ## Link descriptions
 
 Readable labels, graphic alternatives or `office:title` can establish source purpose.
-Supplied descriptions preserve visible text and target names. The measured Writer
-`office:title` probe remains unsupported on 26.8.1.1; source success does not clear `PDF019`.
-Its internal-bookmark fixture has a real destination/readable label but exported annotation
-Contents/Alt is absent (`PDF019`, veraPDF 7.18.1-2/7.18.5-2). Conversely the broken-target
-control triggers built-in `PDF017` while veraPDF accepts it. Never rely on one layer alone.
+Supplied descriptions preserve visible text and target names. Source `office:title` does
+not establish PDF annotation Contents/Alt: inspect `PDF020` and veraPDF
+7.18.1-2/7.18.5-2. Built-in internal-target checks (`PDF018`) remain independent of validator
+acceptance. Never rely on one layer alone.
 
 ## Graphic roles
 
@@ -79,35 +76,38 @@ Roles resolve legal defaults/common/automatic inheritance and ordered class over
 Explicit ODF 1.4 `draw:decorative` changes derive isolated styles; ambiguous contexts refuse.
 A role never hides invalid payloads, external resources, scripts or navigation failures.
 Groups retain child checks; authored alternatives on decorative objects still need review.
-The measured standard decorative property exports an undescribed Figure on 26.8.1.1,
-retaining `PDF007`/veraPDF failures. An all-decorative image cannot establish meaningful content.
+Inspect whether the exporter actually retains the nonsemantic role; undescribed Figure
+output retains `PDF008`/veraPDF failures. An all-decorative image cannot establish meaningful content.
 
-[Generated capabilities](CAPABILITIES.md) link exact tool identities/probe observations;
-[text fixture measurements](measurements/text-exports.json) retain narrower results.
-Neither implies support for every document or runtime combination.
+The [probe catalogue](CAPABILITIES.md) describes the experiments run by doctor. Actual
+results include tool identities and apply only to their authored inputs/environment.
+They never imply support for every document or runtime combination.
 
 ## ODF schema validation
 
 Unmodified OASIS 1.3/1.4 and W3C MathML 3 grammars ship with notices/provenance. Offline
 `audit --schema` validates recognized parts against the declared version, not arbitrary
 members. Unsupported versions report `SCHEMA002`; producer violations are `SCHEMA001` warnings.
-Remediation compares message/element fingerprints as a multiset, including attributes,
-parent and neighboring tags. A fix cannot hide an equal newly located violation.
-Unlocated violations compare by count. libxml2 can expose only one error inside an already
+Within one live document, remediation compares diagnostic messages and stable reported
+node/context identities as a multiset. Unrelated metadata does not create a new defect;
+an equal diagnostic on another node remains new. Independent document snapshots retain
+structural fingerprints; unlocated diagnostics compare by count. libxml2 can expose only one error inside an already
 failing model: a passing differential gate means no introduced violation was detected,
 not complete conformance. `document.odf_version` relabels; it does not convert markup.
 
 ## Preservation boundaries
 
-Only permitted effects normalize for protection checks. Wording/order, logical grids,
+One allowance-based proof masks only explicitly permitted edit effects. Its characterization
+matrix covers every applicable corpus/kind pair; protected content and schema/opaque guards
+remain independent. Only permitted effects normalize for protection checks. Wording/order, logical grids,
 references, fields, anchors, geometry, comments/processing instructions, foreign XML,
 payloads and unrelated styles remain protected. Other families also protect their data,
 formulas, navigation, MathML, chart ranges and database bindings. Unchanged members retain
 bytes. These checks complement [render fidelity](FIDELITY.md).
 
-Declared signatures are unverified (`PKG008`); all guarded remediation refuses, including
-no-op/dry runs. Original export makes no signature claim. Encryption (`PKG009`), duplicate
-ZIP names (`PKG006`), unsafe paths (`PKG007`) or malformed manifests block complete access.
+Declared signatures are unverified (`PKG011`); all guarded remediation refuses, including
+no-op/dry runs. Native export makes no signature claim. Encryption (`PKG012`), duplicate
+ZIP names (`PKG009`), unsafe paths (`PKG010`) or malformed manifests block complete access.
 Planning/remediation/native work do not select a protected body through those failures.
 
 Tracked changes permit title/description metadata only; language/version/structural edits
@@ -118,20 +118,22 @@ revision history and hidden/conditional branches stay excluded. Main outline/spa
 edits have narrower main-flow scope. Spacer removal also excludes lists/tables/fields,
 identities/RDF, breaks/page semantics, unknown attributes and non-inert inline content.
 
-Writer 26.8.1.1 painted tracked deleted words in the measured current view while excluding
-its hidden section. Inspection neither accepts revisions nor predicts that deleted text
-will be absent. Columns, floating frames, sections and notes retain reading-order review;
+Inspection neither accepts revisions nor predicts that tracked deleted text will be absent
+from native output. Review the native revision/visibility state. Columns, floating frames, sections and notes retain reading-order review;
 declared layout alone does not prove native use/order.
 
 ## Native document context and declared dependencies
 
-Guarded export/comparison/pipeline classify known declarations without fetching resources.
+Guarded export, comparison and runs classify known declarations without fetching resources.
 `NATIVE001` identifies external, unresolved, incorrectly addressed or unestablished loading/
 execution context. Inline/exact package files or subdocuments can pass, but presence does
-not prove decoding/loading. Captured filename/path fields (`NATIVE002`) refuse; original
-export/comparison can retain identity. See [source capture](EVIDENCE.md#source-capture).
+not prove decoding/loading. Private captures cannot preserve filename/path fields (`NATIVE002`)
+or relative hyperlink destinations (`NATIVE003`), so native operations refuse them without
+rewriting authored content. Make hyperlink destinations absolute; XML base alone does not
+establish LibreOffice preservation. Source-only audit and remediation remain available.
+See [source capture](EVIDENCE.md#source-capture).
 
-The [native policy](../src/odfa11y/native/export_context.py) covers content/styles/meta,
+The [native policy](../src/odfa11y/odf/export_context.py) covers content/styles/meta,
 reachable embedded ODF, reloads, fill/bullet images, chart symbols, SVG definitions/fonts,
 form images and rendering XML bases. Files require exact non-directory members; object
 folders require content.xml, while OLE needs a file/inline data. Chart self-data `.` is
@@ -141,7 +143,7 @@ Navigation/template provenance differs from loaded image data. Presentation show
 are navigation; execution/applets/scripts and nonempty form/table/text database, service
 or DDE bindings remain unestablished despite cached values. Empty named bindings identify
 no concrete dependency. Opaque internals/dynamic importer behavior remain outside inspection.
-Raw `native.export.export_pdfua` callers own guard policy/isolation.
+Raw `native.libreoffice.export_pdfua` callers own guard policy/isolation.
 
 ## Formula declarations
 
@@ -154,17 +156,17 @@ and dynamic `INDIRECT` refuse. External references/DDE remain limitations even i
 branches. HYPERLINK is navigation but arguments are inspected; string contents are inert.
 
 `CELL("FILENAME")`/`INFO("directory")` refuse captured export; other supported literal
-queries classify normally. [Bundled function/query provenance](../src/odfa11y/native/formula_data/functions.toml)
+queries classify normally. [Bundled function/query provenance](../src/odfa11y/odf/formula_data/functions.toml)
 is offline. Expressions permit 32,768 characters, 4,096 tokens and depth 64; iterative
 named work permits 4,096 expansions/depth 64, 100,000 declarations/tree and 64 embedded
 directories within package budgets. Exhaustion is explicit incomplete-context refusal.
 
 ## Native execution limits
 
-Selected work timeouts default to 120 seconds per invocation; direct `validate_pdfua`
-defaults to 180 and identity probes have a separate 20-second bound. CLI accepts whole
-seconds; library calls accept fractional finite positive numbers, excluding booleans.
-The portable maximum is `(2**32 - 2) / 1000` seconds. Invalid values fail before launch/output.
+Export, validation and identification share the selected per-call duration, validated by
+[`Timeout`](../src/odfa11y/tool_timeout.py). The [generated CLI reference](CLI.md) describes
+`--timeout`; CLI and library durations support finite positive fractional seconds and
+exclude booleans. Defaults and portable bounds have one owner in `Timeout`.
 Timeouts are not workflow deadlines; cleanup adds grace and cannot recover escaped descendants.
 See [batch interruption](BATCH.md).
 
@@ -178,7 +180,7 @@ Inspected painted graphics are not proof of pixel visibility or correct artifact
 
 Unsupported filtered inline-image/color-space boundaries, whole-Form StructParent ownership,
 malformed decoding, cycles and exhausted budgets cause explicit incomplete inspection or
-`PDF000`/comparison failure. Decoded content and repeated work each have 64 MiB budgets;
+`PDF001`/comparison failure. Decoded content and repeated work each have 64 MiB budgets;
 arrays permit 10,000 streams, with 5,000 Form invocations/depth 50. Decoder/final-byte checks
 do not bound peak memory or raster allocations.
 

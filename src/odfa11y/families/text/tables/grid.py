@@ -1,21 +1,18 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Check declared grid occupancy independently of semantic table intent."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-from odfa11y.content import axis_count, declarations, repeated
-from odfa11y.errors import RemediationError
-from odfa11y.odf import qn, select_elements
+lazy from lxml import etree
 
-if TYPE_CHECKING:
-    from lxml import etree
+from odfa11y.concepts import axis_count, declarations, repeated
+from odfa11y.errors import DocumentRefusal
+from odfa11y.odf import names as xml_names
+from odfa11y.odf import select_elements
 
 MAX_COMPLEX_CELLS = 100_000
-CELL = qn("table", "table-cell")
-COVERED = qn("table", "covered-table-cell")
+CELL = xml_names.TABLE_TABLE_CELL
+COVERED = xml_names.TABLE_COVERED_TABLE_CELL
 
 
 @dataclass(frozen=True)
@@ -37,7 +34,7 @@ def inspect_grid(table: etree._Element) -> Grid:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         The grid is inconsistent or a complex expansion exceeds the inspection bound.
 
     """
@@ -49,7 +46,7 @@ def inspect_grid(table: etree._Element) -> Grid:
         row_width = sum(repeated(cell, "number-columns-repeated") for cell in cells)
         if row_width != width:
             message = "Table row width differs from the declared column grid."
-            raise RemediationError(message)
+            raise DocumentRefusal(message)
         for cell in cells:
             complex_grid |= (
                 cell.tag == COVERED
@@ -60,7 +57,7 @@ def inspect_grid(table: etree._Element) -> Grid:
     if complex_grid:
         if height * width > MAX_COMPLEX_CELLS:
             message = "Complex grid exceeds bounded inspection; review the table in Writer."
-            raise RemediationError(message)
+            raise DocumentRefusal(message)
         _inspect_coverage(rows, grid)
     return grid
 
@@ -84,16 +81,16 @@ def _occupy(
     if cell.tag == COVERED:
         if (row, column) not in occupied:
             message = "Covered cell has no spanning origin."
-            raise RemediationError(message)
+            raise DocumentRefusal(message)
         return
     height = repeated(cell, "number-rows-spanned")
     width = repeated(cell, "number-columns-spanned")
     if row + height > grid.rows or column + width > grid.columns:
         message = "Spanning cell extends beyond the declared grid."
-        raise RemediationError(message)
+        raise DocumentRefusal(message)
     for y in range(row, row + height):
         for x in range(column, column + width):
             if (y, x) in occupied:
                 message = "Spanning origins overlap or a covered placeholder is missing."
-                raise RemediationError(message)
+                raise DocumentRefusal(message)
             occupied.add((y, x))

@@ -3,6 +3,94 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "capabilities": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "family": {
+            "enum": [
+              "text",
+              "spreadsheet",
+              "presentation",
+              "drawing",
+              "formula",
+              "chart",
+              "image",
+              "database"
+            ]
+          },
+          "id": {
+            "enum": [
+              "link-descriptions",
+              "decorative-graphic-role",
+              "writer-header-columns",
+              "math-tagging",
+              "calc-pdfua"
+            ]
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "related_rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "unsupported",
+              "not-tested"
+            ]
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "version"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "family",
+          "status",
+          "tool",
+          "reason",
+          "related_rules",
+          "meaning"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "exit_status": {
       "enum": [
         0,
@@ -12,9 +100,95 @@
         4
       ]
     },
-    "format": {
-      "enum": [
-        1
+    "failure": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "details": {
+              "type": "string"
+            },
+            "exit_status": {
+              "enum": [
+                2,
+                3,
+                4
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "problems": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "remedy": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "enum": [
+                        "regenerate-plan",
+                        "rebind-plan",
+                        "choose-output",
+                        "install-tool",
+                        "edit-in-application",
+                        "embed-resource"
+                      ]
+                    },
+                    "detail": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "target",
+                    "detail"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "exit_status",
+            "remedy",
+            "problems",
+            "details"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "libraries": {
@@ -32,6 +206,11 @@
     "python": {
       "type": "string"
     },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
     "schema_versions": {
       "items": {
         "type": "string"
@@ -41,83 +220,6 @@
     "toolchain": {
       "additionalProperties": false,
       "properties": {
-        "capabilities": {
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "family": {
-                "enum": [
-                  "text",
-                  "spreadsheet",
-                  "presentation",
-                  "drawing",
-                  "formula",
-                  "chart",
-                  "image",
-                  "database"
-                ]
-              },
-              "id": {
-                "enum": [
-                  "link-descriptions",
-                  "decorative-graphic-role",
-                  "writer-header-columns",
-                  "math-tagging",
-                  "calc-pdfua"
-                ]
-              },
-              "reason": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "status": {
-                "enum": [
-                  "supported",
-                  "unsupported",
-                  "not-tested"
-                ]
-              },
-              "tool": {
-                "anyOf": [
-                  {
-                    "additionalProperties": false,
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "version": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name",
-                      "version"
-                    ],
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "id",
-              "family",
-              "status",
-              "tool",
-              "reason"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
         "libreoffice": {
           "anyOf": [
             {
@@ -167,10 +269,41 @@
       },
       "required": [
         "libreoffice",
-        "verapdf",
-        "capabilities"
+        "verapdf"
       ],
       "type": "object"
+    },
+    "unavailable": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "selection": {
+            "enum": [
+              "soffice",
+              "verapdf"
+            ]
+          },
+          "tool": {
+            "enum": [
+              "LibreOffice",
+              "veraPDF"
+            ]
+          }
+        },
+        "required": [
+          "tool",
+          "blocks",
+          "selection"
+        ],
+        "type": "object"
+      },
+      "type": "array"
     }
   },
   "required": [
@@ -180,8 +313,11 @@
     "libraries",
     "schema_versions",
     "toolchain",
-    "format",
-    "exit_status"
+    "capabilities",
+    "schema_version",
+    "unavailable",
+    "exit_status",
+    "failure"
   ],
   "type": "object"
 }

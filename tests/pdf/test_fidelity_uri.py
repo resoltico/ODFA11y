@@ -1,24 +1,21 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Effective URI destinations, independent expected references and malformed contexts."""
 
-from __future__ import annotations
-
 from collections import Counter
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject, TextStringObject
+lazy from pypdf.generic import PdfObject
 
-from odfa11y.errors import ToolFailedError
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.pdf.fidelity.compare import FidelityMeasurements
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
+from tests.fixtures.measurements import measurement
 from tests.fixtures.pdf import register, text_pdf
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf.generic import PdfObject
 
 
 def _with_base(path: Path, links: list[str], base: PdfObject | None) -> Path:
@@ -42,15 +39,18 @@ def test_base_change_and_equivalent_absolute_destinations(tmp_path: Path) -> Non
     right = _with_base(
         tmp_path / "right.pdf", ["file.pdf"] * 2, TextStringObject("https://example.test/two/")
     )
-    report = compare_pdfs(left, right, FidelityPolicy())
-    assert {f.rule_id for f in report.findings} == {"FID004", "FID006"}
+    report = compare_pdfs(left, right, Pagination.SAME()).report
+    assert {f.rule_id for f in report.findings} == {
+        rules.FIDELITY004.id,
+        rules.FIDELITY006.id,
+    }
     absolute = _with_base(
         tmp_path / "absolute.pdf",
         ["https://example.test/one/file.pdf"] * 2,
         TextStringObject("https://irrelevant.test/"),
     )
-    assert compare_pdfs(left, absolute, FidelityPolicy()).findings == []
-    assert read_snapshot(left).links == Counter({"https://example.test/one/file.pdf": 2})
+    assert compare_pdfs(left, absolute, Pagination.SAME()).report.findings == []
+    assert dict(read_snapshot(left).links) == Counter({"https://example.test/one/file.pdf": 2})
 
 
 @pytest.mark.parametrize(
@@ -84,7 +84,7 @@ def test_reference_resolution_from_written_pdf(
     path = _with_base(
         tmp_path / "reference.pdf", [reference], TextStringObject("https://example.test/a/b/c?q")
     )
-    assert read_snapshot(path).links == Counter({expected: 1})
+    assert dict(read_snapshot(path).links) == Counter({expected: 1})
 
 
 @pytest.mark.parametrize(
@@ -97,26 +97,32 @@ def test_reference_resolution_from_written_pdf(
         NumberObject(1),
     ],
 )
-def test_unestablished_or_malformed_base_refuses(tmp_path: Path, base: PdfObject | None) -> None:
+def test_unestablished_or_malformed_base_is_reported(
+    tmp_path: Path, base: PdfObject | None
+) -> None:
     path = _with_base(tmp_path / "bad.pdf", ["file.pdf"], base)
-    with pytest.raises(ToolFailedError, match=r"(Base|relative|Relative)"):
-        read_snapshot(path)
+    snapshot = read_snapshot(path)
+    assert snapshot.issues
+    assert any("Base" in issue.problem or "Relative" in issue.problem for issue in snapshot.issues)
+    assert snapshot.pages[0].text == "Identical text"
 
 
 @pytest.mark.parametrize("uri", ["https://host/%ZZ", "https://host/a b", "https://[bad/", ":bad"])
-def test_malformed_action_refuses(tmp_path: Path, uri: str) -> None:
+def test_malformed_action_is_reported(tmp_path: Path, uri: str) -> None:
     path = _with_base(tmp_path / "bad.pdf", [uri], TextStringObject("https://example.test/"))
-    with pytest.raises(ToolFailedError, match="URI"):
-        read_snapshot(path)
+    snapshot = read_snapshot(path)
+    assert snapshot.issues
+    assert any("URI" in issue.problem for issue in snapshot.issues)
+    assert snapshot.pages[0].text == "Identical text"
 
 
 def test_file_base_and_empty_authority_reference(tmp_path: Path) -> None:
     path = _with_base(tmp_path / "file.pdf", ["../g", "///g"], TextStringObject("file:///a/b/c"))
-    assert read_snapshot(path).links == Counter({"file:///a/g": 1, "file:///g": 1})
+    assert dict(read_snapshot(path).links) == Counter({"file:///a/g": 1, "file:///g": 1})
 
 
 @pytest.mark.parametrize("shape", ["catalog", "subtype", "missing-uri", "uri-name"])
-def test_malformed_catalog_and_action_values_refuse(tmp_path: Path, shape: str) -> None:
+def test_malformed_catalog_and_action_values_are_reported(tmp_path: Path, shape: str) -> None:
     path = _with_base(tmp_path / "shape.pdf", ["https://example.test/"], None)
     writer = PdfWriter(clone_from=path)
     if shape == "catalog":
@@ -135,8 +141,10 @@ def test_malformed_catalog_and_action_values_refuse(tmp_path: Path, shape: str) 
         else:
             action[NameObject("/URI")] = NameObject("/invalid")
     writer.write(path)
-    with pytest.raises(ToolFailedError, match="Expected"):
-        read_snapshot(path)
+    snapshot = read_snapshot(path)
+    assert snapshot.issues
+    assert any("Expected" in issue.problem for issue in snapshot.issues)
+    assert snapshot.pages[0].text == "Identical text"
 
 
 @pytest.mark.parametrize(
@@ -152,7 +160,7 @@ def test_malformed_catalog_and_action_values_refuse(tmp_path: Path, shape: str) 
     ],
 )
 @pytest.mark.parametrize("field", ["Base", "action"])
-def test_malformed_uri_components_refuse_in_either_field(
+def test_malformed_uri_components_are_reported_in_either_field(
     tmp_path: Path, uri: str, field: str
 ) -> None:
     path = _with_base(
@@ -160,8 +168,10 @@ def test_malformed_uri_components_refuse_in_either_field(
         ["g" if field == "Base" else uri],
         TextStringObject(uri if field == "Base" else "https://example.test/"),
     )
-    with pytest.raises(ToolFailedError, match="URI"):
-        read_snapshot(path)
+    snapshot = read_snapshot(path)
+    assert snapshot.issues
+    assert any("URI" in issue.problem for issue in snapshot.issues)
+    assert snapshot.pages[0].text == "Identical text"
 
 
 @pytest.mark.parametrize(
@@ -183,4 +193,51 @@ def test_valid_authority_and_encoded_components_preserve_resolution(
     tmp_path: Path, base: str, reference: str, expected: str
 ) -> None:
     path = _with_base(tmp_path / "valid.pdf", [reference], TextStringObject(base))
-    assert read_snapshot(path).links == Counter({expected: 1})
+    assert dict(read_snapshot(path).links) == Counter({expected: 1})
+
+
+@pytest.mark.parametrize(
+    ("base", "reference", "expected"),
+    [
+        ("https://example.test/a?", "", "https://example.test/a?"),
+        ("https://example.test/a?#old", "#new", "https://example.test/a?#new"),
+        ("https://example.test/a#old", "", "https://example.test/a"),
+        ("https://example.test/a//b/./c?q", "#new", "https://example.test/a//b/./c?q#new"),
+        ("https://example.test/a//b/c", "../g", "https://example.test/a//g"),
+    ],
+)
+def test_stdlib_resolution_retains_authored_rfc_edge_cases(
+    tmp_path: Path, base: str, reference: str, expected: str
+) -> None:
+    path = _with_base(tmp_path / "reference.pdf", [reference], TextStringObject(base))
+    assert dict(read_snapshot(path).links) == {expected: 1}
+
+
+def test_one_malformed_uri_does_not_abort_other_fidelity_checks(tmp_path: Path) -> None:
+    source = _with_base(
+        tmp_path / "source.pdf",
+        ["https://private:secret@example.test/%ZZ", "https://example.test/kept"],
+        None,
+    )
+    candidate = text_pdf(
+        tmp_path / "candidate.pdf",
+        [["Changed text"]],
+        links=["https://example.test/kept", "https://example.test/added"],
+    )
+    snapshot = read_snapshot(source)
+    assert dict(snapshot.links) == {"https://example.test/kept": 1}
+    assert snapshot.issues[0].page == 1
+    report = compare_pdfs(source, candidate, Pagination.SAME()).report
+    assert {rules.FIDELITY008.id, rules.FIDELITY003.id, rules.FIDELITY006.id} <= {
+        finding.rule_id for finding in report.findings
+    }
+    assert "secret" not in str(report.as_dict())
+    assert measurement(report, FidelityMeasurements).raster_changed_ratios is not None
+
+
+def test_snapshot_link_multiset_is_immutable(tmp_path: Path) -> None:
+    path = _with_base(tmp_path / "links.pdf", ["https://example.test/"] * 2, None)
+    snapshot = read_snapshot(path)
+    assert snapshot.links == (("https://example.test/", 2),)
+    with pytest.raises(TypeError):
+        snapshot.links[0] = ("changed", 1)  # ty: ignore[invalid-assignment] Negative control: link counts cannot mutate a frozen snapshot.

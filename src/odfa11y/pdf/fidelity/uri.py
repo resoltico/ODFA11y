@@ -1,15 +1,13 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve supported PDF URI actions without accessing their destinations."""
 
-from __future__ import annotations
-
 import re
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from pypdf.errors import PdfReadError
 from pypdf.generic import DictionaryObject, TextStringObject
 
-from odfa11y.pdf.reading.consumption import resolve
+from odfa11y.pdf.reading.objects import resolve
 
 _UNRESERVED_SUBDELIMS = r"(?:[A-Za-z0-9._~!$&'()*+,;=-]|%[0-9A-Fa-f]{2})"
 _PCHAR = rf"(?:{_UNRESERVED_SUBDELIMS}|[:@])"
@@ -96,23 +94,26 @@ def effective_uri(value: object, base: str | None) -> str:
         msg = "Relative PDF URI requires an explicit absolute http, https, ftp or file Base"
         raise PdfReadError(msg)
     reference = urlsplit(uri)
-    query_present = "?" in uri.split("#", 1)[0]
-    authority = reference.netloc if uri.startswith("//") else parts.netloc
-    if uri.startswith("//"):
-        path = _remove_dot_segments(reference.path)
-        query = reference.query
-    elif not reference.path:
-        path = parts.path
-        query = reference.query if query_present else parts.query
-        query_present = query_present or "?" in (base or "").split("#", 1)[0]
-    else:
-        merged = reference.path
-        if not merged.startswith("/"):
+    target = urlsplit(urljoin(base or "", uri))
+    # urljoin collapses repeated path slashes; preserve these authored RFC path segments.
+    if "//" in reference.path or "//" in parts.path or uri.startswith("//"):
+        path = reference.path
+        if not path:
+            path = parts.path if not uri.startswith("//") else ""
+        elif not path.startswith("/"):
             directory = parts.path.rsplit("/", 1)[0] if "/" in parts.path else ""
-            merged = directory + "/" + merged
-        path = _remove_dot_segments(merged)
-        query = reference.query
-    target = urlunsplit((parts.scheme, authority, path, query, reference.fragment))
+            path = directory + "/" + path
+        target = target._replace(
+            netloc=reference.netloc if uri.startswith("//") else parts.netloc,
+            path=_remove_dot_segments(path) if reference.path or uri.startswith("//") else path,
+        )
+    # urljoin also drops explicit empty query/fragment delimiters, which are significant.
+    query_present = "?" in uri.split("#", 1)[0]
+    query = reference.query if query_present else target.query
+    query_present = query_present or (
+        not reference.path and not uri.startswith("//") and "?" in (base or "").split("#", 1)[0]
+    )
+    target = urlunsplit(target._replace(query=query, fragment=reference.fragment))
     if query_present and not query:
         body, marker, fragment = target.partition("#")
         target = body + "?" + (marker + fragment if marker else "")

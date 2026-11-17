@@ -1,2 +1,2 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Bounded native execution, source preflight, export and measured capabilities."""
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Bounded process execution and native document exporters."""

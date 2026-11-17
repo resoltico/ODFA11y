@@ -1,0 +1,110 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Parser nesting and named dependency nesting must not multiply Python stack depth."""
+
+import json
+import sys
+from dataclasses import replace
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y.application.export import export_document
+from odfa11y.application.native import NativeTools
+from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
+from odfa11y.errors import DocumentRefusal
+from odfa11y.native.process import run_bounded
+from odfa11y.odf import OdfDocument, validate
+from odfa11y.odf.formula import OPENFORMULA, FormulaAnalysis, classify_formula
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
+from odfa11y.status import Profile
+from tests.fixtures.documents import TABLE_BODY, Variant, make_flat
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import recording, refusing
+from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
+
+
+def named_chain(tmp_path: Path, count: int, wrappers: int) -> Path:
+    names = []
+    for index in range(count):
+        target = "1" if index == count - 1 else f"Chain_{index + 1}"
+        formula = "of:=" + "SUM(" * wrappers + target + ")" * wrappers
+        names.append(
+            f'<table:named-expression table:name="Chain_{index}" '
+            f'table:base-cell-address="$Sheet1.$A$1" table:expression="{formula}"/>'
+        )
+    body = (
+        f'<office:spreadsheet xmlns:of="{OPENFORMULA}">{TABLE_BODY}'
+        f"<table:named-expressions>{''.join(names)}</table:named-expressions>"
+        "</office:spreadsheet>"
+    )
+    source = make_flat(tmp_path, "spreadsheet", Variant(body=body))
+    # Independent normative input oracle; there is no malformed-schema escape hatch.
+    assert validate(OdfDocument.open(source)).count == 0
+    return source
+
+
+@pytest.mark.parametrize(("count", "wrappers"), [(10, 1), (40, 8)])
+def test_valid_named_chains_do_not_multiply_lexical_parser_stack(
+    native_tools: NativeTools,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    count: int,
+    wrappers: int,
+) -> None:
+    source = named_chain(tmp_path, count, wrappers)
+    report = audit_odf(source)
+    assert rules.NATIVE001.id not in {finding.rule_id for finding in report.findings}
+    calls = []
+    native_tools = replace(native_tools, export=recording(calls))
+    export_document(source, tmp_path / "output.pdf", native_tools=native_tools)
+    assert len(calls) == 1
+
+
+def test_name_depth_budget_is_an_explicit_refusal_through_all_public_boundaries(
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = named_chain(tmp_path, 80, 8)
+    original = source.read_bytes()
+    report = audit_odf(source)
+    assert rules.NATIVE001.id in {finding.rule_id for finding in report.findings}
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)["formula_incomplete"]
+        > 0
+    )
+    calls = []
+    native_tools = replace(native_tools, export=refusing(calls))
+    with pytest.raises(DocumentRefusal, match="formula context"):
+        export_document(source, tmp_path / "output.pdf", native_tools=native_tools)
+    record = execute(
+        source,
+        reviewed_plan(source, [], Pagination.SAME()),
+        tmp_path / "evidence",
+        RunSettings(profile=Profile.PDF),
+        native_tools=native_tools,
+    )
+    assert record.failed_stage == "export-source"
+    assert record.exit_status == 2
+    assert calls == []
+    assert not (tmp_path / "output.pdf").exists()
+    assert source.read_bytes() == original
+    command = [sys.executable, "-m", "odfa11y", "audit", str(source), "--format", "json"]
+    completed = run_bounded(command, timeout=30)
+    assert "RecursionError" not in completed.stderr
+    assert completed.returncode in {0, 1, 2}
+    payload = json.loads(completed.stdout)
+    assert rules.NATIVE001.id in {
+        finding["rule_id"] for finding in payload["inputs"][0]["reports"][0]["findings"]
+    }
+
+
+def test_remaining_python_stack_exhaustion_is_explicitly_incomplete() -> None:
+    def unavailable_stack(_: str) -> FormulaAnalysis:
+        message = "Caller stack exhausted"
+        raise RecursionError(message)
+
+    assert classify_formula("of:=Named", {"of": OPENFORMULA}, unavailable_stack) == FormulaAnalysis(
+        incomplete=1
+    )

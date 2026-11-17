@@ -20,13 +20,13 @@ veraPDF, and they do not impose a process CPU/memory limit. Hostile inputs can e
 resources. See [scope and threat model](../docs/ACCESSIBILITY.md#threat-model).
 
 Guarded native operations refuse recognized unsupported rendering/resource declarations
-and incorrect file/object addressing. Captured pipeline exports also refuse
+and incorrect file/object addressing. Captured run exports also refuse
 location-sensitive fields. These are bounded declaration/context controls, not universal
 network isolation or inspection of opaque embedded internals. The low-level native export
 API requires caller policy and isolation. `production` selects assurance gates; it does
 not provide an isolated execution environment.
 
-Pipeline capture checks bounded regular-file identity. Source/staging ancestor namespaces
+Source capture checks bounded regular-file identity. Source/staging ancestor namespaces
 must remain stable; leaf identity does not prevent parent exchanges or concurrent in-place
 writes. Bundle verification likewise requires stable directory namespaces. See
 [Evidence](../docs/EVIDENCE.md#privacy) for privacy and capture/verification details.

@@ -1,14 +1,13 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Calc's declared PDF/UA experiment uses an explicit semantic header row."""
-
-from __future__ import annotations
 
 lazy from pathlib import Path
 
-from odfa11y.native.probe_pdf import calc_pdfua
-from odfa11y.native.probe_sources import write_probe_package
-from odfa11y.native.probes import CapabilityProbe, ProbeId
+from odfa11y.families.probe_pdf import calc_pdfua
+from odfa11y.families.probe_sources import write_probe_package
+from odfa11y.families.probes import CapabilityProbe, ProbeId
 from odfa11y.odf import Family
+from odfa11y.rules import registry as rules
 
 
 def write_calc_probe(directory: Path) -> Path:
@@ -52,10 +51,11 @@ PROBES = (
         write_calc_probe,
         "calc_pdf_Export",
         calc_pdfua,
-        frozenset(),
+        (rules.TABLE004, rules.PDFUA001),
         (
             "The small semantic Calc table passes strict PDF inspection and "
             "veraPDF PDF/UA-1 validation."
         ),
+        requires_validator=True,
     ),
 )

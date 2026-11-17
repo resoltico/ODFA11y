@@ -1,121 +1,105 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Publish an evidence directory atomically."""
-
-from __future__ import annotations
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Publish only declared binary, structured and textual evidence artifacts."""
 
 import json
 import shutil
+from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import BinaryIO
 
 from lxml import etree
 
-from odfa11y.errors import OutputError
-from odfa11y.safe_xml import parse_secure
-from odfa11y.staging import staging_sibling
+from odfa11y.contracts import JsonObject
+from odfa11y.errors import OutputOccupied
+from odfa11y.evidence.manifest import write_manifest
+from odfa11y.evidence.paths import unsafe_reason
+from odfa11y.evidence.redact import Redactor
+from odfa11y.publish import (
+    publish_directory,
+    publish_file,
+    require_empty_directory,
+    staging_sibling,
+)
 
-from .manifest import sha256_file, write_manifest
-from .paths import is_reserved_bundle_file, unsafe_reason
-from .review import render_review
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping
+@dataclass(frozen=True, slots=True)
+class BinaryArtifact:
+    source: Path
 
-    from odfa11y.pipeline.record import RunRecord
 
-    from .redact import Redactor
+@dataclass(frozen=True, slots=True)
+class JsonArtifact:
+    value: JsonObject
+
+
+@dataclass(frozen=True, slots=True)
+class TextArtifact:
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
+class XmlArtifact:
+    root: etree._Element
+
+
+type BundleArtifact = BinaryArtifact | JsonArtifact | TextArtifact | XmlArtifact
 
 
 def require_free_directory(directory: Path) -> None:
-    """Ensure a bundle directory does not exist or is empty.
-
-    Raises
-    ------
-    OutputError
-        The path exists and is not an empty directory.
-
-    """
-    if directory.exists() and not (directory.is_dir() and not any(directory.iterdir())):
-        msg = f"Evidence directory must not exist or must be empty: {directory}"
-        raise OutputError(msg)
+    require_empty_directory(directory)
 
 
 def write_bundle(
-    directory: str | Path,
-    record: RunRecord,
-    artifacts: Mapping[str, Path],
-    redactor: Redactor,
-    *,
-    diagnostics: frozenset[str] | set[str] = frozenset(),
-) -> dict[str, str]:
-    """Write artifacts, run.json, REVIEW.md and manifest.json, then publish in one rename.
-
-    ``artifacts`` maps bundle-relative names to source files. The record, the review sheet
-    pass through ``redactor``. Only explicitly named diagnostics are transformed; document
-    payloads are copied unchanged regardless of suffix. Returned hashes identify staged bytes.
-
-    Returns
-    -------
-    dict[str, str]
-        SHA-256 values of the published artifacts, also written into the run record.
-
-    Raises
-    ------
-    OutputError
-        An artifact name is not a safe bundle-relative name.
-
-    """
+    directory: str | Path, artifacts: Mapping[str, BundleArtifact], redactor: Redactor
+) -> None:
     target = Path(directory)
-    require_free_directory(target)
+    require_empty_directory(target)
+    names = tuple(artifacts)
+    if len({name.casefold() for name in names}) != len(names):
+        message = "Evidence artifact names collide on a case-insensitive file system"
+        raise OutputOccupied(message)
+    for name in names:
+        if reason := unsafe_reason(name):
+            message = f"Unsafe evidence artifact name {name!r}: {reason}"
+            raise OutputOccupied(message)
     target.parent.mkdir(parents=True, exist_ok=True)
-    for name in artifacts:
-        if reason := unsafe_reason(name) or (
-            "belongs to the bundle itself" if is_reserved_bundle_file(name) else None
-        ):
-            msg = f"Unsafe bundle file name {name!r}: {reason}"
-            raise OutputError(msg)
-    staging = staging_sibling(target)
-    staging.mkdir()
+    staged = staging_sibling(target)
+    staged.mkdir()
     try:
-        for name, source in artifacts.items():
-            destination = staging / name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            if name in diagnostics:
-                _write_diagnostic(source, destination, redactor)
-            else:
-                shutil.copyfile(source, destination)
-        outputs = {name: sha256_file(staging / name) for name in artifacts}
-        safe_record = redactor.record(record.as_dict() | {"outputs": outputs})
-        (staging / "run.json").write_text(
-            json.dumps(safe_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
-        (staging / "REVIEW.md").write_text(
-            redactor.text(render_review(record, redactor=redactor)), encoding="utf-8"
-        )
-        write_manifest(staging)
-        if target.exists():
-            target.rmdir()
-        staging.replace(target)
-        return outputs
+        for name, artifact in artifacts.items():
+            publish_file(
+                staged / name,
+                lambda stream, artifact=artifact: _write_artifact(artifact, stream, redactor),
+            )
+        write_manifest(staged, names)
+        publish_directory(staged, target)
     finally:
-        if staging.exists():
-            shutil.rmtree(staging, ignore_errors=True)
+        if staged.exists():
+            shutil.rmtree(staged)
 
 
-def _write_diagnostic(source: Path, destination: Path, redactor: Redactor) -> None:
-    if destination.suffix == ".xml":
-        root = parse_secure(source.read_bytes())
-        for node in root.iter():
-            if node.text:
-                node.text = redactor.text(node.text)
-            if node.tail:
-                node.tail = redactor.text(node.tail)
-            for key, value in node.attrib.items():
-                node.set(key, redactor.text(value))
-        destination.write_bytes(etree.tostring(root, encoding="utf-8", xml_declaration=True))
-    elif destination.suffix == ".json":
-        value = redactor.record(json.loads(source.read_text(encoding="utf-8")))
-        destination.write_text(json.dumps(value, ensure_ascii=False) + "\n", encoding="utf-8")
-    else:
-        destination.write_text(redactor.text(source.read_text(encoding="utf-8")), encoding="utf-8")
+def _write_artifact(artifact: BundleArtifact, stream: BinaryIO, redactor: Redactor) -> None:
+    match artifact:
+        case BinaryArtifact(source=source):
+            with source.open("rb") as content:
+                shutil.copyfileobj(content, stream)
+        case JsonArtifact(value=value):
+            encoded = (
+                json.dumps(redactor.record(value), indent=2, sort_keys=True, ensure_ascii=False)
+                + "\n"
+            )
+            stream.write(encoded.encode("utf-8"))
+        case TextArtifact(value=value):
+            stream.write(redactor.text(value).encode("utf-8"))
+        case XmlArtifact(root=root):
+            root = deepcopy(root)
+            for node in root.iter():
+                if node.text:
+                    node.text = redactor.text(node.text)
+                if node.tail:
+                    node.tail = redactor.text(node.tail)
+                for name, value in node.attrib.items():
+                    node.set(name, redactor.text(value))
+            stream.write(etree.tostring(root, encoding="utf-8", xml_declaration=True))

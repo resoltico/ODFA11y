@@ -1,7 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Redaction keeps local paths out of everything a bundle publishes."""
-
-from __future__ import annotations
 
 import json
 from dataclasses import replace
@@ -9,16 +7,16 @@ from pathlib import Path
 
 import pytest
 from lxml import etree
+from markdown_it import MarkdownIt
 
-from odfa11y.evidence import (
-    Redactor,
-    check_bundle,
-    write_bundle,
-)
-from odfa11y.families.text import ADAPTER
+from odfa11y.errors import DocumentRefusal
+from odfa11y.evidence import Redactor, check_bundle
+from odfa11y.families.text import SPEC
+from odfa11y.status import Refused
+from tests.fixtures.bundles import write_run_bundle
 from tests.fixtures.records import record
 
-REVIEW_ITEMS = ADAPTER.review_items
+REVIEW_ITEMS = SPEC.review_items
 NO_REDACTION = Redactor(())
 
 
@@ -37,7 +35,7 @@ def bundle(tmp_path: Path, artifacts: dict[str, bytes] | None = None) -> Path:
         source.write_bytes(data)
         sources[name] = source
     target = tmp_path / "bundle"
-    write_bundle(target, record(), sources, NO_REDACTION)
+    write_run_bundle(target, record(), sources, NO_REDACTION)
     return target
 
 
@@ -113,7 +111,7 @@ def test_text_artifacts_are_redacted_and_binary_ones_are_not(tmp_path: Path) -> 
     binary.write_bytes(str(work).encode())
     redactor = Redactor.for_locations({"work": work})
     target = tmp_path / "bundle"
-    write_bundle(
+    write_run_bundle(
         target,
         record(),
         {"report.xml": xml, "data.bin": binary},
@@ -142,13 +140,20 @@ def test_a_location_matches_whatever_separators_the_text_uses(tmp_path: Path) ->
 )
 def test_review_redacts_paths_before_markdown_escaping(tmp_path: Path, private_path: str) -> None:
     failed = record(status="failed", failed_stage="export-source")
-    failed.stages[-1] = replace(
-        failed.stages[-1], reason=f"Executable not found: {private_path} | failed"
+    failed = replace(
+        failed,
+        stages=(
+            *failed.stages[:-1],
+            replace(
+                failed.stages[-1],
+                outcome=Refused(DocumentRefusal(f"Executable not found: {private_path} | failed")),
+            ),
+        ),
     )
     target = tmp_path / "evidence"
-    write_bundle(target, failed, {}, Redactor(()))
+    write_run_bundle(target, failed, {}, Redactor(()))
     review = (target / "REVIEW.md").read_text()
     assert "zz-private-person-zz" not in review
-    assert "<path>/no-such-soffice" in review
+    assert "&lt;path&gt;/no-such-soffice" in MarkdownIt("commonmark").render(review)
     assert r"\| failed" in review
     assert check_bundle(target) == []

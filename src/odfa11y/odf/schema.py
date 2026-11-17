@@ -1,7 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Validate documents against the bundled, unmodified OASIS ODF Relax NG schemas."""
-
-from __future__ import annotations
 
 import hashlib
 import json
@@ -10,19 +8,17 @@ from collections import Counter
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING
+from weakref import ReferenceType, ref
 
 from lxml import etree
 
 from odfa11y.errors import XmlParseError
-
-from .detect import declared_version
-from .kinds import Family
-from .namespaces import NS, is_office_element, qn
-from .storage import Part
-
-if TYPE_CHECKING:
-    from .document import OdfDocument
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.detect import declared_version
+from odfa11y.odf.kinds import Family
+from odfa11y.odf.names import NS, is_office_element
+from odfa11y.odf.storage import Part
+lazy from odfa11y.odf.document import OdfDocument
 
 SUPPORTED_VERSIONS = ("1.3", "1.4")
 SCHEMA_DIRECTORY = Path(__file__).parent / "schemas"
@@ -30,19 +26,30 @@ SCHEMA_PARTS = (Part.CONTENT, Part.STYLES, Part.META, Part.SETTINGS, Part.MANIFE
 FINGERPRINT_LENGTH = 16
 # Attributes ODFA11y itself rewrites when it relabels a document; they must not make a
 # pre-existing violation look new.
-FINGERPRINT_IGNORED_ATTRIBUTES = frozenset({qn("office", "version"), qn("manifest", "version")})
+FINGERPRINT_IGNORED_ATTRIBUTES = frozenset({xml_names.OFFICE_VERSION, xml_names.MANIFEST_VERSION})
+
+
+@dataclass(frozen=True, slots=True)
+class _NodeLocation:
+    node: etree._Element
+    parent: etree._Element | None
+    tag: str | None
+    parent_tag: str | None
+    error_type: int
 
 
 @dataclass(frozen=True, slots=True)
 class Violation:
     """One schema violation, identified without positions so unrelated edits keep it stable.
 
-    ``fingerprint`` hashes the message with the failing element's tag, attributes, parent
-    and neighbouring tags; it is None when libxml2 gave no resolvable location.
+    ``fingerprint`` describes structural context for independent document comparisons.
+    An unambiguous live location additionally retains node/context identity for one model
+    lifetime, without making neighbouring metadata part of the defect identity.
     """
 
     message: str
     fingerprint: str | None = None
+    _location: _NodeLocation | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +59,7 @@ class SchemaResult:
     version: str | None
     available: bool
     violations: dict[str, tuple[Violation, ...]] = field(default_factory=dict)
+    _scope: ReferenceType[object] | None = field(default=None, repr=False, compare=False)
 
     @property
     def count(self) -> int:
@@ -116,7 +124,9 @@ def validate(document: OdfDocument) -> SchemaResult:
                 errors.extend(_violation(tree, error) for error in validator.error_log)
         if errors:
             violations[member] = tuple(errors)
-    return SchemaResult(version=version, available=True, violations=violations)
+    return SchemaResult(
+        version=version, available=True, violations=violations, _scope=ref(document)
+    )
 
 
 @cache
@@ -144,9 +154,10 @@ def _models(
 def regressions(before: SchemaResult, after: SchemaResult) -> dict[str, tuple[str, ...]]:
     """Find violations present after an edit that were not present before it.
 
-    Violations are matched by message and fingerprint, so a violation fixed in one place
-    cannot hide an equal one introduced in another. libxml2 reports only the first error
-    in a failing content model, which bounds what any comparison can see.
+    One live document uses reported node/context identity, so unrelated metadata does not
+    create a defect and an equal message on another node remains new. Independent snapshots
+    retain structural fingerprints. Unlocated diagnostics fall back to multiplicities.
+    libxml2 can report only the first error in a failing model; this is not conformance proof.
 
     Returns
     -------
@@ -154,34 +165,48 @@ def regressions(before: SchemaResult, after: SchemaResult) -> dict[str, tuple[st
         New violation messages per member; empty when nothing regressed.
 
     """
+    source = before._scope() if before._scope is not None else None
+    live = source is not None and after._scope is not None and after._scope() is source
     found: dict[str, tuple[str, ...]] = {}
     for member, current in after.violations.items():
-        extra = Counter((v.message, v.fingerprint) for v in current) - Counter(
-            (v.message, v.fingerprint) for v in before.violations.get(member, ())
+        extra = Counter(_identity(v, live) for v in current) - Counter(
+            _identity(v, live) for v in before.violations.get(member, ())
         )
         if extra:
             found[member] = tuple(sorted(message for message, _ in extra.elements()))
     return found
 
 
+def _identity(violation: Violation, live: bool) -> tuple[str, _NodeLocation | str | None]:
+    location = violation._location if live else None
+    return violation.message, location if location is not None else violation.fingerprint
+
+
 def _violation(tree: etree._ElementTree, error: etree._LogEntry) -> Violation:
-    element = _locate(tree, error.path)
+    elements = _locations(tree, error.path)
+    element = elements[0] if elements else None
+    location = None
+    if len(elements) == 1 and element is not None:
+        parent = element.getparent()
+        location = _NodeLocation(element, parent, _tag(element), _tag(parent), error.type)
     return Violation(
-        error.message, None if element is None else _fingerprint(error.message, element)
+        error.message,
+        None if element is None else _fingerprint(error.message, element),
+        location,
     )
 
 
-def _locate(tree: etree._ElementTree, path: str | None) -> etree._Element | None:
+def _locations(tree: etree._ElementTree, path: str | None) -> tuple[etree._Element, ...]:
     if not path:
-        return None
+        return ()
     namespaces = {prefix: uri for prefix, uri in tree.getroot().nsmap.items() if prefix}
     try:
         found = tree.xpath(path, namespaces=namespaces)
     except etree.XPathError:
-        return None
-    if isinstance(found, list) and found and isinstance(found[0], etree._Element):  # noqa: SLF001  lxml exposes element types with a private name.
-        return found[0]
-    return None
+        return ()
+    if isinstance(found, list) and all(isinstance(node, etree._Element) for node in found):
+        return tuple(found)
+    return ()
 
 
 def _fingerprint(message: str, element: etree._Element) -> str:

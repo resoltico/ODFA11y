@@ -1,22 +1,18 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Generated spacing must not mask changes to excluded authored contexts."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.families.text import NormalizeSpacing
-from odfa11y.families.text.protection import ProtectedEdit
-from odfa11y.families.text.spacing import derived_style_name
+from odfa11y.concepts.preservation import ProtectedPackage
+from odfa11y.decisions.edit import Status
+from odfa11y.families.text.spacing.edit import derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.answers import materialize, spacing_input
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
+lazy from tests.fixtures.answers import apply_in_memory
 
 
 def test_proven_spacing_derivation_does_not_mask_annotation_style_change(tmp_path: Path) -> None:
@@ -26,18 +22,20 @@ def test_proven_spacing_derivation_does_not_mask_annotation_style_change(tmp_pat
     authored = etree.SubElement(annotation, qn("text", "p"))
     authored.set(qn("text", "style-name"), "Body")
     authored.text = "Protected annotation"
-    operation = NormalizeSpacing("Synthetic heading", ("Body",))
-    guard = ProtectedEdit(document, operation)
-    assert operation.apply(document)[0].status is Status.APPLIED
-    assert guard.intact()
+    operation = spacing_input("Synthetic heading", ("Body",))
+    guard = ProtectedPackage.capture(document)
+    decision = materialize(document, [operation])[0]
+    result = decision.kind.edit(document, decision)
+    assert result.outcomes[0].status is Status.APPLIED
+    assert guard.preserved(ProtectedPackage.capture(document), result.allowance)
     authored.set(qn("text", "style-name"), derived_style_name("Body"))
-    assert not guard.intact()
+    assert not guard.preserved(ProtectedPackage.capture(document), result.allowance)
 
 
 def test_spacing_refuses_shared_generated_style_in_excluded_content(tmp_path: Path) -> None:
     document = OdfDocument.open(make_minimal_odt(tmp_path / "source.odt"))
-    operation = NormalizeSpacing("Synthetic heading", ("Body",))
-    assert operation.apply(document)[0].status is Status.APPLIED
+    operation = spacing_input("Synthetic heading", ("Body",))
+    assert apply_in_memory(document, operation)[0].status is Status.APPLIED
     paragraph = select_elements(document.tree(Part.CONTENT), "//text:p")[0]
     annotation = etree.SubElement(paragraph, qn("office", "annotation"))
     authored = etree.SubElement(annotation, qn("text", "p"))
@@ -49,7 +47,7 @@ def test_spacing_refuses_shared_generated_style_in_excluded_content(tmp_path: Pa
     )[0]
     reference.set(qn("fo", "margin-bottom"), "2cm")
     before = etree.tostring(document.tree(Part.CONTENT))
-    outcomes = operation.apply(document)
+    outcomes = apply_in_memory(document, operation)
     assert outcomes[0].status is Status.FAILED
     assert "excluded content" in outcomes[0].message
     assert etree.tostring(document.tree(Part.CONTENT)) == before
@@ -57,10 +55,10 @@ def test_spacing_refuses_shared_generated_style_in_excluded_content(tmp_path: Pa
 
 def test_spacing_in_table_cells_uses_only_proven_derivations_and_reapplies(tmp_path: Path) -> None:
     source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
-    operation = NormalizeSpacing("Synthetic heading", ("(none)",))
+    operation = spacing_input("Synthetic heading", ("(none)",))
     output = tmp_path / "reviewed.odt"
-    assert execute_operations(source, output, [operation]).changed
-    assert not execute_operations(output, tmp_path / "again.odt", [operation]).changed
+    assert apply_answers(source, output, [operation]).changed
+    assert not apply_answers(output, tmp_path / "again.odt", [operation]).changed
     before = select_elements(
         OdfDocument.open(source).tree(Part.CONTENT), "//table:table-cell/text:p"
     )
@@ -83,8 +81,8 @@ def test_text_only_paragraph_base_derives_valid_ordered_spacing_properties(tmp_p
     assert validate(document).count == 0
     document.save(source)
     output = tmp_path / "reviewed.odt"
-    operation = NormalizeSpacing("Synthetic heading", ("Body",))
-    assert execute_operations(source, output, [operation]).changed
+    operation = spacing_input("Synthetic heading", ("Body",))
+    assert apply_answers(source, output, [operation]).changed
     after = OdfDocument.open(output)
     assert validate(after).count == 0
     derived = select_elements(after.tree(Part.CONTENT), "//style:style")[0]
@@ -92,4 +90,4 @@ def test_text_only_paragraph_base_derives_valid_ordered_spacing_properties(tmp_p
         qn("style", "paragraph-properties"),
         qn("style", "text-properties"),
     ]
-    assert not execute_operations(output, tmp_path / "again.odt", [operation]).changed
+    assert not apply_answers(output, tmp_path / "again.odt", [operation]).changed

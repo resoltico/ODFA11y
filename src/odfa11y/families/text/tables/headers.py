@@ -1,18 +1,15 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Resolve semantic header intervals, including valid grouped/nonleading bands."""
-
-from __future__ import annotations
 
 import operator
 from bisect import bisect_right
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-from odfa11y.content import AXES, declarations, repeated
+lazy from lxml import etree
+
+from odfa11y.concepts import AXES, declarations, repeated
+from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn, select_elements
-
-if TYPE_CHECKING:
-    from lxml import etree
 
 
 @dataclass(frozen=True)
@@ -67,7 +64,7 @@ def header_bands(table: etree._Element, axis: str) -> HeaderBands:
         marked = any(
             parent.tag == header
             for parent in node.iterancestors()
-            if next(parent.iterancestors(qn("table", "table")), None) is table
+            if next(parent.iterancestors(xml_names.TABLE_TABLE), None) is table
         )
         if marked:
             if intervals and intervals[-1][1] == position:
@@ -97,7 +94,7 @@ def relationships_cross_headers(
             column = 0
             for cell in select_elements(row, "./table:table-cell | ./table:covered-table-cell"):
                 for _ in range(repeated(cell, "number-columns-repeated")):
-                    if cell.tag == qn("table", "table-cell") and (
+                    if cell.tag == xml_names.TABLE_TABLE_CELL and (
                         rows.crosses(row_position, repeated(cell, "number-rows-spanned"))
                         or columns.crosses(column, repeated(cell, "number-columns-spanned"))
                     ):

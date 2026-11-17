@@ -1,15 +1,10 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Decide which document uses declared protection and package names permit."""
 
-from __future__ import annotations
-
 from enum import StrEnum
-from typing import TYPE_CHECKING
 
 from odfa11y.errors import PackageError
-
-if TYPE_CHECKING:
-    from .protection import PackageProtection
+lazy from odfa11y.odf.encryption import PackageProtection
 
 
 class Use(StrEnum):
@@ -20,6 +15,19 @@ class Use(StrEnum):
     REMEDIATE = "remediate"
     EXPORT = "export"
     STYLE = "style"
+
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.AUDIT: "Inspect the source without changing it.",
+            self.PLAN: "Prepare source-bound questions for human decisions.",
+            self.REMEDIATE: "Apply explicitly reviewed source edits.",
+            self.EXPORT: (
+                "Send a source with established rendering dependencies to its native exporter."
+            ),
+            self.STYLE: "Inspect style declarations and usage without changing the source.",
+        }[self]
 
 
 USE_LABELS = {

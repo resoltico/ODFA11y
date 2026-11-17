@@ -1,68 +1,54 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Live XML changes, cache generations and access policy do not rely on edit declarations."""
 
-from __future__ import annotations
-
-import tomllib
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Outcome, Status
+from odfa11y.audit import audit_odf
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.errors import PackageError
-from odfa11y.odf import KINDS, NS, OdfDocument, PackageStorage, Part, Use, qn
-from odfa11y.odf.protection import PackageProtection
-from odfa11y.remediation import SetMetadata
-from odfa11y.source_audit import audit_odf
-from tests.fixtures.operations import assert_refused, execute_operations
-from tests.fixtures.paths import TESTS
+from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, Use, qn
+from odfa11y.odf.allowance import TextFields
+from odfa11y.odf.encryption import PackageProtection
+from tests.fixtures.answers import fault_input, metadata_input
+from tests.fixtures.corpus import ALL_DOCUMENTS, CORPUS
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.writer import make_minimal_odt
+lazy from odfa11y.decisions import Decision
 
-CORPUS = TESTS
-CORPUS_DOCUMENTS = tuple(
-    directory / entry["file"]
-    for directory, section in [
-        (CORPUS / "corpus", "document"),
-        (CORPUS / "family_corpus", "documents"),
-    ]
-    for entry in tomllib.loads((directory / "manifest.toml").read_text())[section]
-)
-
-CORPUS_DOCUMENTS += tuple(
-    source
-    for directory in [CORPUS / "corpus/sources", CORPUS / "family_corpus/sources"]
-    for source in sorted(directory.rglob("*"))
-    if source.suffix.startswith(".fod")
-    or source.suffix in {kind.extension for kind in KINDS.values()}
-)
+CORPUS_DOCUMENTS = tuple(item.path for item in ALL_DOCUMENTS)
 
 
-def _tree_metadata_edit(
-    operation: SetMetadata, document: OdfDocument, status: Status
-) -> tuple[Outcome, ...]:
+def _tree_metadata_edit(operation: Decision, document: OdfDocument, status: Status) -> EditResult:
     meta = document.tree(Part.META).find("office:meta", NS)
     assert meta is not None
+    fields = TextFields.capture(Part.META, meta, ((qn("dc", "title"), operation.answer.title),))
     title = meta.find(qn("dc", "title"))
     if title is None:
         title = etree.SubElement(meta, qn("dc", "title"))
-    title.text = operation.title
-    return (Outcome(operation.name, status, "Title"),)
+    title.text = operation.answer.title
+    return EditResult((Outcome(operation.kind.id, status, "Title"),), fields.allowance())
 
 
-def test_undeclared_tree_mutation_is_published_and_other_members_keep_their_bytes(
+def test_live_tree_mutation_without_dirty_hint_keeps_other_members_identical(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        SetMetadata,
-        "apply",
-        lambda operation, document: _tree_metadata_edit(operation, document, Status.APPLIED),
-    )
     source = make_minimal_odt(tmp_path / "source.odt")
     original = source.read_bytes()
     destination = tmp_path / "result.odt"
-    result = execute_operations(source, destination, [SetMetadata(title="Reviewed title")])
+    result = apply_answers(
+        source,
+        destination,
+        [
+            fault_input(
+                metadata_input(title="Reviewed title"),
+                lambda document, decision: _tree_metadata_edit(decision, document, Status.APPLIED),
+            )
+        ],
+    )
     assert result.changed
     before, after = PackageStorage(source), PackageStorage(destination)
     for member in before.member_names():
@@ -82,15 +68,21 @@ def test_mutation_misreported_as_unchanged_refuses_publication(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        SetMetadata,
-        "apply",
-        lambda operation, document: _tree_metadata_edit(operation, document, Status.UNCHANGED),
-    )
     source = make_minimal_odt(tmp_path / "source.odt")
     destination = tmp_path / "result.odt"
     assert_refused(
-        execute_operations(source, destination, [SetMetadata(title="Reviewed title")]),
+        apply_answers(
+            source,
+            destination,
+            [
+                fault_input(
+                    metadata_input(title="Reviewed title"),
+                    lambda document, decision: _tree_metadata_edit(
+                        decision, document, Status.UNCHANGED
+                    ),
+                )
+            ],
+        ),
         match="reported no change but changed",
     )
     assert not destination.exists()
@@ -139,9 +131,9 @@ def test_namespace_binding_changes_ignored_by_c14n_are_detected(tmp_path: Path) 
     tree = document.tree(Part.CONTENT)
     left = etree.fromstring(b'<root xmlns:of="urn:formula:a" formula="of:=1"/>')
     right = etree.fromstring(b'<root xmlns:of="urn:formula:b" formula="of:=1"/>')
-    tree._setroot(left)  # noqa: SLF001  lxml documents this tree-root replacement API.
+    tree._setroot(left)
     checkpoint = document.checkpoint()
-    tree._setroot(right)  # noqa: SLF001  lxml documents this tree-root replacement API.
+    tree._setroot(right)
     assert etree.tostring(left, method="c14n2") == etree.tostring(right, method="c14n2")
     assert document.changed_since(checkpoint) == frozenset({"content.xml"})
 

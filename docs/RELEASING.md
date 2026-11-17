@@ -17,7 +17,7 @@ Before release, verify:
 - The GitHub environment named `release` has a required maintainer reviewer. The draft job
   uses this environment; it waits for review only when that protection is configured.
 - The default branch requires exactly **CI gate**. This job waits for static analysis,
-  platform Quality and Integration jobs and fails unless every required job succeeds,
+  full platform verification jobs and fails unless every required job succeeds,
   including rejection of skipped/cancelled results.
 - The repository description agrees with `[project].description`, rather than a separate
   manually maintained description authority.
@@ -36,19 +36,24 @@ credentials. Repository settings changes require corresponding authorization.
 
 Inspect intended files, including hidden paths, for private documents, reports, environment
 files, credentials, virtual environments and build outputs. `.gitignore` limits accidental
-staging; it does not sanitize committed content. Run [required development checks](DEVELOPING.md#required-checks)
-and [audit hygiene scans](DEVELOPING.md#audit-hygiene), then require hosted checks on the
-exact release commit. Local results do not establish hosted-platform behavior.
+staging; it does not sanitize committed content. The release workflow runs the
+[required development checks](DEVELOPING.md#required-checks) and
+[audit hygiene scans](DEVELOPING.md#audit-hygiene) on the exact release commit.
+Local results do not establish hosted-platform behavior.
 
 Dependency/tool constraints and the lockfile define Python inputs. Native installer pins,
 checksums, runner selection and cache policy are declared in
-[Checks](../.github/workflows/checks.yml). Some native/runner inputs follow their configured
+[native pins](../tools/native_versions.toml) and [Checks](../.github/workflows/checks.yml). Some native/runner inputs follow their configured
 current distributions; a Python lockfile does not freeze the complete toolchain.
 
 ## Start a release
 
-Commit the intended package version and matching dated changelog section to `main`, wait
-for its checks, then manually dispatch:
+Merge the intended package version and matching dated changelog section to `main`, then
+dispatch the release workflow once. It qualifies that exact commit before creating a draft;
+there is no separate manual preflight gate run. Automatic pull-request/main checks may also
+run, but their build outputs are not substituted for the release workflow's tested assets.
+
+Dispatch:
 
 ```bash
 gh workflow run checks.yml --ref main -f release=true
@@ -64,16 +69,16 @@ The same [Checks workflow](../.github/workflows/checks.yml) qualifies and create
 
 1. Run static/security gates, per-platform tests and required real LibreOffice/veraPDF
    integration. **CI gate** requires all those job groups to succeed.
-2. Build/inspect a source archive and wheel. Run the extracted source's contributor checks
-   without `.git` or imports from the original checkout. Verify an isolated installed wheel
-   with locked/hashed dependencies. Linux also requires byte-identical rebuilds.
+2. Run `tools.check build release`: inspect the minimal source archive and wheel, rebuild
+   the extracted source byte-for-byte and verify an isolated installed wheel outside the
+   checkout with locked/hashed runtime dependencies and the public API examples.
 3. Preserve the tested Linux distributions as a workflow artifact. The draft job downloads
    those exact assets and does not rebuild them.
 4. Derive `v<version>` and require that neither that tag nor a matching release/draft exists.
    `tools.github_release absent` uses authenticated paginated exact-state queries;
    transport, authentication, server and parse failures abort rather than imply absence.
-5. Validate package metadata, resources, notices and complete contributor inventory with
-   `tools/check_release.py` in a clean release checkout. Extract exactly the matching
+5. Validate package metadata, resources, notices and exact minimal distribution inventory with
+   `tools.check release` in a clean release checkout. Extract exactly the matching
    changelog section, including its heading/date and internal Markdown. Missing/duplicate
    sections fail; Unreleased and adjacent sections are excluded.
 6. Attest provenance for both distributions and write `SHA256SUMS`.

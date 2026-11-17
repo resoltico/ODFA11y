@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "odfa11y"
-version = "0.8.0"
+version = "0.9.0"
 description = "Audit and explicitly remediate OpenDocument families; verify supported PDF/UA exports with evidence"
 readme = "README.md"
 requires-python = ">=3.15"
-# Code uses MPL-2.0; bundled ODF and MathML grammars retain OASIS and W3C notices.
-license = "MPL-2.0 AND LicenseRef-OASIS-ODF-Notice AND W3C"
-license-files = ["LICENSE", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt", "src/odfa11y/native/formula_data/NOTICE.txt"]
+# Owner code uses AGPL-3.0-only; bundled standards retain OASIS and W3C terms.
+license = "AGPL-3.0-only AND LicenseRef-OASIS-ODF-Notice AND W3C"
+license-files = ["LICENSE", "PROJECT-NOTICE.md", "LICENSE-COMMERCIAL.md", "THIRD-PARTY-NOTICES.md", "src/odfa11y/odf/schemas/NOTICE.txt", "src/odfa11y/odf/schemas/mathml/NOTICE.txt", "src/odfa11y/odf/formula_data/NOTICE.txt"]
 authors = [
   { name = "Ervins Strauhmanis" }
 ]
@@ -29,25 +29,26 @@ classifiers = [
 dependencies = [
   "lxml>=6.1.3,<7",
   "pillow>=13.0.0,<14",
-  "pypdf>=6.21.4,<7",
-  "pypdfium2>=5.14.0,<6",
+  "pypdf>=7.1.0,<8",
+  "pypdfium2>=5.15.2,<6",
 ]
 
 [dependency-groups]
 dev = [
-  "hypothesis>=6.170.12,<7",
+  "hypothesis>=6.170.15,<7",
   "types-lxml==2026.2.16",
   "pytest>=9.2.0,<10",
   "pytest-cov>=7.1.0,<8",
   "pytest-xdist>=3.8.0,<4",
-  "ruff==0.17.3",
+  "ruff==0.17.5",
   "tach==0.35.3",
-  "ty==0.0.93",
+  "ty==0.0.104",
   "jsonschema>=4.26.0,<5",
+  "markdown-it-py==4.3.0",
 ]
 audit = [
   "pip-audit==2.10.1",
-  "zizmor==1.31.1",
+  "zizmor==1.32.0",
 ]
 
 [project.scripts]
@@ -66,21 +67,10 @@ odfa11y = "odfa11y.cli:main"
 packages = ["src/odfa11y"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "/src/odfa11y",
-  "/tests",
-  "/tools",
-  "/docs",
-  "/.github",
-  "/.editorconfig",
-  "/.gitattributes",
-  "/.gitignore",
-  "/.python-version",
-  "/tach.toml",
-  "/AGENTS.md",
-  "/CHANGELOG.md",
-  "/uv.lock",
-]
+include = ["/pyproject.toml", "/README.md", "/LICENSE", "/PROJECT-NOTICE.md", "/LICENSE-COMMERCIAL.md", "/THIRD-PARTY-NOTICES.md", "/src/odfa11y"]
+
+[tool.uv]
+required-version = "==0.13.8"
 
 [tool.pytest.ini_options]
 addopts = "-ra -p no:tach"
@@ -91,7 +81,6 @@ testpaths = ["tests"]
 # Remove successful tmp_path outputs; retain pytest's three-session failed-call history.
 tmp_path_retention_policy = "failed"
 markers = [
-  "integration: tests that invoke an external application such as LibreOffice",
 ]
 
 [tool.coverage.run]
@@ -103,9 +92,6 @@ fail_under = 88
 show_missing = true
 skip_covered = true
 
-[tool.ty.environment]
-python-version = "3.15"
-
 [tool.ty.src]
 include = ["src", "tests", "tools"]
 
@@ -116,48 +102,34 @@ unused-ignore-comment = "error"
 error-on-warning = true
 
 [tool.ruff]
-required-version = "==0.17.3"
-target-version = "py315"
+required-version = "==0.17.5"
 preview = true
 line-length = 100
-respect-gitignore = false
-# Check authored hidden/ignored Python; generated distribution trees exist only at the root.
+respect-gitignore = true
 exclude = [".git", ".venv", "__pycache__", ".ruff_cache", "build/**", "dist/**"]
 
 [tool.ruff.lint]
-select = ["ALL"]
-ignore = [
-  # These rules conflict with Ruff's formatter; formatting is checked separately.
-  "missing-trailing-comma",
-  # Use the brief's standard noqa syntax; RUF100 still rejects stale suppressions.
-  "noqa-comments",
-  # Cohesion is reviewed; these incidental function-size caps are not requirements.
-  "too-many-arguments",
-  "too-many-return-statements",
-  "too-many-statements",
-]
+select = ["E", "F", "W", "I", "UP", "B", "S", "SIM", "RUF", "PL", "C90", "PT", "PTH", "TRY", "DTZ", "ERA", "T20", "CPY001", "D"]
+explicit-preview-rules = true
+# Complexity has one owner: McCabe's control-flow cap.
+ignore = ["PLR0911", "PLR0912", "PLR0913", "PLR0915"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.lint.pylint]
-max-branches = 10
-
 [tool.ruff.lint.pydocstyle]
-# Public APIs use NumPy-style docstrings; this resolves competing docstring conventions.
-convention = "numpy"
-property-decorators = ["odfa11y.serialization.JsonProperty"]
-
-[tool.ruff.lint.flake8-type-checking]
-strict = true
+convention = "pep257"
 
 [tool.ruff.lint.flake8-copyright]
-notice-rgx = "SPDX-License-Identifier: MPL-2\\.0"
+notice-rgx = "SPDX-License-Identifier: AGPL-3\\.0-only"
 min-file-size = 0
 
 [tool.ruff.lint.per-file-ignores]
+"src/odfa11y/cli/writer.py" = ["T20"]
+# Only the root API and application use cases require public docstrings.
+"!src/odfa11y/{application/**,__init__.py}" = ["D"]
 # Pytest assertions, descriptive test names, literal expectations and exact render comparisons.
-"tests/**" = ["assert", "undocumented-public-function", "magic-value-comparison", "float-equality-comparison"]
+"tests/**" = ["assert", "magic-value-comparison", "float-equality-comparison"]
 # Test subprocesses select local tools; pypdf fixtures require its private registration API.
 "tests/tools/test_architecture.py" = ["suspicious-subprocess-import"]
 "tests/cli/test_cli_input_failures.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]

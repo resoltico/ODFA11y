@@ -1,66 +1,45 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Hash every file of an evidence bundle and verify the hashes later."""
 
-from __future__ import annotations
-
-import hashlib
 import json
 import os
 import re
 import stat
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from odfa11y.errors import OutputError, PackageError
+from odfa11y.capture import source_digest
+from odfa11y.errors import OutputOccupied, PackageError
+from odfa11y.evidence.paths import MANIFEST_NAME, unsafe_reason
+from odfa11y.publish import publish_file
 
-from .paths import MANIFEST_NAME, unsafe_reason
-
-MANIFEST_FORMAT = 1
-CHUNK_BYTES = 1 << 20
+BUNDLE_VERSION = 1
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 MAX_SHOWN_NAME = 120
 
 
-def sha256_file(path: Path) -> str:
-    """Hash a file in chunks.
-
-    Returns
-    -------
-    str
-        The hexadecimal SHA-256 digest.
-
-    """
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(CHUNK_BYTES):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def write_manifest(directory: Path) -> None:
-    """Record the SHA-256 of every file in a directory except the root manifest itself.
+def write_manifest(directory: Path, names: Iterable[str]) -> None:
+    """Record the SHA-256 of the explicitly declared bundle files.
 
     Raises
     ------
-    OutputError
+    OutputOccupied
         A name is unsafe, or an entry is a symbolic link or not a regular file.
 
     """
     files: dict[str, str] = {}
-    for path in sorted(directory.rglob("*")):
-        relative = path.relative_to(directory).as_posix()
-        if path.is_dir() and not path.is_symlink():
-            continue
+    for relative in sorted(names):
+        path = directory / relative
         if relative == MANIFEST_NAME:
             continue
         if reason := unsafe_reason(relative) or _kind_problem(path):
             msg = f"Cannot record {relative!r} in a bundle: {reason}"
-            raise OutputError(msg)
-        files[relative] = sha256_file(path)
-    payload = {"format": MANIFEST_FORMAT, "files": files}
-    (directory / MANIFEST_NAME).write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+            raise OutputOccupied(msg)
+        files[relative] = source_digest(path)
+    payload = {"bundle_version": BUNDLE_VERSION, "files": files}
+    encoded = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    publish_file(directory / MANIFEST_NAME, lambda stream: stream.write(encoded))
 
 
 def check_bundle(directory: str | Path) -> list[str]:
@@ -102,11 +81,11 @@ def _read_manifest(root: Path) -> dict[str, str]:
         raise PackageError(msg)
     text = (root / MANIFEST_NAME).read_text(encoding="utf-8")
     manifest = json.loads(text, object_pairs_hook=_no_duplicates)
-    if not isinstance(manifest, dict) or manifest.keys() != {"format", "files"}:
-        msg = "expected exactly the keys 'format' and 'files'"
+    if not isinstance(manifest, dict) or manifest.keys() != {"bundle_version", "files"}:
+        msg = "expected exactly the keys 'bundle_version' and 'files'"
         raise PackageError(msg)
-    if type(manifest["format"]) is not int or manifest["format"] != MANIFEST_FORMAT:
-        msg = f"unsupported format {manifest['format']!r}"
+    if type(manifest["bundle_version"]) is not int or manifest["bundle_version"] != BUNDLE_VERSION:
+        msg = f"unsupported bundle version {manifest['bundle_version']!r}"
         raise PackageError(msg)
     files = manifest["files"]
     if not isinstance(files, dict):
@@ -158,7 +137,7 @@ def _file_problem(root: Path, name: str, digest: str) -> str | None:
         if not wanted(mode):
             return f"Unsafe: {_shown(name)} is not a regular file"
     try:
-        matches = sha256_file(current) == digest
+        matches = source_digest(current) == digest
     except OSError as exc:
         return f"Unreadable: {_shown(name)}: {exc.strerror or type(exc).__name__}"
     return None if matches else f"Modified: {_shown(name)}"

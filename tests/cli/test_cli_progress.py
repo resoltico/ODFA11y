@@ -1,27 +1,23 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Progress reaches interactive stderr before work and never changes evidence facts."""
 
-from __future__ import annotations
-
+import importlib
 import io
-from typing import TYPE_CHECKING, override
+from typing import override
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.batch import run_batch
 from odfa11y.cli.progress import progress_callback
-from odfa11y.errors import OutputError
-from odfa11y.outcomes import ProgressEvent, StepName, StepState
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.pipeline.profiles import profile_named
-from tests.batch.test_batch import manifest_file
+from odfa11y.errors import IoFailure, OutputOccupied
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.progress import ProgressEvent, Step, StepState
+from odfa11y.run import publication as run_publication
+from odfa11y.status import Profile
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute, run_batch
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class Terminal(io.StringIO):
@@ -77,8 +73,8 @@ def test_progress_is_append_only_and_safe(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr("sys.stderr", terminal)
     callback = progress_callback("text")
     assert callback is not None
-    callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.RUNNING))
-    callback(ProgressEvent(StepName.EXPORT_SOURCE, StepState.PASSED))
+    callback(ProgressEvent(Step.EXPORT_SOURCE, StepState.RUNNING))
+    callback(ProgressEvent(Step.EXPORT_SOURCE, StepState.PASSED))
     assert terminal.getvalue() == (
         "Progress: Export source PDF: running\nProgress: Export source PDF: passed\n"
     )
@@ -91,7 +87,7 @@ def test_pipeline_progress_precedes_work_and_publication(tmp_path: Path) -> None
 
     def observe(event: ProgressEvent) -> None:
         name, status = event.step, event.state
-        if name == "identify-source" and status == "running":
+        if name == "prepare" and status == "running":
             assert not output.exists()
         if name == "publish-evidence":
             assert output.exists() == (status == "passed")
@@ -99,13 +95,13 @@ def test_pipeline_progress_precedes_work_and_publication(tmp_path: Path) -> None
 
     result = execute(
         source,
-        reviewed_plan(source, (), FidelityPolicy()),
+        reviewed_plan(source, (), Pagination.SAME()),
         output,
-        RunSettings(profile=profile_named("source"), on_progress=observe),
+        RunSettings(profile=Profile.parse("source"), on_progress=observe),
     )
-    assert events[0] == ("identify-source", "running")
+    assert events[0] == ("prepare", "running")
     assert events[-2:] == [("publish-evidence", "running"), ("publish-evidence", "passed")]
-    assert ("export-source", "running") not in events
+    assert events.index(("export-source", "running")) < events.index(("export-source", "skipped"))
     assert ("export-source", "skipped") in events
     assert "on_progress" not in result.as_dict()
     assert (output / "run.json").exists()
@@ -119,9 +115,9 @@ def test_failed_progress_stream_does_not_prevent_evidence(
     output = tmp_path / "evidence"
     execute(
         source,
-        reviewed_plan(source, (), FidelityPolicy()),
+        reviewed_plan(source, (), Pagination.SAME()),
         output,
-        RunSettings(profile=profile_named("source"), on_progress=progress_callback("text")),
+        RunSettings(profile=Profile.parse("source"), on_progress=progress_callback("text")),
     )
     assert (output / "run.json").exists()
 
@@ -132,15 +128,17 @@ def test_batch_progress_contains_fixed_steps_and_published_status_only(tmp_path:
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
+    manifest = write_batch_file(tmp_path, [("one", "doc.odt", "plan.toml")])
     events: list[tuple[str, str]] = []
     record = run_batch(
         manifest,
         tmp_path / "batch",
-        RunSettings(profile=profile_named("source")),
+        RunSettings(profile=Profile.parse("source")),
         on_progress=lambda event: events.append((event.step, event.state)),
     )
-    assert events == [("batch-item", "running"), ("batch-item", "passed")]
+    assert events[0] == ("batch-item", "running")
+    assert events[-1] == ("batch-item", "passed")
+    assert ("prepare", "running") in events
     assert record.items[0].status == "completed"
     assert str(tmp_path) not in str(events)
 
@@ -155,14 +153,14 @@ def test_publication_failure_never_emits_passed_progress(
         msg = "Evidence storage unavailable"
         raise OSError(msg)
 
-    monkeypatch.setattr("odfa11y.pipeline.publication.write_bundle", unavailable_bundle)
-    with pytest.raises(OSError, match="storage unavailable"):
+    monkeypatch.setattr(run_publication, "write_bundle", unavailable_bundle)
+    with pytest.raises(IoFailure, match="storage unavailable"):
         execute(
             source,
-            reviewed_plan(source, (), FidelityPolicy()),
+            reviewed_plan(source, (), Pagination.SAME()),
             tmp_path / "evidence",
             RunSettings(
-                profile=profile_named("source"),
+                profile=Profile.parse("source"),
                 on_progress=lambda event: events.append((event.step, event.state)),
             ),
         )
@@ -178,27 +176,31 @@ def test_batch_interruption_emits_no_completion(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(tmp_path, [("one", "doc.odt", "plan.toml")])
+    manifest = write_batch_file(tmp_path, [("one", "doc.odt", "plan.toml")])
     events: list[tuple[str, str]] = []
 
     def interrupted_pipeline(*_args: object, **_kwargs: object) -> None:
         raise KeyboardInterrupt
 
-    monkeypatch.setattr("odfa11y.batch.run.execute", interrupted_pipeline)
-    record = run_batch(
-        manifest,
-        tmp_path / "batch",
-        RunSettings(profile=profile_named("source")),
-        on_progress=lambda event: events.append((event.step, event.state)),
+    monkeypatch.setattr(
+        importlib.import_module("odfa11y.application.run"), "execute", interrupted_pipeline
     )
-    assert events == [("batch-item", "running"), ("batch-item", "failed")]
-    assert record.exit_status == 3
+    with pytest.raises(KeyboardInterrupt):
+        run_batch(
+            manifest,
+            tmp_path / "batch",
+            RunSettings(profile=Profile.parse("source")),
+            on_progress=lambda event: events.append((event.step, event.state)),
+        )
+    assert events[0] == ("batch-item", "running")
+    assert events[-1] == ("batch-item", "failed")
+    assert ("batch-item", "passed") not in events
     assert (tmp_path / "batch" / "batch.json").exists()
 
 
 def test_observer_is_excluded_from_options_identity() -> None:
-    plain = RunSettings(profile=profile_named("source"))
-    observed = RunSettings(profile=profile_named("source"), on_progress=lambda _event: None)
+    plain = RunSettings(profile=Profile.parse("source"))
+    observed = RunSettings(profile=Profile.parse("source"), on_progress=lambda _event: None)
     assert plain == observed
     assert repr(plain) == repr(observed)
     assert plain.profile == observed.profile
@@ -206,12 +208,12 @@ def test_observer_is_excluded_from_options_identity() -> None:
 
 @pytest.mark.parametrize(
     ("failure", "status"),
-    [(OutputError("Unsafe publication"), "failed"), (KeyboardInterrupt(), "failed")],
+    [(OutputOccupied("Unsafe publication"), "failed"), (KeyboardInterrupt(), "failed")],
 )
 def test_publication_observes_domain_failure_and_interruption_without_replacing_exception(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failure: OutputError | KeyboardInterrupt,
+    failure: OutputOccupied | KeyboardInterrupt,
     status: str,
 ) -> None:
     source = make_minimal_odt(tmp_path / "doc.odt")
@@ -220,17 +222,32 @@ def test_publication_observes_domain_failure_and_interruption_without_replacing_
     def failed_bundle(*_args: object, **_kwargs: object) -> dict[str, str]:
         raise failure
 
-    monkeypatch.setattr("odfa11y.pipeline.publication.write_bundle", failed_bundle)
+    monkeypatch.setattr(run_publication, "write_bundle", failed_bundle)
     with pytest.raises(type(failure)) as caught:
         execute(
             source,
-            reviewed_plan(source, (), FidelityPolicy()),
+            reviewed_plan(source, (), Pagination.SAME()),
             tmp_path / "evidence",
             RunSettings(
-                profile=profile_named("source"),
+                profile=Profile.parse("source"),
                 on_progress=lambda event: events.append((event.step, event.state)),
             ),
         )
     assert caught.value is failure
     assert events[-2:] == [("publish-evidence", "running"), ("publish-evidence", status)]
     assert ("publish-evidence", "passed") not in events
+
+
+def test_interactive_progress_retains_escaped_item_identity(monkeypatch) -> None:
+    terminal = Terminal()
+    monkeypatch.setattr("sys.stderr", terminal)
+    monkeypatch.setenv("NO_COLOR", "1")
+    callback = progress_callback("text")
+    assert callback is not None
+    callback(ProgressEvent(Step.BATCH_ITEM, StepState.RUNNING, item="reviewed"))
+    callback(ProgressEvent(Step.AUDIT_SOURCE, StepState.PASSED, item="malformed\x1b[31m\n"))
+    assert terminal.getvalue() == (
+        "Progress: [reviewed] Process batch item: running\n"
+        "Progress: [malformed\\x1b[31m\\x0a] Audit source: passed\n"
+    )
+    assert "\x1b" not in terminal.getvalue()

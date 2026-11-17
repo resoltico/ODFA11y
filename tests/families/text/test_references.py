@@ -1,23 +1,19 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Anchors resolve by declared identity, with explicit refusal to infer repairs."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
+from odfa11y.audit import audit_odf
 from odfa11y.families.text.references import audit_references
 from odfa11y.odf import OdfDocument, Part
-from odfa11y.remediation import SetMetadata
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import metadata_input
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import execute_operations
+from tests.fixtures.operations import apply_answers
 from tests.fixtures.paths import TESTS
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize(
@@ -31,13 +27,13 @@ if TYPE_CHECKING:
             ),
             [],
         ),
-        ('<text:p><text:a xlink:href="#missing">Go</text:a></text:p>', ["REFERENCE001"]),
+        ('<text:p><text:a xlink:href="#missing">Go</text:a></text:p>', [rules.REF001.id]),
         (
             (
                 '<text:p><text:a office:name="a">One</text:a><text:a office:name="a">Two</text:a>'
                 '<text:a xlink:href="#a">Go</text:a></text:p>'
             ),
-            ["REFERENCE002"],
+            [rules.REF002.id],
         ),
         (
             (
@@ -52,14 +48,14 @@ if TYPE_CHECKING:
                 '<text:p><text:bookmark-end text:name="a"/>A'
                 '<text:bookmark-start text:name="a"/></text:p>'
             ),
-            ["REFERENCE003"],
+            [rules.REF003.id],
         ),
         (
             (
                 '<text:p><text:reference-mark text:name="a"/>'
                 '<text:bookmark-ref text:ref-name="a" text:reference-format="text"/></text:p>'
             ),
-            ["REFERENCE001"],
+            [rules.REF001.id],
         ),
         (
             (
@@ -82,7 +78,7 @@ if TYPE_CHECKING:
                 '<text:p><text:note text:id="a" text:note-class="footnote">'
                 "<text:note-citation>1</text:note-citation><text:note-body/></text:note></text:p>"
             ),
-            ["NOTE002"],
+            [rules.NOTE003.id],
         ),
     ],
 )
@@ -92,7 +88,8 @@ def test_relationship_controls(tmp_path: Path, body: str, expected: list[str]) -
     observed = [
         f.rule_id
         for f in report.findings
-        if f.rule_id.startswith("REFERENCE") or f.rule_id == "NOTE002"
+        if f.rule_id.startswith("REF")
+        or f.rule_id in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
     ]
     assert observed == expected
     document = OdfDocument.open(source)
@@ -103,9 +100,9 @@ def test_relationship_controls(tmp_path: Path, body: str, expected: list[str]) -
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_writer_relationship_fixtures(case: str) -> None:
-    report = audit_odf(TESTS / "text_corpus" / f"references-{case}.odt")
-    findings = [f.rule_id for f in report.findings if f.rule_id.startswith("REFERENCE")]
-    assert findings == ([] if case == "positive" else ["REFERENCE001"])
+    report = audit_odf(TESTS / "corpus/structure" / f"references-{case}.odt")
+    findings = [f.rule_id for f in report.findings if f.rule_id.startswith("REF")]
+    assert findings == ([] if case == "positive" else [rules.REF001.id])
 
 
 @pytest.mark.parametrize(
@@ -125,9 +122,7 @@ def test_excluded_and_producer_specific_targets_remain_explicit_review(
     report = audit_odf(
         make_flat(tmp_path, "text", Variant(body=f"<office:text>{body}</office:text>"))
     )
-    assert [f.rule_id for f in report.findings if f.rule_id.startswith("REFERENCE")] == [
-        "REFERENCE004"
-    ]
+    assert [f.rule_id for f in report.findings if f.rule_id.startswith("REF")] == [rules.REF004.id]
 
 
 def test_range_cannot_cross_note_reading_context(tmp_path: Path) -> None:
@@ -138,7 +133,7 @@ def test_range_cannot_cross_note_reading_context(tmp_path: Path) -> None:
         "</text:p></text:note-body></text:note></text:p></office:text>"
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    finding = next(f for f in report.findings if f.rule_id == "REFERENCE003")
+    finding = next(f for f in report.findings if f.rule_id == rules.REF003.id)
     assert finding.location is not None
     assert finding.location.path.startswith("content/reference[")
 
@@ -156,9 +151,16 @@ def test_duplicate_note_identities_are_reported_without_reference_fields(tmp_pat
             Variant(body=f"<office:text><text:p>{note}{note}</text:p></office:text>"),
         )
     )
-    assert len([f for f in report.findings if f.rule_id == "NOTE002"]) == 2
+    assert (
+        len([
+            f
+            for f in report.findings
+            if f.rule_id in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
+        ])
+        == 2
+    )
     assert not any(
-        rule.startswith("REFERENCE") or rule == "NOTE002"
+        rule.startswith("REF") or rule in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
         for question in report.decisions
         for rule in question.rule_ids
     )
@@ -166,14 +168,14 @@ def test_duplicate_note_identities_are_reported_without_reference_fields(tmp_pat
 
 @pytest.mark.parametrize("case", ["positive", "negative"])
 def test_review_metadata_does_not_repair_or_retarget_references(tmp_path: Path, case: str) -> None:
-    source = TESTS / "text_corpus" / f"references-{case}.odt"
+    source = TESTS / "corpus/structure" / f"references-{case}.odt"
     output = tmp_path / "reviewed.odt"
     before = etree.tostring(OdfDocument.open(source).tree(Part.CONTENT))
-    execute_operations(source, output, [SetMetadata(title="Reviewed references")])
+    apply_answers(source, output, [metadata_input(title="Reviewed references")])
     assert etree.tostring(OdfDocument.open(output).tree(Part.CONTENT)) == before
     report = audit_odf(output)
     assert not any(
-        rule.startswith("REFERENCE") or rule == "NOTE002"
+        rule.startswith("REF") or rule in {rules.NOTE002.id, rules.NOTE003.id, rules.NOTE004.id}
         for question in report.decisions
         for rule in question.rule_ids
     )

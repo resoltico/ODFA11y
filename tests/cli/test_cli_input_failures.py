@@ -1,24 +1,23 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """CLI input refusals terminate promptly and preserve independent audit results."""
-
-from __future__ import annotations
 
 import json
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from dataclasses import replace
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import EncodedStreamObject, NameObject, StreamObject
 
+from odfa11y.application.compare import is_pdf
+from odfa11y.application.native import NativeTools
 from odfa11y.cli import main
-from odfa11y.pipeline.comparison import is_pdf
+from odfa11y.rules import registry as rules
+from tests.fixtures.native import refusing
 from tests.fixtures.pdf import register, tagged_writer, text_pdf
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.parametrize("operand", ["audit", "source", "candidate"])
@@ -51,11 +50,11 @@ def test_fifo_refuses_before_deadline(tmp_path: Path, operand: str) -> None:
         timeout=3,
         check=False,
     )
-    assert result.returncode == 3
+    assert result.returncode == 2
     assert "regular file" in result.stderr
     assert "Traceback" not in result.stderr
     if operand == "audit":
-        assert "Command: failed (exit 3" in result.stdout
+        assert "Result: failed (exit 2" in result.stdout
     else:
         assert not result.stdout
     assert not diff.exists()
@@ -76,16 +75,18 @@ def test_audit_retains_before_and_after_results_with_strongest_status(
     output = capsys.readouterr()
     assert str(missing) in output.err
     if output_format == "json":
-        assert "Command gate (--strict): FAIL (exit 3)" in output.err
-        reports = json.loads(output.out)
+        payload = json.loads(output.out)
+        assert payload["exit_status"] == 3
+        assert payload["inputs"][1]["failure"]["code"] == "io-failure"
+        reports = [report for item in payload["inputs"] for report in item["reports"]]
         assert [report["subject"] for report in reports] == [str(first), str(last)]
-        assert reports[0]["passed"]
-        assert not reports[1]["passed"]
+        assert reports[0]["summary"]["errors"] == 0
+        assert reports[1]["summary"]["errors"] > 0
     else:
-        assert "Command: failed (exit 3" in output.out
+        assert "Result: failed (exit 3" in output.out
         assert str(first) in output.out
         assert str(last) in output.out
-        assert "GRAPHIC003" in output.out
+        assert rules.GRAPHIC001.id in output.out
 
 
 def test_sniff_regular_alias_and_directory(tmp_path: Path) -> None:
@@ -94,14 +95,14 @@ def test_sniff_regular_alias_and_directory(tmp_path: Path) -> None:
     alias.symlink_to(source)
     assert is_pdf(source)
     assert is_pdf(alias)
-    assert main(["audit", str(tmp_path)]) == 3
+    assert main(["audit", str(tmp_path)]) == 2
 
 
 def test_sniff_checks_opened_file_kind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     source = text_pdf(tmp_path / "source", [["Regular"]])
     directory_info = tmp_path.stat()
     monkeypatch.setattr(os, "fstat", lambda _: directory_info)
-    assert main(["audit", str(source)]) == 3
+    assert main(["audit", str(source)]) == 2
 
 
 def test_strict_gate_is_separate_from_json_report(
@@ -110,8 +111,10 @@ def test_strict_gate_is_separate_from_json_report(
     source = make_minimal_odt(tmp_path / "warning.odt", features={"with_plain_email": True})
     assert main(["audit", str(source), "--strict", "--format", "json"]) == 1
     output = capsys.readouterr()
-    assert json.loads(output.out)["passed"]
-    assert "Command gate (--strict): FAIL (exit 1)" in output.err
+    payload = json.loads(output.out)
+    assert payload["inputs"][0]["reports"][0]["summary"]["errors"] == 0
+    assert payload["exit_status"] == 1
+    assert not output.err
 
 
 def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_failure(
@@ -127,8 +130,8 @@ def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_fa
     before = source.read_bytes()
     assert main(["audit", str(source), "--format", "json"]) == 2
     output = capsys.readouterr()
-    report = json.loads(output.out)
-    assert [finding["rule_id"] for finding in report["findings"]] == ["PDF000"]
+    report = json.loads(output.out)["inputs"][0]["reports"][0]
+    assert [finding["rule_id"] for finding in report["findings"]] == [rules.PDF001.id]
     assert "Unsupported PDF stream decoding" in report["findings"][0]["message"]
     assert not output.err
     assert main(["compare", str(source), str(source)]) == 3
@@ -140,14 +143,12 @@ def test_real_unsupported_stream_is_a_structured_audit_and_controlled_compare_fa
 
 
 def test_compare_preflight_rejects_candidate_before_export(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    native_tools: NativeTools, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = make_minimal_odt(tmp_path / "source.odt")
     calls = []
-    monkeypatch.setattr(
-        "odfa11y.pipeline.comparison.export_pdfua", lambda *args: calls.append(args)
-    )
-    assert main(["compare", str(source), str(tmp_path / "missing")]) == 3
+    native_tools = replace(native_tools, export=refusing(calls))
+    assert main(["compare", str(source), str(tmp_path / "missing")], native_tools=native_tools) == 3
     assert not calls
 
 
@@ -158,21 +159,21 @@ def test_unreadable_input_continues_to_next_audit(
     good = make_minimal_odt(tmp_path / "good.odt")
     opener = os.open
 
-    def open_input(path: Path, flags: int) -> int:
+    def open_input(path, flags, mode=0o777, *, dir_fd=None) -> int:
         if path == blocked:
             message = "Permission denied"
-            raise PermissionError(message)
-        return opener(path, flags)
+            raise PermissionError(13, message, str(path))
+        return opener(path, flags, mode, dir_fd=dir_fd)
 
     monkeypatch.setattr(os, "open", open_input)
     assert main(["audit", str(blocked), str(good), "--format", "json"]) == 3
     output = capsys.readouterr()
     assert "Permission denied" in output.err
     assert str(blocked) in output.err
-    assert json.loads(output.out)["subject"] == str(good)
+    assert json.loads(output.out)["inputs"][1]["reports"][0]["subject"] == str(good)
 
 
-@pytest.mark.parametrize("command", ["pipeline", "batch"])
+@pytest.mark.parametrize("command", ["run", "batch"])
 def test_help_explains_profiles_and_timeout(
     capsys: pytest.CaptureFixture[str], command: str
 ) -> None:
@@ -180,6 +181,6 @@ def test_help_explains_profiles_and_timeout(
         main([command, "--help"])
     assert exited.value.code == 0
     output = " ".join(capsys.readouterr().out.split())
-    assert "default: verify" in output
-    assert "production also requires veraPDF and gates warnings" in output
-    assert "seconds (default: 120)" in output
+    assert "default: pdf" in output
+    assert "Require PDF/UA validation and reject warnings as well as errors." in output
+    assert "Seconds per native call (default: 120)" in output

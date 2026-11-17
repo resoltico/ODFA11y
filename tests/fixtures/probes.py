@@ -1,9 +1,8 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Independent PDF controls and explicit probe doubles for native workflow tests."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 from pypdf.generic import (
     ArrayObject,
@@ -13,8 +12,10 @@ from pypdf.generic import (
     NumberObject,
     TextStringObject,
 )
+lazy from pypdf import PdfWriter
 
-from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeExecution, ProbeId
+from odfa11y.families.probes import CapabilityResult, CapabilityStatus, ProbeExecution, ProbeId
+from odfa11y.tool_identity import ToolIdentity
 from tests.fixtures.pdf import (
     annotation_references,
     dictionary,
@@ -25,22 +26,13 @@ from tests.fixtures.pdf import (
     set_page_content,
     tagged_writer,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-
-    from odfa11y.native.export import ExportSettings
-    from odfa11y.native.probes import CapabilityProbe, ProbeCache
-    from odfa11y.native.process import ToolIdentity
+lazy from odfa11y.families.probes import CapabilityProbe
+lazy from odfa11y.native.libreoffice import ExportSettings
 
 PURPOSE = "ODFA11y reviewed link purpose."
 
 
 def conclusive_probe(
-    _cache: ProbeCache,
     probe: CapabilityProbe,
     identity: ToolIdentity,
     _settings: ExportSettings,

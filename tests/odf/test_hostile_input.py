@@ -1,42 +1,40 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Inputs that are malformed, adversarial or merely unusual must not crash or corrupt output."""
-
-from __future__ import annotations
 
 import os
 import stat
 import sys
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
+lazy from pathlib import Path
 
 import pypdfium2
 import pytest
 
-from odfa11y.adapter import Status
-from odfa11y.errors import PackageError, ToolFailedError
-from odfa11y.families.text import (
-    LinkifyAddresses,
-    MarkTableHeaders,
-    RemoveEmptySpacers,
-    TableHeaders,
-)
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PackageError, PlanError, ToolFailure, ToolUnavailable
 from odfa11y.odf import OdfDocument, PackageStorage, Part, select_elements
-from odfa11y.outcomes import StageStatus
-from odfa11y.pdf.fidelity import FidelityPolicy, compare_pdfs
 from odfa11y.pdf.fidelity import compare as compare_module
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.engine import execute
-from odfa11y.remediation import SetMetadata, SetOdfVersion
-from odfa11y.source_audit import audit_odf
-from odfa11y.tools import Tools
-from tests.fixtures.operations import assert_refused, execute_operations
+from odfa11y.pdf.fidelity import compare_pdfs
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
+from odfa11y.status import Profile
+from tests.fixtures.answers import (
+    address_input,
+    apply_in_memory,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+    version_input,
+)
+from tests.fixtures.operations import apply_answers, assert_refused
 from tests.fixtures.pdf import text_pdf
 from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 CENTRAL_DIRECTORY_SIGNATURE = b"PK\x01\x02"
 ENCRYPTED_FLAG_OFFSET = 8
@@ -68,8 +66,8 @@ def test_malformed_optional_members_do_not_abort_the_audit_or_remediation(tmp_pa
     broken = tmp_path / "broken.odt"
     package.save(broken)
     report = audit_odf(broken, schema=True)
-    assert "XML001" in {f.rule_id for f in report.findings}
-    result = execute_operations(broken, tmp_path / "out.odt", [SetMetadata(title="Still works")])
+    assert rules.XML001.id in {f.rule_id for f in report.findings}
+    result = apply_answers(broken, tmp_path / "out.odt", [metadata_input(title="Still works")])
     assert result.changed
 
 
@@ -83,7 +81,7 @@ def test_zip_encrypted_members_are_an_invalid_package_not_a_crash(tmp_path: Path
     encrypted.write_bytes(bytes(data))
     with pytest.raises(PackageError):
         PackageStorage(encrypted)
-    assert {f.rule_id for f in audit_odf(encrypted).findings} == {"PKG000"}
+    assert {f.rule_id for f in audit_odf(encrypted).findings} == {rules.PKG001.id}
 
 
 ANNOTATED = (
@@ -99,7 +97,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
     tmp_path: Path,
 ) -> None:
     source = with_body(tmp_path, ANNOTATED)
-    audited = [f for f in audit_odf(source).findings if f.rule_id == "LINK001"]
+    audited = [f for f in audit_odf(source).findings if f.rule_id == rules.LINK001.id]
     texts = []
     for finding in audited:
         value = finding.details["text"]
@@ -110,7 +108,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
         "qa@example.test",
     ]
     document = OdfDocument.open(source)
-    (outcome,) = LinkifyAddresses().apply(document)
+    (outcome,) = apply_in_memory(document, address_input())
     assert (outcome.status, outcome.count) == (Status.APPLIED, 2)
     content = document.tree(Part.CONTENT)
     assert not select_elements(
@@ -122,7 +120,7 @@ def test_linkification_touches_only_prose_not_annotations_descriptions_or_commen
         "qa@example.test",
     ]
     assert audit_odf(source).findings  # the original is untouched
-    assert LinkifyAddresses().apply(document)[0].status is Status.UNCHANGED
+    assert apply_in_memory(document, address_input())[0].status is Status.UNCHANGED
 
 
 @pytest.mark.parametrize(
@@ -143,7 +141,7 @@ def test_paragraphs_with_markers_or_fields_are_never_removed_as_spacers(
     body = b'<text:p text:style-name="Body">' + marker + b"</text:p>"
     document = OdfDocument.open(with_body(tmp_path, body))
     paragraph = select_elements(document.tree(Part.CONTENT), "//text:p")[0]
-    RemoveEmptySpacers().apply(document)
+    apply_in_memory(document, spacer_input())
     assert paragraph in document.tree(Part.CONTENT).iter()
 
 
@@ -152,8 +150,8 @@ def test_audit_and_remediation_agree_on_what_a_spacer_is(tmp_path: Path) -> None
         b'<text:list><text:list-item><text:p text:style-name="Body"/></text:list-item></text:list>'
     )
     source = with_body(tmp_path, listed)
-    finding = next(f for f in audit_odf(source).findings if f.rule_id == "LAYOUT001")
-    (outcome,) = RemoveEmptySpacers().apply(OdfDocument.open(source))
+    finding = next(f for f in audit_odf(source).findings if f.rule_id == rules.STYLE002.id)
+    (outcome,) = apply_in_memory(OdfDocument.open(source), spacer_input())
     assert finding.details["count"] == outcome.count == 1  # the list item's paragraph is neither
 
 
@@ -163,8 +161,8 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     valid = make_minimal_odt(
         tmp_path / "v12.odt", version="1.2", features={"with_data_table": True}
     )
-    result = execute_operations(valid, tmp_path / "out.odt", [SetOdfVersion("1.4")])
-    assert result.schema.status == StageStatus.PASSED
+    result = apply_answers(valid, tmp_path / "out.odt", [version_input("1.4")])
+    assert result.schema.status == "passed"
     assert result.schema.version == "1.4"
     package = PackageStorage(valid)
     package.write_member(
@@ -173,7 +171,7 @@ def test_a_relabel_from_a_version_without_a_schema_must_yield_a_valid_document(
     invalid = tmp_path / "invalid.odt"
     package.save(invalid)
     assert_refused(
-        execute_operations(invalid, tmp_path / "never.odt", [SetOdfVersion("1.4")]),
+        apply_answers(invalid, tmp_path / "never.odt", [version_input("1.4")]),
         match="must validate",
     )
     assert not (tmp_path / "never.odt").exists()
@@ -190,9 +188,11 @@ def test_duplicate_table_names_are_ambiguous_and_fail(tmp_path: Path) -> None:
     package.write_member("content.xml", content[:end] + content[start:end] + content[end:])
     twin = tmp_path / "twin.odt"
     package.save(twin)
-    (outcome,) = MarkTableHeaders({"Data": TableHeaders(1)}).apply(OdfDocument.open(twin))
-    assert outcome.status is Status.FAILED
-    assert "must resolve to exactly one table" in outcome.message
+    document = OdfDocument.open(twin)
+    checkpoint = document.checkpoint()
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(document, header_inputs({"Data": header_answer(1)}))
+    assert not document.changed_since(checkpoint)
 
 
 @POSIX_ONLY
@@ -203,14 +203,11 @@ def test_a_non_executable_soffice_fails_the_stage_and_still_publishes_evidence(
     fake = tmp_path / "soffice"
     fake.write_text("#!/bin/sh\n", encoding="utf-8")
     fake.chmod(0o600)
-    record = execute(
-        source,
-        reviewed_plan(source, [], FidelityPolicy()),
-        tmp_path / "out",
-        RunSettings(tools=Tools(soffice=str(fake))),
-    )
-    assert record.failed_stage == "export-source"
-    assert (tmp_path / "out" / "run.json").is_file()
+    with pytest.raises(ToolUnavailable):
+        execute(
+            source, reviewed_plan(source), tmp_path / "out", RunSettings(tools=Tools(soffice=fake))
+        )
+    assert not (tmp_path / "out").exists()
 
 
 def test_a_renderer_failure_is_a_tool_error_not_a_traceback(
@@ -223,8 +220,8 @@ def test_a_renderer_failure_is_a_tool_error_not_a_traceback(
         raise pypdfium2.PdfiumError(message)
 
     monkeypatch.setattr(compare_module.pypdfium2, "PdfDocument", refuse)
-    with pytest.raises(ToolFailedError, match="Cannot render"):
-        compare_pdfs(pdf, pdf, FidelityPolicy())
+    with pytest.raises(ToolFailure, match="Cannot render"):
+        compare_pdfs(pdf, pdf, Pagination.SAME())
 
 
 @POSIX_ONLY
@@ -234,15 +231,15 @@ def test_published_outputs_honour_the_umask_instead_of_being_owner_only(tmp_path
         source = make_minimal_odt(tmp_path / "doc.odt")
         record = execute(
             source,
-            reviewed_plan(source, [], FidelityPolicy()),
+            reviewed_plan(source, [], Pagination.SAME()),
             tmp_path / "out",
-            RunSettings(tools=Tools(soffice="missing")),
+            RunSettings(profile=Profile.SOURCE),
         )
         remediated = tmp_path / "remediated.odt"
-        execute_operations(source, remediated, [SetMetadata(title="Modes")])
+        apply_answers(source, remediated, [metadata_input(title="Modes")])
     finally:
         os.umask(previous)
-    assert record.failed_stage == "export-source"
+    assert record.failed_stage is None
     assert stat.S_IMODE(remediated.stat().st_mode) == 0o644
     bundle = tmp_path / "out"
     assert stat.S_IMODE(bundle.stat().st_mode) == 0o755

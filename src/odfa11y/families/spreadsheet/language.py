@@ -1,14 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Bind the spreadsheet family's language to its table-cell style."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from odfa11y.content import set_style_language, style_language
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+from odfa11y.concepts import set_style_language, style_language
+from odfa11y.odf.allowance import XmlChange
+lazy from odfa11y.odf import OdfDocument
 
 
 def default_language(document: OdfDocument) -> str | None:
@@ -23,7 +18,7 @@ def default_language(document: OdfDocument) -> str | None:
     return style_language(document, "table-cell")
 
 
-def set_default_language(document: OdfDocument, tag: str) -> bool:
+def set_default_language(document: OdfDocument, tag: str) -> XmlChange:
     """Write the family's default language.
 
     Returns

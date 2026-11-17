@@ -1,6 +1,6 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Standalone chart semantics and protected source assurance."""
 
-from .adapter import ADAPTER
+from odfa11y.families.chart.spec import SPEC
 
-__all__ = ["ADAPTER"]
+__all__ = ["SPEC"]

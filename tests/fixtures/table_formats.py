@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Explicit Writer number formatting needed to retain native numeric cell values."""
 
 NUMERIC_STYLES = (

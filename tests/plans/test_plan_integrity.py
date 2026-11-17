@@ -1,31 +1,30 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """A plan must mean what its author reviewed: selector conflicts, fingerprints, style identity."""
 
-from __future__ import annotations
+from typing import Unpack
+lazy from pathlib import Path
 
-from typing import TYPE_CHECKING, Unpack
-
+import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, graphics_fingerprint, table_fingerprint
-from odfa11y.families.text import (
-    MarkTableHeaders,
-    NormalizeSpacing,
-    SetGraphicAlternatives,
-    TableHeaders,
-    derived_style_name,
-)
+from odfa11y.concepts import graphics_fingerprint, table_fingerprint
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PlanError
+from odfa11y.families.text import derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from tests.fixtures.answers import (
+    Authored,
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    spacing_input,
+)
 from tests.fixtures.writer import make_minimal_odt
+lazy from tests.fixtures.writer import Features
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation
-    from tests.fixtures.writer import Features
-
-WRONG = "000000000000"
+WRONG = "0" * 16
 
 
 def open_document(tmp_path: Path, **features: Unpack[Features]) -> OdfDocument:
@@ -40,7 +39,7 @@ def open_document(tmp_path: Path, **features: Unpack[Features]) -> OdfDocument:
     return OdfDocument.open(make_minimal_odt(tmp_path / "doc.odt", features=features))
 
 
-def statuses(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
+def statuses(operation: Authored, document: OdfDocument) -> tuple[Status, ...]:
     """Apply an operation and list its outcome statuses.
 
     Returns
@@ -49,34 +48,25 @@ def statuses(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
         One status per outcome.
 
     """
-    return tuple(outcome.status for outcome in operation.apply(document))
+    return tuple(outcome.status for outcome in apply_in_memory(document, operation))
 
 
 def test_conflicting_alt_text_for_one_graphic_fails_every_involved_entry(tmp_path: Path) -> None:
     document = open_document(tmp_path, with_image_without_alt=True)
     entries = {
-        "Logo": GraphicAlternative(description="A"),
-        "logo.svg": GraphicAlternative(description="B"),
+        "Logo": graphic_answer(description="A"),
+        "content/frame[name=Logo]": graphic_answer(description="B"),
     }
-    outcomes = SetGraphicAlternatives(entries).apply(document)
-    assert {outcome.key for outcome in outcomes} == {"Logo", "logo.svg"}
-    assert all(outcome.status is Status.FAILED for outcome in outcomes)
-    assert all("different description" in outcome.message for outcome in outcomes)
+    with pytest.raises(PlanError, match="same decision kind"):
+        apply_in_memory(document, graphic_inputs(entries))
     assert not document.dirty
 
 
 def test_entries_that_set_different_fields_or_equal_values_combine(tmp_path: Path) -> None:
     document = open_document(tmp_path, with_image_without_alt=True)
-    different = {
-        "Logo": GraphicAlternative(title="T"),
-        "logo.svg": GraphicAlternative(description="D"),
-    }
-    assert statuses(SetGraphicAlternatives(different), document) == (Status.APPLIED, Status.APPLIED)
-    same = {
-        "Logo": GraphicAlternative(description="D"),
-        "logo.svg": GraphicAlternative(description="D"),
-    }
-    assert statuses(SetGraphicAlternatives(same), document) == (Status.UNCHANGED, Status.UNCHANGED)
+    combined = {"content/frame[name=Logo]": graphic_answer(title="T", description="D")}
+    assert statuses(graphic_inputs(combined), document) == (Status.APPLIED,)
+    assert statuses(graphic_inputs(combined), document) == (Status.UNCHANGED,)
 
 
 def test_a_fingerprint_binds_alt_text_to_the_reviewed_graphic_and_survives_the_edit(
@@ -85,26 +75,27 @@ def test_a_fingerprint_binds_alt_text_to_the_reviewed_graphic_and_survives_the_e
     document = open_document(tmp_path, with_image_without_alt=True)
     frames = select_elements(document.tree(Part.CONTENT), "//draw:frame")
     fingerprint = graphics_fingerprint(document, frames)
-    entry = {"Logo": GraphicAlternative("Title", "Description", fingerprint)}
-    assert statuses(SetGraphicAlternatives(entry), document) == (Status.APPLIED,)
+    entry = {"Logo": graphic_answer("Title", "Description", fingerprint)}
+    assert statuses(graphic_inputs(entry), document) == (Status.APPLIED,)
     assert (
         graphics_fingerprint(document, frames) == fingerprint
     )  # setting alt text does not change it
-    assert statuses(SetGraphicAlternatives(entry), document) == (Status.UNCHANGED,)
-    stale = {"Logo": GraphicAlternative("Other", fingerprint=WRONG)}
-    (outcome,) = SetGraphicAlternatives(stale).apply(document)
-    assert outcome.status is Status.FAILED
-    assert "no longer the object" in outcome.message
+    assert statuses(graphic_inputs(entry), document) == (Status.UNCHANGED,)
+    stale = {"Logo": graphic_answer("Other", fingerprint=WRONG)}
+    checkpoint = document.checkpoint()
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(document, graphic_inputs(stale))
+    assert not document.changed_since(checkpoint)
 
 
 def test_a_fingerprint_binds_header_rows_to_the_reviewed_table(tmp_path: Path) -> None:
     document = open_document(tmp_path, with_data_table=True)
     table = select_elements(document.tree(Part.CONTENT), "//table:table")[0]
     fingerprint = table_fingerprint(table)
-    entry = {"Data": TableHeaders(1, fingerprint=fingerprint)}
-    assert statuses(MarkTableHeaders(entry), document) == (Status.APPLIED,)
+    entry = {"Data": header_answer(1, fingerprint=fingerprint)}
+    assert statuses(header_inputs(entry), document) == (Status.APPLIED,)
     assert table_fingerprint(table) == fingerprint  # moving rows into the header keeps it
-    assert statuses(MarkTableHeaders(entry), document) == (Status.UNCHANGED,)
+    assert statuses(header_inputs(entry), document) == (Status.UNCHANGED,)
 
 
 def test_a_table_that_drifted_since_review_is_refused(tmp_path: Path) -> None:
@@ -113,11 +104,10 @@ def test_a_table_that_drifted_since_review_is_refused(tmp_path: Path) -> None:
     fingerprint = table_fingerprint(table)
     select_elements(table, ".//text:p")[0].text = "Edited after review"
     checkpoint = document.checkpoint()
-    (outcome,) = MarkTableHeaders({"Data": TableHeaders(1, fingerprint=fingerprint)}).apply(
-        document
-    )
-    assert outcome.status is Status.FAILED
-    assert "no longer the object" in outcome.message
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(
+            document, header_inputs({"Data": header_answer(1, fingerprint=fingerprint)})
+        )
     assert not document.changed_since(checkpoint)
 
 
@@ -127,11 +117,9 @@ def test_marking_headers_keeps_a_reviewed_graphic_in_that_row_addressable(tmp_pa
     cell_paragraph = select_elements(document.tree(Part.CONTENT), "//table:table-cell/text:p")[0]
     cell_paragraph.append(frame)
     fingerprint = graphics_fingerprint(document, [frame])
-    graphics = SetGraphicAlternatives({
-        "Logo": GraphicAlternative("A logo", fingerprint=fingerprint)
-    })
+    graphics = graphic_inputs({"Logo": graphic_answer("A logo", fingerprint=fingerprint)})
     assert statuses(graphics, document) == (Status.APPLIED,)
-    assert statuses(MarkTableHeaders({"Data": TableHeaders(rows=1)}), document) == (Status.APPLIED,)
+    assert statuses(header_inputs({"Data": header_answer(rows=1)}), document) == (Status.APPLIED,)
     assert graphics_fingerprint(document, [frame]) == fingerprint
     assert statuses(graphics, document) == (Status.UNCHANGED,)
 
@@ -160,7 +148,7 @@ def test_a_foreign_style_with_the_derived_name_is_never_overwritten(tmp_path: Pa
     foreign = _add_style(document.tree(Part.CONTENT), "office:automatic-styles", name)
     before = etree.tostring(foreign)
     checkpoint = document.checkpoint()
-    (outcome,) = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(document)
+    (outcome,) = apply_in_memory(document, spacing_input("Body paragraph.", ("BodyTight",)))
     assert outcome.status is Status.FAILED
     assert "not an unmodified derivation" in outcome.message
     assert etree.tostring(foreign) == before
@@ -171,24 +159,24 @@ def test_a_foreign_style_in_the_styles_part_is_protected_too(tmp_path: Path) -> 
     document = _spacing_document(tmp_path)
     name = derived_style_name("BodyTight")
     _add_style(document.tree(Part.STYLES), "office:styles", name)
-    (outcome,) = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(document)
+    (outcome,) = apply_in_memory(document, spacing_input("Body paragraph.", ("BodyTight",)))
     assert outcome.status is Status.FAILED
 
 
 def test_distinct_base_styles_never_share_a_derived_name() -> None:
     assert derived_style_name("Body Text") != derived_style_name("Body_Text")
     assert derived_style_name("x" * 60 + "a") != derived_style_name("x" * 60 + "b")
-    assert derived_style_name("BodyTight").startswith("A11ySpacing_BodyTight_")
+    assert derived_style_name("BodyTight").startswith("ODFA11y_spacing_")
 
 
 def test_the_generated_style_converges_when_the_reference_changes(tmp_path: Path) -> None:
     document = _spacing_document(tmp_path)
-    operation = NormalizeSpacing("Body paragraph.", ("BodyTight",))
+    operation = spacing_input("Body paragraph.", ("BodyTight",))
     assert statuses(operation, document) == (Status.APPLIED,)
     first = {
         style.get(qn("style", "name"))
         for style in select_elements(document.tree(Part.CONTENT), "//style:style")
-        if "A11ySpacing" in (style.get(qn("style", "name")) or "")
+        if "ODFA11y_spacing_" in (style.get(qn("style", "name")) or "")
     }
     select_elements(document.tree(Part.CONTENT), "//text:p")[0].set(
         qn("text", "style-name"), "Heading1"
@@ -197,6 +185,6 @@ def test_the_generated_style_converges_when_the_reference_changes(tmp_path: Path
     second = {
         style.get(qn("style", "name"))
         for style in select_elements(document.tree(Part.CONTENT), "//style:style")
-        if "A11ySpacing" in (style.get(qn("style", "name")) or "")
+        if "ODFA11y_spacing_" in (style.get(qn("style", "name")) or "")
     }
     assert first == second == {derived_style_name("BodyTight")}

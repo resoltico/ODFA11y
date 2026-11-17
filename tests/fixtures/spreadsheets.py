@@ -1,20 +1,14 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Build synthetic spreadsheets, as packages or flat XML, with selected structural features."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
 lazy from collections.abc import Mapping
+lazy from pathlib import Path
 
-from odfa11y.families.spreadsheet import SetSheetNames
-from odfa11y.families.spreadsheet.names import SheetNameChange
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
 from odfa11y.families.spreadsheet.sheets import sheet_name, sheets
-from odfa11y.families.spreadsheet.snapshot import sheet_fingerprint
 from odfa11y.odf import OdfDocument, Part
+from tests.fixtures.answers import RawDecisions, sheet_answer, sheet_inputs
 from tests.fixtures.documents import Variant, make_flat, make_package
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 LAYOUTS = {"package": make_package, "flat": make_flat}
 HIDDEN_SHEET_STYLE = (
@@ -137,7 +131,7 @@ def make_spreadsheet(
     return LAYOUTS[layout](directory, kind, variant)
 
 
-def reviewed_sheet_names(source: OdfDocument | Path, names: Mapping[str, str]) -> SetSheetNames:
+def reviewed_sheet_names(source: OdfDocument | Path, names: Mapping[str, str]) -> RawDecisions:
     """Bind explicit fixture answers to current sheet ordinals and preserved content.
 
     Returns
@@ -154,7 +148,7 @@ def reviewed_sheet_names(source: OdfDocument | Path, names: Mapping[str, str]) -
             ((i, node) for i, node in enumerate(available, 1) if sheet_name(node) == old), None
         )
         index, node = match or (len(available) + position, None)
-        entries[f"content/sheet[{index}]"] = SheetNameChange(
+        entries[f"content/sheet[{index}]"] = sheet_answer(
             new, sheet_fingerprint(document, node) if node is not None else "0" * 16
         )
-    return SetSheetNames(entries)
+    return sheet_inputs(entries)

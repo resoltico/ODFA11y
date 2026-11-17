@@ -1,0 +1,127 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Native integration cases for pipeline."""
+
+import json
+lazy from collections.abc import Callable
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y.application.tools import Tools
+from odfa11y.evidence import check_bundle
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.status import Profile
+from tests.fixtures.answers import (
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+)
+from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import STAGE_NAMES, RunSettings, execute, stage_statuses
+from tests.fixtures.writer import document_with_spacers, make_minimal_odt
+
+
+@pytest.mark.usefixtures("required_verapdf")
+def test_end_to_end_run_with_libreoffice_and_verapdf_produces_verified_evidence(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    verapdf = external_tool("verapdf")
+    source = make_minimal_odt(
+        tmp_path / "doc.odt",
+        features={"with_data_table": True, "with_image_without_alt": True},
+    )
+    operations = [
+        metadata_input(title="Evidence run", language="en-GB"),
+        header_inputs({"Data": header_answer(1)}),
+        graphic_inputs({"Logo": graphic_answer("Logo", "A sample logo")}),
+    ]
+    options = RunSettings(
+        tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
+    )
+    record = execute(
+        source, reviewed_plan(source, operations, Pagination.SAME()), tmp_path / "out", options
+    )
+    why = [
+        (
+            stage.name,
+            stage.outcome,
+            [f.message for f in stage.report.findings] if stage.report else [],
+        )
+        for stage in record.stages
+        if stage.outcome.status != "passed"
+    ]
+    assert stage_statuses(record) == dict.fromkeys(STAGE_NAMES, "passed"), why
+    assert record.exit_status == 0
+    assert check_bundle(tmp_path / "out") == []
+    run = json.loads((tmp_path / "out" / "run.json").read_text())
+    assert run["toolchain"]["libreoffice"]["version"] != "unknown"
+    assert run["toolchain"]["verapdf"]["name"] == "veraPDF"
+    assert run["schema_version"] == 1
+    assert run["profile"] == "production"
+    assert run["document"]["kind"]["media_type"] == "application/vnd.oasis.opendocument.text"
+    assert run["document"]["layout"] == "package"
+    assert run["document"]["kind"]["family"] == "text"
+    assert len(run["plan_sha256"]) == 64
+    assert {font["name"] for font in run["fonts"]["remediated"]}
+    assert set(json.loads((tmp_path / "out" / "manifest.json").read_text())["files"]) >= {
+        "remediated.odt",
+        "remediated.pdf",
+        "source.pdf",
+        "verapdf.xml",
+    }
+    assert "- [ ]" in (tmp_path / "out" / "REVIEW.md").read_text()
+
+
+def test_layout_shifting_operations_fail_the_default_fidelity_gate_and_leave_diff_images(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    source = document_with_spacers(tmp_path)
+    options = RunSettings(tools=Tools(soffice=soffice))
+    failed = execute(
+        source,
+        reviewed_plan(source, [spacer_input()], Pagination.SAME()),
+        tmp_path / "strict",
+        options,
+    )
+    assert stage_statuses(failed)["fidelity"] == "gate-failed"
+    assert failed.exit_status == 2
+    assert (tmp_path / "strict" / "diff" / "page-001-diff.png").is_file()
+    allowed = Pagination.MAY_CHANGE
+    passed = execute(
+        source,
+        reviewed_plan(source, [spacer_input()], allowed),
+        tmp_path / "relaxed",
+        options,
+    )
+    assert stage_statuses(passed)["fidelity"] == "passed"
+
+
+def test_repeated_runs_have_equal_logical_results_and_identical_documents(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    source = make_minimal_odt(tmp_path / "doc.odt")
+    options = RunSettings(tools=Tools(soffice=soffice))
+    runs = [
+        execute(
+            source,
+            reviewed_plan(source, [metadata_input(title="Same")], Pagination.SAME()),
+            tmp_path / f"r{i}",
+            options,
+        )
+        for i in range(2)
+    ]
+    first, second = (json.loads((tmp_path / f"r{i}" / "run.json").read_text()) for i in range(2))
+    assert first["stages"] == second["stages"]
+    assert "operations" not in first
+    assert first["decisions"] == second["decisions"]
+    manifests = [
+        json.loads((tmp_path / f"r{i}" / "manifest.json").read_text())["files"] for i in range(2)
+    ]
+    assert manifests[0]["remediated.odt"] == manifests[1]["remediated.odt"]
+    assert runs[0].passed

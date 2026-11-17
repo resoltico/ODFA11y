@@ -1,54 +1,59 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Facts preserve registered identity and reject incorrect measurement types."""
-
-from __future__ import annotations
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Producer contracts reject wrong measurement types before changing a report."""
 
 from typing import cast
 
 import pytest
 
-from odfa11y.errors import ReportError
-from odfa11y.report import FACT_REGISTRY, FactKey, FactKeys, FactSet
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.contracts import decode
+from odfa11y.errors import InvalidOption
+from odfa11y.pdf.audit import PdfMeasurements
+from odfa11y.pdf.fidelity.compare import FidelityMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
+from odfa11y.report import Report, ReportKind
+from tests.fixtures.measurements import measurement
 
 
 @pytest.mark.parametrize(
-    ("key", "value"),
+    ("contract", "values"),
     [
-        (FactKeys.PDF_PAGE_COUNT, True),
-        (FactKeys.PDF_PAGE_COUNT, 1.0),
-        (FactKeys.DOCUMENT_TITLE, 3),
-        (FactKeys.PDF_STRUCTURE_TAGS, {"H1": "one"}),
-        (FactKeys.FIDELITY_RASTER_CHANGED_RATIOS, ["wrong"]),
+        (PdfMeasurements, {"page_count": True}),
+        (PdfMeasurements, {"page_count": 1.0}),
+        (DocumentMetadata, {"title": 3}),
+        (PdfStructureMeasurements, {"structure_tags": {"H1": "one"}}),
+        (FidelityMeasurements, {"raster_changed_ratios": ["wrong"]}),
     ],
 )
-def test_fact_type_mismatch_is_rejected(key: FactKey[object], value: object) -> None:
-    facts = FactSet()
-    with pytest.raises(ReportError, match="requires"):
-        facts[key] = value
-    assert not facts
+def test_wrong_measurement_types_are_refused(
+    contract: type[object], values: dict[str, object]
+) -> None:
+    with pytest.raises(InvalidOption):
+        decode(contract, values)
 
 
-def test_registered_fact_identity_cannot_be_forged() -> None:
-    facts = FactSet({FactKeys.PDF_PAGE_COUNT: 1})
-    forged = FactKey[str]("pdf.page_count", str, "Forged definition")
-    with pytest.raises(ReportError, match="registered"):
-        facts[forged] = "wrong"
-    with pytest.raises(ReportError, match="registered"):
-        _ = facts[forged]
-    with pytest.raises(ReportError, match="registered"):
-        facts.get(forged)
-    with pytest.raises(ReportError, match="registered"):
-        facts[cast("FactKey[str]", "pdf.page_count")] = "wrong"
-    assert facts[FactKeys.PDF_PAGE_COUNT] == 1
-    assert FACT_REGISTRY["pdf.page_count"] is FactKeys.PDF_PAGE_COUNT
+def test_invalid_fragments_cannot_replace_a_valid_measurement() -> None:
+    report = Report[object](ReportKind.PDF, "sample.pdf")
+    report.measure(PdfMeasurements(page_count=1))
+    with pytest.raises(InvalidOption):
+        report.measure(PdfMeasurements(page_count=cast(int, "wrong")))
+    assert measurement(report, PdfMeasurements).page_count == 1
+    with pytest.raises(TypeError, match="dataclass"):
+        report.measure({"page_count": 2})
 
 
-def test_facts_preserve_namespaces_nullable_values_and_registered_measurements() -> None:
-    facts = FactSet({FactKeys.DOCUMENT_TITLE: "Source", FactKeys.PDF_TITLE: "Export"})
-    facts[FactKeys.DOCUMENT_LANGUAGE] = None
-    assert facts.get(FactKeys.PDF_PAGE_COUNT) is None
-    assert facts.as_dict() == {
-        "document.title": "Source",
-        "pdf.title": "Export",
-        "document.language": None,
-    }
+def test_closed_producer_fields_and_typed_records_replace_the_key_registry() -> None:
+    with pytest.raises(InvalidOption, match="Unknown keys"):
+        decode(PdfMeasurements, {"page_count": 1, "unknown_count": 2})
+    report = Report[object](ReportKind.ODF, "sample.odt")
+    report.measure(DocumentMetadata(title="Source"))
+    report.measure(PdfMeasurements(title="Export"))
+    assert isinstance(report.facts[0], DocumentMetadata)
+    assert isinstance(report.facts[1], PdfMeasurements)
+    values = report.as_dict()["facts"]
+    assert isinstance(values, list)
+    first, second = values
+    assert isinstance(first, dict)
+    assert isinstance(second, dict)
+    assert first["title"] == "Source"
+    assert second["title"] == "Export"

@@ -1,22 +1,17 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Declared Base names avoid sibling scans while malformed ordinal targets stay exact."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, ClassVar, Self, override
+from typing import ClassVar, Self, override
+lazy from collections.abc import Iterator
 
 from lxml import etree
+lazy import pytest
 
 from odfa11y.families.database.descriptions import targets
 from odfa11y.odf import OdfDocument, Part, qn, select_elements
 from tests.fixtures.paths import TESTS
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    import pytest
-
-SOURCE = TESTS / "family_corpus/fruit-database.odb"
+SOURCE = TESTS / "corpus/families/fruit-database.odb"
 
 
 class CountedElement(etree.ElementBase):

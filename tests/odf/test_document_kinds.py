@@ -1,23 +1,21 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Every ODF kind, in both layouts, is recognised, audited and kept apart from other families."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.families import GENERIC, adapter_for
+from odfa11y.audit import audit_odf
+from odfa11y.audit.package import PackageMeasurements
+from odfa11y.families import require_spec, spec_for
 from odfa11y.odf import KINDS, OdfDocument, validate
-from odfa11y.report import RULES, FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.remediate.document_ops import COMMON_KINDS
+from odfa11y.report import RULES
+from odfa11y.rules import registry as rules
 from tests.fixtures.documents import KIND_SPECS, make_flat, make_package
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.report import Report
+from tests.fixtures.measurements import measured, measurement
+lazy from odfa11y.report import Report
 
 LAYOUTS = {"package": make_package, "flat": make_flat}
 CASES = [(name, layout) for name in KIND_SPECS for layout in LAYOUTS]
@@ -44,15 +42,18 @@ def test_every_kind_audits_without_errors_and_selects_its_family_adapter(
 ) -> None:
     report = audit_odf(LAYOUTS[layout](tmp_path, name), schema=True)
     assert report.error_count == 0, [f.as_dict() for f in report.findings]
-    assert report.facts[FactKeys.PACKAGE_LAYOUT] == layout
+    assert measured(measurement(report, PackageMeasurements).layout) == layout
     family = KIND_SPECS[name].family
-    assert report.facts[FactKeys.DOCUMENT_FAMILY] == family
-    assert report.facts[FactKeys.DOCUMENT_ADAPTER] == family
-    assert "ODF009" not in ids(report)
+    assert measured(measurement(report, PackageMeasurements).family) == family
+    assert measured(measurement(report, PackageMeasurements).family) == family
+    assert rules.ODF010.id not in ids(report)
     assert all(finding.rule is RULES[finding.rule_id] for finding in report.findings)
     document = OdfDocument.open(LAYOUTS[layout](tmp_path, name))
     assert document.kind is not None
-    assert all(document.kind.family in question.kind.families for question in report.decisions)
+    assert all(
+        question.kind in (*COMMON_KINDS, *require_spec(document.kind).kinds)
+        for question in report.decisions
+    )
 
 
 @pytest.mark.parametrize(("name", "layout"), [c for c in CASES if KIND_SPECS[c[0]].schema_valid])
@@ -66,11 +67,10 @@ def test_synthetic_documents_validate_against_the_bundled_schema(
 
 def test_the_registry_serves_each_implemented_family_and_everything_else_generically() -> None:
     for kind in KINDS.values():
-        adapter = adapter_for(kind)
-        assert adapter is (adapter_for(kind))
-        assert adapter.name == kind.family.value
+        adapter = require_spec(kind)
+        assert adapter is (require_spec(kind))
         assert adapter.family is kind.family
-    assert adapter_for(None) is GENERIC
+    assert spec_for(None) is None
 
 
 def test_every_kind_has_its_own_short_name() -> None:
@@ -90,9 +90,9 @@ def test_a_damaged_mimetype_member_is_reported_and_the_audit_continues(
             data = original.read(member.filename)
             copy.writestr(member, data + damage if member.filename == "mimetype" else data)
     report = audit_odf(damaged)
-    assert "PKG001" in {f.rule_id for f in report.findings}
-    assert "ODF005" not in {f.rule_id for f in report.findings}
-    assert report.facts[FactKeys.DOCUMENT_KIND] == "text"
+    assert rules.PKG004.id in {f.rule_id for f in report.findings}
+    assert rules.ODF006.id not in {f.rule_id for f in report.findings}
+    assert measured(measurement(report, PackageMeasurements).kind) == "text"
 
 
 def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path) -> None:
@@ -102,5 +102,5 @@ def test_a_content_root_that_is_not_document_content_is_an_error(tmp_path: Path)
         for member in original.infolist():
             data = original.read(member.filename)
             copy.writestr(member, b"<foo/>" if member.filename == "content.xml" else data)
-    assert "ODF011" in {f.rule_id for f in audit_odf(wrong).findings}
-    assert "ODF011" not in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.ODF012.id in {f.rule_id for f in audit_odf(wrong).findings}
+    assert rules.ODF012.id not in {f.rule_id for f in audit_odf(source).findings}

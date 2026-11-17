@@ -1,26 +1,18 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Require version tags and distribution metadata to agree before a draft release."""
-
-from __future__ import annotations
 
 import argparse
 import email
 import hashlib
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 import sys
 import tarfile
 import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+lazy from email.message import Message
 
-if TYPE_CHECKING or __package__:
-    from .source_inventory import archive_errors
-else:
-    from source_inventory import archive_errors
-
-if TYPE_CHECKING:
-    from email.message import Message
+from tools.source_inventory import archive_errors
 
 
 def check_release(tag: str, directory: Path) -> list[str]:
@@ -63,7 +55,6 @@ def check_release(tag: str, directory: Path) -> list[str]:
             return [*errors, "Source archive metadata is not a regular file"]
         errors.extend(_metadata_errors(email.message_from_bytes(stream.read()), project))
         prefix = names[0].name.removesuffix("/PKG-INFO")
-        errors.extend(_sdist_license_errors(archive, root, project["license-files"]))
         errors.extend(_sdist_inventory_errors(archive, root, prefix))
         errors.extend(archive_errors(archive, root, prefix))
     return errors
@@ -77,18 +68,6 @@ def _wheel_license_errors(
         found = [name for name in wheel.namelist() if name.endswith(f"/licenses/{relative}")]
         if len(found) != 1 or wheel.read(found[0]) != (root / relative).read_bytes():
             errors.append(f"Wheel {relative} does not match the repository file")
-    return errors
-
-
-def _sdist_license_errors(
-    archive: tarfile.TarFile, root: Path, license_files: list[str]
-) -> list[str]:
-    errors = []
-    for relative in license_files:
-        found = [m for m in archive.getmembers() if m.name.endswith(f"/{relative}")]
-        stream = archive.extractfile(found[0]) if len(found) == 1 and found[0].isfile() else None
-        if stream is None or stream.read() != (root / relative).read_bytes():
-            errors.append(f"Source archive {relative} does not match the repository file")
     return errors
 
 

@@ -1,11 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """The OpenDocument document kinds: media types, families and body elements.
 
 Pure data about the standard. What a family's documents *mean* belongs to the family's
 adapter, never here.
 """
-
-from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -24,6 +22,22 @@ class Family(StrEnum):
     CHART = "chart"
     IMAGE = "image"
     DATABASE = "database"
+
+    @property
+    def meaning(self) -> str:
+        """Return the core-owned meaning of this value."""
+        return {
+            self.TEXT: "A text document expresses prose and its structure.",
+            self.SPREADSHEET: "A spreadsheet expresses cells, formulas and tabular relationships.",
+            self.PRESENTATION: "A presentation expresses slides and their associated notes.",
+            self.DRAWING: "A drawing expresses objects placed on pages.",
+            self.FORMULA: "A formula document expresses a mathematical expression.",
+            self.CHART: "A chart document expresses data graphically.",
+            self.IMAGE: "An image document expresses graphic content.",
+            self.DATABASE: (
+                "A database document describes forms, reports, queries and data sources."
+            ),
+        }[self]
 
 
 @dataclass(frozen=True, slots=True)

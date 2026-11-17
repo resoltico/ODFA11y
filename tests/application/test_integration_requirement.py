@@ -1,14 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Missing native tools must fail required integration, including in distributed runs."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
 
 import pytest
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 def test_required_integration_rejects_an_unavailable_tool(

@@ -1,25 +1,25 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Logical header axes keep grouped/repeated data and reject unsafe boundaries."""
 
-from __future__ import annotations
-
 from copy import deepcopy
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
-from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import axis_count, header_count, table_fingerprint
-from odfa11y.families.text import MarkTableHeaders, TableHeaders
+from odfa11y.audit import audit_odf
+from odfa11y.concepts import axis_count, header_count, table_fingerprint
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PlanError
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import (
+    apply_in_memory,
+    header_answer,
+    header_inputs,
+)
 from tests.fixtures.documents import Variant, make_flat, make_package
-from tests.fixtures.operations import execute_operations
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
+from tests.fixtures.operations import apply_answers
 
 REPEATED = (
     '<office:text><table:table table:name="Data">'
@@ -40,10 +40,10 @@ def test_both_axes_split_repeats_without_changing_logical_data(
     before = OdfDocument.open(source)
     table = select_elements(before.tree(Part.CONTENT), "//table:table")[0]
     fingerprint = table_fingerprint(table)
-    operation = MarkTableHeaders({"Data": TableHeaders(rows=2, columns=1, fingerprint=fingerprint)})
+    operation = header_inputs({"Data": header_answer(rows=2, columns=1, fingerprint=fingerprint)})
     once, twice = tmp_path / ("once" + source.suffix), tmp_path / ("twice" + source.suffix)
-    assert execute_operations(source, once, [operation]).changed
-    assert not execute_operations(once, twice, [operation]).changed
+    assert apply_answers(source, once, [operation]).changed
+    assert not apply_answers(once, twice, [operation]).changed
     result = OdfDocument.open(twice)
     table = select_elements(result.tree(Part.CONTENT), "//table:table")[0]
     assert (axis_count(table, "rows"), axis_count(table, "columns")) == (5, 4)
@@ -58,9 +58,12 @@ def test_groups_keep_their_identity_and_a_missing_axis_keeps_its_header(tmp_path
     )
     body = body.replace("</table:table-row>", "</table:table-row></table:table-row-group>")
     doc = OdfDocument.open(make_package(tmp_path, "text", Variant(body=body)))
-    operation = MarkTableHeaders({"Data": TableHeaders(rows=2, columns=1)})
-    assert operation.apply(doc)[0].status is Status.APPLIED
-    assert MarkTableHeaders({"Data": TableHeaders(rows=3)}).apply(doc)[0].status is Status.APPLIED
+    operation = header_inputs({"Data": header_answer(rows=2, columns=1)})
+    assert apply_in_memory(doc, operation)[0].status is Status.APPLIED
+    assert (
+        apply_in_memory(doc, header_inputs({"Data": header_answer(rows=3)}))[0].status
+        is Status.APPLIED
+    )
     table = select_elements(doc.tree(Part.CONTENT), "//table:table")[0]
     assert header_count(table, "columns") == 1
     group = select_elements(table, "./table:table-row-group")[0]
@@ -72,15 +75,15 @@ def test_groups_keep_their_identity_and_a_missing_axis_keeps_its_header(tmp_path
 def test_a_repeated_merged_cell_crossing_a_boundary_is_rejected(tmp_path: Path, axis: str) -> None:
     body = REPEATED.replace('office:value="7"', f'office:value="7" table:number-{axis}-spanned="2"')
     doc = OdfDocument.open(make_package(tmp_path, "text", Variant(body=body)))
-    entry = TableHeaders(rows=4) if axis == "rows" else TableHeaders(columns=1)
-    operation = MarkTableHeaders({"Data": entry})
-    outcome = operation.apply(doc)[0]
+    entry = header_answer(rows=4) if axis == "rows" else header_answer(columns=1)
+    operation = header_inputs({"Data": entry})
+    outcome = apply_in_memory(doc, operation)[0]
     assert outcome.status is Status.FAILED
     assert "merged cell crosses" in outcome.message
     assert not doc.dirty
 
 
-def test_no_earlier_table_is_mutated_when_a_later_target_fails(tmp_path: Path) -> None:
+def test_no_output_is_published_when_a_later_header_target_fails(tmp_path: Path) -> None:
     doc = OdfDocument.open(make_package(tmp_path, "text", Variant(body=REPEATED)))
     table = select_elements(doc.tree(Part.CONTENT), "//table:table")[0]
     second = deepcopy(table)
@@ -88,12 +91,15 @@ def test_no_earlier_table_is_mutated_when_a_later_target_fails(tmp_path: Path) -
     parent = table.getparent()
     assert parent is not None
     parent.append(second)
-    original = etree.tostring(doc.tree(Part.CONTENT))
-    operation = MarkTableHeaders({"Data": TableHeaders(columns=1), "Other": TableHeaders(rows=9)})
-    checkpoint = doc.checkpoint()
-    assert operation.apply(doc)[0].status is Status.FAILED
-    assert etree.tostring(doc.tree(Part.CONTENT)) == original
-    assert not doc.changed_since(checkpoint)
+    source = doc.save(tmp_path / "two-tables.odt")
+    before = source.read_bytes()
+    destination = tmp_path / "refused.odt"
+    operation = header_inputs({"Data": header_answer(columns=1), "Other": header_answer(rows=9)})
+    result = apply_answers(source, destination, [operation])
+    assert not result.published
+    assert any(outcome.status is Status.FAILED for outcome in result.outcomes)
+    assert source.read_bytes() == before
+    assert not destination.exists()
 
 
 def test_nonleading_header_bands_are_rejected_without_rewriting_groups(tmp_path: Path) -> None:
@@ -103,7 +109,7 @@ def test_nonleading_header_bands_are_rejected_without_rewriting_groups(tmp_path:
         "<table:table-header-rows><table:table-row><table:table-cell/></table:table-row></table:table-header-rows></table:table>",
     )
     doc = OdfDocument.open(make_package(tmp_path, "text", Variant(body=body)))
-    outcome = MarkTableHeaders({"Data": TableHeaders(rows=1)}).apply(doc)[0]
+    outcome = apply_in_memory(doc, header_inputs({"Data": header_answer(rows=1)}))[0]
     assert outcome.status is Status.FAILED
     assert "Non-leading" in outcome.message
     assert not doc.dirty
@@ -118,9 +124,10 @@ def test_reviewed_fingerprint_detects_protected_cell_changes(
     fingerprint = table_fingerprint(table)
     cell = select_elements(table, ".//table:table-cell")[0]
     cell.set(qn("office" if attribute == "value" else "table", attribute), "changed")
-    operation = MarkTableHeaders({"Data": TableHeaders(columns=1, fingerprint=fingerprint)})
+    operation = header_inputs({"Data": header_answer(columns=1, fingerprint=fingerprint)})
     checkpoint = doc.checkpoint()
-    assert operation.apply(doc)[0].status is Status.FAILED
+    with pytest.raises(PlanError, match="fingerprint"):
+        apply_in_memory(doc, operation)
     assert not doc.changed_since(checkpoint)
 
 
@@ -137,7 +144,7 @@ def test_repeat_splitting_rejects_duplicate_structural_identity(
 ) -> None:
     body = REPEATED.replace("<text:p>Seven</text:p>", structure)
     doc = OdfDocument.open(make_package(tmp_path, "text", Variant(body=body)))
-    outcome = MarkTableHeaders({"Data": TableHeaders(rows=2)}).apply(doc)[0]
+    outcome = apply_in_memory(doc, header_inputs({"Data": header_answer(rows=2)}))[0]
     assert outcome.status is Status.FAILED
     assert "duplicate structural" in outcome.message
     assert not doc.dirty
@@ -147,6 +154,6 @@ def test_repeat_splitting_rejects_duplicate_structural_identity(
 def test_audit_reports_unresolvable_repeat_counts(tmp_path: Path, repeat: str) -> None:
     body = REPEATED.replace('number-rows-repeated="5"', f'number-rows-repeated="{repeat}"')
     source = make_package(tmp_path, "text", Variant(body=body))
-    findings = [f for f in audit_odf(source).findings if f.rule_id == "TABLE002"]
+    findings = [f for f in audit_odf(source).findings if f.rule_id == rules.TABLE002.id]
     assert len(findings) == 1
     assert findings[0].severity.value == "error"

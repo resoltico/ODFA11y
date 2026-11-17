@@ -1,13 +1,12 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Wrap explicit leading header declarations without losing repeated data or groups."""
-
-from __future__ import annotations
 
 from copy import deepcopy
 
 from lxml import etree
 
-from odfa11y.content import AXES, declarations, repeated
+from odfa11y.concepts import AXES, declarations, repeated
+from odfa11y.odf import names as xml_names
 from odfa11y.odf import qn
 
 
@@ -43,7 +42,7 @@ def mark_axis(table: etree._Element, axis: str, count: int) -> None:
 def _unwrap(table: etree._Element, axis: str) -> None:
     header_tag = qn("table", AXES[axis][1])
     for wrapper in list(table.iter(header_tag)):
-        owner = next(wrapper.iterancestors(qn("table", "table")), None)
+        owner = next(wrapper.iterancestors(xml_names.TABLE_TABLE), None)
         parent = wrapper.getparent()
         if owner is not table or parent is None:
             continue

@@ -1,0 +1,201 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Real leaf exchanges reject wrong bytes; parent namespace guarantees remain separate."""
+
+import os
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y import capture
+from odfa11y.errors import PackageError
+from odfa11y.evidence import check_bundle
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.status import Profile
+from tests.batch.test_batch import write_batch_file
+from tests.fixtures.documents import make_flat
+from tests.fixtures.plans import plan_header, reviewed_plan
+from tests.fixtures.runs import RunSettings, execute, run_batch
+
+
+@pytest.mark.parametrize("kind", ["symlink", "regular", "symlink-without-nofollow"])
+def test_real_exchange_before_open_is_rejected_without_reading_wrong_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    if kind == "symlink-without-nofollow":
+        monkeypatch.setattr(capture.os, "O_NOFOLLOW", 0, raising=False)
+    source = make_flat(tmp_path, "text")
+    replacement = tmp_path / "replacement.fodt"
+    replacement.write_bytes(b"different file identity")
+    selected = tmp_path / "selected.fodt"
+    source.rename(selected)  # Keep selected inode alive: inode reuse is not this control.
+    source.write_bytes(selected.read_bytes())
+    original_open = os.open
+    original_read = os.read
+    reads = []
+
+    def exchange(
+        path: str | os.PathLike[str], flags: int, mode: int = 0o777, *, dir_fd: int | None = None
+    ) -> int:
+        if path == source:
+            source.rename(tmp_path / "before-exchange.fodt")
+            if kind.startswith("symlink"):
+                source.symlink_to(replacement)
+            else:
+                os.link(replacement, source)
+        return original_open(path, flags, mode, dir_fd=dir_fd)
+
+    def read(descriptor: int, count: int) -> bytes:
+        reads.append(descriptor)
+        return original_read(descriptor, count)
+
+    monkeypatch.setattr(capture.os, "open", exchange)
+    monkeypatch.setattr(capture.os, "read", read)
+    with pytest.raises(PackageError, match="identity changed"), capture.capture_source(source):
+        pytest.fail("another selected file was captured")
+    assert reads == []
+    assert replacement.read_bytes() == b"different file identity"
+    assert not list(tmp_path.glob(".odfa11y-source-*"))
+
+
+def test_pipeline_and_batch_retain_identity_failure_evidence_and_continue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = make_flat(tmp_path, "text")
+    other = tmp_path / "other.fodt"
+    other.write_bytes(source.read_bytes() + b" ")
+    original_open = os.open
+
+    def exchange(
+        path: str | os.PathLike[str], flags: int, mode: int = 0o777, *, dir_fd: int | None = None
+    ) -> int:
+        if path == source:
+            old = tmp_path / "selected.fodt"
+            old.unlink(missing_ok=True)
+            source.rename(old)
+            os.link(other, source)
+        return original_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(capture.os, "open", exchange)
+    output = tmp_path / "run"
+    with pytest.raises(PackageError, match="identity changed"):
+        execute(
+            source,
+            reviewed_plan(source, [], Pagination.SAME()),
+            output,
+            RunSettings(profile=Profile.parse("source")),
+        )
+    assert not output.exists()
+    # Give the next capture a distinct selected inode again.
+    source.unlink()
+    source.write_bytes(other.read_bytes())
+    valid_dir = tmp_path / "valid"
+    valid_dir.mkdir()
+    valid = make_flat(valid_dir, "text")
+    (tmp_path / "plan.toml").write_text(
+        plan_header(valid) + '[decisions."document.metadata"]\nlanguage="en-GB"'
+    )
+    manifest = write_batch_file(
+        tmp_path,
+        [
+            ("changed", source.name, "plan.toml"),
+            ("valid", valid.relative_to(tmp_path).as_posix(), "plan.toml"),
+        ],
+    )
+    result = run_batch(manifest, tmp_path / "batch", RunSettings(profile=Profile.parse("source")))
+    assert [r.exit_status for r in result.items] == [2, 0]
+    assert result.items[0].failed_stage is None
+    assert result.items[0].error is not None
+    assert not (tmp_path / "batch" / "changed").exists()
+    assert check_bundle(tmp_path / "batch" / "valid") == []
+    assert not list(tmp_path.glob(".odfa11y-source-*"))
+
+
+@pytest.mark.parametrize("alias", ["file", "directory"])
+def test_deliberate_aliases_use_the_resolved_parent(tmp_path: Path, alias: str) -> None:
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    source = make_flat(parent, "text")
+    link = tmp_path / "alias"
+    if alias == "directory":
+        link.symlink_to(parent, target_is_directory=True)
+        selected = link / source.name
+    else:
+        link.symlink_to(source)
+        selected = link
+    with capture.capture_source(selected) as staged:
+        assert staged.identity.path.parent == parent.resolve()
+        assert staged.path.read_bytes() == source.read_bytes()
+    assert not staged.path.exists()
+    assert link.is_symlink()
+
+
+@pytest.mark.parametrize("timing", ["before-open-hardlink", "after-open", "during-copy"])
+def test_private_capture_survives_parent_namespace_changes_with_the_same_leaf_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, timing: str
+) -> None:
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    source = make_flat(parent, "text")
+    expected = source.read_bytes()
+    selected = source.stat()
+    moved = tmp_path / "moved"
+    original_open, original_read = os.open, os.read
+    exchanged = False
+
+    def exchange() -> None:
+        nonlocal exchanged
+        parent.rename(moved)
+        parent.mkdir()
+        os.link(moved / source.name, source)
+        exchanged = True
+
+    def open_source(
+        path: str | os.PathLike[str], flags: int, mode: int = 0o777, *, dir_fd: int | None = None
+    ) -> int:
+        if path == source and timing == "before-open-hardlink":
+            exchange()
+        descriptor = original_open(path, flags, mode, dir_fd=dir_fd)
+        if path == source and timing == "after-open":
+            try:
+                exchange()
+            except BaseException:
+                os.close(descriptor)
+                raise
+        return descriptor
+
+    def read(descriptor: int, count: int) -> bytes:
+        data = original_read(descriptor, count)
+        if data and timing == "during-copy" and not exchanged:
+            exchange()
+        return data
+
+    monkeypatch.setattr(capture.os, "open", open_source)
+    monkeypatch.setattr(capture.os, "read", read)
+    try:
+        _assert_parent_observation(source, selected, expected, timing)
+    except PermissionError:
+        # Windows may deny ancestor rename while the input descriptor is open.
+        assert os.name == "nt"
+        assert parent.is_dir()
+        assert not moved.exists()
+        assert source.read_bytes() == expected
+        assert not list(parent.glob(".odfa11y-source-*"))
+    finally:
+        for path in moved.glob(".odfa11y-source-*"):
+            path.unlink()  # Explicitly clean this unsupported-namespace experiment's owned copy.
+    original_parent = moved if moved.exists() else parent
+    assert (original_parent / source.name).read_bytes() == expected
+
+
+def _assert_parent_observation(
+    source: Path, selected: os.stat_result, expected: bytes, timing: str
+) -> None:
+    moved = source.parent.parent / "moved"
+    with capture.capture_source(source) as staged:
+        assert os.path.samestat(selected, source.stat())  # Leaf identity is unchanged.
+        assert staged.path.read_bytes() == expected
+        assert staged.path.parent not in {source.parent, moved}
+        assert staged.identity.device == selected.st_dev
+        assert staged.identity.inode == selected.st_ino
+    assert not staged.path.exists()
+    assert not list(moved.glob(".odfa11y-source-*"))

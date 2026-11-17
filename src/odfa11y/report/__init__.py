@@ -1,30 +1,24 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Rules, findings and report rendering shared by every check."""
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Typed findings, rules and machine-readable rendering."""
 
-from . import rules
-from .facts import FACT_REGISTRY, FactKey, FactKeys, FactSet
-from .models import Finding, Location, Report
-from .render import FORMATS, exit_status, render_reports
-from .rules import RULES, Category, Rule, Severity
-from .sarif import preflight_sarif
-from .terminal import terminal_text
+from odfa11y.report.json import render_json
+from odfa11y.report.model import Finding, Location, Report, ReportKind, exit_status
+from odfa11y.report.sarif import SarifOptions, preflight_sarif, render_sarif
+from odfa11y.rules import registry as rules
+from odfa11y.rules.registry import RULES, Rule, Severity
 
 __all__ = [
-    "FACT_REGISTRY",
-    "FORMATS",
     "RULES",
-    "Category",
-    "FactKey",
-    "FactKeys",
-    "FactSet",
     "Finding",
     "Location",
     "Report",
+    "ReportKind",
     "Rule",
+    "SarifOptions",
     "Severity",
     "exit_status",
     "preflight_sarif",
-    "render_reports",
+    "render_json",
+    "render_sarif",
     "rules",
-    "terminal_text",
 ]

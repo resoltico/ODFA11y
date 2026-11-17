@@ -1,28 +1,73 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Compare two PDFs: pages, text, links and rendered pixels."""
 
-from __future__ import annotations
-
-import sys
+from collections import Counter
+from collections.abc import Callable
 from contextlib import closing
+from dataclasses import dataclass, field
+from math import ceil, isfinite
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Annotated, Literal
 
 import pypdfium2
 from PIL import Image, ImageChops
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.contracts import Description
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf.fidelity.snapshot import read_snapshot
-from odfa11y.report import FactKeys, Report, rules
-
-if TYPE_CHECKING:
-    from odfa11y.pdf.fidelity.policy import FidelityPolicy
-    from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
+from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rules
+lazy from odfa11y.pdf.fidelity.snapshot import PdfSnapshot
+lazy from odfa11y.plans.fidelity import FidelityPolicy, SamePagination
 
 MAX_RENDER_PIXELS = 20_000_000
 EXCERPT_CONTEXT = 40
-POINTS_PER_INCH = 72
+RASTER_SCALE = 1.0  # fixed 72-dpi canvas units
 RATIO_PRECISION = 6
+
+
+@dataclass(frozen=True, slots=True)
+class RasterResult:
+    ratios: tuple[float, ...] | None
+    images: tuple[Path, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class FidelityResult:
+    report: Report
+    images: tuple[Path, ...] = ()
+
+
+type Rasterizer = Callable[
+    [tuple[Path, Path], PdfSnapshot, SamePagination, Report, Path | None], RasterResult
+]
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactCounts:
+    source: int
+    candidate: int
+
+
+@dataclass(frozen=True, slots=True)
+class FidelityMeasurements:
+    """Measurements produced by pdf-fidelity analysis; None denotes unmeasured data."""
+
+    producer: Literal["pdf-fidelity"] = field(default="pdf-fidelity", init=False)
+    policy: Annotated[FidelityPolicy | None, Description("Effective comparison policy.")] = None
+    page_count: Annotated[
+        ArtifactCounts | None, Description("Source and candidate page counts.")
+    ] = None
+    link_count: Annotated[
+        ArtifactCounts | None, Description("Established external URI destination counts.")
+    ] = None
+    raster_changed_ratios: Annotated[
+        list[float] | None, Description("Changed-pixel ratio for each compared page.")
+    ] = None
+    raster_max_changed_ratio: Annotated[
+        float | None, Description("Largest changed-pixel ratio.")
+    ] = None
 
 
 def compare_pdfs(
@@ -31,7 +76,8 @@ def compare_pdfs(
     policy: FidelityPolicy,
     *,
     diff_dir: str | Path | None = None,
-) -> Report:
+    render: Rasterizer | None = None,
+) -> FidelityResult:
     """Compare a candidate PDF with its source PDF under a fidelity policy.
 
     Returns
@@ -44,21 +90,34 @@ def compare_pdfs(
     """
     source, candidate = Path(source), Path(candidate)
     report = Report(
-        kind="fidelity", subject=f"{candidate.name} vs {source.name}", sources=(candidate, source)
+        kind=ReportKind.FIDELITY,
+        subject=f"{candidate.name} vs {source.name}",
+        _sources=(candidate, source),
     )
-    report.facts[FactKeys.FIDELITY_POLICY] = policy.as_dict()
+    report.measure(FidelityMeasurements(policy=policy))
     before, after = read_snapshot(source), read_snapshot(candidate)
-    report.facts[FactKeys.FIDELITY_PAGE_COUNT] = {
-        "source": len(before.pages),
-        "candidate": len(after.pages),
-    }
+    report.measure(
+        FidelityMeasurements(page_count=ArtifactCounts(len(before.pages), len(after.pages)))
+    )
+    for artifact, snapshot in (("source", before), ("candidate", after)):
+        for issue in snapshot.issues:
+            report.raise_(
+                rules.FIDELITY008,
+                details={"artifact": artifact, "page": issue.page, "problem": issue.problem},
+            )
     _compare_text(before, after, report)
     _compare_links(before, after, report)
-    if policy.pagination == "same" and _compare_pages(before, after, report):
-        _compare_raster(
-            (source, candidate), before, policy, report, Path(diff_dir) if diff_dir else None
+    images = ()
+    if isinstance(policy, SamePagination) and _compare_pages(before, after, report):
+        images = _compare_raster(
+            (source, candidate),
+            before,
+            policy,
+            report,
+            Path(diff_dir) if diff_dir else None,
+            render=render,
         )
-    return report
+    return FidelityResult(report, images)
 
 
 def _compare_text(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> None:
@@ -69,8 +128,8 @@ def _compare_text(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> No
         min(len(before.text), len(after.text)),
     )
     start = max(position - EXCERPT_CONTEXT, 0)
-    report.add(
-        rules.FID003,
+    report.raise_(
+        rules.FIDELITY003,
         details={
             "position": position,
             "source": before.text[start : position + EXCERPT_CONTEXT],
@@ -80,22 +139,25 @@ def _compare_text(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> No
 
 
 def _compare_links(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> None:
-    missing = before.links - after.links
-    added = after.links - before.links
-    report.facts[FactKeys.FIDELITY_LINK_COUNT] = {
-        "source": sum(before.links.values()),
-        "candidate": sum(after.links.values()),
-    }
+    original = Counter(dict(before.links))
+    changed = Counter(dict(after.links))
+    missing = original - changed
+    added = changed - original
+    report.measure(
+        FidelityMeasurements(
+            link_count=ArtifactCounts(sum(original.values()), sum(changed.values()))
+        )
+    )
     if missing:
-        report.add(rules.FID004, details={"missing": sorted(missing.elements())})
+        report.raise_(rules.FIDELITY004, details={"missing": sorted(missing.elements())})
     if added:
-        report.add(rules.FID006, details={"added": sorted(added.elements())})
+        report.raise_(rules.FIDELITY006, details={"added": sorted(added.elements())})
 
 
 def _compare_pages(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> bool:
     if len(before.pages) != len(after.pages):
-        report.add(
-            rules.FID001, details={"source": len(before.pages), "candidate": len(after.pages)}
+        report.raise_(
+            rules.FIDELITY001, details={"source": len(before.pages), "candidate": len(after.pages)}
         )
         return False
     resized = [
@@ -104,7 +166,7 @@ def _compare_pages(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> b
         if (a.width, a.height) != (b.width, b.height)
     ]
     if resized:
-        report.add(rules.FID002, details={"pages": resized})
+        report.raise_(rules.FIDELITY002, details={"pages": resized})
         return False
     return True
 
@@ -112,36 +174,68 @@ def _compare_pages(before: PdfSnapshot, after: PdfSnapshot, report: Report) -> b
 def _compare_raster(
     paths: tuple[Path, Path],
     snapshot: PdfSnapshot,
-    policy: FidelityPolicy,
+    policy: SamePagination,
     report: Report,
     diff_dir: Path | None,
-) -> None:
-    if policy.dpi > sys.float_info.max:
-        msg = "DPI exceeds the numeric range supported by PDF rendering"
-        raise ToolFailedError(msg)
-    scale = policy.dpi / POINTS_PER_INCH
-    oversized = [
-        index + 1
-        for index, page in enumerate(snapshot.pages)
-        if page.width * page.height * scale * scale > MAX_RENDER_PIXELS
-    ]
-    if oversized:
-        report.add(rules.FID007, details={"pages": oversized, "pixel_limit": MAX_RENDER_PIXELS})
-        return
+    *,
+    render: Rasterizer | None,
+) -> tuple[Path, ...]:
     try:
-        ratios = _render_ratios(paths, snapshot, policy, report, diff_dir)
-    except pypdfium2.PdfiumError as exc:
-        msg = f"Cannot render PDF for comparison: {exc}"
-        raise ToolFailedError(msg) from exc
-    report.facts[FactKeys.FIDELITY_RASTER_CHANGED_RATIOS] = ratios
-    report.facts[FactKeys.FIDELITY_RASTER_MAX_CHANGED_RATIO] = max(ratios, default=0.0)
+        original, changed = (_render_sizes(path, len(snapshot.pages)) for path in paths)
+        resized = [
+            index + 1 for index, (a, b) in enumerate(zip(original, changed, strict=True)) if a != b
+        ]
+        if resized:
+            report.raise_(rules.FIDELITY002, details={"pages": resized})
+            return ()
+        oversized = [
+            index + 1
+            for index, (width, height) in enumerate(original)
+            if width * height > MAX_RENDER_PIXELS
+        ]
+        if oversized:
+            report.raise_(
+                rules.FIDELITY007, details={"pages": oversized, "pixel_limit": MAX_RENDER_PIXELS}
+            )
+            return ()
+        raster = (render or render_pages)(paths, snapshot, policy, report, diff_dir)
+    except pypdfium2.PdfiumError as error:
+        message = f"Cannot render PDF for comparison: {error}"
+        raise ToolFailure(message) from error
+    if raster.ratios is not None:
+        ratios = list(raster.ratios)
+        report.measure(FidelityMeasurements(raster_changed_ratios=ratios))
+        report.measure(FidelityMeasurements(raster_max_changed_ratio=max(ratios, default=0.0)))
+
+    return raster.images
+
+
+def _render_sizes(path: Path, expected_pages: int) -> tuple[tuple[int, int], ...]:
+    sizes = []
+    with closing(pypdfium2.PdfDocument(path)) as document:
+        if len(document) != expected_pages:
+            message = "PDF page count changed during comparison"
+            raise ToolFailure(message)
+        for index in range(len(document)):
+            with closing(document[index]) as page:
+                sizes.append(_bitmap_size(page))
+    return tuple(sizes)
+
+
+def _bitmap_size(page: pypdfium2.PdfPage) -> tuple[int, int]:
+    width, height = page.get_size()
+    if not all(isfinite(value) and value > 0 for value in (width, height)):
+        message = "PDF page has an unrenderable geometry"
+        raise ToolFailure(message)
+    return ceil(width * RASTER_SCALE), ceil(height * RASTER_SCALE)
 
 
 def _difference(
     left: Image.Image, right: Image.Image, ink_threshold: int
 ) -> tuple[float, Image.Image]:
     if left.size != right.size:
-        return 1.0, Image.new("L", left.size, 255)
+        message = "Raster geometry must match before comparing pixels"
+        raise ValueError(message)
     lookup = [255 if value < ink_threshold else 0 for value in range(256)]
     ink_left = left.convert("L").point(lookup).convert("1")
     ink_right = right.convert("L").point(lookup).convert("1")
@@ -150,30 +244,67 @@ def _difference(
     return moved.histogram()[255] / ink, moved.convert("L")
 
 
-def _render_ratios(
+def render_pages(
     paths: tuple[Path, Path],
     snapshot: PdfSnapshot,
-    policy: FidelityPolicy,
+    policy: SamePagination,
     report: Report,
     diff_dir: Path | None,
-) -> list[float]:
-    scale = policy.dpi / POINTS_PER_INCH
-    ratios: list[float] = []
+) -> RasterResult:
+    ratios = []
+    images = []
     with (
         closing(pypdfium2.PdfDocument(paths[0])) as reference,
         closing(pypdfium2.PdfDocument(paths[1])) as changed,
     ):
+        if len(reference) != len(snapshot.pages) or len(changed) != len(snapshot.pages):
+            message = "PDF page count changed during comparison"
+            raise ToolFailure(message)
         for index in range(len(snapshot.pages)):
-            left = reference[index].render(scale=scale).to_pil().convert("RGB")
-            right = changed[index].render(scale=scale).to_pil().convert("RGB")
+            with closing(reference[index]) as left_page, closing(changed[index]) as right_page:
+                left_size, right_size = _bitmap_size(left_page), _bitmap_size(right_page)
+                if left_size != right_size:
+                    report.raise_(rules.FIDELITY002, details={"pages": [index + 1]})
+                    return RasterResult(None, tuple(images))
+                if left_size[0] * left_size[1] > MAX_RENDER_PIXELS:
+                    report.raise_(
+                        rules.FIDELITY007,
+                        details={"pages": [index + 1], "pixel_limit": MAX_RENDER_PIXELS},
+                    )
+                    return RasterResult(None, tuple(images))
+                left, right = _render_pair(left_page, right_page)
+            if left.size != right.size:
+                report.raise_(rules.FIDELITY002, details={"pages": [index + 1]})
+                return RasterResult(None, tuple(images))
             ratio, mask = _difference(left, right, policy.ink_threshold)
             ratios.append(round(ratio, RATIO_PRECISION))
             if ratio > policy.raster_tolerance:
-                details: dict[str, object] = {"page": index + 1, "changed_ratio": ratios[-1]}
-                if diff_dir is not None:
-                    diff_dir.mkdir(parents=True, exist_ok=True)
-                    path = diff_dir / f"page-{index + 1:03d}-diff.png"
-                    mask.save(path)
-                    details["diff_image"] = path.name
-                report.add(rules.FID005, details=details)
-    return ratios
+                image = _raster_finding(report, diff_dir, index + 1, ratios[-1], mask)
+                if image is not None:
+                    images.append(image)
+    return RasterResult(tuple(ratios), tuple(images))
+
+
+def _render_pair(
+    left: pypdfium2.PdfPage, right: pypdfium2.PdfPage
+) -> tuple[Image.Image, Image.Image]:
+    with closing(left.render(scale=RASTER_SCALE)) as bitmap:
+        original = bitmap.to_pil().convert("RGB")
+    with closing(right.render(scale=RASTER_SCALE)) as bitmap:
+        changed = bitmap.to_pil().convert("RGB")
+    return original, changed
+
+
+def _raster_finding(
+    report: Report, diff_dir: Path | None, page: int, ratio: float, mask: Image.Image
+) -> Path | None:
+    details: dict[str, object] = {"page": page, "changed_ratio": ratio}
+    path = None
+    if diff_dir is not None:
+        diff_dir.mkdir(parents=True, exist_ok=True)
+        path = diff_dir / f"page-{page:03d}-diff.png"
+        mask.save(path)
+        details["diff_image"] = path.name
+    report.raise_(rules.FIDELITY005, details=details)
+
+    return path

@@ -1,22 +1,18 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Empty text does not make identities, references or metadata removable."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Outcome, Status
-from odfa11y.families.text import RemoveEmptySpacers
+from odfa11y.decisions.edit import EditResult, Outcome, Status
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
+from tests.fixtures.answers import fault_input, spacer_input
 from tests.fixtures.documents import Variant, make_flat, make_package
-from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from pathlib import Path
+from tests.fixtures.operations import apply_answers, assert_refused
+lazy from odfa11y.decisions import Decision
 
 PARAGRAPHS = [
     '<text:p xml:id="anchor"/>',
@@ -44,7 +40,7 @@ def test_empty_semantic_paragraph_is_preserved(
     source = author(tmp_path, "text", Variant(body=f"<office:text>{paragraph}</office:text>"))
     before = source.read_bytes()
     destination = tmp_path / ("result" + source.suffix)
-    result = execute_operations(source, destination, [RemoveEmptySpacers()])
+    result = apply_answers(source, destination, [spacer_input()])
     assert not result.changed
     assert source.read_bytes() == before
     original = select_elements(OdfDocument.open(source).tree(Part.CONTENT), "//text:p")[0]
@@ -65,7 +61,7 @@ def test_linked_identity_survives_removal_of_inert_spacer(
     original = source.read_bytes()
     assert validate(OdfDocument.open(source)).count == 0
     destination = tmp_path / ("result" + source.suffix)
-    result = execute_operations(source, destination, [RemoveEmptySpacers()])
+    result = apply_answers(source, destination, [spacer_input()])
     assert result.changed
     assert source.read_bytes() == original
     document = OdfDocument.open(destination)
@@ -74,8 +70,8 @@ def test_linked_identity_survives_removal_of_inert_spacer(
     assert len(select_elements(tree, "//*[@xml:id='anchor']")) == 1
     assert len(select_elements(tree, "//text:p")) == 2
     assert select_elements(tree, "//text:a")[0].get(qn("xlink", "href")) == "#anchor"
-    assert not execute_operations(
-        destination, tmp_path / ("again" + source.suffix), [RemoveEmptySpacers()]
+    assert not apply_answers(
+        destination, tmp_path / ("again" + source.suffix), [spacer_input()]
     ).changed
 
 
@@ -96,17 +92,16 @@ def test_spacer_guard_rejects_identity_loss_before_publication(
     destination = tmp_path / ("existing" + source.suffix)
     destination.write_bytes(b"keep existing destination")
 
-    def damage(_operation: RemoveEmptySpacers, document: OdfDocument) -> tuple[Outcome, ...]:
+    def damage(document: OdfDocument, decision: Decision) -> EditResult:
         tree = document.tree(Part.CONTENT)
         node = select_elements(tree, "//*[@xml:id='anchor']")[0]
         parent = node.getparent()
         assert parent is not None
         parent.remove(node)
-        return (Outcome("remove_empty_spacers", Status.APPLIED, "Removed", count=1),)
+        return EditResult((Outcome(decision.kind.id, Status.APPLIED, "Removed", count=1),))
 
-    monkeypatch.setattr(RemoveEmptySpacers, "apply", damage)
     assert_refused(
-        execute_operations(source, destination, [RemoveEmptySpacers()]),
+        apply_answers(source, destination, [fault_input(spacer_input(), damage)]),
         match="Protected document content changed",
     )
     assert source.read_bytes() == original

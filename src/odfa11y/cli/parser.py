@@ -1,319 +1,256 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Define the command-line arguments for every command."""
-
-from __future__ import annotations
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Define the final command surface with one help text per shared option."""
 
 import argparse
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Never
+from typing import Never
 
-from odfa11y import (
-    DEFAULT_PROFILE,
-    DEFAULT_TIMEOUT_SECONDS,
-    FORMATS,
-    PROFILES,
-    ExitStatus,
-    PlanError,
-    __version__,
-    profile_named,
-    terminal_text,
-    validate_timeout,
-)
+from odfa11y import ExitStatus, InvalidOption, Profile, Tools, __version__
 
-if TYPE_CHECKING:
-    from odfa11y import (
-        Profile,
-    )
+from . import writer
+from .text import terminal_text
+
+HELP = {
+    "format": "Output representation (default: text).",
+    "source": "Input document.",
+    "destination": "Output file, distinct from the source.",
+    "plan": "TOML plan with reviewed answers and a fidelity policy.",
+    "output_dir": "Evidence output directory.",
+    "soffice": "LibreOffice executable (default: PATH).",
+    "verapdf": "veraPDF executable (default: PATH).",
+    "replace": "Atomically replace an existing regular output file.",
+    "source_root": "Confined source root, required for SARIF output.",
+    "strict": "Reject warning findings as well as errors.",
+}
 
 
 class TerminalParser(argparse.ArgumentParser):
-    """Keep native help and suggestions while escaping untrusted error messages."""
+    def _print_message(self, message, file=None) -> None:
+        if message:
+            if file is sys.stderr:
+                writer.err(message, end="")
+            else:
+                writer.out(message, end="")
 
     def error(self, message: str) -> Never:
-        """Print a terminal-safe parse error and exit with the shared usage status."""
         self.print_usage(sys.stderr)
         self.exit(ExitStatus.USAGE_ERROR, f"{self.prog}: error: {terminal_text(message)}\n")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Define every command and its arguments.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        The parser for all supported CLI commands.
-
-    """
     parser = TerminalParser(
         prog="odfa11y",
-        description="Audit, remediate and verify ODF documents for accessible PDF/UA.",
+        description="Audit, review, remediate and verify accessible documents.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         suggest_on_error=True,
         color=False,
         epilog=(
-            "Workflow (review decisions before changing a document):\n"
-            "  odfa11y audit original.odt\n"
-            "  odfa11y plan original.odt > document.toml\n"
-            "  # Edit document.toml: uncomment only reviewed decisions.\n"
-            "  odfa11y remediate original.odt reviewed.odt --plan document.toml --dry-run\n"
-            "  odfa11y pipeline original.odt --plan document.toml \\\n"
-            "    --output-dir evidence --profile production\n"
-            "  odfa11y verify evidence\n\n"
-            "Use a new plan filename and evidence directory.\n"
-            "Exit statuses: 0 success; 1 gated warnings;\n"
-            "  2 error findings; 3 execution failure; 4 invalid arguments/plans.\n"
-            "A successful automated check still requires human accessibility review.\n"
-            "Use odfa11y COMMAND --help for examples and options."
-        ),
+            "Workflow: audit, prepare a plan, review answers, remediate, run and verify evidence.\n"
+            "Exit statuses: "
+        )
+        + "; ".join(f"{value.value}: {value.meaning}" for value in ExitStatus),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
-
     p = _command(
         sub,
         "audit",
-        examples=("  odfa11y audit source.odt\n  odfa11y audit exported.pdf --verapdf --strict"),
-        description="Audit ODF or PDF files without changing them.",
+        "Inspect ODF or PDF inputs without changing them.",
+        "odfa11y audit source.odt\nodfa11y audit exported.pdf --validate --strict",
     )
-    p.add_argument("sources", nargs="+", type=Path)
+    p.add_argument("sources", nargs="+", type=Path, help="One or more input documents.")
     p.add_argument(
-        "--schema", action="store_true", help="Validate ODF files against the ODF schema."
+        "--schema", action="store_true", help="Validate ODF against its declared schema."
     )
-    _add_verapdf(p, "Validate PDF files with veraPDF (PDF/UA-1).")
-    _add_timeout(p)
-    _add_report_options(p)
+    p.add_argument("--validate", action="store_true", help="Request independent PDF/UA validation.")
+    _verapdf(p)
+    _timeout(p)
+    _report_options(p)
 
     p = _command(
         sub,
         "plan",
-        examples=(
-            "  odfa11y plan source.odt\n"
-            "  odfa11y plan source.odt > plan.toml\n"
-            "  # Use a new filename; edit and review the commented decisions."
-        ),
-        description="Print a source-bound plan of disabled human answers.",
+        "Prepare source-bound questions with inert unanswered blocks.",
+        "odfa11y plan source.odt > plan.toml\nodfa11y plan edited.odt --from plan.toml",
     )
-    p.add_argument("source", type=Path)
+    _source(p)
+    p.add_argument(
+        "--from", dest="from_plan", type=Path, help="Carry answers whose bindings still match."
+    )
+    p.add_argument(
+        "--all",
+        dest="include_all",
+        action="store_true",
+        help="Include optional overrides not raised by findings.",
+    )
+    _format(p)
 
     p = _command(
         sub,
         "remediate",
-        examples=(
-            "  odfa11y remediate source.odt reviewed.odt --plan plan.toml --dry-run\n"
-            "  odfa11y remediate source.odt reviewed.odt --plan plan.toml"
-        ),
-        description="Apply reviewed decisions to a separate ODF document.",
+        "Apply reviewed answers under preservation and schema guards.",
+        "odfa11y remediate source.odt reviewed.odt --plan plan.toml --dry-run",
     )
-    p.add_argument("source", type=Path)
-    p.add_argument("destination", type=Path)
-    p.add_argument("--plan", type=Path, required=True, help="Source-bound TOML plan.")
+    _source(p)
+    p.add_argument("destination", type=Path, help=HELP["destination"])
+    p.add_argument("--plan", type=Path, required=True, help=HELP["plan"])
     p.add_argument(
-        "--rebind",
+        "--dry-run",
         action="store_true",
-        help="Explicitly accept a different source digest; target fingerprints still apply.",
+        help="Preview changes and remaining findings without publishing.",
     )
-    p.add_argument("--dry-run", action="store_true", help="Report outcomes without writing.")
-    p.add_argument("--format", choices=("text", "json"), default="text")
+    _replace(p)
+    _format(p)
 
     p = _command(
         sub,
         "export",
-        examples=(
-            "  odfa11y export reviewed.odt reviewed.pdf\n  odfa11y audit reviewed.pdf --verapdf"
-        ),
-        description="Export an ODF document to PDF/UA with LibreOffice.",
+        "Publish a guarded native PDF export.",
+        "odfa11y export reviewed.odt publication.pdf\nodfa11y audit publication.pdf --validate",
     )
-    p.add_argument("source", type=Path)
-    p.add_argument("destination", type=Path)
-    _add_tool_options(p)
+    _source(p)
+    p.add_argument("destination", type=Path, help=HELP["destination"])
+    _tools(p)
+    _replace(p)
+    _format(p)
 
     p = _command(
         sub,
         "compare",
-        examples=(
-            "  odfa11y compare source.odt reviewed.odt --diff-dir differences\n"
-            "  odfa11y compare original.pdf reviewed.pdf --strict"
-        ),
-        description="Compare two ODF or PDF files for fidelity.",
+        "Compare source and candidate fidelity under an explicit policy.",
+        "odfa11y compare source.odt reviewed.odt --diff-dir differences",
     )
-    p.add_argument("source", type=Path)
-    p.add_argument("candidate", type=Path)
-    p.add_argument("--plan", type=Path, help="TOML file whose [fidelity] table sets the policy.")
-    p.add_argument("--diff-dir", type=Path, help="Write images of pages that differ here.")
-    _add_tool_options(p)
-    _add_report_options(p)
+    _source(p)
+    p.add_argument("candidate", type=Path, help="Candidate document to compare with the source.")
+    p.add_argument("--plan", type=Path, help=HELP["plan"])
+    p.add_argument("--diff-dir", type=Path, help="Directory for declared difference images.")
+    _tools(p)
+    _report_options(p)
 
     p = _command(
         sub,
-        "pipeline",
-        examples=(
-            "  odfa11y pipeline source.odt --plan plan.toml --output-dir evidence\n"
-            "  odfa11y pipeline source.odt --plan plan.toml \\\n"
-            "    --output-dir production --profile production\n"
-            "  # Review evidence/REVIEW.md; automated gates do not certify accessibility."
-        ),
-        description="Remediate, export, validate, compare and keep evidence.",
+        "run",
+        "Prepare, remediate and retain selected assurance evidence.",
+        "odfa11y run source.odt --plan plan.toml --output-dir evidence --profile pdf",
     )
-    p.add_argument("source", type=Path)
-    p.add_argument("--plan", type=Path, required=True, help="Source-bound TOML plan.")
-    p.add_argument("--output-dir", type=Path, required=True, help="Evidence directory to create.")
-    p.add_argument(
-        "--profile",
-        choices=tuple(PROFILES.values()),
-        type=_profile_value,
-        default=DEFAULT_PROFILE,
-        help=_profile_help(),
-    )
-    p.add_argument(
-        "--verapdf-path", type=Path, help="veraPDF executable for the production profile."
-    )
-    _add_tool_options(p)
-    p.add_argument("--format", choices=("text", "json"), default="text")
-
-    p.add_argument(
-        "--rebind", action="store_true", help="Explicitly rebind this plan to the selected source."
-    )
-
-    _add_batch(sub)
+    _source(p)
+    p.add_argument("--plan", type=Path, required=True, help=HELP["plan"])
+    _run_options(p)
 
     p = _command(
         sub,
-        "verify",
-        examples=(
-            "  odfa11y verify evidence\n"
-            "  # Checks file integrity; read evidence/REVIEW.md for human review."
-        ),
-        description="Verify an evidence directory against its manifest.",
+        "batch",
+        "Execute independent batch-file items and retain progress.",
+        "odfa11y batch batch.toml --output-dir batch-evidence",
     )
-    p.add_argument("directory", type=Path)
+    p.add_argument(
+        "batch_file", type=Path, help="Batch file listing document IDs, source paths and plans."
+    )
+    _run_options(p)
+
+    p = _command(
+        sub,
+        "verify-evidence",
+        "Check recorded-file integrity without asserting accessibility.",
+        "odfa11y verify-evidence evidence",
+    )
+    p.add_argument("directory", type=Path, help="Evidence bundle directory to verify.")
+    _format(p)
 
     p = _command(
         sub,
         "doctor",
-        examples=("  odfa11y doctor\n  odfa11y doctor --soffice /path/to/soffice --format json"),
-        description="Show tool and dependency versions and what the PDF export supports.",
+        "Measure native tool identities and scoped capability experiments.",
+        "odfa11y doctor --format json",
     )
-    _add_tool_options(p)
-    p.add_argument("--verapdf-path", type=Path, help="Selected veraPDF executable.")
-    p.add_argument("--format", choices=("text", "json"), default="text")
+    _tools(p)
+    _verapdf(p)
+    _format(p)
     return parser
 
 
-def _add_report_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--format", choices=FORMATS, default="text")
-    parser.add_argument(
-        "--source-root", type=Path, help="Confined source root, required for SARIF."
-    )
-    parser.add_argument("--strict", action="store_true", help="Fail on warnings too.")
-
-
-def _add_tool_options(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--soffice", type=Path, help="LibreOffice executable.")
-    _add_timeout(parser)
-
-
-def _add_timeout(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--timeout",
-        type=_timeout_seconds,
-        default=DEFAULT_TIMEOUT_SECONDS,
-        help=f"Native tool timeout in seconds (default: {DEFAULT_TIMEOUT_SECONDS}).",
-    )
-
-
-def _timeout_seconds(value: str) -> int:
-    try:
-        seconds = int(value)
-        validate_timeout(seconds)
-    except (ValueError, PlanError) as exc:
-        msg = (
-            f"Invalid timeout: {value!r}; "
-            "use positive whole seconds within the portable wait range."
-        )
-        raise argparse.ArgumentTypeError(msg) from exc
-    return seconds
-
-
-def _add_verapdf(parser: argparse.ArgumentParser, help_text: str) -> None:
-    parser.add_argument("--verapdf", action="store_true", help=help_text)
-    parser.add_argument(
-        "--verapdf-path", type=Path, help="veraPDF executable (implies --verapdf); default: PATH."
-    )
-
-
-def _add_batch(sub: argparse._SubParsersAction) -> None:
-    p = _command(
-        sub,
-        "batch",
-        examples=(
-            "  odfa11y batch manifest.toml --output-dir batch-evidence\n"
-            "  odfa11y batch manifest.toml --output-dir production --profile production"
-        ),
-        description="Run independent manifest items and retain aggregate evidence.",
-    )
-    p.add_argument(
-        "--rebind", action="store_true", help="Explicitly rebind each plan to its selected source."
-    )
-    p.add_argument("manifest", type=Path)
-    p.add_argument("--output-dir", type=Path, required=True)
-    p.add_argument(
-        "--profile",
-        choices=tuple(PROFILES.values()),
-        type=_profile_value,
-        default=DEFAULT_PROFILE,
-        help=_profile_help(),
-    )
-    p.add_argument("--verapdf-path", type=Path)
-    _add_tool_options(p)
-    p.add_argument("--format", choices=("text", "json"), default="text")
-
-
-def _profile_help() -> str:
-    return (
-        f"Assurance profile (default: {DEFAULT_PROFILE}): source checks source/remediation; "
-        "verify adds PDF diagnostics and fidelity; production also requires veraPDF "
-        "and gates warnings."
-    )
-
-
-def _command(
-    sub: argparse._SubParsersAction, name: str, *, description: str, examples: str
-) -> argparse.ArgumentParser:
-    """Keep command descriptions and practical examples in native argparse help.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        The command parser with plain, suggestion-enabled help.
-
-    """
+def _command(sub, name: str, description: str, examples: str):
     return sub.add_parser(
         name,
         help=description,
         description=description,
-        epilog=f"Examples:\n{examples}",
+        epilog="Examples:\n" + examples,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         suggest_on_error=True,
         color=False,
     )
 
 
-def _profile_value(value: str) -> Profile:
-    """Parse a profile value using the core catalogue.
+def _source(parser) -> None:
+    parser.add_argument("source", type=Path, help=HELP["source"])
 
-    Returns
-    -------
-    Profile
-        The selected core profile.
 
-    Raises
-    ------
-    argparse.ArgumentTypeError
-        The core rejects the supplied profile name.
+def _format(parser, *, findings: bool = False) -> None:
+    parser.add_argument(
+        "--format",
+        choices=("text", "json", "sarif") if findings else ("text", "json"),
+        default="text",
+        help=HELP["format"],
+    )
 
-    """
+
+def _report_options(parser) -> None:
+    _format(parser, findings=True)
+    parser.add_argument("--strict", action="store_true", help=HELP["strict"])
+    parser.add_argument("--source-root", type=Path, help=HELP["source_root"])
+
+
+def _tools(parser) -> None:
+    parser.add_argument("--soffice", type=Path, help=HELP["soffice"])
+    _timeout(parser)
+
+
+def _verapdf(parser) -> None:
+    parser.add_argument("--verapdf", type=Path, help=HELP["verapdf"])
+
+
+def _replace(parser) -> None:
+    parser.add_argument("--replace", action="store_true", help=HELP["replace"])
+
+
+def _timeout(parser) -> None:
+    default = Tools().timeout
+    parser.add_argument(
+        "--timeout",
+        type=_timeout_seconds,
+        default=default,
+        help=f"Seconds per native call (default: {default:g}).",
+    )
+
+
+def _timeout_seconds(value: str) -> float:
     try:
-        return profile_named(value)
-    except PlanError as exc:
-        raise argparse.ArgumentTypeError(str(exc)) from exc
+        return Tools(timeout=float(value)).timeout
+    except (ValueError, InvalidOption) as error:
+        message = (
+            f"Invalid timeout {value!r}; require finite positive seconds within the portable range."
+        )
+        raise argparse.ArgumentTypeError(message) from error
+
+
+def _profile_value(value: str) -> Profile:
+    try:
+        return Profile.parse(value)
+    except InvalidOption as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
+def _run_options(parser) -> None:
+    parser.add_argument("--output-dir", type=Path, required=True, help=HELP["output_dir"])
+    parser.add_argument(
+        "--profile",
+        type=_profile_value,
+        choices=tuple(Profile),
+        default=Profile.PDF,
+        help="Assurance profile (default: pdf): "
+        + "; ".join(f"{value.value}: {value.meaning}" for value in Profile),
+    )
+    _tools(parser)
+    _verapdf(parser)
+    _format(parser)

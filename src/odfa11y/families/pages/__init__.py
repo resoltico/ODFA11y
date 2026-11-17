@@ -1,13 +1,6 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Shared page semantics with two native-family registrations."""
 
-from .adapter import DRAWING_ADAPTER, PRESENTATION_ADAPTER
-from .operations import SetGraphicAlternatives, SetLinkDescriptions, SetPageSemantics
+from odfa11y.families.pages.spec import DRAWING_SPEC, PRESENTATION_SPEC
 
-__all__ = [
-    "DRAWING_ADAPTER",
-    "PRESENTATION_ADAPTER",
-    "SetGraphicAlternatives",
-    "SetLinkDescriptions",
-    "SetPageSemantics",
-]
+__all__ = ["DRAWING_SPEC", "PRESENTATION_SPEC"]

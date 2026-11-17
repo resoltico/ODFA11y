@@ -1,20 +1,16 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Prove local cached chart-range boundaries without materializing repeated table data."""
-
-from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterator
 
-from odfa11y.content import axis_count, cell_at, declarations, repeated
-from odfa11y.errors import RemediationError
-from odfa11y.odf import qn, select_elements
+lazy from lxml import etree
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from lxml import etree
+from odfa11y.concepts import axis_count, cell_at, declarations, repeated
+from odfa11y.errors import DocumentRefusal
+from odfa11y.odf import names as xml_names
+from odfa11y.odf import select_elements
 
 TABLE_NAME = r"(?:'(?:[^']|'')+'|[^.\s:]+)"
 RANGE = re.compile(
@@ -70,7 +66,7 @@ class LocalRange:
 def range_shape(chart: etree._Element, address: str) -> tuple[int, int] | None:
     """Inspect a range without expanding cached cells.
 
-    A reversed or out-of-bounds local range propagates ``RemediationError``.
+    A reversed or out-of-bounds local range propagates ``DocumentRefusal``.
 
     Returns
     -------
@@ -92,7 +88,7 @@ def resolve_range(chart: etree._Element, address: str) -> LocalRange | None:
 
     Raises
     ------
-    RemediationError
+    DocumentRefusal
         A resolved local range is reversed or exceeds its declared grid.
 
     """
@@ -102,8 +98,8 @@ def resolve_range(chart: etree._Element, address: str) -> LocalRange | None:
     tables = select_elements(chart, "./table:table")
     name = _table_name(match["table"])
     if name is None and len(tables) == 1:
-        name = tables[0].get(qn("table", "name"))
-    matches = [table for table in tables if table.get(qn("table", "name")) == name]
+        name = tables[0].get(xml_names.TABLE_NAME)
+    matches = [table for table in tables if table.get(xml_names.TABLE_NAME) == name]
     if len(matches) != 1 or _table_name(match["endtable"]) not in {None, name}:
         return None
     table = matches[0]
@@ -117,7 +113,7 @@ def resolve_range(chart: etree._Element, address: str) -> LocalRange | None:
     last_column = _column(match["endcolumn"] or match["column"], columns)
     if not (1 <= first_row <= last_row <= rows and 1 <= first_column <= last_column <= columns):
         msg = "A local chart data range is reversed or exceeds its declared table."
-        raise RemediationError(msg)
+        raise DocumentRefusal(msg)
     if (
         cell_at(table, first_row, first_column) is None
         or cell_at(table, last_row, last_column) is None

@@ -1,22 +1,21 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Exit aggregation honors severity across inputs, stages and batch items."""
 
-from __future__ import annotations
-
+import importlib
 from itertools import permutations
-from typing import TYPE_CHECKING
+lazy from collections.abc import Iterator
 lazy from pathlib import Path
 
 import pytest
 
-from odfa11y.batch.record import BatchItemResult, BatchRecord
+from odfa11y.batch.record import BatchRecord
 from odfa11y.cli import main
-from odfa11y.errors import PackageError, PlanError
-from odfa11y.outcomes import ExitStatus, combine_statuses
-from odfa11y.report import Report, rules
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
+from odfa11y.errors import PlanError, ToolFailure
+from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rules
+from odfa11y.status import ExitStatus, Profile, combine_statuses
+from tests.fixtures.records import batch_item
 
 
 @pytest.mark.parametrize(
@@ -36,10 +35,8 @@ def test_exit_precedence_is_independent_of_numeric_order(
     assert combine_statuses(statuses) == expected
     assert (
         BatchRecord(
-            items=[
-                BatchItemResult(str(i), exit_status=ExitStatus(status))
-                for i, status in enumerate(statuses)
-            ]
+            profile=Profile.PRODUCTION,
+            items=tuple(batch_item(str(i), status) for i, status in enumerate(statuses)),
         ).exit_status
         == expected
     )
@@ -65,12 +62,14 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
             raise PlanError(msg)
         if source.name == "unreadable":
             msg = "Unreadable input"
-            raise PackageError(msg)
-        report = Report(kind="text", subject="source")
-        report.add(rules.META001)
+            raise ToolFailure(msg)
+        report = Report(kind=ReportKind.ODF, subject="source")
+        report.raise_(rules.META001)
         yield report
 
-    monkeypatch.setattr("odfa11y.application.audit_document", audit)
+    monkeypatch.setattr(
+        importlib.import_module("odfa11y.application.audit"), "audit_document", audit
+    )
     sources = ["invalid", "findings"]
     if execution_failure:
         sources.append("unreadable")
@@ -78,5 +77,5 @@ def test_multi_input_audit_aggregates_usage_findings_and_execution_failure(
         sources.reverse()
     assert main(["audit", *sources, "--format", "json"]) == (3 if execution_failure else 4)
     captured = capsys.readouterr()
-    assert "META001" in captured.out
+    assert rules.META001.id in captured.out
     assert "Invalid plan or policy" in captured.err

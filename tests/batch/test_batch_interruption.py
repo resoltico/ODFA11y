@@ -1,7 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Interrupt a real batch process after evidence publication and inspect durable state."""
-
-from __future__ import annotations
 
 import importlib
 import json
@@ -9,27 +7,24 @@ import multiprocessing
 import os
 import signal
 import sys
-from typing import TYPE_CHECKING
+lazy from collections.abc import Callable
+lazy from multiprocessing.synchronize import Event
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.cli import main
 from odfa11y.evidence import check_bundle
-from odfa11y.pipeline.context import RunSettings
-from odfa11y.pipeline.profiles import profile_named
-from tests.batch.test_batch import manifest_file
+from odfa11y.status import Profile
+from tests.batch.test_batch import write_batch_file
 from tests.fixtures.plans import plan_header
+from tests.fixtures.runs import RunSettings, run_batch
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from multiprocessing.synchronize import Event
-    from pathlib import Path
-
-    from odfa11y.plans import Plan
+lazy from odfa11y.plans import Plan
 
 
 def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
-    runner = importlib.import_module("odfa11y.batch.run")
+    runner = importlib.import_module("odfa11y.application.run")
     original = runner.load_plan
     count = 0
 
@@ -43,8 +38,7 @@ def _blocked_batch(manifest: str, output: str, ready: Event) -> None:
 
     patch = pytest.MonkeyPatch()
     patch.setattr(runner, "load_plan", block_second)
-    result = runner.run_batch(manifest, output, RunSettings(profile=profile_named("source")))
-    sys.exit(result.exit_status)
+    sys.exit(main(["batch", manifest, "--output-dir", output, "--profile", "source"]))
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows terminate forcibly kills the process")
@@ -57,7 +51,7 @@ def test_real_process_interruption_keeps_completed_evidence_and_pending_ids(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("first", "second", "third")]
     )
     context = multiprocessing.get_context("spawn")
@@ -94,7 +88,7 @@ def test_real_process_interruption_keeps_completed_evidence_and_pending_ids(
 
 
 def _blocked_publication(manifest: str, output: str, ready: Event, boundary: str) -> None:
-    runner = importlib.import_module("odfa11y.batch.run")
+    runner = importlib.import_module("odfa11y.application.run")
     publisher = importlib.import_module("odfa11y.evidence.bundle")
     count = 0
 
@@ -115,7 +109,7 @@ def _blocked_publication(manifest: str, output: str, ready: Event, boundary: str
         patch.setattr(runner, "execute", blocked(runner.execute))
     else:
         patch.setattr(publisher, "write_manifest", blocked(publisher.write_manifest))
-    runner.run_batch(manifest, output, RunSettings(profile=profile_named("source")))
+    run_batch(manifest, output, RunSettings(profile=Profile.SOURCE))
 
 
 @pytest.mark.parametrize("boundary", ["before", "after"])
@@ -129,7 +123,7 @@ def test_forced_kill_at_publication_preserves_completed_bundles(
         plan_header(tmp_path / "doc.odt")
         + '[decisions."document.metadata"]\ntitle="T"\nlanguage="en"'
     )
-    manifest = manifest_file(
+    manifest = write_batch_file(
         tmp_path, [(name, "doc.odt", "plan.toml") for name in ("first", "second", "third")]
     )
     context = multiprocessing.get_context("spawn")

@@ -1,16 +1,11 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Views of established current Writer flow and excluded authored contexts."""
 
-from __future__ import annotations
+lazy from lxml import etree
 
-from typing import TYPE_CHECKING
-
-from odfa11y.content import eligible_text_node, reading_context_path
+from odfa11y.concepts import eligible_text_node, reading_context_path
 from odfa11y.odf import qn, select_elements
 from odfa11y.report import Location
-
-if TYPE_CHECKING:
-    from lxml import etree
 
 
 def text_nodes(

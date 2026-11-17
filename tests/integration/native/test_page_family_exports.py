@@ -1,0 +1,103 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Native integration cases for page family exports."""
+
+from collections.abc import Callable
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y.application.tools import Tools
+from odfa11y.evidence import check_bundle
+from odfa11y.odf import OdfDocument, Part, qn, select_elements
+from odfa11y.pdf import audit_pdfua
+from odfa11y.pdf.audit import PdfMeasurements
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
+from odfa11y.status import Profile
+from tests.families.pages.test_page_family_exports import CORPUS, FAMILIES, _plan
+from tests.fixtures.answers import (
+    graphic_answer,
+    metadata_input,
+    page_answer,
+)
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import validate_pdfua
+from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
+lazy from tests.fixtures.answers import graphic_inputs, page_inputs
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+@pytest.mark.usefixtures("required_verapdf")
+def test_native_page_pipeline_has_independent_positive_and_negative_pdf_controls(
+    tmp_path: Path, family: str, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    verapdf = external_tool("verapdf")
+    suffix, _ = FAMILIES[family]
+    source = CORPUS / f"fruit-{family}{suffix}"
+    root = tmp_path / "evidence"
+    record = execute(
+        source,
+        reviewed_plan(source, _plan(), Pagination.SAME()),
+        root,
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
+        ),
+    )
+    assert record.passed, [stage.as_dict() for stage in record.stages]
+    assert all(stage.outcome.status == "passed" for stage in record.stages)
+    assert check_bundle(root) == []
+    assert rules.PDF008.id in {f.rule_id for f in audit_pdfua(root / "source.pdf").findings}
+    damaged = validate_pdfua(root / "source.pdf", executable=verapdf)
+    assert not damaged.compliant
+    assert {(failure.clause, failure.test_number) for failure in damaged.failures} == {("7.3", "1")}
+    assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant
+    assert (
+        measured(
+            measurement(
+                audit_pdfua(root / "remediated.pdf"), PdfStructureMeasurements
+            ).structure_tags
+        )["Figure"]
+        == 1
+    )
+
+
+@pytest.mark.usefixtures("required_verapdf")
+def test_described_illustration_only_draw_export_passes_both_content_checks(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    verapdf = external_tool("verapdf")
+    doc = OdfDocument.open(CORPUS / "fruit-drawing.odg")
+    page = select_elements(doc.tree(Part.CONTENT), "//office:body/office:drawing/draw:page")[0]
+    for shape in list(page):
+        if shape.get(qn("draw", "name")) != "Fruit illustration":
+            page.remove(shape)
+    page.set(qn("draw", "nav-order"), "id3")
+    source = doc.save(tmp_path / "illustration.odg")
+    root = tmp_path / "evidence"
+    plan = [
+        metadata_input(language="en-US"),
+        page_inputs({"Fruit overview": page_answer("Fruit illustration")}),
+        graphic_inputs({
+            "Fruit illustration": graphic_answer(
+                "Fruit illustration", "A red apple and a green pear"
+            )
+        }),
+    ]
+    record = execute(
+        source,
+        reviewed_plan(source, plan, Pagination.SAME()),
+        root,
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
+        ),
+    )
+    assert record.passed, [stage.as_dict() for stage in record.stages]
+    report = audit_pdfua(root / "remediated.pdf")
+    assert measured(measurement(report, PdfMeasurements).text_character_count) == 0
+    assert measured(measurement(report, PdfMeasurements).described_graphic_count) == 1
+    assert rules.PDF011.id not in {finding.rule_id for finding in report.findings}
+    assert validate_pdfua(root / "remediated.pdf", executable=verapdf).compliant

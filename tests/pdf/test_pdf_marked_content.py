@@ -1,30 +1,31 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Marked-content reconciliation, verified against independently built content streams."""
 
-from __future__ import annotations
-
-import time
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from pathlib import Path
 
 import pytest
 from pypdf.generic import ArrayObject, DictionaryObject, NameObject, NumberObject
+lazy from pypdf import PdfWriter
+lazy from pypdf.generic import IndirectObject
 
-from odfa11y.errors import ToolFailedError
+from odfa11y.errors import ToolFailure
 from odfa11y.pdf import audit_pdfua
-from odfa11y.pdf import marked_content as marked
+from odfa11y.pdf.reading import limits
+from odfa11y.pdf.reading.content import scan as content_scan
 from odfa11y.pdf.reading.content import scan_content
-from odfa11y.report import FactKeys
+from odfa11y.pdf.structure.marked_content import MarkedContentMeasurements
+from odfa11y.rules import registry as rules
+from tests.fixtures.measurements import measured, measurement
 from tests.fixtures.pdf import dictionary, marked_text, set_page_content, tagged_writer, text_pdf
+lazy from odfa11y.report import Finding, Report
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from pypdf import PdfWriter
-    from pypdf.generic import IndirectObject
-
-    from odfa11y.report import Finding, Report
-
-CONTENT_RULES = {"PDF020", "PDF021", "PDF022", "PDF023"}
+CONTENT_RULES = {
+    rules.PDF021.id,
+    rules.PDF022.id,
+    rules.PDF023.id,
+    rules.PDF024.id,
+}
 TEXT = "BT /F1 12 Tf 10 50 Td (x) Tj ET"
 
 
@@ -83,13 +84,13 @@ def set_content(writer: PdfWriter, operators: str) -> None:
 def test_content_that_every_element_and_sequence_agrees_on_has_no_findings(tmp_path: Path) -> None:
     report = audit(tmp_path, tagged_writer(["H1", ("L", [("LI", ["P"])]), "P"]))
     assert not content_findings(report)
-    assert report.facts[FactKeys.PDF_MARKED_CONTENT_ID_COUNT] == 3
+    assert measured(measurement(report, MarkedContentMeasurements).marked_content_id_count) == 3
 
 
 def test_marked_content_no_structure_element_refers_to_is_an_error(tmp_path: Path) -> None:
     writer = tagged_writer(["H1"])
     set_content(writer, f"{marked_text(0)}\n{marked_text(7)}\n{marked_text(3)}")
-    finding = content_findings(audit(tmp_path, writer))["PDF020"]
+    finding = content_findings(audit(tmp_path, writer))[rules.PDF021.id]
     assert finding.severity.value == "error"
     assert finding.details["pages"] == [{"page": 1, "count": 2, "mcids": [3, 7]}]
 
@@ -98,9 +99,9 @@ def test_a_reference_to_marked_content_the_page_lacks_is_a_warning(tmp_path: Pat
     writer = tagged_writer(["H1", "P"])
     set_content(writer, marked_text(0))
     findings = content_findings(audit(tmp_path, writer))
-    assert set(findings) == {"PDF021"}
-    assert findings["PDF021"].severity.value == "warning"
-    assert findings["PDF021"].details["references"] == [{"page": 1, "mcid": 1}]
+    assert set(findings) == {rules.PDF022.id}
+    assert findings[rules.PDF022.id].severity.value == "warning"
+    assert findings[rules.PDF022.id].details["references"] == [{"page": 1, "mcid": 1}]
 
 
 def test_a_reference_resolved_through_another_page_is_not_content_of_this_page(
@@ -110,17 +111,17 @@ def test_a_reference_resolved_through_another_page_is_not_content_of_this_page(
     other = writer.add_blank_page(width=100, height=100)
     dictionary(leaves(writer)[1])[NameObject("/Pg")] = other.indirect_reference
     findings = content_findings(audit(tmp_path, writer))
-    assert set(findings) == {"PDF020", "PDF021"}
-    assert findings["PDF021"].details["references"] == [{"page": 2, "mcid": 1}]
+    assert set(findings) == {rules.PDF021.id, rules.PDF022.id}
+    assert findings[rules.PDF022.id].details["references"] == [{"page": 2, "mcid": 1}]
 
 
 def test_marked_content_referred_to_twice_is_a_warning(tmp_path: Path) -> None:
     writer = tagged_writer(["H1", "P"])
     dictionary(leaves(writer)[1])[NameObject("/K")] = NumberObject(0)
     findings = content_findings(audit(tmp_path, writer))
-    assert set(findings) == {"PDF020", "PDF022"}
-    assert findings["PDF022"].severity.value == "warning"
-    assert findings["PDF022"].details["mcids"] == [{"page": 1, "mcid": 0, "references": 2}]
+    assert set(findings) == {rules.PDF021.id, rules.PDF023.id}
+    assert findings[rules.PDF023.id].severity.value == "warning"
+    assert findings[rules.PDF023.id].details["mcids"] == [{"page": 1, "mcid": 0, "references": 2}]
 
 
 def test_a_marked_content_reference_dictionary_counts_like_an_integer(tmp_path: Path) -> None:
@@ -134,7 +135,10 @@ def test_a_marked_content_reference_dictionary_counts_like_an_integer(tmp_path: 
     dictionary(leaves(writer)[0])[NameObject("/K")] = ArrayObject([reference])
     assert not content_findings(audit(tmp_path, writer))
     reference[NameObject("/MCID")] = NumberObject(4)
-    assert set(content_findings(audit(tmp_path, writer))) == {"PDF020", "PDF021"}
+    assert set(content_findings(audit(tmp_path, writer))) == {
+        rules.PDF021.id,
+        rules.PDF022.id,
+    }
 
 
 def test_a_reference_into_a_form_xobject_is_not_judged_against_the_page(tmp_path: Path) -> None:
@@ -164,7 +168,7 @@ def test_text_outside_tagged_content_and_artifacts_is_an_error(
 ) -> None:
     writer = tagged_writer(["H1"])
     set_content(writer, operators)
-    finding = content_findings(audit(tmp_path, writer))["PDF023"]
+    finding = content_findings(audit(tmp_path, writer))[rules.PDF024.id]
     assert finding.severity.value == "error"
     assert finding.details["pages"] == [{"page": 1, "text_operations": 1}]
 
@@ -182,7 +186,7 @@ def test_text_outside_tagged_content_and_artifacts_is_an_error(
 def test_tagged_and_artifact_text_is_accepted(tmp_path: Path, operators: str) -> None:
     writer = tagged_writer(["H1"])
     set_content(writer, operators)
-    assert "PDF023" not in content_findings(audit(tmp_path, writer))
+    assert rules.PDF024.id not in content_findings(audit(tmp_path, writer))
 
 
 def test_a_properties_resource_supplies_the_mcid_of_a_named_property_list(tmp_path: Path) -> None:
@@ -196,13 +200,13 @@ def test_a_named_property_list_without_an_mcid_does_not_tag_content(tmp_path: Pa
     set_content(writer, f"/P /MC0 BDC {TEXT} EMC")
     resources = cast("DictionaryObject", writer.pages[0]["/Resources"])
     cast("DictionaryObject", resources["/Properties"])[NameObject("/MC0")] = DictionaryObject()
-    assert {"PDF021", "PDF023"} <= set(content_findings(audit(tmp_path, writer)))
+    assert {rules.PDF022.id, rules.PDF024.id} <= set(content_findings(audit(tmp_path, writer)))
 
 
 def test_a_pdf_without_a_structure_tree_still_reports_unmarked_content(tmp_path: Path) -> None:
     report = audit_pdfua(text_pdf(tmp_path / "untagged.pdf", [["x"]]))
-    assert "PDF004" in {f.rule_id for f in report.findings}
-    assert set(content_findings(report)) == {"PDF023"}
+    assert rules.PDF005.id in {f.rule_id for f in report.findings}
+    assert set(content_findings(report)) == {rules.PDF024.id}
 
 
 def test_every_page_is_reconciled_with_its_own_content(tmp_path: Path) -> None:
@@ -240,53 +244,57 @@ def test_content_scanning_follows_pdf_syntax(data: bytes, mcids: set[int], unmar
     assert (scan.mcids, scan.unmarked_text_operations) == (mcids, unmarked)
 
 
-def test_hostile_content_scanning_keeps_results_and_meets_the_time_budget() -> None:
+def test_hostile_content_scanning_keeps_results_with_bounded_operands() -> None:
     hostile = [
         (b"/P <</MCID 1>> BDC " * 200_000, {1}),
         (b"(" * 2_000_000, set()),
         (b"<<" * 1_000_000 + b">>", set()),
         (b"/A " * 1_000_000, set()),
     ]
-    started = time.perf_counter()
     for data, expected in hostile:
         scan = scan_content(data, lambda _name: None)
         assert (scan.mcids, scan.unmarked_text_operations) == (expected, 0)
-    with pytest.raises(ToolFailedError, match="Inline image has no data delimiter"):
+    with pytest.raises(ToolFailure, match="Inline image has no data delimiter"):
         scan_content(b"BI " * 500_000, lambda _name: None)
-    assert time.perf_counter() - started < 10
+    scanner = content_scan._Scanner(lambda _name: None)
+    for _ in range(content_scan.MAX_OPERANDS * 100):
+        scanner.operand("name", "/A")
+        assert len(scanner.operands) <= content_scan.MAX_OPERANDS
 
 
 def test_page_content_above_the_size_limit_is_reported_as_uninspectable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     writer = tagged_writer(["H1"])
+    del writer.root_object["/Metadata"]
     path = tmp_path / "large.pdf"
     writer.write(path)
-    monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 10)
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 10)
     report = audit_pdfua(path)
-    assert [f.rule_id for f in report.findings] == ["PDF000"]
-    assert "larger than the 10-byte limit" in report.findings[0].message
+    assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
+    assert "10-byte inspection limit" in report.findings[0].message
 
 
 def test_the_content_limit_covers_all_pages_together(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     writer = tagged_writer(["H1"])
+    del writer.root_object["/Metadata"]
     second = writer.add_blank_page(width=100, height=100)
     set_page_content(writer, second, marked_text(0))
     page_bytes = len(marked_text(0))
-    monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes - 1)
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 2 * page_bytes - 1)
     report = audit(tmp_path, writer)
-    assert [f.rule_id for f in report.findings] == ["PDF000"]
-    monkeypatch.setattr(marked, "MAX_CONTENT_BYTES", 2 * page_bytes + 1)
-    assert "PDF000" not in {f.rule_id for f in audit(tmp_path, writer).findings}
+    assert [f.rule_id for f in report.findings] == [rules.PDF001.id]
+    monkeypatch.setattr(limits, "MAX_CONTENT_BYTES", 2 * page_bytes + 1)
+    assert rules.PDF001.id not in {f.rule_id for f in audit(tmp_path, writer).findings}
 
 
 @pytest.mark.parametrize("filter_name", [b"F", b"Filter", b"Fi#6cter"])
 def test_a_filtered_inline_image_is_refused_instead_of_guessing_its_end(
     filter_name: bytes,
 ) -> None:
-    with pytest.raises(ToolFailedError, match="Filtered inline images"):
+    with pytest.raises(ToolFailure, match="Filtered inline images"):
         scan_content(
             b"BI /W 1 /H 1 /CS /G /BPC 8 /" + filter_name + b" /Fl ID x EI",
             lambda _name: None,

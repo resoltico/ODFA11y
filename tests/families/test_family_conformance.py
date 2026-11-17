@@ -1,27 +1,29 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Every family uses real source-bound questions, guarded publication and explicit rebinding."""
-
-from __future__ import annotations
 
 import hashlib
 import tomllib
+from copy import deepcopy
 lazy from pathlib import Path
 
 import pytest
+from lxml import etree
 
+from odfa11y.application.remediate import remediate
+from odfa11y.audit import audit_odf, prepare_plan
 from odfa11y.decisions import Decision, decode_answer
 from odfa11y.errors import PackageError, PlanError
-from odfa11y.families import adapter_for
-from odfa11y.odf import NS, OdfDocument, PackageStorage, Part
-from odfa11y.plans import Plan, parse_tables, registered_kinds
-from odfa11y.remediation import remediate
+from odfa11y.odf import NS, OdfDocument, PackageStorage, Part, qn
+from odfa11y.plans import Plan, parse_tables
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.report import Location
-from odfa11y.source_audit import audit_odf, prepare_plan
+from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target, TargetPath, require_target
 from tests.fixtures.paths import TESTS
 from tests.fixtures.spreadsheets import make_spreadsheet, picture, row, sheet, text_cell
 from tests.fixtures.writer import make_minimal_odt
 
-FAMILY_CORPUS = TESTS / "family_corpus"
+FAMILY_CORPUS = TESTS / "corpus/families"
 FAMILY_FIXTURES = [
     "text",
     "spreadsheet",
@@ -39,33 +41,37 @@ def test_family_question_roundtrip_preservation_and_rebinding(tmp_path: Path, fi
     source = family_source(tmp_path, fixture)
     document = OdfDocument.open(source)
     original_bytes = source.read_bytes()
-    before = adapter_for(document.kind).snapshot(document)
+    before = _xml_outside_document_title(document)
     plan = reviewed_title_plan(source)
     destination = tmp_path / ("reviewed" + source.suffix)
     result = remediate(source, destination, plan)
     assert result.published, result.as_dict()
     assert result.changed
     assert result.exit_status == 0
-    assert "META001" not in {f.rule_id for f in audit_odf(destination).findings}
+    assert rules.META001.id not in {f.rule_id for f in audit_odf(destination).findings}
     after = OdfDocument.open(destination)
-    assert adapter_for(after.kind).snapshot(after) == before
+    assert _xml_outside_document_title(after) == before
     assert source.read_bytes() == original_bytes
     second = tmp_path / ("second" + source.suffix)
     with pytest.raises(PlanError, match="digest mismatch"):
         remediate(destination, second, plan)
     assert not second.exists()
-    reapplied = remediate(destination, second, plan, rebind=True)
+    reapplied = remediate(destination, second, rebound_plan(destination, plan))
     assert reapplied.published
     assert not reapplied.changed
-    assert reapplied.rebind
     assert not reapplied.violations
     # A source binding never authorizes a decision belonging to another family.
     foreign = registered_kinds()["formula.alternative" if fixture == "text" else "heading.level"]
     target = None if foreign.scope == "document" else Location("content/heading[1]")
     decision = Decision(
         foreign,
-        target,
-        None if target is None else "0" * 16,
+        (
+            None
+            if target is None
+            else Target(
+                TargetPath((target).path), Fingerprint(None if target is None else "0" * 16)
+            )
+        ),
         decode_answer(
             foreign.answer_type,
             {"level": 2} if foreign.id == "heading.level" else {"alternative": "A formula"},
@@ -90,36 +96,36 @@ def test_preview_and_publication_return_all_outcomes(
     graphic = kinds["graphic.alternative"]
     decisions = [
         Decision(
-            metadata,
-            None,
-            None,
-            decode_answer(metadata.answer_type, {"title": "Reviewed"}, metadata.id),
+            metadata, None, decode_answer(metadata.answer_type, {"title": "Reviewed"}, metadata.id)
         )
     ]
     if failing_target:
         decisions.append(
             Decision(
                 graphic,
-                Location("content/frame[name=Missing]"),
-                "0" * 16,
+                Target(
+                    TargetPath((Location("content/frame[name=Missing]")).path),
+                    Fingerprint("0" * 16),
+                ),
                 decode_answer(graphic.answer_type, {"title": "Missing"}, graphic.id),
             )
         )
     plan = Plan.for_source(source, decisions)
     destination = tmp_path / "out.odt"
+    if failing_target:
+        with pytest.raises(PlanError, match="exactly one"):
+            remediate(source, destination, plan, dry_run=dry_run)
+        assert source.read_bytes() == before
+        assert not destination.exists()
+        return
     result = remediate(source, destination, plan, dry_run=dry_run)
-    assert result.published is (not dry_run and not failing_target)
-    assert result.exit_status == (2 if failing_target else 0)
+    assert result.published is not dry_run
+    assert result.exit_status == 0
     assert destination.exists() is result.published
     assert source.read_bytes() == before
-    assert len(result.outcomes) == (2 if failing_target else 1)
+    assert len(result.outcomes) == 1
     assert result.outcomes[0].status == "applied"
-    if failing_target:
-        assert result.outcomes[1].status == "failed"
-        assert result.violations[0].kind == "failed-outcome"
-        assert result.violations[0].key == "content/frame[name=Missing]"
-    else:
-        assert not result.violations
+    assert not result.violations
     result.as_dict()
 
 
@@ -138,8 +144,7 @@ def test_sheet_and_graphic_questions_compose_and_rebind(tmp_path: Path) -> None:
         decisions.append(
             Decision(
                 question.kind,
-                question.target,
-                question.fingerprint,
+                require_target(question.target),
                 decode_answer(question.kind.answer_type, values, question.kind.id),
             )
         )
@@ -149,8 +154,10 @@ def test_sheet_and_graphic_questions_compose_and_rebind(tmp_path: Path) -> None:
     first, second = tmp_path / "first.ods", tmp_path / "second.ods"
     result = remediate(source, first, plan)
     assert result.published, result.as_dict()
-    assert not {"SHEET002", "GRAPHIC003"} & {f.rule_id for f in audit_odf(first).findings}
-    result = remediate(first, second, plan, rebind=True)
+    assert not {rules.SHEET002.id, rules.GRAPHIC001.id} & {
+        f.rule_id for f in audit_odf(first).findings
+    }
+    result = remediate(first, second, rebound_plan(first, plan))
     assert result.published, result.as_dict()
     assert not result.changed
 
@@ -168,10 +175,10 @@ def reviewed_title_plan(source: Path) -> Plan:
     report, template = prepare_plan(source)
     assert source.read_bytes() == original_bytes
     assert template is not None
-    assert any(f.rule_id == "META001" for f in report.findings)
+    assert any(f.rule_id == rules.META001.id for f in report.findings)
     question = next(d for d in report.decisions if d.kind.id == "document.metadata")
     # Enable only the reviewed table printed by the real plan renderer.
-    preceding, marker, following = template.partition('# [decisions."document.metadata"]')
+    preceding, marker, following = template.partition('[decisions."document.metadata"]')
     assert marker
     reviewed = (
         preceding
@@ -184,7 +191,6 @@ def reviewed_title_plan(source: Path) -> Plan:
     assert plan.decisions == (
         Decision(
             question.kind,
-            None,
             None,
             decode_answer(
                 question.kind.answer_type, {"title": "Reviewed fruit document"}, question.kind.id
@@ -248,3 +254,33 @@ def test_every_family_audit_preserves_live_trees_and_serializes_against_its_sche
     assert not document.changed_since(before)
     assert source.read_bytes() == before_bytes
     report.as_dict()
+
+
+def rebound_plan(source: Path, previous: Plan) -> Plan:
+    """Exercise the new-plan workflow before applying preserved answers again."""
+    _, template = prepare_plan(source, previous=previous)
+    assert template is not None
+    return parse_tables(tomllib.loads(template), registered_kinds())
+
+
+def _xml_outside_document_title(document: OdfDocument) -> tuple[bytes, ...]:
+    parts = []
+    for tree in document.distinct_trees(*Part):
+        root = deepcopy(tree.getroot())
+        for meta in root.findall("office:meta", NS):
+            for title in meta.findall("dc:title", NS):
+                meta.remove(title)
+            if not len(meta) and not meta.attrib:
+                root.remove(meta)
+        # Authoring a title may create the optional standard metadata part and entry.
+        if root.tag == qn("office", "document-meta") and not len(root):
+            assert set(root.attrib) <= {qn("office", "version")}
+            continue
+        for entry in root.findall("manifest:file-entry", NS):
+            if dict(entry.attrib) == {
+                qn("manifest", "full-path"): "meta.xml",
+                qn("manifest", "media-type"): "text/xml",
+            }:
+                root.remove(entry)
+        parts.append(etree.tostring(root, method="c14n", exclusive=True))
+    return tuple(parts)

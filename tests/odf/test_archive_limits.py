@@ -1,21 +1,17 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Reject corrupt, ambiguous and resource-exhausting ZIP inputs at their real boundary."""
 
-from __future__ import annotations
-
 import zipfile
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 
+from odfa11y.audit import audit_odf
 from odfa11y.errors import PackageError
 from odfa11y.odf import PackageStorage
 from odfa11y.odf import archive as archive_limits
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
 from tests.fixtures.writer import TEXT_MEDIA_TYPE, make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_duplicate_zip_members_are_reported_and_cannot_be_rewritten(tmp_path: Path) -> None:
@@ -23,7 +19,7 @@ def test_duplicate_zip_members_are_reported_and_cannot_be_rewritten(tmp_path: Pa
     content = PackageStorage(source).read("content.xml")
     with zipfile.ZipFile(source, "a") as archive, pytest.warns(UserWarning, match="Duplicate name"):
         archive.writestr("content.xml", content)
-    assert "PKG006" in {f.rule_id for f in audit_odf(source).findings}
+    assert rules.PKG009.id in {f.rule_id for f in audit_odf(source).findings}
     destination = tmp_path / "existing.odt"
     destination.write_bytes(b"existing destination")
     with pytest.raises(PackageError, match="duplicate ZIP"):

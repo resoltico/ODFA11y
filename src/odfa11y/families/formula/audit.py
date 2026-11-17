@@ -1,22 +1,23 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Audit native MathML structure and supplied spoken alternatives."""
 
-from __future__ import annotations
+from typing import Annotated, Literal
+lazy from dataclasses import dataclass, field
 
-from typing import TYPE_CHECKING
+from lxml import etree
 
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
+from odfa11y.families.formula.domain import FORMULA
+from odfa11y.families.formula.kinds import FORMULA_ALTERNATIVE
 from odfa11y.odf import Part, qn
-from odfa11y.report import FactKeys, Location, rules
-
-from .decisions import FORMULA_ALTERNATIVE
-from .expression import expression
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.odf import names as xml_names
+from odfa11y.report import Location
+from odfa11y.rules import registry as rules
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 TOKENS = {qn("math", name) for name in ("mi", "mn", "mo", "mtext", "ms", "ci", "cn", "csymbol")}
 CONTENT_VALUES = {
@@ -46,6 +47,14 @@ CONTENT_VALUES = {
 NONEXPRESSION = {qn("math", name) for name in ("annotation", "annotation-xml", "mphantom")}
 
 
+@dataclass(frozen=True, slots=True)
+class FormulaMeasurements:
+    """Measurements produced by formula analysis; None denotes unmeasured data."""
+
+    producer: Literal["formula"] = field(default="formula", init=False)
+    element_count: Annotated[int | None, Description("Inspected MathML elements.")] = None
+
+
 def _meaningful(node: etree._Element) -> bool:
     if node.tag in NONEXPRESSION or any(
         parent.tag in NONEXPRESSION for parent in node.iterancestors()
@@ -53,43 +62,46 @@ def _meaningful(node: etree._Element) -> bool:
         return False
     if node.tag in CONTENT_VALUES:
         return True
-    if node.tag == qn("math", "ms") and (node.get("lquote", '"') or node.get("rquote", '"')):
+    if node.tag == xml_names.MATH_MS and (node.get("lquote", '"') or node.get("rquote", '"')):
         return True
-    if node.tag == qn("math", "csymbol") and (node.get("definitionURL") or "").strip():
+    if node.tag == xml_names.MATH_CSYMBOL and (node.get("definitionURL") or "").strip():
         return True
-    if node.tag == qn("math", "mglyph"):
+    if node.tag == xml_names.MATH_MGLYPH:
         return bool((node.get("src") or "").strip())
     return node.tag in TOKENS and bool("".join(node.itertext()).strip())
 
 
-def audit_formula(document: OdfDocument, report: Report) -> None:
+def audit_formula(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Check formula applicability and semantics; formal MathML validation is a schema gate."""
-    root = expression(document)
+    entries = tuple(FORMULA.enumerate(document))
+    root = entries[0][1] if entries else None
     location = Location(f"{Part.CONTENT}/formula")
     if root is None:
-        report.add(
+        report.raise_(
             rules.MATH001,
             "Formula content must be a native MathML root; flat office wrappers are unsupported.",
             location=location,
         )
         return
     nodes = [node for node in root.iter() if isinstance(node.tag, str)]
-    report.facts[FactKeys.FORMULA_ELEMENT_COUNT] = len(nodes)
+    report.observe_review(Topic.MATHEMATICS, Topic.EXPORT_BOUNDARY)
+    if root.get(xml_names.XML_LANG) or any(_meaningful(node) for node in nodes):
+        report.observe_review(Topic.LANGUAGE)
+    report.measure(FormulaMeasurements(element_count=len(nodes)))
     if not any(_meaningful(node) for node in nodes):
-        report.add(rules.MATH001, "The mathematical expression is empty.", location=location)
+        report.raise_(rules.MATH002, "The mathematical expression is empty.", location=location)
     if not (root.get("alttext") or "").strip():
-        report.add(rules.MATH002, location=location)
-        report.add_decision(
-            OpenDecision(
+        report.raise_(
+            rules.MATH003,
+            location=location,
+            decision=OpenDecision(
                 FORMULA_ALTERNATIVE,
-                None,
-                None,
+                FORMULA.binding(document, entries[0][0]),
                 {"alternative": root.get("alttext")},
-                (rules.MATH002.id,),
-            )
+            ),
         )
     if any(
-        node.get("href") or node.get("src") or node.get("altimg") or node.get(qn("xlink", "href"))
+        node.get("href") or node.get("src") or node.get("altimg") or node.get(xml_names.XLINK_HREF)
         for node in nodes
     ):
-        report.add(rules.MATH003, location=location)
+        report.raise_(rules.MATH004, location=location)

@@ -1,45 +1,23 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Validator process and report handling with stub executables (no real veraPDF needed)."""
-
-from __future__ import annotations
 
 import os
 import shlex
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
+from lxml import etree
 
-from odfa11y.errors import ToolFailedError, ToolNotFoundError
-from odfa11y.pdf import add_verapdf_findings, find_verapdf, validate_pdfua
-from odfa11y.report import FactKeys, Report
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-REPORT = """<?xml version="1.0" encoding="utf-8"?>
-<report>
-  <buildInformation>
-    <releaseDetails id="core" version="9.9.9" buildDate="x"></releaseDetails>
-  </buildInformation>
-  <jobs><job>
-    <validationReport jobEndStatus="{status}" profileName="PDF/UA-1 validation profile"
-        isCompliant="{compliant}">
-      <details passedRules="1" failedRules="{failed}">
-        {rules}
-      </details>
-    </validationReport>
-  </job></jobs>
-</report>"""
-FAILED_RULE = """<rule specification="ISO 14289-1:2014" clause="7.1" testNumber="10"
-    status="failed" failedChecks="4">
-  <description>The catalog shall include DisplayDocTitle.</description>
-  <check status="failed"><context>root/a</context><errorMessage>one</errorMessage></check>
-  <check status="failed"><context>root/b</context><errorMessage>two</errorMessage></check>
-  <check status="failed"><context>root/c</context><errorMessage>three</errorMessage></check>
-  <check status="failed"><context>root/d</context><errorMessage>four</errorMessage></check>
-</rule>
-<rule specification="ISO 14289-1:2014" clause="6.2" testNumber="1" status="passed"
-    failedChecks="0"><description>Fine.</description></rule>"""
+from odfa11y.errors import ToolFailure, ToolUnavailable
+from odfa11y.native.verapdf import find_verapdf
+from odfa11y.pdf import add_verapdf_findings
+from odfa11y.pdf.validation import ValidationMeasurements, parse_validation
+from odfa11y.report import Report
+from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rule_catalogue
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import validate_pdfua
+from tests.fixtures.verapdf import FAILED_RULE, REPORT
 
 
 def stub(directory: Path, output: str, *, status: int = 0) -> Path:
@@ -101,15 +79,15 @@ def test_failed_rules_keep_their_standard_identity_and_sample_contexts(tmp_path:
         "10",
     )
     assert failure.failed_checks == 4
-    assert failure.contexts == ("root/a", "root/b", "root/c")
-    assert failure.messages == ("one", "two", "three")
-    report = Report(kind="verapdf", subject="in.pdf")
+    assert failure.contexts == ("root/a", "root/b", "root/c", "root/d")
+    assert failure.messages == ("one", "two", "three", "four")
+    report = Report(kind=ReportKind.PDF_VALIDATION, subject="in.pdf")
     add_verapdf_findings(report, result)
     finding = report.findings[0]
-    assert finding.rule_id == "VERA001"
+    assert finding.rule_id == rule_catalogue.PDFUA001.id
     assert "clause 7.1 test 10" in finding.message
     assert finding.details["failed_checks"] == 4
-    assert report.facts[FactKeys.VERAPDF_IDENTITY]["compliant"] is False
+    assert measured(measurement(report, ValidationMeasurements).identity).compliant is False
 
 
 def test_a_report_is_the_outcome_whatever_the_exit_status(tmp_path: Path) -> None:
@@ -130,10 +108,75 @@ def test_a_report_is_the_outcome_whatever_the_exit_status(tmp_path: Path) -> Non
 def test_execution_and_report_failures_are_distinct_from_non_compliance(
     tmp_path: Path, output: str, status: int, message: str
 ) -> None:
-    with pytest.raises(ToolFailedError, match=message):
+    with pytest.raises(ToolFailure, match=message):
         validate_pdfua(tmp_path / "in.pdf", executable=stub(tmp_path, output, status=status))
 
 
 def test_missing_validator_is_a_not_found_error(tmp_path: Path) -> None:
-    with pytest.raises(ToolNotFoundError):
+    with pytest.raises(ToolUnavailable):
         find_verapdf(tmp_path / "absent")
+
+
+@pytest.mark.parametrize("namespace", ["default", "prefixed"])
+def test_namespaced_report_elements_keep_failure_details(namespace: str) -> None:
+    source = report_xml(compliant=False)
+    uri = "urn:verapdf:report"
+    if namespace == "default":
+        xml = source.replace("<report>", f'<report xmlns="{uri}">').encode()
+    else:
+        root = etree.fromstring(source.encode())
+        for node in root.iter():
+            node.tag = f"{{{uri}}}{node.tag}"
+        xml = etree.tostring(root)
+        assert b"<ns0:" in xml
+    result = parse_validation(xml)
+    assert not result.compliant
+    assert result.identity.version == "9.9.9"
+    assert result.failures[0].description == "The catalog shall include DisplayDocTitle."
+    assert result.failures[0].contexts[0] == "root/a"
+    assert result.failures[0].messages[0] == "one"
+
+
+@pytest.mark.parametrize("value", ["no", "", "-1", "1.5", "\u0661"])
+def test_malformed_failed_check_count_is_a_tool_failure(value: str) -> None:
+    xml = report_xml(compliant=False).replace('failedChecks="4"', f'failedChecks="{value}"')
+    with pytest.raises(ToolFailure, match="malformed failedChecks"):
+        parse_validation(xml.encode())
+
+
+def test_malformed_compliance_boolean_is_a_tool_failure() -> None:
+    xml = report_xml(compliant=True).replace('isCompliant="true"', 'isCompliant="perhaps"')
+    with pytest.raises(ToolFailure, match="malformed isCompliant"):
+        parse_validation(xml.encode())
+
+
+def test_native_report_bytes_are_not_repaired_before_xml_validation(tmp_path: Path) -> None:
+    body = REPORT.format(status="normal", compliant="true", failed=0, rules="").encode()
+    body = body.replace(b"</report>", b"<unused>\xff</unused></report>")
+    payload = tmp_path / "raw-report.xml"
+    payload.write_bytes(body)
+    executable = stub(tmp_path, "placeholder")
+    executable.write_text(
+        f'@echo off\r\ntype "{payload}"\r\n'
+        if os.name == "nt"
+        else "#!/bin/sh\ncat " + shlex.quote(str(payload)) + "\n"
+    )
+    with pytest.raises(ToolFailure, match="parse the veraPDF report as XML"):
+        validate_pdfua(tmp_path / "input.pdf", executable=executable)
+
+
+@pytest.mark.parametrize(
+    ("compliant", "failed", "rules"),
+    [("false", 1, ""), ("false", 0, ""), ("true", 1, FAILED_RULE), ("false", 2, FAILED_RULE)],
+)
+def test_verdict_counts_and_failed_rule_details_must_agree(compliant, failed, rules) -> None:
+    xml = REPORT.format(status="normal", compliant=compliant, failed=failed, rules=rules)
+    with pytest.raises(ToolFailure, match="inconsistent"):
+        parse_validation(xml.encode())
+
+
+@pytest.mark.parametrize("value", ["no", "", "-1", "1.5", "\u0661"])
+def test_failed_rule_count_is_validated(value: str) -> None:
+    xml = REPORT.format(status="normal", compliant="false", failed=value, rules=FAILED_RULE)
+    with pytest.raises(ToolFailure, match="malformed failedRules"):
+        parse_validation(xml.encode())

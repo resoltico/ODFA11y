@@ -1,29 +1,25 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Load, edit and atomically save ODF ZIP packages."""
-
-from __future__ import annotations
 
 import lzma
 import zipfile
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import BinaryIO
+lazy import os
+lazy from collections.abc import Iterable
 
 from odfa11y.errors import MissingMemberError, PackageError
-from odfa11y.staging import staging_sibling
-
-from .archive import (
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.archive import (
     check_archive_limits,
     clone_zipinfo,
     is_unsafe_member_name,
     validate_archive,
 )
-from .storage import OdfStorage, Part
-
-if TYPE_CHECKING:
-    import os
-    from collections.abc import Iterable
+from odfa11y.odf.storage import Layout, OdfStorage, Part
+from odfa11y.publish import publish_file
 
 # Errors raised while reading malformed or unsupported ZIP structure or damaged member data.
 UNREADABLE_ARCHIVE_ERRORS = (
@@ -42,7 +38,7 @@ PART_MEMBERS = {
     Part.SETTINGS: "settings.xml",
     Part.MANIFEST: "META-INF/manifest.xml",
 }
-MIMETYPE_MEMBER = "mimetype"
+MIMETYPE_MEMBER = xml_names.MIMETYPE_MEMBER
 
 
 def _read_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytes:
@@ -82,7 +78,7 @@ class PackageStorage(OdfStorage):
     makes that invariant explicit instead of relying on generic ZIP behaviour.
     """
 
-    layout = "package"
+    layout = Layout.PACKAGE
 
     def __init__(self, source: str | os.PathLike[str]) -> None:
         """Load and index the document resources.
@@ -115,7 +111,7 @@ class PackageStorage(OdfStorage):
                 self.order.append(info.filename)
                 self.members[info.filename] = Member(info=info, data=_read_member(zf, info))
 
-    def member_for(self, part: Part) -> str | None:  # noqa: PLR6301  Implement the shared storage instance interface.
+    def member_for(self, part: Part) -> str | None:
         """Name the package member holding a part.
 
         Returns
@@ -194,7 +190,6 @@ class PackageStorage(OdfStorage):
 
         """
         destination = Path(destination)
-        destination.parent.mkdir(parents=True, exist_ok=True)
         if len(self.order) != len(set(self.order)):
             msg = "Cannot rewrite an ODF package with duplicate ZIP member names"
             raise PackageError(msg)
@@ -203,15 +198,11 @@ class PackageStorage(OdfStorage):
             msg = f"Cannot rewrite an ODF package with unsafe member names: {unsafe}"
             raise PackageError(msg)
 
-        tmp = staging_sibling(destination)
-        try:
-            self._write_archive(tmp)
-            validate_archive(tmp, self._declared_mimetype())
-            tmp.replace(destination)
-        finally:
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
-        return destination
+        def write(stream: BinaryIO) -> None:
+            self._write_archive(stream)
+            validate_archive(stream, self._declared_mimetype())
+
+        return publish_file(destination, write, replace=True)
 
     def _declared_mimetype(self) -> str | None:
         member = self.members.get(MIMETYPE_MEMBER)
@@ -223,7 +214,7 @@ class PackageStorage(OdfStorage):
             msg = "Cannot rewrite an ODF package whose mimetype is not ASCII"
             raise PackageError(msg) from exc
 
-    def _write_archive(self, tmp: Path) -> None:
+    def _write_archive(self, tmp: BinaryIO) -> None:
         with zipfile.ZipFile(tmp, "w") as zf:
             if MIMETYPE_MEMBER in self.members:
                 # ODF package requirement: first member, uncompressed.

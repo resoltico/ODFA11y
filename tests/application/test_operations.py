@@ -1,37 +1,36 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Each operation: applies once, then reports unchanged; every failure is explicit."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative
-from odfa11y.families.text import (
-    LinkifyAddresses,
-    MarkTableHeaders,
-    NormalizeSpacing,
-    RemoveEmptySpacers,
-    SetGraphicAlternatives,
-    TableHeaders,
-    derived_style_name,
-)
-from odfa11y.families.text.styles import catalog_of
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import PlanError
+from odfa11y.families.text import derived_style_name
 from odfa11y.odf import OdfDocument, Part, qn, select_elements, validate
-from odfa11y.remediation import SetMetadata, SetOdfVersion
+from odfa11y.odf.styles import styles_of
+from tests.fixtures.answers import (
+    Authored,
+    RawDecisions,
+    address_input,
+    apply_in_memory,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+    spacing_input,
+    version_input,
+)
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from odfa11y.adapter import Operation
-    from tests.fixtures.writer import Features
+lazy from tests.fixtures.writer import Features
 
 
-def run(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
+def run(operation: Authored, document: OdfDocument) -> tuple[Status, ...]:
     """Apply an operation and return its statuses.
 
     Returns
@@ -40,7 +39,7 @@ def run(operation: Operation, document: OdfDocument) -> tuple[Status, ...]:
         The status of each outcome.
 
     """
-    return tuple(outcome.status for outcome in operation.apply(document))
+    return tuple(outcome.status for outcome in apply_in_memory(document, operation))
 
 
 def document(tmp_path: Path, *, version: str = "1.4", **features: Unpack[Features]) -> OdfDocument:
@@ -65,19 +64,20 @@ def assert_valid(doc: OdfDocument) -> None:
 @pytest.mark.parametrize("version", ["1.3", "1.4"])
 def test_odf_version_is_applied_once_and_stays_valid(tmp_path: Path, version: str) -> None:
     doc = document(tmp_path, version="1.3" if version == "1.4" else "1.4")
-    operation = SetOdfVersion(version)
+    operation = version_input(version)
     assert run(operation, doc) == (Status.APPLIED,)
     assert run(operation, doc) == (Status.UNCHANGED,)
     assert_valid(doc)
 
 
 def test_odf_version_without_a_bundled_schema_fails(tmp_path: Path) -> None:
-    assert run(SetOdfVersion("1.2"), document(tmp_path)) == (Status.FAILED,)
+    with pytest.raises(PlanError, match="version"):
+        run(version_input("1.2"), document(tmp_path))
 
 
 def test_metadata_is_applied_once_and_language_reaches_both_places(tmp_path: Path) -> None:
     doc = document(tmp_path)
-    operation = SetMetadata(title=" New title ", description="About", language="fr-CA")
+    operation = metadata_input(title=" New title ", description="About", language="fr-CA")
     assert run(operation, doc) == (Status.APPLIED,) * 3
     assert run(operation, doc) == (Status.UNCHANGED,) * 3
     assert (
@@ -93,7 +93,8 @@ def test_metadata_is_applied_once_and_language_reaches_both_places(tmp_path: Pat
 
 @pytest.mark.parametrize("tag", ["", "x", "en GB", "12-34"])
 def test_invalid_language_tags_fail(tmp_path: Path, tag: str) -> None:
-    assert run(SetMetadata(language=tag), document(tmp_path)) == (Status.FAILED,)
+    with pytest.raises(PlanError, match="language"):
+        run(metadata_input(language=tag), document(tmp_path))
 
 
 def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail(
@@ -101,48 +102,49 @@ def test_alt_text_is_ordered_for_the_schema_applied_once_and_unmatched_keys_fail
 ) -> None:
     doc = document(tmp_path, with_image_without_alt=True)
     entries = {
-        "Logo": GraphicAlternative("Title", "Description"),
-        "Missing": GraphicAlternative("x"),
+        "Logo": graphic_answer("Title", "Description"),
+        "Missing": graphic_answer("x"),
     }
-    assert run(SetGraphicAlternatives(entries), doc) == (Status.FAILED,)
+    with pytest.raises(PlanError, match="exactly one"):
+        run(graphic_inputs(entries), doc)
     assert not doc.dirty  # selectors are resolved before anything is edited
-    entries = {"Logo": GraphicAlternative("Title", "Description")}
-    assert run(SetGraphicAlternatives(entries), doc) == (Status.APPLIED,)
+    entries = {"Logo": graphic_answer("Title", "Description")}
+    assert run(graphic_inputs(entries), doc) == (Status.APPLIED,)
     assert_valid(doc)
-    assert run(
-        SetGraphicAlternatives({"Logo": GraphicAlternative("Title", "Description")}), doc
-    ) == (Status.UNCHANGED,)
-    assert run(
-        SetGraphicAlternatives({"logo.svg": GraphicAlternative(description="By file name")}), doc
-    ) == (Status.APPLIED,)
+    assert run(graphic_inputs({"Logo": graphic_answer("Title", "Description")}), doc) == (
+        Status.UNCHANGED,
+    )
+    with pytest.raises(PlanError, match="exactly one"):
+        run(graphic_inputs({"logo.svg": graphic_answer(description="By file name")}), doc)
     assert_valid(doc)
 
 
 def test_header_rows_apply_once_and_can_be_explicitly_revised(tmp_path: Path) -> None:
     doc = document(tmp_path, with_data_table=True)
-    assert run(MarkTableHeaders({"Data": TableHeaders(1)}), doc) == (Status.APPLIED,)
-    assert run(MarkTableHeaders({"Data": TableHeaders(1)}), doc) == (Status.UNCHANGED,)
-    assert run(MarkTableHeaders({"Data": TableHeaders(2)}), doc) == (Status.APPLIED,)
+    assert run(header_inputs({"Data": header_answer(1)}), doc) == (Status.APPLIED,)
+    assert run(header_inputs({"Data": header_answer(1)}), doc) == (Status.UNCHANGED,)
+    assert run(header_inputs({"Data": header_answer(2)}), doc) == (Status.APPLIED,)
     assert_valid(doc)
 
 
 def test_header_rows_fail_for_unknown_tables_and_too_many_rows(tmp_path: Path) -> None:
     doc = document(tmp_path, with_data_table=True)
-    assert run(MarkTableHeaders({"Nope": TableHeaders(1)}), doc) == (Status.FAILED,)
-    assert run(MarkTableHeaders({"Data": TableHeaders(9)}), doc) == (Status.FAILED,)
+    with pytest.raises(PlanError, match="exactly one"):
+        run(header_inputs({"Nope": header_answer(1)}), doc)
+    assert run(header_inputs({"Data": header_answer(9)}), doc) == (Status.FAILED,)
 
 
 def test_linkify_applies_once_and_keeps_the_document_valid(tmp_path: Path) -> None:
     doc = document(tmp_path, with_plain_email=True)
-    assert run(LinkifyAddresses(), doc) == (Status.APPLIED,)
-    assert run(LinkifyAddresses(), doc) == (Status.UNCHANGED,)
+    assert run(address_input(), doc) == (Status.APPLIED,)
+    assert run(address_input(), doc) == (Status.UNCHANGED,)
     assert_valid(doc)
 
 
 def test_spacer_removal_applies_once(tmp_path: Path) -> None:
     doc = document(tmp_path, add_blank_body_paragraph=True)
-    assert run(RemoveEmptySpacers(), doc) == (Status.APPLIED,)
-    assert run(RemoveEmptySpacers(), doc) == (Status.UNCHANGED,)
+    assert run(spacer_input(), doc) == (Status.APPLIED,)
+    assert run(spacer_input(), doc) == (Status.UNCHANGED,)
     assert [p.text for p in select_elements(doc.tree(Part.CONTENT), "//text:p")] == [
         "Body paragraph."
     ]
@@ -155,7 +157,7 @@ def test_spacer_removal_retains_semantically_protected_paragraphs(
     doc = document(tmp_path, add_blank_body_paragraph=True)
     paragraph = select_elements(doc.tree(Part.CONTENT), "//text:p[not(text())]")[0]
     _protect(doc, paragraph, marker)
-    RemoveEmptySpacers().apply(doc)
+    apply_in_memory(doc, spacer_input())
     assert paragraph in doc.tree(Part.CONTENT).iter()
 
 
@@ -194,28 +196,28 @@ def _spacing_document(tmp_path: Path) -> OdfDocument:
 
 def test_spacing_copies_reference_spacing_onto_a_derived_style_once(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
-    operation = NormalizeSpacing("Body paragraph.", ("BodyTight",))
+    operation = spacing_input("Body paragraph.", ("BodyTight",))
     assert run(operation, doc) == (Status.APPLIED,)
     last = select_elements(doc.tree(Part.CONTENT), "//text:p[last()]")[0]
     assert last.get(qn("text", "style-name")) == derived_style_name("BodyTight")
-    assert catalog_of(doc).spacing_signature(derived_style_name("BodyTight")) == catalog_of(
+    assert styles_of(doc).spacing_signature(derived_style_name("BodyTight")) == styles_of(
         doc
     ).spacing_signature("Body")
-    assert catalog_of(doc).style("paragraph", "BodyTight") is not None
+    assert styles_of(doc).resolve("paragraph", "BodyTight") is not None
     assert run(operation, doc) == (Status.UNCHANGED,)
 
 
 def test_spacing_follows_a_changed_reference_without_new_style_names(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
-    NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(doc)
+    apply_in_memory(doc, spacing_input("Body paragraph.", ("BodyTight",)))
     paragraphs = select_elements(doc.tree(Part.CONTENT), "//text:p")
     paragraphs[0].set(qn("text", "style-name"), "Heading1")
-    outcome = NormalizeSpacing("Body paragraph.", ("BodyTight",)).apply(doc)[0]
+    outcome = apply_in_memory(doc, spacing_input("Body paragraph.", ("BodyTight",)))[0]
     assert outcome.status is Status.APPLIED
     clones = [
         s
         for s in select_elements(doc.tree(Part.CONTENT), "//style:style")
-        if "A11ySpacing" in (s.get(qn("style", "name")) or "")
+        if "ODFA11y_spacing_" in (s.get(qn("style", "name")) or "")
     ]
     assert len(clones) == 1
 
@@ -223,31 +225,16 @@ def test_spacing_follows_a_changed_reference_without_new_style_names(tmp_path: P
 @pytest.mark.parametrize(
     "operation",
     [
-        NormalizeSpacing("Nowhere", ("BodyTight",)),
-        NormalizeSpacing("Body paragraph.", ("NoSuchStyle",)),
+        spacing_input("Nowhere", ("BodyTight",)),
+        spacing_input("Body paragraph.", ("NoSuchStyle",)),
     ],
 )
-def test_spacing_failures_are_explicit(tmp_path: Path, operation: NormalizeSpacing) -> None:
+def test_spacing_failures_are_explicit(tmp_path: Path, operation: RawDecisions) -> None:
     doc = _spacing_document(tmp_path)
     assert run(operation, doc) == (Status.FAILED,)
-
-
-def test_operations_describe_themselves_in_json_compatible_values() -> None:
-    described = SetGraphicAlternatives({"Logo": GraphicAlternative("T", "D")}).as_dict()
-    assert described == {
-        "operation": "set_graphic_alternatives",
-        "entries": {
-            "Logo": {"title": "T", "description": "D", "fingerprint": None, "decorative": None}
-        },
-    }
-    assert MarkTableHeaders({"Data": TableHeaders(1)}).as_dict() == {
-        "operation": "mark_table_headers",
-        "entries": {"Data": {"rows": 1, "columns": None, "fingerprint": None}},
-    }
-    assert NormalizeSpacing("x", ("A",)).as_dict()["target_styles"] == ("A",)
 
 
 def test_a_reference_style_without_spacing_cannot_be_copied(tmp_path: Path) -> None:
     doc = _spacing_document(tmp_path)
     select_elements(doc.tree(Part.CONTENT), "//text:p")[0].set(qn("text", "style-name"), "Unknown")
-    assert run(NormalizeSpacing("Body paragraph.", ("BodyTight",)), doc) == (Status.FAILED,)
+    assert run(spacing_input("Body paragraph.", ("BodyTight",)), doc) == (Status.FAILED,)

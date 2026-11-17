@@ -1,24 +1,27 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """A hidden-paragraph condition excludes its whole block, regardless of cached visibility."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.adapter import Status
-from odfa11y.content import GraphicAlternative, document_links, eligible_text_node
-from odfa11y.families.text import LinkifyAddresses, SetGraphicAlternatives
+from odfa11y.audit import audit_odf, prepare_plan
+from odfa11y.concepts import document_links, eligible_text_node
+from odfa11y.errors import PlanError
+from odfa11y.families.text.headings.audit import TextContentMeasurements
+from odfa11y.families.text.tables.audit import TableMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements, validate
-from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf, prepare_plan
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import (
+    address_input,
+    graphic_answer,
+    graphic_inputs,
+)
 from tests.fixtures.documents import Variant, make_flat, make_package
-from tests.fixtures.operations import execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.operations import apply_answers
+lazy from tests.fixtures.answers import apply_in_memory
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
@@ -47,11 +50,13 @@ Conditional heading https://hidden.example
     before = etree.tostring(excluded)
     assert all(not eligible_text_node(node) for node in excluded.iter())
     report, template = prepare_plan(source)
-    assert report.facts[FactKeys.TEXT_HEADING_COUNT] == 1
-    assert report.facts[FactKeys.TEXT_TABLE_COUNT] == 0
-    assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
+    assert measured(measurement(report, TextContentMeasurements).heading_count) == 1
+    assert measured(measurement(report, TableMeasurements).table_count) == 0
+    assert rules.ORDER003.id in {finding.rule_id for finding in report.findings}
     addresses = [
-        finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
+        finding.details["text"]
+        for finding in report.findings
+        if finding.rule_id == rules.LINK001.id
     ]
     assert addresses == ["https://visible.example"]
     assert len(document_links(document)) == 1
@@ -60,24 +65,22 @@ Conditional heading https://hidden.example
     assert 'decisions."link.description"."content/link[1]"' in template
     assert "ConditionalBox" not in template
     assert "ConditionalTable" not in template
-    assert (
-        SetGraphicAlternatives({"ConditionalBox": GraphicAlternative(title="Reviewed")})
-        .apply(document)[0]
-        .status
-        is Status.FAILED
-    )
+    with pytest.raises(PlanError, match="exactly one"):
+        apply_in_memory(
+            document, graphic_inputs({"ConditionalBox": graphic_answer(title="Reviewed")})
+        )
     assert etree.tostring(excluded) == before
-    result = LinkifyAddresses().apply(document)
+    result = apply_in_memory(document, address_input())
     assert result[0].count == 1
     assert etree.tostring(excluded) == before
     destination = tmp_path / ("out.odt" if layout == "package" else "out.fodt")
-    assert execute_operations(source, destination, [LinkifyAddresses()]).changed
+    assert apply_answers(source, destination, [address_input()]).changed
     reloaded = OdfDocument.open(destination)
     retained = select_elements(reloaded.tree(Part.CONTENT), "//text:hidden-paragraph/..")[0]
     assert etree.tostring(retained) == before
     after = audit_odf(destination)
-    assert after.facts[FactKeys.TEXT_HEADING_COUNT] == 1
-    assert "HIDDEN001" in {finding.rule_id for finding in after.findings}
+    assert measured(measurement(after, TextContentMeasurements).heading_count) == 1
+    assert rules.ORDER003.id in {finding.rule_id for finding in after.findings}
 
 
 @pytest.mark.parametrize("layout", ["package", "flat"])
@@ -94,15 +97,17 @@ def test_span_marker_excludes_its_whole_paragraph_including_sibling_prose(
     document = OdfDocument.open(source)
     assert validate(document).count == 0
     report = audit_odf(source)
-    assert "HIDDEN001" in {finding.rule_id for finding in report.findings}
+    assert rules.ORDER003.id in {finding.rule_id for finding in report.findings}
     assert [
-        finding.details["text"] for finding in report.findings if finding.rule_id == "LINK001"
+        finding.details["text"]
+        for finding in report.findings
+        if finding.rule_id == rules.LINK001.id
     ] == ["https://visible.example"]
     conditional = select_elements(
         document.tree(Part.CONTENT), "//text:hidden-paragraph/ancestor::text:p"
     )[0]
     before = etree.tostring(conditional)
-    assert LinkifyAddresses().apply(document)[0].count == 1
+    assert apply_in_memory(document, address_input())[0].count == 1
     assert etree.tostring(conditional) == before
 
 
@@ -121,5 +126,5 @@ def test_note_marker_does_not_hide_unrelated_enclosing_paragraph(tmp_path: Path)
     assert eligible_text_node(outer)
     assert not eligible_text_node(inner)
     before = etree.tostring(inner)
-    assert LinkifyAddresses().apply(document)[0].count == 1
+    assert apply_in_memory(document, address_input())[0].count == 1
     assert etree.tostring(inner) == before

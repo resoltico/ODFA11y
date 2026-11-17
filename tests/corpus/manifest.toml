@@ -1,138 +1,671 @@
-# The Writer regression corpus: what each document must audit to, and its identity.
-# See README.md for purposes and provenance. Hashes are SHA-256 of the stored bytes.
-
-[provenance]
-libreoffice = "24.2.7.2"
+# One corpus authority for stored identities, purposes, authoring and expectations.
 
 [[document]]
 file = "bookmarks.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/bookmarks.html"
+filter = "writer8"
 rules = []
 rules_after_plan = []
 schema_violations = 8
 sha256 = "5c55098581b91b68b0f73ddf29aceed274d5e95fbab7e9eedc2d1cc2ae078caf"
+builder = "convert"
 
 [[document]]
 file = "footnotes.fodt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "footnotes.odt"
+filter = "OpenDocument Text Flat XML"
 rules = ["NOTE001"]
 rules_after_plan = ["NOTE001"]
 schema_violations = 6
 sha256 = "3d2d1798207722aea4cc5a2069219c570566f2e7babac21c1a1d0efbe7582b5f"
+builder = "convert"
 
 [[document]]
 file = "footnotes.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/footnotes.fodt"
+filter = "writer8"
 rules = ["NOTE001"]
 rules_after_plan = ["NOTE001"]
 schema_violations = 6
 sha256 = "1334647db20f6c1fbbcc33c766b684b7f29c49aa96d4d6a88851461c0e4b3276"
+builder = "convert"
 
 [[document]]
 file = "frames-textbox.odt"
-rules = ["ORDER001"]
-rules_after_plan = ["ORDER001"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/frames-textbox.fodt"
+filter = "writer8"
+rules = ["ORDER002"]
+rules_after_plan = ["ORDER002"]
 schema_violations = 11
 sha256 = "839ecd92f4879c44bbca7ba224c83e0363e64fa78231d651841c307fcbe4c9ef"
+builder = "convert"
 
 [[document]]
 file = "header-footer.fodt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "header-footer.odt"
+filter = "OpenDocument Text Flat XML"
 rules = []
 rules_after_plan = []
 schema_violations = 6
 sha256 = "fe38ceaee95128a10a00fe3af445ce8253c1eb201e581d3f2effba911a01c972"
+builder = "convert"
 
 [[document]]
 file = "header-footer.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/header-footer.fodt"
+filter = "writer8"
 rules = []
 rules_after_plan = []
 schema_violations = 6
 sha256 = "012a29a0a085b78408519793d9c62b220c9c3e9bc59d0dd380f2beeb9f8f2530"
+builder = "convert"
 
 [[document]]
 file = "headings-skipped.odt"
-rules = ["HEADING002"]
-rules_after_plan = ["HEADING002"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/headings-skipped.html"
+filter = "writer8"
+rules = ["HEADING003"]
+rules_after_plan = ["HEADING003"]
 schema_violations = 6
 sha256 = "1d133a4fdca4cbc364887065f9dc54cff17c7cd2cbd466e3fee886bf303e1c0f"
+builder = "convert"
 
 [[document]]
 file = "images-described.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/images-described.fodt"
+filter = "writer8"
 rules = []
 rules_after_plan = []
 schema_violations = 6
 sha256 = "cf4a137cd41ce4a19fa542d6215ab07624eeb2580b121e428ba2f07829eb0c91"
+builder = "convert"
 
 [[document]]
 file = "images-undescribed.fodt"
-rules = ["GRAPHIC003"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "images-undescribed.odt"
+filter = "OpenDocument Text Flat XML"
+rules = ["GRAPHIC001"]
 rules_after_plan = []
 schema_violations = 6
 sha256 = "ad116aed39a6521fcb3d557a5e2eb0c4c70ae7cd4de91da6c74eb738044d647f"
+builder = "convert"
 
 [[document]]
 file = "images-undescribed.odt"
-rules = ["GRAPHIC003"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/images-undescribed.html"
+filter = "writer8"
+rules = ["GRAPHIC001"]
 rules_after_plan = []
 schema_violations = 6
 sha256 = "401585b7c44ff08401dc5cbf12bffaea68557f87948b68ba0fa57fcea4c3dbc8"
+builder = "convert"
 
 [[document]]
 file = "links.fodt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "links.odt"
+filter = "OpenDocument Text Flat XML"
 rules = ["LINK001"]
 rules_after_plan = []
 schema_violations = 8
 sha256 = "2f33cc498331842bb5b8781d765506e68b75c6fff00d6f3d9894df3ab4a2e9e9"
+builder = "convert"
 
 [[document]]
 file = "links.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/links.html"
+filter = "writer8"
 rules = ["LINK001"]
 rules_after_plan = []
 schema_violations = 8
 sha256 = "4fe2c9a339cf0acd8ef61f1f2fd769e7e1e2d35ea6d1174284e85a96ffa631b9"
+builder = "convert"
 
 [[document]]
 file = "lists-nested.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/lists-nested.html"
+filter = "writer8"
 rules = []
 rules_after_plan = []
 schema_violations = 11
 sha256 = "d45ec484624e161078b0a6daa8dd413c558f00306b9c71a454afd0b3f374da90"
+builder = "convert"
 
 [[document]]
 file = "mixed-languages.odt"
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/mixed-languages.fodt"
+filter = "writer8"
 rules = []
 rules_after_plan = []
 schema_violations = 6
 sha256 = "44e402e4bdf55d9f59a15cb11f213bd6710169f801a44922dd0c3e0cdd0d6aee"
+builder = "convert"
 
 [[document]]
 file = "page-breaks-spacers.odt"
-rules = ["LAYOUT001"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/page-breaks-spacers.fodt"
+filter = "writer8"
+rules = ["STYLE002"]
 rules_after_plan = []
 schema_violations = 6
 sha256 = "8151c8e6ed9cbfff44307140816ac9260a580b72b82aecd2cf666484dba82830"
+builder = "convert"
 
 [[document]]
 file = "table-header-row.odt"
-rules = ["LAYOUT001"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/table-header-row.html"
+filter = "writer8"
+rules = ["STYLE002"]
 rules_after_plan = []
 schema_violations = 11
 sha256 = "7099bda2b8ac43e178cd0bd18fed405615a5cdccca3f69f2af827ed32b2d01dc"
+builder = "convert"
 
 [[document]]
 file = "table-merged-cells.fodt"
-rules = ["TABLE001", "LAYOUT001"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "table-merged-cells.odt"
+filter = "OpenDocument Text Flat XML"
+rules = ["TABLE001", "STYLE002"]
 rules_after_plan = ["TABLE001"]
 schema_violations = 6
 sha256 = "f6c116fcb84405c780eaf46ee07492ab88d7af2eace1361aef0ac23de4ed70de"
+builder = "convert"
 
 [[document]]
 file = "table-merged-cells.odt"
-rules = ["TABLE001", "LAYOUT001"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/table-merged-cells.html"
+filter = "writer8"
+rules = ["TABLE001", "STYLE002"]
 rules_after_plan = ["TABLE001"]
 schema_violations = 11
 sha256 = "76ea0681c0ab19dd091a2e2d0402eeee3736f2be5d72f0d6ee2eba2867e120aa"
+builder = "convert"
 
 [[document]]
 file = "table-no-header-row.odt"
-rules = ["TABLE001", "LAYOUT001"]
+family = "text"
+purposes = ["writer-regression", "preservation"]
+producer = "LibreOffice 24.2.7.2"
+odf_version = "1.3"
+source = "sources/table-no-header-row.html"
+filter = "writer8"
+rules = ["TABLE001", "STYLE002"]
 rules_after_plan = ["TABLE001"]
 schema_violations = 11
 sha256 = "083a68fb12b52d2a4835bc9325605944a0ce70fe208368b59fd4c73156047c3f"
+builder = "convert"
+
+[[document]]
+file = "families/fruit-presentation.odp"
+family = "presentation"
+purposes = ["family-conformance", "preservation"]
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native application services, standard ODF save mode"
+schema_violations = 0
+sha256 = "acd125e92e31dd1f64c71e511c7079e99a1785fa9bd4d44b229955fe46f2b308"
+builder = "native-services"
+
+[[document]]
+file = "families/fruit-drawing.odg"
+family = "drawing"
+purposes = ["family-conformance", "preservation"]
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native application services, standard ODF save mode"
+schema_violations = 0
+sha256 = "87c53c33c6f24679baab85efcb771854c8d8ddda78d16ae4594979e08c01a5b4"
+builder = "native-services"
+
+[[document]]
+file = "families/sum-formula.odf"
+family = "formula"
+purposes = ["family-conformance", "preservation"]
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native application services, standard ODF save mode"
+schema_violations = 0
+sha256 = "eafceebc92348aa8ed7193b8634a5e5364bbf20fb5d5808b1befabed672b3cd2"
+builder = "native-services"
+
+[[document]]
+file = "families/fruit-chart.odc"
+family = "chart"
+purposes = ["family-conformance", "preservation"]
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native Calc internal-data-provider chart parts assembled into standard Chart package"
+schema_violations = 0
+sha256 = "3d2a9662675a4e3751a1e15a30726be6424365559ad17791fca50ca2a779133b"
+builder = "native-services"
+
+[[document]]
+file = "families/fruit-image.odi"
+family = "image"
+purposes = ["family-conformance", "preservation"]
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native Draw frame and SVG assembled into standard Image body and package"
+schema_violations = 0
+sha256 = "e1d9cc787e083d49ab25924691028d08fdf13b039ae7ae3fb26d007753573298"
+builder = "native-services"
+
+[[document]]
+file = "families/fruit-database.odb"
+family = "database"
+purposes = ["family-conformance", "preservation"]
+producer = "LibreOffice 26.8.0.3"
+odf_version = "1.4"
+authoring = "native application services, standard ODF save mode"
+schema_violations = 0
+sha256 = "dd01697b58faa3d686c5c4106742ebe9bbe7db97d66a7ab02cfd251bb5e78871"
+builder = "native-services"
+
+[[document]]
+file = "families/sheet-values.ods"
+family = "spreadsheet"
+purposes = ["family-conformance", "preservation"]
+producer = "ODFA11y synthetic ODF fixture"
+odf_version = "1.4"
+authoring = "Explicit ODF values, header rows, hidden sheet, embedded PNG"
+schema_violations = 0
+sha256 = "ec977f602c6e0a5bc9bcad829ce334b457f65275695832731655ec2c02ae981c"
+builder = "copy"
+
+[[document]]
+file = "families/sheet-references.ods"
+family = "spreadsheet"
+purposes = ["family-conformance", "preservation"]
+producer = "ODFA11y synthetic ODF fixture"
+odf_version = "1.4"
+authoring = "Explicit ODF values, header rows, hidden sheet, embedded PNG, and a sheet reference"
+schema_violations = 0
+sha256 = "7f060d8bacd57ec5cead10ddcb778cfda06348b428d37a9fd01a3e545f65f158"
+builder = "copy"
+
+[[document]]
+file = "structure/language-negative.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/language-negative.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "a162fdf3e9fdd62b4ff2ab9e7ca493b64b88137375742dfe36ca1aad4a485367"
+builder = "convert"
+
+[[document]]
+file = "structure/language-positive.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/language-positive.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "cd3dcf9cb1a39d39a171ffa345da57981b9d8d800dd25b936b635e062df4b2b2"
+builder = "convert"
+
+[[document]]
+file = "structure/lists-negative.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/lists-negative.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "11b435e0312c1c0209ffac2419cb549f172899323f2b7e8a8c54c5d088caccc8"
+builder = "convert"
+
+[[document]]
+file = "structure/lists-positive.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/lists-positive.fodt"
+filter = "writer8"
+schema_violations = 11
+sha256 = "5f70bbfb36e749cae8d3b78e2f5a4648376a198d39d1bfcc995cde1b8001ac1b"
+builder = "convert"
+
+[[document]]
+file = "structure/references-negative.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/references-negative.fodt"
+filter = "writer8"
+schema_violations = 8
+sha256 = "60264b6b4ee18950b1f391eaf82d3e1fb42e473539a8ea38f66a22e9ed8946c1"
+builder = "convert"
+
+[[document]]
+file = "structure/references-positive.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/references-positive.fodt"
+filter = "writer8"
+schema_violations = 8
+sha256 = "5b2fdfcf8990ec557f3db0d840053a6508ee22ab7ce99586afd9ff45dbc7bd92"
+builder = "convert"
+
+[[document]]
+file = "structure/tables-data-no-headers.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/tables-data-no-headers.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "820fee9f9df83f22a5547a66a4ae8e27d3acfe16117e23149a7ace32b896956a"
+builder = "convert"
+
+[[document]]
+file = "structure/tables-negative.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/tables-negative.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "636411b99f5ddd3175bf52ee9cd49129df36f8becc71a259614f23366deededa"
+builder = "convert"
+
+[[document]]
+file = "structure/tables-positive.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/tables-positive.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "260843e3925345c56298af8e64e9f43b8de58c593ad4e1d899ad9042d1a50414"
+builder = "convert"
+
+[[document]]
+file = "structure/visibility-negative.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/visibility-negative.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "d488c632d366027ba3c532d4a77e40763f7365b87c33f069bef04cebf1802fbf"
+builder = "convert"
+
+[[document]]
+file = "structure/visibility-positive.odt"
+family = "text"
+purposes = ["text-structure", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+odf_version = "1.3"
+source = "structure/sources/visibility-positive.fodt"
+filter = "writer8"
+schema_violations = 6
+sha256 = "f945ad6ad6811128072747c5cabcfbda48c902a753b77f7e7f8f0f1be18c5123"
+builder = "convert"
+
+[[document]]
+file = "reproductions/text-contexts.fodt"
+family = "text"
+purposes = ["reproduction", "preservation"]
+producer = "ODFA11y synthetic authoring source"
+schema_violations = 1
+sha256 = "d253e4be9880fd3eb951a5af59f318e3a6990da7b349eea175844915d414509d"
+builder = "copy"
+
+[[document]]
+file = "reproductions/text-contexts.odt"
+family = "text"
+purposes = ["reproduction", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+source = "reproductions/text-contexts.fodt"
+filter = "writer8"
+schema_violations = 9
+sha256 = "66bff5199d069bad9aca64f3cfa7ccce658603685e811e689b579c8790e256ae"
+builder = "convert"
+
+[[document]]
+file = "reproductions/unnamed-link.odt"
+family = "text"
+purposes = ["reproduction", "preservation"]
+producer = "LibreOffice 26.8.1.1"
+schema_violations = 0
+sha256 = "75ae3a0afb0a0291bb14d80e527b44ebc4fd1a4533ddb4025ac5173b3858ee3c"
+builder = "convert"
+source = "reproductions/unnamed-link.odt"
+filter = "writer8"
+
+[[document]]
+file = "sources/footnotes.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "32e015eb98711da88924c086c7650e9985a1063ce77827647497ade55f3917a1"
+builder = "copy"
+
+[[document]]
+file = "sources/frames-textbox.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "6857d993478e4495be80f73fc099d501f1545b867893cdbb0b67c9f564323942"
+builder = "copy"
+
+[[document]]
+file = "sources/header-footer.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "8875ca46d3cfee1a41ebaaa10df1b25052ca890b84f9cff7f3600d8dc9a7e51b"
+builder = "copy"
+
+[[document]]
+file = "sources/images-described.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "45c7aad5a944db831969db296eed1a30cdc18fc850b92f9b3f81a1aa35c0c6c0"
+builder = "copy"
+
+[[document]]
+file = "sources/mixed-languages.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "e899188cc31ef68437520ad94e550d73982342b902b21313c3000f7437d80f17"
+builder = "copy"
+
+[[document]]
+file = "sources/page-breaks-spacers.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "2d3cf6474939d1ef3bc8eb6495b5b7b3b9fdff26effd4e8398f025e516ece325"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/language-negative.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "6daf4bf6028341af60251386b3b11f87c7105ceaaeadbb3572ce04fb70214acd"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/language-positive.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "b94bed40ed1d19b957b8ff187e7c9fb20b0ada3a59b249f92162300219818cdc"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/lists-negative.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "5391e84f80c20c8556b459d2bc49251b3265de0ca77fb7ec6ebb053e7a1e9315"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/lists-positive.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "9c18276f9e41af7d45c1836bc47b744a708692dc8066f589cdda393bd2207e75"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/references-negative.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 1
+sha256 = "25e1749db50a755ad54a3358b490819137a449eaf384c3beec64594ea687f035"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/references-positive.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 1
+sha256 = "19489aef13f2876ef48174d92c31b2f035324f714670876448975aafabbb20a5"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/tables-data-no-headers.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "f6bf9b0e998818a3d3ca7919a1c0f25b2d03eee6152ec755c3cf7b4467b02b08"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/tables-negative.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "6150e4ff8906b325748e1871511b3073d18f8aa6ebbcb66a76baf9248749af38"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/tables-positive.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "b716b1ba2d5e70c60e62aab5f97ed8621f53ded9a826db801e2eb48f7bd6d0c6"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/visibility-negative.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "3819cbef9e44e8dafa351109e79ba8d826e7196b96038933428790e197f37fb6"
+builder = "copy"
+
+[[document]]
+file = "structure/sources/visibility-positive.fodt"
+family = "text"
+purposes = ["authoring-source", "preservation"]
+producer = "Producer not recorded in authoring source"
+schema_violations = 0
+sha256 = "d2f442ab7d9db8cc8e9ed86ebad7ea0b1cb101555bdd7047d4e37f496f2a5781"
+builder = "copy"

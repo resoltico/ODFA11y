@@ -1,15 +1,10 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Exercise XML external-entity protection using actual package members."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 from odfa11y.odf import PackageStorage
 from tests.fixtures.writer import make_minimal_odt
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_external_file_entity_is_not_expanded(tmp_path: Path) -> None:

@@ -1,16 +1,26 @@
-# SPDX-License-Identifier: MPL-2.0
-"""Evidence bundles: hashed, atomically published, path-free records of a run."""
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Declared, redacted evidence artifacts and manifest integrity verification."""
 
-from .bundle import require_free_directory, write_bundle
-from .manifest import check_bundle, sha256_file
-from .redact import Redactor
-from .review import render_review
+from odfa11y.evidence.redact import Redactor
+lazy from odfa11y.evidence.bundle import (
+    BinaryArtifact,
+    BundleArtifact,
+    JsonArtifact,
+    TextArtifact,
+    XmlArtifact,
+    require_free_directory,
+    write_bundle,
+)
+lazy from odfa11y.evidence.manifest import check_bundle
 
 __all__ = [
+    "BinaryArtifact",
+    "BundleArtifact",
+    "JsonArtifact",
     "Redactor",
+    "TextArtifact",
+    "XmlArtifact",
     "check_bundle",
-    "render_review",
     "require_free_directory",
-    "sha256_file",
     "write_bundle",
 ]

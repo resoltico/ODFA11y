@@ -1,31 +1,25 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Detect live XML changes by content and keep derived state coherent between operations."""
-
-from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import cast
+lazy from collections.abc import Callable, Iterator
+lazy from os import PathLike
+lazy from pathlib import Path
 
 from lxml import etree
 
 from odfa11y.errors import MissingMemberError, PackageError
-
-from .access import require_access
-from .detect import detect
-from .opening import open_storage
-from .protection import inspect_protection
-from .storage import Part, parse_member_xml
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-    from os import PathLike
-    from pathlib import Path
-
-    from .access import Use
-    from .detect import Detection
-    from .kinds import DocumentKind
-    from .storage import OdfStorage
+from odfa11y.odf.access import require_access
+from odfa11y.odf.detect import detect
+from odfa11y.odf.encryption import inspect_protection
+from odfa11y.odf.opening import open_storage
+from odfa11y.odf.storage import Layout, Part, parse_member_xml
+lazy from odfa11y.odf.access import Use
+lazy from odfa11y.odf.detect import Detection
+lazy from odfa11y.odf.kinds import DocumentKind
+lazy from odfa11y.odf.storage import OdfStorage
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +68,7 @@ class OdfDocument:
         return cls(open_storage(source))
 
     @property
-    def layout(self) -> str:
+    def layout(self) -> Layout:
         """``package`` for a ZIP package, ``flat`` for a single XML file."""
         return self.storage.layout
 

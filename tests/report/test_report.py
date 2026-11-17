@@ -1,99 +1,73 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Rules, findings, rendering and exit statuses."""
-
-from __future__ import annotations
 
 import json
 import re
 
 import pytest
 
+from odfa11y import render_json
+from odfa11y.concepts.metadata import DocumentMetadata
 from odfa11y.decisions import OpenDecision
-from odfa11y.errors import ReportError
-from odfa11y.plans import registered_kinds
+from odfa11y.pdf.fidelity.compare import FidelityMeasurements
+from odfa11y.remediate.catalogue import registered_kinds
 from odfa11y.report import (
     RULES,
-    FactKeys,
-    FactSet,
     Location,
     Report,
     Severity,
     exit_status,
-    render_reports,
-    rules,
 )
+from odfa11y.report.model import ReportKind
+from odfa11y.rules import registry as rules
 from tests.fixtures.paths import REPOSITORY
+from tests.fixtures.schema import assert_record_schema
 
 
 def _report() -> Report:
-    report = Report(
-        kind="odf",
+    report = Report[object](
+        kind=ReportKind.ODF,
         subject="sample.odt",
-        facts=FactSet({
-            FactKeys.DOCUMENT_TITLE: "T",
-            FactKeys.FIDELITY_RASTER_CHANGED_RATIOS: [0.0, 1.0],
-        }),
+        facts=(
+            DocumentMetadata(title="T"),
+            FidelityMeasurements(raster_changed_ratios=[0.0, 1.0]),
+        ),
     )
-    report.add(
+    report.raise_(
         rules.LINK001,
         "Needs review",
         location=Location("content/paragraph[2]"),
-        details={"count": 2},
-    )
-    report.add_decision(
-        OpenDecision(
-            registered_kinds()["text.linkify_addresses"],
-            None,
-            None,
-            {"enabled": False},
-            ("LINK001",),
-        )
+        details={"text": "Two addresses"},
+        decision=OpenDecision(
+            registered_kinds()["text.linkify_addresses"], None, {"enabled": False}
+        ),
     )
     return report
 
 
-def test_text_report_shows_result_metadata_finding_and_decisions() -> None:
-    lines = render_reports([_report()]).splitlines()
-    assert lines[:3] == [
-        "Subject: sample.odt (odf)",
-        "Check: no errors",
-        "Findings: 0 error(s), 1 warning(s), 0 info",
-    ]
-    assert "  document.title: T" in lines
-    assert "  fidelity.raster_changed_ratios: 2 record(s)" in lines
-    assert "  WARNING LINK001: Needs review" in lines
-    assert "    location: content/paragraph[2]" in lines
-    assert any("text.linkify_addresses" in line for line in lines)
-    assert any(line.strip() == "count: 2" for line in lines)
-
-
 def test_json_is_an_object_for_one_report_and_an_array_for_several() -> None:
-    single = json.loads(render_reports([_report()], output_format="json"))
-    assert single["format"] == 6
+    assert_record_schema(_report())
+    single = json.loads(render_json(_report()))
+    assert single["schema_version"] == 1
     assert single["kind"] == "odf"
     assert single["summary"] == {"errors": 0, "warnings": 1, "info": 0}
     finding = single["findings"][0]
     assert (finding["rule_id"], finding["severity"], finding["category"]) == (
-        "LINK001",
+        rules.LINK001.id,
         "warning",
-        "links",
+        "link",
     )
     assert "remedy" not in finding
-    assert single["decisions"][0]["kind"] == "text.linkify_addresses"
+    assert single["decisions"][0]["kind_id"] == "text.linkify_addresses"
     assert finding["location"] == {"path": "content/paragraph[2]", "member": None}
-    several = json.loads(render_reports([_report(), _report()], output_format="json"))
+    several = json.loads(render_json([_report(), _report()]))
     assert isinstance(several, list)
     assert len(several) == 2
 
 
-def test_unsupported_format_is_rejected() -> None:
-    with pytest.raises(ReportError, match="Unsupported report format: yaml"):
-        render_reports([_report()], output_format="yaml")
-
-
 def test_message_defaults_to_the_rule_title() -> None:
-    report = Report(kind="odf", subject="x")
-    report.add(rules.META001)
+    report = Report(kind=ReportKind.ODF, subject="x")
+    report.raise_(rules.META001)
     assert report.findings[0].message == rules.META001.title
 
 
@@ -110,16 +84,16 @@ def test_message_defaults_to_the_rule_title() -> None:
 def test_exit_status_follows_highest_severity(
     severity: Severity, *, strict: bool, expected: int
 ) -> None:
-    report = Report(kind="odf", subject="x")
+    report = Report(kind=ReportKind.ODF, subject="x")
     rule = next(r for r in RULES.values() if r.severity is severity)
-    report.add(rule)
+    report.raise_(rule)
     assert exit_status([report], strict=strict) == expected
 
 
 def test_exit_status_takes_the_worst_report() -> None:
-    clean, warned, failed = (Report(kind="odf", subject=str(i)) for i in range(3))
-    warned.add(rules.LINK001)
-    failed.add(rules.META001)
+    clean, warned, failed = (Report(kind=ReportKind.ODF, subject=str(i)) for i in range(3))
+    warned.raise_(rules.LINK001)
+    failed.raise_(rules.META001)
     assert exit_status([clean, warned], strict=True) == 1
     assert exit_status([clean, warned, failed], strict=True) == 2
     assert exit_status([], strict=True) == 0
@@ -143,22 +117,48 @@ def test_rules_document_lists_exactly_the_registered_rules_with_severity_and_tit
                 match.group(4).replace("`", "").strip(),
             )
     assert documented == {
-        key: (rule.severity.value, rule.title, ", ".join(rule.decision_kinds))
+        key: (
+            rule.severity.value,
+            rule.title,
+            ", ".join(kind.id for kind in registered_kinds().values() if rule in kind.resolves),
+        )
         for key, rule in RULES.items()
     }
 
 
 def test_finding_references_one_rule_without_serializing_its_implementation() -> None:
-    report = Report(kind="odf", subject="source.odt")
-    report.add(rules.HEADING004, "A source-specific observation")
+    report = Report(kind=ReportKind.ODF, subject="source.odt")
+    report.raise_(rules.HEADING005, "A source-specific observation")
     [finding] = report.findings
-    assert finding.rule is rules.HEADING004
+    assert finding.rule is rules.HEADING005
     findings = report.as_dict()["findings"]
     assert isinstance(findings, list)
     [payload] = findings
     assert isinstance(payload, dict)
-    assert payload["rule_id"] == "HEADING004"
+    assert payload["rule_id"] == rules.HEADING005.id
     assert payload["severity"] == "info"
-    assert payload["category"] == "semantics"
+    assert payload["category"] == "heading"
     assert payload["message"] == "A source-specific observation"
     assert "rule" not in payload
+
+
+def test_questions_are_derived_from_raised_findings_and_their_actual_rules() -> None:
+    report = Report(ReportKind.ODF, "sample.odt")
+    kind = registered_kinds()["document.metadata"]
+    question = OpenDecision(kind, None, {})
+    assert report.decisions == ()
+    report.raise_(rules.META001, decision=question)
+    report.raise_(rules.META002, decision=question)
+    assert len(report.decisions) == 1
+    assert report.decisions[0].rule_ids == (rules.META001.id, rules.META002.id)
+    report.findings.clear()
+    assert report.decisions == ()
+
+
+def test_a_finding_cannot_raise_a_question_that_does_not_address_its_rule() -> None:
+    report = Report(ReportKind.ODF, "sample.odt")
+    question = OpenDecision(registered_kinds()["document.metadata"], None, {})
+    with pytest.raises(ValueError, match="does not address"):
+        report.raise_(rules.LINK001, decision=question)
+    assert report.findings == []
+    assert report.decisions == ()

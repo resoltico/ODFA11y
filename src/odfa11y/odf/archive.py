@@ -1,16 +1,13 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Preserve ZIP metadata and validate ODF archive invariants."""
-
-from __future__ import annotations
 
 import zipfile
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
+lazy from typing import BinaryIO
 
 from odfa11y.errors import PackageError
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from odfa11y.odf import names as xml_names
 
 
 def clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
@@ -36,7 +33,7 @@ def clone_zipinfo(info: zipfile.ZipInfo) -> zipfile.ZipInfo:
     return clone
 
 
-def validate_archive(tmp: Path, expected_mimetype: str | None) -> None:
+def validate_archive(tmp: Path | BinaryIO, expected_mimetype: str | None) -> None:
     """Check a written archive's integrity and first-member mimetype invariant.
 
     Raises
@@ -49,13 +46,13 @@ def validate_archive(tmp: Path, expected_mimetype: str | None) -> None:
     with zipfile.ZipFile(tmp, "r") as zf:
         infos = zf.infolist()
         if expected_mimetype is not None:
-            if not infos or infos[0].filename != "mimetype":
+            if not infos or infos[0].filename != xml_names.MIMETYPE_MEMBER:
                 msg = "Generated package does not place mimetype first"
                 raise PackageError(msg)
             if infos[0].compress_type != zipfile.ZIP_STORED:
                 msg = "Generated package compresses the mimetype member"
                 raise PackageError(msg)
-            if zf.read("mimetype").decode("ascii", "strict") != expected_mimetype:
+            if zf.read(xml_names.MIMETYPE_MEMBER).decode("ascii", "strict") != expected_mimetype:
                 msg = "Generated package has an invalid mimetype value"
                 raise PackageError(msg)
         bad = zf.testzip()

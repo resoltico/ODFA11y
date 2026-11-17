@@ -1,16 +1,12 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Read the structure of a spreadsheet: sheets, rows, cells and what each one shows."""
 
-from __future__ import annotations
+lazy from collections.abc import Iterator
 
-from typing import TYPE_CHECKING
+lazy from lxml import etree
 
-from odfa11y.odf import NS, qn, select_elements
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from lxml import etree
+from odfa11y.odf import NS, select_elements
+from odfa11y.odf import names as xml_names
 
 SHEETS = "//office:body/office:spreadsheet/table:table"
 ROWS = (
@@ -44,7 +40,7 @@ def sheet_name(sheet: etree._Element) -> str:
         The ``table:name``, empty when it is missing.
 
     """
-    return sheet.get(qn("table", "name")) or ""
+    return sheet.get(xml_names.TABLE_NAME) or ""
 
 
 def cell_text(cell: etree._Element) -> str:

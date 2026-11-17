@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Remediation refuses documents it cannot edit safely and keeps what it does not touch."""
+
+import zipfile
+from pathlib import Path
+
+import pytest
+from lxml import etree
+
+from odfa11y.audit import audit_odf
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.errors import DocumentRefusal, PackageError, PlanError
+from odfa11y.odf import OdfDocument, PackageStorage, Part, ensure_metadata_part, qn
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import metadata_input
+from tests.fixtures.documents import OASIS, Variant, make_flat, make_package
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.operations import apply_answers
+lazy from odfa11y.report import Report
+lazy from tests.fixtures.answers import apply_in_memory
+
+
+def ids(report: Report) -> set[str]:
+    return {finding.rule_id for finding in report.findings}
+
+
+def test_remediation_refuses_an_unrecognised_document(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "text", Variant(media_type="application/epub+zip"))
+    destination = tmp_path / "out.odt"
+    with pytest.raises(DocumentRefusal, match="No supported source family"):
+        apply_answers(source, destination, [metadata_input(title="x")])
+    assert not destination.exists()
+
+
+def test_explicit_metadata_creates_a_missing_optional_package_part(tmp_path: Path) -> None:
+    source = tmp_path / "nometa.odt"
+    with (
+        zipfile.ZipFile(make_package(tmp_path, "text")) as full,
+        zipfile.ZipFile(source, "w") as cut,
+    ):
+        for member in full.infolist():
+            if member.filename != "meta.xml":
+                cut.writestr(member, full.read(member.filename))
+    destination = tmp_path / "out.odt"
+    assert apply_answers(source, destination, [metadata_input(title="x")]).changed
+    assert measured(measurement(audit_odf(destination), DocumentMetadata).title) == "x"
+    with zipfile.ZipFile(destination) as created:
+        manifest = created.read("META-INF/manifest.xml")
+        assert manifest.count(b'manifest:full-path="meta.xml"') == 1
+    assert not apply_answers(
+        destination, tmp_path / "again.odt", [metadata_input(title="x")]
+    ).changed
+
+
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_metadata_creation_preflights_conflicting_manifest_declarations(
+    tmp_path: Path, *, duplicate: bool
+) -> None:
+    source = make_package(tmp_path, "text")
+    storage = PackageStorage(source)
+    storage.members.pop("meta.xml")
+    storage.save(source)
+    document = OdfDocument.open(source)
+    manifest = document.tree(Part.MANIFEST).getroot()
+    count = 2 if duplicate else 1
+    for _ in range(count):
+        entry = etree.SubElement(manifest, qn("manifest", "file-entry"))
+        entry.set(qn("manifest", "full-path"), "meta.xml")
+        entry.set(qn("manifest", "media-type"), "text/xml" if duplicate else "text/plain")
+    checkpoint = document.checkpoint()
+    with pytest.raises(DocumentRefusal, match="duplicate or has a conflicting"):
+        ensure_metadata_part(document)
+    assert not document.has(Part.META)
+    assert not document.changed_since(checkpoint)
+
+
+def test_invalid_metadata_language_prevents_earlier_valid_field_edits(tmp_path: Path) -> None:
+    document = OdfDocument.open(make_package(tmp_path, "text"))
+    original = etree.tostring(document.tree(Part.META))
+    with pytest.raises(PlanError, match="language"):
+        apply_in_memory(document, metadata_input(title="A chosen title", language="not a language"))
+    assert not document.dirty
+    assert etree.tostring(document.tree(Part.META)) == original
+
+
+def test_editing_a_flat_document_keeps_comments_and_processing_instructions(
+    tmp_path: Path,
+) -> None:
+    source = make_flat(tmp_path, "text")
+    text = source.read_text(encoding="utf-8")
+    declaration, rest = text.split("\n", 1)
+    source.write_text(
+        f"  {declaration}\n"
+        '<?xml-stylesheet href="s.css" type="text/css"?>\n'
+        f"<!-- keep me -->\n{rest}\n<!-- and me -->\n",
+        encoding="utf-8",
+    )
+    destination = tmp_path / "out.fodt"
+    apply_answers(source, destination, [metadata_input(title="Changed")])
+    saved = destination.read_text(encoding="utf-8")
+    assert '<?xml-stylesheet href="s.css" type="text/css"?>' in saved
+    assert "<!-- keep me -->" in saved
+    assert "<!-- and me -->" in saved
+    assert "Changed" in saved
+
+
+def test_a_flat_document_without_metadata_gets_it_in_schema_order(tmp_path: Path) -> None:
+    source = make_flat(tmp_path, "text")
+    text = source.read_text(encoding="utf-8")
+    start, end = text.index("<office:meta>"), text.index("</office:meta>") + len("</office:meta>")
+    source.write_text(text[:start] + text[end:], encoding="utf-8")
+    destination = tmp_path / "out.fodt"
+    apply_answers(source, destination, [metadata_input(title="Added")])
+    assert measured(measurement(audit_odf(destination), DocumentMetadata).title) == "Added"
+    assert rules.SCHEMA001.id not in ids(audit_odf(destination, schema=True))
+
+
+def test_a_blank_title_is_refused_rather_than_written_empty(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "text")
+    destination = tmp_path / "out.odt"
+    with pytest.raises(PlanError, match="non-blank"):
+        apply_answers(source, destination, [metadata_input(title="   ")])
+    assert not destination.exists()
+
+
+@pytest.mark.parametrize(("given", "written"), [("en_US", "en-US"), ("x-klingon", "x-klingon")])
+def test_language_tags_are_normalised_or_private_use_and_stay_schema_valid(
+    tmp_path: Path, given: str, written: str
+) -> None:
+    source = make_package(tmp_path, "text")
+    destination = tmp_path / "out.odt"
+    apply_answers(source, destination, [metadata_input(language=given)])
+    assert measurement(audit_odf(destination), DocumentMetadata).language == written
+
+
+def test_remediation_refuses_a_document_whose_parts_contradict_each_other(tmp_path: Path) -> None:
+    for name, variant in {
+        "manifest": Variant(manifest_media_type=OASIS + "spreadsheet"),
+        "body": Variant(
+            body="<office:spreadsheet><table:table table:name='A'/></office:spreadsheet>"
+        ),
+    }.items():
+        source = make_package(tmp_path, "text", variant)
+        with pytest.raises(PackageError, match="nothing was written"):
+            apply_answers(source, tmp_path / f"{name}.odt", [metadata_input(title="x")])
+        assert not (tmp_path / f"{name}.odt").exists()

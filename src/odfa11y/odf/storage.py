@@ -1,36 +1,35 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """How an ODF document is stored, and the logical parts every layout provides."""
-
-from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
+lazy import os
+lazy from pathlib import Path
 
 from lxml import etree
 
 from odfa11y.errors import XmlParseError
 from odfa11y.safe_xml import parse_secure
-
-if TYPE_CHECKING:
-    import os
-    from pathlib import Path
+from odfa11y.targets import Part
 
 
-class Part(StrEnum):
-    """A logical part of an ODF document, independent of how it is stored."""
+class Layout(StrEnum):
+    PACKAGE = "package"
+    FLAT = "flat"
 
-    CONTENT = "content"
-    STYLES = "styles"
-    META = "meta"
-    SETTINGS = "settings"
-    MANIFEST = "manifest"
+    @property
+    def meaning(self) -> str:
+        return {
+            self.PACKAGE: "An OpenDocument ZIP package with separate members.",
+            self.FLAT: "A single XML document containing the OpenDocument parts.",
+        }[self]
 
 
 class OdfStorage(ABC):
     """A loaded document container: a ZIP package or a single flat XML file."""
 
-    layout: ClassVar[str]
+    layout: ClassVar[Layout]
     source: Path
 
     @abstractmethod

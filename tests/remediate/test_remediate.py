@@ -1,0 +1,290 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""The executor: fail-closed publication, postconditions and byte preservation."""
+
+import zipfile
+from dataclasses import dataclass
+from typing import ClassVar, override
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y.decisions import Decision
+from odfa11y.decisions.edit import EditResult, Outcome, Status
+from odfa11y.errors import OutputOccupied, PlanError
+from odfa11y.odf import OdfDocument, PackageStorage, Part, qn, select_elements, validate
+from odfa11y.odf.allowance import Allowance, Attributes
+from tests.fixtures.answers import (
+    FaultEdit,
+    address_input,
+    fault_input,
+    graphic_answer,
+    graphic_inputs,
+    header_answer,
+    header_inputs,
+    metadata_input,
+    spacer_input,
+    version_input,
+)
+from tests.fixtures.documents import make_package
+from tests.fixtures.operations import apply_answers, assert_refused
+from tests.fixtures.schema import assert_record_schema
+from tests.fixtures.writer import make_minimal_odt
+
+
+@dataclass(frozen=True, slots=True)
+class Misbehaving(FaultEdit):
+    """A test operation whose edits are chosen by the test."""
+
+    action: str
+    name: ClassVar[str] = "misbehaving"
+
+    @override
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+        content = document.tree(Part.CONTENT)
+        paragraph = select_elements(content, "//text:p")[0]
+        if self.action == "change-text":
+            paragraph.text = "Different words"
+        elif self.action == "break-schema":
+            paragraph.set(qn("text", "outline-level"), "1")
+        return (Outcome(self.name, Status.APPLIED, "did something", count=1),)
+
+
+@dataclass(frozen=True, slots=True)
+class Lying(FaultEdit):
+    """Claims a change without editing anything."""
+
+    name: ClassVar[str] = "lying"
+
+    @override
+    def apply(self, document: OdfDocument) -> tuple[Outcome, ...]:
+        return (Outcome(self.name, Status.APPLIED, "claims a change"),)
+
+
+def test_full_remediation_publishes_a_valid_document_and_reports_each_outcome(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(
+        tmp_path / "source.odt",
+        features={
+            "with_plain_email": True,
+            "with_data_table": True,
+            "with_image_without_alt": True,
+        },
+    )
+    operations = [
+        metadata_input(title="New title", language="en-GB"),
+        graphic_inputs({"Logo": graphic_answer("Example logo", "Sample")}),
+        header_inputs({"Data": header_answer(1)}),
+        address_input(),
+    ]
+    destination = tmp_path / "out.odt"
+    result = apply_answers(source, destination, operations)
+    assert_record_schema(result)
+    assert result.destination == destination
+    assert result.changed
+    assert result.schema.status == "passed"
+    assert result.schema.version == "1.4"
+    assert result.schema.new_count == 0
+    assert {o.status for o in result.outcomes} == {Status.APPLIED}
+    again = apply_answers(destination, tmp_path / "again.odt", operations)
+    assert not again.changed
+    for member in ("content.xml", "styles.xml", "meta.xml", "META-INF/manifest.xml"):
+        assert PackageStorage(destination).read(member) == PackageStorage(
+            tmp_path / "again.odt"
+        ).read(member)
+
+
+def test_failed_outcomes_abort_the_run_listing_every_failure_and_write_nothing(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    destination = tmp_path / "out.odt"
+    destination.write_bytes(b"existing")
+    operations = [
+        graphic_inputs({"A": graphic_answer("x"), "B": graphic_answer("y")}),
+        header_inputs({"C": header_answer(1)}),
+    ]
+    original = source.read_bytes()
+    with pytest.raises(PlanError) as raised:
+        apply_answers(source, destination, operations)
+    assert len(raised.value.problems) == 3
+    for key in ("name=A", "name=B", "name=C"):
+        assert key in str(raised.value)
+    assert source.read_bytes() == original
+    assert destination.read_bytes() == b"existing"
+
+
+def test_dry_run_reports_outcomes_and_writes_nothing(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    destination = tmp_path / "out.odt"
+    result = apply_answers(source, destination, [metadata_input(title="Dry")], dry_run=True)
+    assert result.dry_run
+    assert result.destination is None
+    assert result.changed
+    assert not destination.exists()
+
+
+def test_destination_must_differ_from_the_source(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    for destination in (source, tmp_path / "." / "source.odt"):
+        with pytest.raises(OutputOccupied):
+            apply_answers(source, destination, [])
+
+
+def test_a_symlink_to_the_source_is_not_a_different_destination(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    link = tmp_path / "alias.odt"
+    try:
+        link.symlink_to(source)
+    except OSError:
+        pytest.skip("symbolic links are not available")
+    with pytest.raises(OutputOccupied):
+        apply_answers(source, link, [])
+
+
+def test_text_changes_are_rejected_before_publication(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    destination = tmp_path / "out.odt"
+    assert_refused(
+        apply_answers(source, destination, [Misbehaving("change-text")]),
+        match="content changed",
+    )
+    assert not destination.exists()
+
+
+def test_new_schema_violations_are_rejected_before_publication(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    destination = tmp_path / "out.odt"
+
+    def invalid_edit(document: OdfDocument, decision: Decision) -> EditResult:
+        paragraph = select_elements(document.tree(Part.CONTENT), "//text:p")[0]
+        attribute = qn("text", "outline-level")
+        paragraph.set(attribute, "1")
+        return EditResult(
+            (Outcome(decision.kind.id, Status.APPLIED, "Declared invalid attribute", count=1),),
+            Allowance((Attributes(Part.CONTENT, paragraph, frozenset({attribute})),)),
+        )
+
+    result = apply_answers(
+        source, destination, [fault_input(metadata_input(title="Reviewed"), invalid_edit)]
+    )
+    assert_refused(result, match="schema violations")
+    assert len(result.violations) == 1
+    assert not destination.exists()
+
+
+def test_pre_existing_schema_violations_do_not_block_remediation(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_data_table": True})
+    package = PackageStorage(source)
+    package.write_member(
+        "content.xml", package.read("content.xml").replace(b"<table:table-column/>", b"")
+    )
+    broken = tmp_path / "broken.odt"
+    package.save(broken)
+    result = apply_answers(broken, tmp_path / "out.odt", [metadata_input(title="Still fine")])
+    assert result.schema.before_count is not None
+    assert result.schema.before_count > 0
+    assert result.schema.before_count != 0
+
+
+def test_a_content_edit_beside_an_old_violation_does_not_count_as_a_regression(
+    tmp_path: Path,
+) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", features={"add_blank_body_paragraph": True})
+    package = PackageStorage(source)
+    package.write_member(
+        "content.xml",
+        package.read("content.xml").replace(b"</office:text>", b"<text:bogus/></office:text>"),
+    )
+    broken = tmp_path / "broken.odt"
+    package.save(broken)
+    result = apply_answers(broken, tmp_path / "out.odt", [spacer_input()])
+    assert result.changed
+    assert result.schema.before_count == 1
+
+
+def test_an_operation_that_misreports_its_edits_is_an_internal_error(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    assert_refused(apply_answers(source, tmp_path / "out.odt", [Lying()]), match="Internal error")
+
+
+def test_unmentioned_members_and_foreign_markup_survive_byte_for_byte(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt", features={"with_image_without_alt": True})
+    package = PackageStorage(source)
+    content = package.read("content.xml").replace(
+        b"<office:text>",
+        b'<office:text><!-- keep me --><?keep this?><x:ext xmlns:x="urn:example" x:a="1"/>',
+    )
+    package.write_member("content.xml", content)
+    package.write_member("Extra/blob.bin", b"\x00\x01opaque")
+    marked = tmp_path / "marked.odt"
+    package.save(marked)
+
+    destination = tmp_path / "out.odt"
+    apply_answers(marked, destination, [metadata_input(title="Only metadata changes")])
+    before, after = PackageStorage(marked), PackageStorage(destination)
+    for member in (
+        "content.xml",
+        "styles.xml",
+        "META-INF/manifest.xml",
+        "Extra/blob.bin",
+        "Pictures/logo.svg",
+    ):
+        assert after.read(member) == before.read(member)
+    assert after.read("meta.xml") != before.read("meta.xml")
+
+    apply_answers(
+        marked,
+        tmp_path / "out2.odt",
+        [address_input(), graphic_inputs({"Logo": graphic_answer("T")})],
+    )
+    content_after = PackageStorage(tmp_path / "out2.odt").read("content.xml")
+    assert b"keep me" in content_after
+    assert b"<?keep this?>" in content_after
+    assert b'x:a="1"' in content_after
+    assert PackageStorage(tmp_path / "out2.odt").read("styles.xml") == before.read("styles.xml")
+
+
+def test_saved_archive_keeps_the_mimetype_invariant(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.odt")
+    destination = tmp_path / "out.odt"
+    apply_answers(source, destination, [version_input("1.3")])
+    with zipfile.ZipFile(destination) as archive:
+        first = archive.infolist()[0]
+        assert (first.filename, first.compress_type) == ("mimetype", zipfile.ZIP_STORED)
+    assert (
+        OdfDocument.open(destination).tree(Part.CONTENT).getroot().get(qn("office", "version"))
+        == "1.3"
+    )
+
+
+def test_image_alternative_keeps_preexisting_schema_defects_stable(tmp_path: Path) -> None:
+    source = make_package(tmp_path, "image")
+    document = OdfDocument.open(source)
+    frame = select_elements(document.tree(Part.CONTENT), "//draw:frame")[0]
+    for tag in (qn("svg", "title"), qn("svg", "desc")):
+        for child in frame.findall(tag):
+            frame.remove(child)
+    image = select_elements(frame, "./draw:image")[0]
+    image.set(qn("xlink", "type"), "bad")
+    document.save(source)
+    original_count = validate(OdfDocument.open(source)).count
+    assert original_count > 0
+    output = tmp_path / "reviewed.odi"
+    result = apply_answers(
+        source,
+        output,
+        [
+            graphic_inputs({
+                "Picture": graphic_answer(
+                    title="Observed series", description="Independent invented values"
+                )
+            })
+        ],
+    )
+    assert result.published
+    assert result.schema.before_count == result.schema.after_count == original_count
+    assert result.schema.new_count == 0
+    candidate = OdfDocument.open(output)
+    assert validate(candidate).count == original_count
+    assert select_elements(candidate.tree(Part.CONTENT), "//svg:title")[0].text == "Observed series"

@@ -1,17 +1,11 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Author explicit graphic style contexts for positive and adversarial source fixtures."""
-
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
 
 from lxml import etree
 
-from odfa11y.content.graphic_styles import ROLE
+from odfa11y.concepts.graphic_styles import ROLE
 from odfa11y.odf import NS, Part, qn
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf import OdfDocument
 
 
 def _style(

@@ -1,24 +1,20 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Verify locally supplied image data without fetching resources or decoding full pixels."""
-
-from __future__ import annotations
 
 import base64
 import binascii
 import io
 import re
 import warnings
-from typing import TYPE_CHECKING
 
 from lxml import etree
 from PIL import Image, UnidentifiedImageError
 
-from odfa11y.native.resources import local_resource_path
-from odfa11y.odf import NS, qn
+from odfa11y.odf import NS
+from odfa11y.odf import names as xml_names
+from odfa11y.odf.resources import local_resource_path
 from odfa11y.safe_xml import parse_secure
-
-if TYPE_CHECKING:
-    from odfa11y.odf import OdfDocument
+lazy from odfa11y.odf import OdfDocument
 
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
 CSS_URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.IGNORECASE | re.DOTALL)
@@ -53,7 +49,7 @@ def _data(document: OdfDocument, image: etree._Element) -> bytes | None:
     embedded = image.find("office:binary-data", NS)
     if embedded is not None:
         return base64.b64decode("".join("".join(embedded.itertext()).split()), validate=True)
-    name = local_resource_path(image.get(qn("xlink", "href"), ""))
+    name = local_resource_path(image.get(xml_names.XLINK_HREF, ""))
     return document.storage.read(name) if name is not None and document.storage.has(name) else None
 
 

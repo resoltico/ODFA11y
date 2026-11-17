@@ -1,25 +1,26 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Revision and visibility relationships never authorize accepting or evaluating content."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+lazy from pathlib import Path
 
 import pytest
 from lxml import etree
 
-from odfa11y.families.text import SetTargetLanguages, TargetLanguage
+from odfa11y.audit import audit_odf
 from odfa11y.families.text.language.effective import language_targets
 from odfa11y.families.text.language.operations import language_fingerprint
+from odfa11y.families.text.visibility.audit import VisibilityMeasurements
+from odfa11y.families.text.visibility.revisions import RevisionMeasurements
 from odfa11y.odf import OdfDocument, Part, select_elements
-from odfa11y.remediation import SetMetadata
-from odfa11y.report import FactKeys
-from odfa11y.source_audit import audit_odf
+from odfa11y.rules import registry as rules
+from tests.fixtures.answers import (
+    language_answer,
+    language_inputs,
+    metadata_input,
+)
 from tests.fixtures.documents import Variant, make_flat
-from tests.fixtures.operations import assert_refused, execute_operations
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.operations import apply_answers, assert_refused
 
 INFO = "<office:change-info><dc:creator>Invented Author</dc:creator></office:change-info>"
 
@@ -48,16 +49,20 @@ def _region(kind: str = "insertion", identity: str = "r") -> str:
         (
             "insertion",
             '<text:change-end text:change-id="r"/>Words<text:change-start text:change-id="r"/>',
-            ["REVISION002"],
+            [rules.REVISION002.id],
         ),
-        ("insertion", '<text:change-start text:change-id="r"/>', ["REVISION002"]),
-        ("deletion", '<text:change text:change-id="missing"/>', ["REVISION002", "REVISION003"]),
+        ("insertion", '<text:change-start text:change-id="r"/>', [rules.REVISION002.id]),
+        (
+            "deletion",
+            '<text:change text:change-id="missing"/>',
+            [rules.REVISION003.id, rules.REVISION004.id],
+        ),
         (
             "deletion",
             '<text:change text:change-id="r"/><text:change text:change-id="r"/>',
-            ["REVISION002"],
+            [rules.REVISION002.id],
         ),
-        ("insertion", "No current mark.", ["REVISION003"]),
+        ("insertion", "No current mark.", [rules.REVISION004.id]),
     ],
 )
 def test_revision_mark_relationship_controls(
@@ -70,10 +75,21 @@ def test_revision_mark_relationship_controls(
     )
     report = audit_odf(source)
     assert (
-        sorted(f.rule_id for f in report.findings if f.rule_id in {"REVISION002", "REVISION003"})
+        sorted(
+            f.rule_id
+            for f in report.findings
+            if f.rule_id
+            in {
+                rules.REVISION001.id,
+                rules.REVISION002.id,
+                rules.REVISION003.id,
+                rules.REVISION004.id,
+                rules.REVISION005.id,
+            }
+        )
         == expected
     )
-    assert "REVISION001" in {f.rule_id for f in report.findings}
+    assert rules.REVISION006.id in {f.rule_id for f in report.findings}
 
 
 @pytest.mark.parametrize(
@@ -105,9 +121,9 @@ def test_cached_visibility_never_overrides_condition_scope(
         tmp_path, "text", Variant(body=f"<office:text><text:p>{field}Body</text:p></office:text>")
     )
     report = audit_odf(source)
-    assert "HIDDEN001" in {f.rule_id for f in report.findings}
-    assert ("HIDDEN002" in {f.rule_id for f in report.findings}) is unresolved
-    assert len(report.facts[FactKeys.TEXT_VISIBILITY_CONTEXTS]) == 1
+    assert rules.ORDER003.id in {f.rule_id for f in report.findings}
+    assert (rules.ORDER001.id in {f.rule_id for f in report.findings}) is unresolved
+    assert len(measured(measurement(report, VisibilityMeasurements).visibility_contexts)) == 1
 
 
 def test_revision_title_edit_preserves_history_but_target_language_is_refused(
@@ -126,7 +142,7 @@ def test_revision_title_edit_preserves_history_but_target_language_is_refused(
     document = OdfDocument.open(source)
     before = etree.tostring(select_elements(document.tree(Part.CONTENT), "//office:body")[0])
     output = tmp_path / "metadata.fodt"
-    assert execute_operations(source, output, [SetMetadata(title="Reviewed revisions")]).published
+    assert apply_answers(source, output, [metadata_input(title="Reviewed revisions")]).published
     assert (
         etree.tostring(
             select_elements(OdfDocument.open(output).tree(Part.CONTENT), "//office:body")[0]
@@ -136,12 +152,12 @@ def test_revision_title_edit_preserves_history_but_target_language_is_refused(
     target, node = next(iter(language_targets(document).items()))
     unsafe = tmp_path / "unsafe.fodt"
     assert_refused(
-        execute_operations(
+        apply_answers(
             source,
             unsafe,
             [
-                SetTargetLanguages({
-                    target: TargetLanguage(
+                language_inputs({
+                    target: language_answer(
                         western="en", fingerprint=language_fingerprint(document, node)
                     )
                 })
@@ -179,7 +195,7 @@ def test_reading_order_uncertainty_has_explicit_declared_scope(
             Variant(body=f"<office:text>{body}</office:text>", automatic_styles=styles),
         )
     )
-    findings = [f for f in report.findings if f.rule_id == "ORDER001"]
+    findings = [f for f in report.findings if f.rule_id == rules.ORDER002.id]
     assert [f.details["kind"] for f in findings] == ([] if expected is None else [expected])
     assert all("Declared layout" in str(f.details["scope"]) for f in findings)
 
@@ -191,8 +207,11 @@ def test_xml_identity_is_authoritative_and_must_agree_with_text_identity(tmp_pat
         + '<text:p><text:change text:change-id="r"/></text:p></office:text>'
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    assert "REVISION002" in {finding.rule_id for finding in report.findings}
-    assert report.facts[FactKeys.TEXT_REVISION_RELATIONSHIPS]["unresolved"] == 1
+    assert rules.REVISION001.id in {finding.rule_id for finding in report.findings}
+    assert (
+        measured(measurement(report, RevisionMeasurements).revision_relationships)["unresolved"]
+        == 1
+    )
 
 
 def test_conditionally_hidden_anchor_remains_unestablished_current_flow(tmp_path: Path) -> None:
@@ -203,8 +222,12 @@ def test_conditionally_hidden_anchor_remains_unestablished_current_flow(tmp_path
         '<text:change text:change-id="r"/></text:p></text:section></office:text>'
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    assert {"REVISION001", "REVISION003", "HIDDEN001"} <= {f.rule_id for f in report.findings}
-    assert "REVISION002" not in {finding.rule_id for finding in report.findings}
+    assert {
+        rules.REVISION006.id,
+        rules.REVISION005.id,
+        rules.ORDER003.id,
+    } <= {f.rule_id for f in report.findings}
+    assert rules.REVISION001.id not in {finding.rule_id for finding in report.findings}
 
 
 def test_note_range_cannot_end_in_another_reading_context(tmp_path: Path) -> None:
@@ -216,4 +239,4 @@ def test_note_range_cannot_end_in_another_reading_context(tmp_path: Path) -> Non
         "</text:p></office:text>"
     )
     report = audit_odf(make_flat(tmp_path, "text", Variant(body=body)))
-    assert "REVISION002" in {finding.rule_id for finding in report.findings}
+    assert rules.REVISION002.id in {finding.rule_id for finding in report.findings}

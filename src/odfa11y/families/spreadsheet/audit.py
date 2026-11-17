@@ -1,36 +1,44 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Audit a spreadsheet: sheet names, header rows, merged cells, graphics, links and clutter."""
-
-from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import Annotated, Literal
 
-from odfa11y.content import (
-    SHAPE_TAGS,
+lazy from lxml import etree
+
+from odfa11y.concepts import (
     GraphicIdentity,
     audit_graphic_role,
     document_links,
-    eligible_text_node,
     link_decision,
     link_has_description,
     link_location,
     visible_words,
 )
+from odfa11y.concepts.domains import GRAPHICS
+from odfa11y.concepts.kinds import GRAPHIC_ALTERNATIVE, LINK_DESCRIPTION
+from odfa11y.concepts.metadata import DocumentMetadata
+from odfa11y.concepts.review import ReviewTopic as Topic
+from odfa11y.contracts import Description
 from odfa11y.decisions import OpenDecision
-from odfa11y.odf import NS, Part, qn, select_elements
-from odfa11y.report import FactKeys, Location, rules
-
-from .decisions import SHEET_NAME
-from .sheets import cell_text, is_data_sheet, is_empty, sheet_name, sheets
-from .snapshot import sheet_fingerprint
-
-if TYPE_CHECKING:
-    from lxml import etree
-
-    from odfa11y.odf import OdfDocument
-    from odfa11y.report import Report
+from odfa11y.families.spreadsheet.domains import SHEETS
+from odfa11y.families.spreadsheet.identity import sheet_fingerprint
+from odfa11y.families.spreadsheet.kinds import SHEET_NAME
+from odfa11y.families.spreadsheet.sheets import (
+    cell_text,
+    is_data_sheet,
+    is_empty,
+    sheet_name,
+)
+from odfa11y.odf import NS, Part, select_elements
+from odfa11y.odf import names as xml_names
+from odfa11y.report import Location
+from odfa11y.rules import registry as rules
+from odfa11y.targets import Fingerprint, Target
+lazy from odfa11y.odf import OdfDocument
+lazy from odfa11y.report import Report
 
 DEFAULT_SHEET_NAME = re.compile(r"sheet\s*\d+", re.IGNORECASE)
 RAW_URL = re.compile(r"(?:[a-z][a-z0-9+.-]*://|www\.|mailto:)\S+", re.IGNORECASE)
@@ -45,24 +53,35 @@ HIDDEN_ROWS = ".//table:table-row[@table:visibility='collapse' or @table:visibil
 HIDDEN_COLUMNS = ".//table:table-column[@table:visibility='collapse' or @table:visibility='filter']"
 
 
-def audit_spreadsheet(document: OdfDocument, report: Report) -> None:
+@dataclass(frozen=True, slots=True)
+class SpreadsheetMeasurements:
+    """Measurements produced by spreadsheet analysis; None denotes unmeasured data."""
+
+    producer: Literal["spreadsheet"] = field(default="spreadsheet", init=False)
+    count: Annotated[int | None, Description("Sheets in document order.")] = None
+    graphic_count: Annotated[int | None, Description("Graphic objects on sheets.")] = None
+
+
+def audit_spreadsheet(document: OdfDocument, report: Report, metadata: DocumentMetadata) -> None:
     """Report the accessibility findings that belong to spreadsheets."""
-    content = document.tree(Part.CONTENT)
-    all_sheets = sheets(content)
-    report.facts[FactKeys.SHEET_COUNT] = len(all_sheets)
+    all_sheets = [node for _, node in SHEETS.enumerate(document)]
+    if all_sheets:
+        report.observe_review(Topic.SHEET_NAMES, Topic.READING_ORDER, Topic.LAYOUT)
+    report.measure(SpreadsheetMeasurements(count=len(all_sheets)))
     _audit_names(document, all_sheets, report)
     _audit_data_sheets(all_sheets, report)
     _audit_graphics(document, report)
     _audit_links(all_sheets, report)
     for index, link in enumerate(document_links(document), 1):
+        report.observe_review(Topic.LINK_PURPOSE)
         if not link_has_description(link):
-            report.add(
+            report.raise_(
                 rules.LINK003,
                 location=link_location(link, index),
+                decision=link_decision(document, link, index, LINK_DESCRIPTION),
             )
-            report.add_decision(link_decision(document, link, index, rules.LINK003.id))
     _audit_trailing_empty_sheets(all_sheets, report)
-    _audit_hidden(content, all_sheets, report)
+    _audit_hidden(document, all_sheets, report)
 
 
 def _location(index: int, sheet: etree._Element) -> Location:
@@ -78,41 +97,40 @@ def _audit_names(document: OdfDocument, all_sheets: list[etree._Element], report
     names = Counter(sheet_name(sheet) for sheet in all_sheets)
     for index, sheet in enumerate(all_sheets, start=1):
         name = sheet_name(sheet)
-        rule = None
-        if not name.strip():
-            rule = rules.SHEET001
-            report.add(
-                rules.SHEET001,
-                "Sheet has no name, so a reader cannot tell it from the others.",
-                location=Location.indexed(Part.CONTENT, "sheet", index),
+        rule = (
+            rules.SHEET001
+            if not name.strip()
+            else (rules.SHEET002 if DEFAULT_SHEET_NAME.fullmatch(name.strip()) else None)
+        )
+        if rule is None:
+            continue
+        decision = (
+            OpenDecision(
+                SHEET_NAME,
+                Target(
+                    Location.indexed(Part.CONTENT, "sheet", index).path,
+                    Fingerprint(sheet_fingerprint(document, sheet)),
+                ),
+                {"name": name},
             )
-        elif DEFAULT_SHEET_NAME.fullmatch(name.strip()):
-            rule = rules.SHEET002
-            report.add(
-                rules.SHEET002,
-                "Sheet keeps its default name, which says nothing about its content.",
-                location=Location.indexed(Part.CONTENT, "sheet", index),
-                details={"sheet": name},
-            )
-
-        if rule is not None and names[name] == 1:
-            report.add_decision(
-                OpenDecision(
-                    SHEET_NAME,
-                    Location.indexed(Part.CONTENT, "sheet", index),
-                    sheet_fingerprint(document, sheet),
-                    {"name": name},
-                    (rule.id,),
-                )
-            )
+            if names[name] == 1
+            else None
+        )
+        report.raise_(
+            rule,
+            location=Location.indexed(Part.CONTENT, "sheet", index),
+            details={"sheet": name},
+            decision=decision,
+        )
 
 
 def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         if not is_data_sheet(sheet):
             continue
+        report.observe_review(Topic.HEADER_CELLS)
         if not select_elements(sheet, ".//table:table-header-rows"):
-            report.add(
+            report.raise_(
                 rules.TABLE004,
                 "Sheet looks like a table of data but marks no header rows to repeat.",
                 location=_location(index, sheet),
@@ -120,7 +138,7 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
             )
         merged = select_elements(sheet, MERGED_CELLS)
         if merged:
-            report.add(
+            report.raise_(
                 rules.TABLE005,
                 "Data sheet merges cells, which breaks row and column navigation.",
                 location=_location(index, sheet),
@@ -129,15 +147,10 @@ def _audit_data_sheets(all_sheets: list[etree._Element], report: Report) -> None
 
 
 def _audit_graphics(document: OdfDocument, report: Report) -> None:
-    content = document.tree(Part.CONTENT)
-    frames = [
-        node
-        for node in select_elements(content, "//office:body//*")
-        if node.tag in SHAPE_TAGS and node.tag != qn("draw", "g") and eligible_text_node(node)
-    ]
-    report.facts[FactKeys.SHEET_GRAPHIC_COUNT] = len(frames)
-    for group in select_elements(document.tree(Part.CONTENT), "//office:body//draw:g"):
-        audit_graphic_role(document, group, report)
+    frames = [node for _, node in GRAPHICS.enumerate(document)]
+    if frames:
+        report.observe_review(Topic.ALT_TEXT, Topic.COLOUR)
+    report.measure(SpreadsheetMeasurements(graphic_count=len(frames)))
     identity = GraphicIdentity(document, frames)
     for frame in frames:
         if audit_graphic_role(document, frame, report):
@@ -150,28 +163,27 @@ def _audit_graphics(document: OdfDocument, report: Report) -> None:
         desc = frame.findtext("svg:desc", namespaces=NS)
         if (title and title.strip()) or (desc and desc.strip()):
             continue
-        declared_name = frame.get(qn("draw", "name"))
+        declared_name = frame.get(xml_names.DRAW_NAME)
         image = frame.find("draw:image", NS)
-        href = image.get(qn("xlink", "href")) if image is not None else None
-        report.add(
-            rules.GRAPHIC003,
+        href = image.get(xml_names.XLINK_HREF) if image is not None else None
+        report.raise_(
+            rules.GRAPHIC001,
             "Picture, chart or object has neither accessible title nor description.",
             location=Location(identity.target(frame)),
             details={
                 "frame": declared_name,
                 "href": href,
             },
+            decision=identity.open_decision(frame, GRAPHIC_ALTERNATIVE),
         )
-
-        report.add_decision(identity.open_decision(frame, rules.GRAPHIC003.id))
 
 
 def _audit_links(all_sheets: list[etree._Element], report: Report) -> None:
     for index, sheet in enumerate(all_sheets, start=1):
         for link in select_elements(sheet, ".//text:a"):
             text = cell_text(link)
-            if RAW_URL.fullmatch(text) and not link.get(qn("office", "title"), "").strip():
-                report.add(
+            if RAW_URL.fullmatch(text) and not link.get(xml_names.OFFICE_TITLE, "").strip():
+                report.raise_(
                     rules.LINK002,
                     "Hyperlink text is a raw address instead of a description of its target.",
                     location=_location(index, sheet),
@@ -184,30 +196,32 @@ def _audit_trailing_empty_sheets(all_sheets: list[etree._Element], report: Repor
     kept = max((index for index, blank in enumerate(empty) if not blank), default=0)
     for index, sheet in enumerate(all_sheets):
         if index > kept and empty[index]:
-            report.add(
-                rules.SHEET007,
+            report.raise_(
+                rules.SHEET003,
                 "Sheet is empty and follows the last sheet with content.",
                 location=_location(index + 1, sheet),
                 details={"sheet": sheet_name(sheet)},
             )
 
 
-def _audit_hidden(
-    content: etree._ElementTree, all_sheets: list[etree._Element], report: Report
-) -> None:
+def _audit_hidden(document: OdfDocument, all_sheets: list[etree._Element], report: Report) -> None:
+    content = document.tree(Part.CONTENT)
     hidden_styles = {
-        style.get(qn("style", "name")) for style in select_elements(content, HIDDEN_SHEET_STYLES)
+        style.get(xml_names.STYLE_NAME)
+        for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
+        for style in select_elements(tree, HIDDEN_SHEET_STYLES)
     } - {None}
     sheet_names = [
         sheet_name(sheet)
         for sheet in all_sheets
-        if sheet.get(qn("table", "style-name")) in hidden_styles
+        if sheet.get(xml_names.TABLE_STYLE_NAME) in hidden_styles
     ]
     rows = len(select_elements(content, HIDDEN_ROWS))
     columns = len(select_elements(content, HIDDEN_COLUMNS))
     if sheet_names or rows or columns:
-        report.add(
-            rules.HIDDEN001,
+        report.observe_review(Topic.HIDDEN_CONTENT)
+        report.raise_(
+            rules.ORDER003,
             "Hidden sheets, rows or columns hold content that not every reader is told about.",
             location=Location(Part.CONTENT.value),
             details={"sheets": sheet_names, "rows": rows, "columns": columns},

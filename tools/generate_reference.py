@@ -1,107 +1,65 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Generate published reference artifacts from their typed authorities."""
-
-from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
 from typing import cast
 
-from odfa11y.adapter import Outcome, ReviewItem, Status
-from odfa11y.application import AuditFailure, AuditInput, AuditRun
-from odfa11y.batch.record import BatchItemResult, BatchRecord
 from odfa11y.cli.parser import build_parser
-from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision
-from odfa11y.errors import OdfA11yError
-from odfa11y.native.probes import CapabilityResult, CapabilityStatus, ProbeId
-from odfa11y.native.process import ToolIdentity
-from odfa11y.odf import Family
-from odfa11y.outcomes import (
-    EXIT_PRECEDENCE,
-    BatchStatus,
-    ExitStatus,
-    ReviewTopic,
-    RunStatus,
-    StageName,
-    StageStatus,
-    ViolationKind,
+from odfa11y.concepts.review import ReviewTopic
+from odfa11y.contracts import JsonObject
+from odfa11y.decisions import DecisionScope
+from odfa11y.decisions.edit import Status
+from odfa11y.errors import RemedyAction
+from odfa11y.families import REGISTRY
+from odfa11y.families.probes import CapabilityStatus, ProbeId
+from odfa11y.families.text.tables.classification import TableKind
+from odfa11y.glossary import TERMS
+from odfa11y.odf import Family, Layout, Part, Use
+from odfa11y.plans.codec import decision_reference
+from odfa11y.progress import Stage, Step, StepState
+from odfa11y.remediate.catalogue import registered_kinds
+from odfa11y.remediate.violations import ViolationKind
+from odfa11y.report import (
+    RULES,
+    ReportKind,
 )
-from odfa11y.pdf.fidelity import FidelityPolicy
-from odfa11y.pipeline.profiles import Profile
-from odfa11y.pipeline.record import RunRecord, StageResult
-from odfa11y.plans import Plan, PlanHeader, SourceBinding
-from odfa11y.plans.codec import decision_reference, decision_schema, plan_schema
-from odfa11y.plans.registry import registered_kinds
-from odfa11y.records import DoctorRecord, DocumentIdentity, SchemaCheck, Toolchain
-from odfa11y.remediation import RemediationResult, Violation
-from odfa11y.report import FACT_REGISTRY, RULES, FactSet, Finding, Location, Report, Rule
-from odfa11y.serialization import JsonObject, JsonValue, schema_for
+from odfa11y.rules.registry import Severity
+from odfa11y.schemas import generated_schemas, registered_contracts
+from odfa11y.status import (
+    EXIT_PRECEDENCE,
+    ExitStatus,
+    SkipReason,
+)
+from odfa11y.status import Profile as AssuranceProfile
 
 SCHEMA_DIRECTORY = Path(__file__).resolve().parents[1] / "src/odfa11y/schemas"
-FORMATS = {
-    "report": Report,
-    "audit": AuditRun,
-    "run": RunRecord,
-    "batch": BatchRecord,
-    "doctor": DoctorRecord,
-    "remediation": RemediationResult,
-    "plan": Plan,
-}
-# Supply type-only names while resolving record annotations; runtime modules stay layered.
-TYPE_NAMESPACE = {
-    value.__name__: value
-    for value in (
-        AuditRun,
-        AuditInput,
-        AuditFailure,
-        OdfA11yError,
-        Outcome,
-        ReviewItem,
-        Status,
-        BatchItemResult,
-        BatchRecord,
-        ToolIdentity,
-        CapabilityResult,
-        CapabilityStatus,
-        ProbeId,
-        Family,
-        FidelityPolicy,
-        BatchStatus,
-        ExitStatus,
-        ReviewTopic,
-        RunStatus,
-        StageName,
-        StageStatus,
-        ViolationKind,
-        Profile,
-        RunRecord,
-        StageResult,
-        DoctorRecord,
-        DocumentIdentity,
-        SchemaCheck,
-        Toolchain,
-        RemediationResult,
-        FactSet,
-        Finding,
-        Rule,
-        Location,
-        Report,
-    )
-} | {
-    "Plan": Plan,
-    "Violation": Violation,
-    "ViolationKind": ViolationKind,
-    "PlanHeader": PlanHeader,
-    "SourceBinding": SourceBinding,
-    "OpenDecision": OpenDecision,
-    "Decision": Decision,
-    "DecisionKind": DecisionKind,
-    "DecisionScope": DecisionScope,
-    "JsonObject": JsonObject,
-    "JsonValue": JsonValue,
-    "Path": Path,
-}
+FORMATS = {contract.name: contract.record for contract in registered_contracts()}
+
+
+USER_ENUMS = (
+    ExitStatus,
+    AssuranceProfile,
+    Stage,
+    Step,
+    StepState,
+    ReviewTopic,
+    Severity,
+    RemedyAction,
+    ReportKind,
+    SkipReason,
+    DecisionScope,
+    Family,
+    Layout,
+    Part,
+    Use,
+    ProbeId,
+    CapabilityStatus,
+    TableKind,
+    Status,
+    ViolationKind,
+)
 
 
 def schemas() -> dict[str, JsonObject]:
@@ -113,27 +71,7 @@ def schemas() -> dict[str, JsonObject]:
         Generated schemas keyed by their public format names.
 
     """
-    fact_properties: JsonObject = {
-        key.id: schema_for(key.value_type, namespace=TYPE_NAMESPACE)
-        | {"description": key.description}
-        for key in FACT_REGISTRY.values()
-    }
-    kinds = registered_kinds()
-    overrides: dict[object, JsonObject] = {
-        Plan: plan_schema(kinds),
-        Decision: decision_schema(kinds, open_decision=False),
-        OpenDecision: decision_schema(kinds, open_decision=True),
-        DecisionKind: {"enum": list(kinds)},
-        FactSet: {"type": "object", "properties": fact_properties, "additionalProperties": False},
-    }
-    return {
-        name: {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "$id": f"urn:odfa11y:schema:{name}",
-            **schema_for(record_type, namespace=TYPE_NAMESPACE, overrides=overrides),
-        }
-        for name, record_type in FORMATS.items()
-    }
+    return generated_schemas()
 
 
 def rule_reference() -> str:
@@ -150,7 +88,7 @@ def rule_reference() -> str:
         "",
         "Rules define each finding's identity, severity, category and possible decision kinds.",
         "Findings reference these rules; open decisions carry the human questions.",
-        "The [registry](../src/odfa11y/report/rules.py) is authoritative.",
+        "The [registry](../src/odfa11y/rules/registry.py) is authoritative.",
         "",
         "## Registered rules",
         "",
@@ -158,7 +96,9 @@ def rule_reference() -> str:
         "| --- | --- | --- | --- |",
     ]
     for rule in sorted(RULES.values(), key=lambda value: value.id):
-        decisions = ", ".join(f"`{kind}`" for kind in rule.decision_kinds)
+        decisions = ", ".join(
+            f"`{kind.id}`" for kind in registered_kinds().values() if rule in kind.resolves
+        )
         lines.append(
             f"| `{rule.id}` | {rule.severity.value.title()} | {rule.title} | {decisions} |"
         )
@@ -166,7 +106,7 @@ def rule_reference() -> str:
 
 
 def _actions(parser: argparse.ArgumentParser) -> list[argparse.Action]:
-    return parser._actions  # noqa: SLF001  argparse stores the actual option/command graph here.
+    return parser._actions
 
 
 def _commands(action: argparse.Action) -> dict[str, argparse.ArgumentParser] | None:
@@ -239,7 +179,7 @@ def cli_reference() -> str:
         "",
         f"Aggregation precedence: **{precedence}**.",
         "",
-        "A passing dry run can have `published=false`; a refused candidate exits 2.",
+        'A passing dry run can have `publication="preview"`; a refused candidate exits 2.',
         "Execution errors retain status 3; invalid arguments/plans use 4.",
         "",
     ]
@@ -261,23 +201,21 @@ def schema_reference() -> str:
         "Draft 2020-12 schemas ship in `odfa11y/schemas`.",
         "Registered facts and decisions are closed vocabularies.",
         "",
-        "| Interface | Format | Schema |",
+        "| Interface | Schema version | Schema |",
         "| --- | --- | --- |",
     ]
-    for name, schema in schemas().items():
-        properties = cast("dict[str, JsonObject]", schema["properties"])
-        if name == "plan":
-            properties = cast("dict[str, JsonObject]", properties["plan"]["properties"])
-        version = cast("list[int]", properties["format"]["enum"])[0]
+    for contract in registered_contracts():
         lines.append(
-            f"| `{name}` | {version} | "
-            f"[{name}.schema.json](../src/odfa11y/schemas/{name}.schema.json) |"
+            f"| `{contract.name}` | {contract.schema_version} | "
+            f"[{contract.filename}](../src/odfa11y/schemas/{contract.filename}) |"
         )
     lines += [
         "",
-        "CLI audit/comparison JSON contains report objects (or an array of them).",
-        "The `audit` schema describes the root application's per-input result record.",
-        "The `plan` schema describes the parsed TOML structure; its header owns `format`.",
+        "CLI JSON is the corresponding application result record, including its schema version.",
+        "The `audit` result always contains an `inputs` array; each input retains its reports.",
+        "The `comparison` result contains its report, strict flag and effective exit status.",
+        "The `plan` result contains the source report and optional unanswered TOML template.",
+        "The `plan-file` schema describes parsed TOML; its header owns `schema_version`.",
         "See [application API](API.md) and [evidence](EVIDENCE.md).",
         "",
     ]
@@ -285,46 +223,46 @@ def schema_reference() -> str:
 
 
 def capability_reference() -> str:
-    """Render scoped native capabilities from the committed doctor measurement.
-
-    Returns
-    -------
-    str
-        A measured capability matrix, without running native tools during generation.
-
-    """
-    record = json.loads((SCHEMA_DIRECTORY.parents[2] / "docs/measurements/doctor.json").read_text())
-    toolchain = record["toolchain"]
+    """Describe current doctor experiments without presenting cached tool verdicts."""
     lines = [
-        "# Measured native capabilities",
+        "# Native capability probes",
         "",
-        f"Recorded with ODFA11y {record['odfa11y']} on `{record['platform']}`.",
-        (
-            f"LibreOffice {toolchain['libreoffice']['version']}; "
-            f"veraPDF {toolchain['verapdf']['version']}."
-        ),
-        "[Doctor record](measurements/doctor.json) is the measurement authority.",
+        "Run `odfa11y doctor --format json` to measure the installed tools and retain their",
+        "identities, observed capabilities and reasons for unmeasured results.",
         "",
-        "| Probe | Family | Result |",
-        "| --- | --- | --- |",
+        "| Probe | Family | Meaning | Related rules | Requires veraPDF |",
+        "| --- | --- | --- | --- | --- |",
     ]
-    lines.extend(
-        f"| `{result['id']}` | {result['family']} | {result['status']} |"
-        for result in toolchain["capabilities"]
-    )
+    for spec in REGISTRY.values():
+        for probe in spec.probes:
+            rules = ", ".join(f"`{rule.id}`" for rule in probe.rules)
+            lines.append(
+                f"| `{probe.id}` | {probe.family.value} | {probe.id.meaning} | "
+                f"{rules} | {'yes' if probe.requires_validator else 'no'} |"
+            )
     lines += [
         "",
-        "These verdicts apply to each probe's authored input and exporter identity.",
-        "Unsupported results do not waive document-level PDF gates. Execution failures are",
-        "reported separately and retried; only conclusive observations are batch-cached.",
-        "Doctor measures every probe; pipelines select relevant family/decision probes.",
+        "A verdict applies to that probe's authored input, tool identity and environment.",
+        "It does not establish behavior for every document or platform. Unsupported results",
+        "never waive document-level PDF gates. Execution failures remain separate from",
+        "supported/unsupported observations; unavailable prerequisites leave explicit",
+        "not-tested results. Runs and batches do not conduct these experiments.",
         "",
-        "The [text-structure measurements](measurements/text-exports.json) additionally",
-        "record fixture-specific roles and independent validator outcomes. Read the",
-        "[accessibility boundaries](ACCESSIBILITY.md) before interpreting a machine pass.",
+        "Complete the [document workflow](WORKFLOW.md) and",
+        "[human acceptance checks](ACCESSIBILITY.md#human-acceptance) for the actual publication.",
         "",
     ]
     return "\n".join(lines)
+
+
+def glossary_reference() -> str:
+    """Generate shared vocabulary from core definitions and enum meanings."""
+    lines = ["# Glossary", "", "## Terms", "", "| Term | Meaning |", "| --- | --- |"]
+    lines.extend(f"| {term} | {meaning} |" for term, meaning in sorted(TERMS.items()))
+    for enum_type in USER_ENUMS:
+        lines.extend(["", f"## {enum_type.__name__}", "", "| Value | Meaning |", "| --- | --- |"])
+        lines.extend(f"| `{member.value}` | {member.meaning} |" for member in enum_type)
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
@@ -356,6 +294,7 @@ def main() -> int:
         + "\n\n<!-- generated decisions -->\n"
         + decision_reference(registered_kinds())
     )
+    artifacts[plan_path.with_name("GLOSSARY.md")] = glossary_reference()
     artifacts[plan_path.with_name("CLI.md")] = cli_reference()
     artifacts[plan_path.with_name("SCHEMAS.md")] = schema_reference()
     artifacts[plan_path.with_name("CAPABILITIES.md")] = capability_reference()

@@ -1,0 +1,115 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Writer exports establish heading behavior and the header-column capability boundary."""
+
+lazy from collections.abc import Callable
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y.application.tools import Tools
+from odfa11y.audit import audit_odf
+from odfa11y.families.text.headings.edit import heading_fingerprint, heading_location
+from odfa11y.native.libreoffice import export_pdfua
+from odfa11y.odf import OdfDocument, Part, select_elements, validate
+from odfa11y.pdf import audit_pdfua
+from odfa11y.pdf.structure.checks import PdfStructureMeasurements
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.rules import registry as rules
+from odfa11y.status import Profile
+from tests.fixtures.answers import (
+    RawFields,
+    header_answer,
+    header_inputs,
+    heading_inputs,
+    level_answer,
+    metadata_input,
+)
+from tests.fixtures.corpus import CORPUS
+from tests.fixtures.measurements import measured, measurement
+from tests.fixtures.native import export_settings, validate_pdfua
+from tests.fixtures.operations import apply_answers
+from tests.fixtures.paths import TESTS
+from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.runs import RunSettings, execute
+from tests.fixtures.writer import make_minimal_odt
+
+
+@pytest.mark.usefixtures("required_verapdf")
+def test_explicit_levels_reach_real_writer_pdf_heading_roles(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    verapdf = external_tool("verapdf")
+    source = CORPUS / "headings-skipped.odt"
+    document = OdfDocument.open(source)
+    headings = select_elements(document.tree(Part.CONTENT), "//text:h")
+    decisions: dict[str, RawFields] = {
+        heading_location(heading, index).path: level_answer(
+            index, heading_fingerprint(heading, document)
+        )
+        for index, heading in enumerate(headings, 1)
+    }
+    baseline = export_pdfua(
+        source, tmp_path / "baseline.pdf", export_settings("writer_pdf_Export", soffice)
+    )
+    assert rules.PDF025.id in {f.rule_id for f in audit_pdfua(baseline).findings}
+    edited = tmp_path / "headings.odt"
+    apply_answers(source, edited, [heading_inputs(decisions)])
+    pdf = export_pdfua(
+        edited, tmp_path / "headings.pdf", export_settings("writer_pdf_Export", soffice)
+    )
+    report = audit_pdfua(pdf)
+    assert {
+        role: measured(measurement(report, PdfStructureMeasurements).structure_tags).get(role)
+        for role in ("H1", "H2", "H3")
+    } == {
+        "H1": 1,
+        "H2": 1,
+        "H3": 1,
+    }
+    assert not {rules.PDF013.id, rules.PDF025.id} & {f.rule_id for f in report.findings}
+    assert report.error_count == 0
+    assert validate_pdfua(pdf, executable=verapdf).compliant
+
+
+@pytest.mark.usefixtures("required_verapdf")
+def test_header_columns_preserve_source_semantics_and_do_not_hide_missing_pdf_headers(
+    tmp_path: Path, external_tool: Callable[..., str]
+) -> None:
+    soffice = external_tool("soffice", "libreoffice")
+    verapdf = external_tool("verapdf")
+    source = TESTS / "corpus/structure/tables-data-no-headers.odt"
+    edited = tmp_path / "columns.odt"
+    apply_answers(source, edited, [header_inputs({"Data": header_answer(columns=1)})])
+    assert validate(OdfDocument.open(edited)).count == validate(OdfDocument.open(source)).count
+    assert rules.TABLE003.id not in {f.rule_id for f in audit_odf(edited).findings}
+    pdf = export_pdfua(
+        edited, tmp_path / "columns.pdf", export_settings("writer_pdf_Export", soffice)
+    )
+    report = audit_pdfua(pdf)
+    assert measured(measurement(report, PdfStructureMeasurements).structure_tags).get("TH", 0) == 0
+    assert rules.PDF016.id in {f.rule_id for f in report.findings}
+    # The independent validator does not detect this missing header semantics property.
+    assert validate_pdfua(pdf, executable=verapdf).compliant
+    clean = make_minimal_odt(tmp_path / "clean.odt", features={"with_data_table": True})
+    clean_columns = tmp_path / "clean-columns.odt"
+    apply_answers(clean, clean_columns, [header_inputs({"Data": header_answer(columns=1)})])
+    assert validate(OdfDocument.open(clean_columns)).count == 0
+    record = execute(
+        clean_columns,
+        reviewed_plan(
+            clean_columns,
+            [metadata_input(title="Header column boundary", language="en-US")],
+            Pagination.SAME(),
+        ),
+        tmp_path / "evidence",
+        RunSettings(
+            tools=Tools(soffice=soffice, verapdf=verapdf), profile=Profile.parse("production")
+        ),
+    )
+    assert record.failed_stage == "audit-pdf", "\n".join(
+        f"{stage.name}: {stage.outcome}"
+        for stage in record.stages
+        if stage.outcome.status in {"gate-failed", "refused", "crashed"}
+    )
+    assert not record.passed

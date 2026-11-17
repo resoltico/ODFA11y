@@ -1,0 +1,136 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Declaration recognition and addressing have independent schema/audit/refusal oracles."""
+
+lazy from pathlib import Path
+
+import pytest
+
+from odfa11y.audit import audit_odf
+from odfa11y.audit.engine import ExportContextMeasurements
+from odfa11y.errors import DocumentRefusal
+from odfa11y.odf import OdfDocument, Part, qn, validate
+from odfa11y.odf.export_context import native_export_limitations, require_native_context
+from odfa11y.rules import registry as rules
+from tests.fixtures.declarations import declaration
+from tests.fixtures.measurements import measured, measurement
+
+KINDS = ["fill", "bullet", "symbol", "font", "form-button", "form-image", "form-image-frame"]
+
+
+@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("href", ["https://example.test/asset.png", "assets/local.png"])
+def test_schema_valid_declarations_are_reported_and_refused(
+    tmp_path: Path, kind: str, href: str
+) -> None:
+    source = declaration(tmp_path, kind, href)
+    document = OdfDocument.open(source)
+    assert validate(document).count == 0
+    report = audit_odf(source)
+    assert rules.NATIVE001.id in {f.rule_id for f in report.findings}
+    assert (
+        measured(measurement(report, ExportContextMeasurements).limitations)[
+            "rendering_dependencies"
+        ]
+        == 1
+    )
+    with pytest.raises(DocumentRefusal, match="resource"):
+        require_native_context(document)
+
+
+@pytest.mark.parametrize("kind", ["fill", "bullet", "symbol", "font", "form-image"])
+@pytest.mark.parametrize("base", ["direct", "inherited"])
+def test_internal_reference_with_explicit_base_is_unestablished(
+    tmp_path: Path, kind: str, base: str
+) -> None:
+    source = declaration(tmp_path, kind, "Pictures/asset.png")
+    document = OdfDocument.open(source)
+    document.storage.write_member("Pictures/asset.png", b"controlled bytes")
+    attribute = qn("form", "image-data") if kind == "form-image" else qn("xlink", "href")
+    document.tree(Part.CONTENT)
+    document.tree(Part.STYLES)
+    nodes = [
+        n
+        for tree in document.distinct_trees(Part.CONTENT, Part.STYLES)
+        for n in tree.iter()
+        if n.get(attribute) == "Pictures/asset.png"
+    ]
+    assert len(nodes) == 1
+    node = nodes[0] if base == "direct" else nodes[0].getparent()
+    assert node is not None
+    node.set("{http://www.w3.org/XML/1998/namespace}base", "https://example.test/")
+    document.save(source)
+    assert native_export_limitations(OdfDocument.open(source))["rendering_dependencies"] == 1
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_exact_internal_percent_escaped_file_with_fragment_is_supported(
+    tmp_path: Path, kind: str
+) -> None:
+    source = declaration(tmp_path, kind, "Pictures/asset%20name.png#item")
+    document = OdfDocument.open(source)
+    document.storage.write_member("Pictures/asset name.png", b"controlled bytes")
+    document.save(source)
+    reopened = OdfDocument.open(source)
+    assert validate(reopened).count == 0
+    assert native_export_limitations(reopened)["rendering_dependencies"] == 0
+    require_native_context(reopened)
+
+
+@pytest.mark.parametrize("kind", ["fill", "bullet", "image", "object-ole"])
+def test_inline_binary_data_does_not_create_a_uri_dependency(tmp_path: Path, kind: str) -> None:
+    source = declaration(tmp_path, kind, None)
+    document = OdfDocument.open(source)
+    assert validate(document).count == 0
+    require_native_context(document)
+    assert native_export_limitations(document)["rendering_dependencies"] == 0
+
+
+@pytest.mark.parametrize(
+    "href",
+    [
+        ".",
+        "./",
+        "Pictures",
+        "Pictures/",
+        "Empty/",
+        "file.png/",
+        "file.png%2f",
+        "file.png/.",
+        "Pictures%2F",
+    ],
+)
+@pytest.mark.parametrize("kind", ["image", "fill", "object-ole"])
+def test_file_resources_reject_root_directories_and_directory_intent(
+    tmp_path: Path, href: str, kind: str
+) -> None:
+    source = declaration(tmp_path, kind, href)
+    document = OdfDocument.open(source)
+    document.storage.write_member("Pictures/child.png", b"asset")
+    document.storage.write_member("Pictures/content.xml", b"object document")
+    document.storage.write_member("Empty/", b"")
+    document.storage.write_member("file.png", b"asset")
+    document.save(source)
+    reopened = OdfDocument.open(source)
+    assert validate(reopened).count == 0
+    assert native_export_limitations(reopened)["rendering_dependencies"] == 1
+    with pytest.raises(DocumentRefusal):
+        require_native_context(reopened)
+
+
+@pytest.mark.parametrize("href", ["Object1", "Object1/", "Object1%2F", "object.odt"])
+def test_embedded_object_contract_accepts_subdocument_folders_and_separate_files(
+    tmp_path: Path, href: str
+) -> None:
+    source = declaration(tmp_path, "object", href)
+    document = OdfDocument.open(source)
+    document.storage.write_member(
+        "Object1/content.xml",
+        b"<office:document-content "
+        b'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0">'
+        b"<office:body/></office:document-content>",
+    )
+    document.storage.write_member("object.odt", b"opaque package bytes")
+    document.save(source)
+    reopened = OdfDocument.open(source)
+    assert validate(reopened).count == 0
+    require_native_context(reopened)

@@ -1,19 +1,13 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """A flat ODF document: all parts in one XML file."""
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import TYPE_CHECKING
+lazy import os
 
 from odfa11y.errors import MissingMemberError, PackageError
-from odfa11y.staging import staging_sibling
-
-from .archive import MAX_UNCOMPRESSED_BYTES
-from .storage import OdfStorage, Part
-
-if TYPE_CHECKING:
-    import os
+from odfa11y.odf.archive import MAX_UNCOMPRESSED_BYTES
+from odfa11y.odf.storage import Layout, OdfStorage, Part
+from odfa11y.publish import publish_file
 
 FLAT_MEMBER = "document"
 
@@ -21,7 +15,7 @@ FLAT_MEMBER = "document"
 class FlatXmlStorage(OdfStorage):
     """One XML member holding meta, settings, styles and body; there is no manifest."""
 
-    layout = "flat"
+    layout = Layout.FLAT
 
     def __init__(self, source: str | os.PathLike[str]) -> None:
         """Load the file, refusing one above the unpacked-size limit.
@@ -42,7 +36,7 @@ class FlatXmlStorage(OdfStorage):
             raise PackageError(msg)
         self._data = self.source.read_bytes()
 
-    def member_for(self, part: Part) -> str | None:  # noqa: PLR6301  Implement the shared storage instance interface.
+    def member_for(self, part: Part) -> str | None:
         """Name the member holding a part.
 
         Returns
@@ -53,7 +47,7 @@ class FlatXmlStorage(OdfStorage):
         """
         return None if part is Part.MANIFEST else FLAT_MEMBER
 
-    def has(self, name: str) -> bool:  # noqa: PLR6301  Implement the shared storage instance interface.
+    def has(self, name: str) -> bool:
         """Return whether the member exists.
 
         Returns
@@ -106,12 +100,4 @@ class FlatXmlStorage(OdfStorage):
             The saved destination.
 
         """
-        destination = Path(destination)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        staged = staging_sibling(destination)
-        try:
-            staged.write_bytes(self._data)
-            staged.replace(destination)
-        finally:
-            staged.unlink(missing_ok=True)
-        return destination
+        return publish_file(destination, lambda stream: stream.write(self._data), replace=True)

@@ -1,68 +1,91 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """ODFA11y's application API: explicit decisions, guarded workflows and typed results."""
 
-from .application import (
-    AuditFailure,
+from odfa11y.application import (
     AuditInput,
-    AuditRun,
+    AuditResult,
     ComparisonResult,
     ExportResult,
     PlanResult,
     VerificationResult,
-    audit,
     compare,
     doctor,
     export,
     plan,
-    remediate,
-    run,
-    run_batch,
     verify_evidence,
 )
-from .batch import BatchRecord
-from .decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
-from .errors import OdfA11yError, OutputError, PlanError, ReportError, ToolNotFoundError
-from .native.export import DEFAULT_TIMEOUT_SECONDS
-from .native.process import validate_timeout
-from .outcomes import (
-    ExitStatus,
-    ProgressEvent,
-    ProgressObserver,
-    StageName,
-    StepName,
-    StepState,
-    failure_status,
+from odfa11y.application import (
+    audit as _audit,
 )
-from .pipeline.profiles import DEFAULT_PROFILE, PROFILES, Profile, profile_named
-from .pipeline.record import RunRecord, StageResult
-from .plans import Plan, PlanHeader, SourceBinding, load_plan, registered_kinds
-from .records import DoctorRecord
-from .remediation import RemediationResult
-from .report import FORMATS, Location, Report, preflight_sarif, render_reports, terminal_text
-from .source_audit import plan_blockers
-from .tools import Tools
-from .version import __version__
+from odfa11y.application import (
+    remediate as _remediate,
+)
+from odfa11y.application import (
+    run as _run,
+)
+from odfa11y.application.batch import batch as _batch
+from odfa11y.application.doctor import DoctorResult
+from odfa11y.application.native import NativeTools
+from odfa11y.application.tools import Tools
+from odfa11y.batch import BatchRecord
+from odfa11y.decisions import Decision, DecisionKind, DecisionScope, OpenDecision, decode_answer
+from odfa11y.errors import (
+    DocumentRefusal,
+    InvalidOption,
+    IoFailure,
+    OdfA11yError,
+    OutputOccupied,
+    PlanError,
+    Remedy,
+    RemedyAction,
+    ToolFailure,
+    ToolUnavailable,
+)
+from odfa11y.plans import Plan, PlanHeader, SourceBinding
+from odfa11y.progress import ProgressEvent, ProgressObserver, Stage, Step, StepState
+from odfa11y.remediate import RemediationResult
+from odfa11y.remediate.catalogue import load_plan, registered_kinds
+from odfa11y.remediate.result import PublicationState
+from odfa11y.report import Location, Report, SarifOptions, render_json, render_sarif
+from odfa11y.report.sarif import sarif_failure
+from odfa11y.run.record import RunRecord, StageResult
+from odfa11y.status import (
+    Crashed,
+    ExitStatus,
+    GateFailed,
+    NotApplicable,
+    Passed,
+    Profile,
+    Refused,
+    Skipped,
+)
+from odfa11y.targets import Fingerprint, Target, TargetPath
+from odfa11y.version import __version__
 
 __all__ = [
-    "DEFAULT_PROFILE",
-    "DEFAULT_TIMEOUT_SECONDS",
-    "FORMATS",
-    "PROFILES",
-    "AuditFailure",
     "AuditInput",
-    "AuditRun",
+    "AuditResult",
     "BatchRecord",
     "ComparisonResult",
+    "Crashed",
     "Decision",
     "DecisionKind",
     "DecisionScope",
-    "DoctorRecord",
+    "DoctorResult",
+    "DocumentRefusal",
     "ExitStatus",
     "ExportResult",
+    "Fingerprint",
+    "GateFailed",
+    "InvalidOption",
+    "IoFailure",
     "Location",
+    "NativeTools",
+    "NotApplicable",
     "OdfA11yError",
     "OpenDecision",
-    "OutputError",
+    "OutputOccupied",
+    "Passed",
     "Plan",
     "PlanError",
     "PlanHeader",
@@ -70,36 +93,47 @@ __all__ = [
     "Profile",
     "ProgressEvent",
     "ProgressObserver",
+    "PublicationState",
+    "Refused",
     "RemediationResult",
+    "Remedy",
+    "RemedyAction",
     "Report",
-    "ReportError",
     "RunRecord",
+    "SarifOptions",
+    "Skipped",
     "SourceBinding",
-    "StageName",
+    "Stage",
     "StageResult",
-    "StepName",
+    "Step",
     "StepState",
-    "ToolNotFoundError",
+    "Target",
+    "TargetPath",
+    "ToolFailure",
+    "ToolUnavailable",
     "Tools",
     "VerificationResult",
     "__version__",
     "audit",
+    "batch",
     "compare",
     "decode_answer",
     "doctor",
     "export",
-    "failure_status",
     "load_plan",
     "plan",
-    "plan_blockers",
-    "preflight_sarif",
-    "profile_named",
     "registered_kinds",
     "remediate",
-    "render_reports",
+    "render_json",
+    "render_sarif",
     "run",
-    "run_batch",
-    "terminal_text",
-    "validate_timeout",
+    "sarif_failure",
     "verify_evidence",
 ]
+
+audit = _audit
+remediate = _remediate
+run = _run
+
+
+batch = _batch

@@ -1,8 +1,30 @@
-# Writer regression corpus
+# Unified regression corpus
+
+The one [manifest](manifest.toml) records every stored ODF artifact's family, purposes,
+producer, byte identity and applicable expectations. Writer regression artifacts remain at
+this directory's root; [family fixtures](families/README.md),
+[text structure](structure/README.md) and [reproductions](reproductions/README.md) share
+this authority. Authoring inputs are included and tagged separately. Fixtures contain
+invented content, not customer data.
+
+Regenerate into a **new** directory with the single
+[builder](../../tools/build_corpus.py), for example:
+
+```sh
+uv run --no-sync python -m tools.build_corpus /absolute/new-output --purpose text-structure
+```
+
+The builder uses ordinary conversion when available, and trusted repository BASIC modules
+in disposable profiles only for formats needing native application services. Synthetic
+preservation inputs are retained as byte-identical inputs. It prints observed hashes and
+schema results but never updates expectations. Inspect generated XML, semantics and tests
+before deliberately replacing an artifact and updating this manifest.
+
+## Writer regression subset
 
 Small, invented LibreOffice Writer documents exercise ODFA11y against native producer
 output alongside the synthetic documents in `tests/fixtures/documents.py`. Their content is
-released with the project under MPL-2.0.
+released with the project under AGPL-3.0-only.
 
 [manifest.toml](manifest.toml) identifies the producer and records each stored document's
 expected audit rule IDs (`rules`), remaining rule IDs after the standard remediation plan
@@ -13,7 +35,7 @@ identify the stored artifacts; they do not establish semantic correctness.
 
 ## Sources and validation
 
-[build.sh](build.sh) imports the HTML and flat-XML files in [sources/](sources/) through
+The builder imports the HTML and flat-XML files in [sources/](sources/) through
 Writer and saves packages (`.odt`), with five documents also saved as flat XML (`.fodt`).
 The stored documents are unmodified Writer output and declare ODF 1.3. The producer
 identity in the manifest describes these fixtures, not a supported execution runtime.

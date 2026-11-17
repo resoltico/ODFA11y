@@ -1,0 +1,119 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Published bytes, structured diagnostics and recorded hashes agree."""
+
+import hashlib
+import json
+import os
+lazy from pathlib import Path
+
+import pytest
+from lxml import etree
+
+from odfa11y.evidence import Redactor, check_bundle
+from odfa11y.odf import OdfDocument
+from odfa11y.plans.fidelity import Pagination
+from odfa11y.status import Profile
+from tests.fixtures.bundles import write_run_bundle
+from tests.fixtures.documents import make_flat
+from tests.fixtures.plans import reviewed_plan
+from tests.fixtures.records import record
+from tests.fixtures.runs import RunSettings, execute
+from tests.fixtures.writer import make_minimal_odt
+
+
+@pytest.mark.parametrize("suffix", [".xml", ".fodt", ".odt"])
+def test_published_document_is_the_remediated_payload(tmp_path: Path, suffix: str) -> None:
+    source = (
+        make_minimal_odt(tmp_path / "source.odt")
+        if suffix == ".odt"
+        else make_flat(tmp_path, "text").rename(tmp_path / f"source{suffix}")
+    )
+    if suffix != ".odt":
+        source.write_bytes(
+            source.read_bytes().replace(b"</text:p>", b" /private/person/file</text:p>", 1)
+        )
+    target = tmp_path / "bundle"
+    execute(
+        source,
+        reviewed_plan(source, [], Pagination.SAME()),
+        target,
+        RunSettings(profile=Profile.parse("source")),
+    )
+    delivered = target / f"remediated{suffix}"
+    OdfDocument.open(delivered)
+    assert delivered.read_bytes() == source.read_bytes()
+    assert (
+        json.loads((target / "manifest.json").read_text())["files"][delivered.name]
+        == hashlib.sha256(delivered.read_bytes()).hexdigest()
+    )
+    assert check_bundle(target) == []
+
+
+def test_structured_diagnostics_and_final_hashes(tmp_path: Path) -> None:
+    xml = tmp_path / "report.xml"
+    xml.write_text('<report path="/private/person/a&amp;b">C:\\Users\\Person\\f.pdf</report>')
+    target = tmp_path / "bundle"
+    write_run_bundle(
+        target, record(), {"report.xml": xml}, Redactor(()), diagnostics={"report.xml"}
+    )
+    root = etree.parse(target / "report.xml").getroot()
+    assert root.get("path") == "<path>/a&b"
+    assert root.text == "<path>/f.pdf"
+    published = json.loads((target / "manifest.json").read_text())
+    assert (
+        published["files"]["report.xml"]
+        == hashlib.sha256((target / "report.xml").read_bytes()).hexdigest()
+    )
+    assert check_bundle(target) == []
+
+
+def test_unwritable_publication_has_no_partial_directory(tmp_path: Path) -> None:
+    parent = tmp_path / "readonly"
+    parent.mkdir()
+    parent.chmod(0o500)
+    source = tmp_path / "artifact"
+    source.write_bytes(b"payload")
+    try:
+        if os.access(parent, os.W_OK):
+            pytest.skip("The platform does not enforce POSIX directory modes for this user")
+        with pytest.raises(PermissionError):
+            write_run_bundle(parent / "bundle", record(), {"artifact": source}, Redactor(()))
+        assert not list(parent.iterdir())
+    finally:
+        parent.chmod(0o700)
+
+
+def test_accepted_package_with_xml_suffix_is_copied_unchanged(tmp_path: Path) -> None:
+    source = make_minimal_odt(tmp_path / "source.xml")
+    target = tmp_path / "bundle"
+    result = execute(
+        source,
+        reviewed_plan(source, [], Pagination.SAME()),
+        target,
+        RunSettings(profile=Profile.parse("source")),
+    )
+    OdfDocument.open(target / "remediated.xml")
+    assert (target / "remediated.xml").read_bytes() == source.read_bytes()
+    assert result.passed
+
+
+def test_flat_document_preserves_declared_encoding(tmp_path: Path) -> None:
+    source = make_flat(tmp_path, "text")
+    source.write_bytes(
+        source
+        .read_bytes()
+        .replace(b'encoding="UTF-8"', b'encoding="ISO-8859-1"')
+        .replace(b'encoding="utf-8"', b'encoding="ISO-8859-1"')
+        .replace(b"</text:p>", b" caf\xe9</text:p>", 1)
+    )
+    target = tmp_path / "bundle"
+    result = execute(
+        source,
+        reviewed_plan(source, [], Pagination.SAME()),
+        target,
+        RunSettings(profile=Profile.parse("source")),
+    )
+    assert result.passed
+    delivered = target / f"remediated{source.suffix}"
+    OdfDocument.open(delivered)
+    assert delivered.read_bytes() == source.read_bytes()

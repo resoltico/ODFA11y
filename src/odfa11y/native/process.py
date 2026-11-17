@@ -1,67 +1,29 @@
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: AGPL-3.0-only
 """Locate and identify the external applications ODFA11y drives."""
 
-from __future__ import annotations
-
-import math
 import os
 import re
 import shutil
 import signal
-import subprocess  # noqa: S404  Invoke selected local tools with argument lists.
+import subprocess
 import sys
 import threading
 import time
-from contextlib import contextmanager
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, TYPE_CHECKING
+from typing import IO
 
-if TYPE_CHECKING:
-    from collections.abc import Generator
-    from types import FrameType
+from odfa11y.errors import Remedy, RemedyAction, ToolUnavailable
+from odfa11y.tool_identity import ToolIdentity
+from odfa11y.tool_timeout import Timeout
 
-from odfa11y.errors import PlanError, ToolNotFoundError
-
-IDENTIFY_TIMEOUT_SECONDS = 20
 MAX_OUTPUT_BYTES = 64 * 1024
 READ_CHUNK_BYTES = 64 * 1024
 READER_JOIN_SECONDS = 3
 VERSION_RE = re.compile(r"\d+(?:\.\d+)+")
 
 # Windows reserves 0xffffffff milliseconds for an infinite wait.
-MAX_TIMEOUT_SECONDS = (2**32 - 2) / 1000
-
-
-def validate_timeout(timeout: float) -> float:
-    """Require finite positive numeric seconds within the portable native wait range.
-
-    Returns
-    -------
-    float
-        Seconds preserving fractional input.
-
-    Raises
-    ------
-    PlanError
-        The input is not a supported finite, positive duration.
-    """
-    message = f"Timeout must be finite positive numeric seconds, at most {MAX_TIMEOUT_SECONDS}."
-    if type(timeout) not in {int, float}:
-        raise PlanError(message)
-    try:
-        seconds = float(timeout)
-    except OverflowError as exc:
-        raise PlanError(message) from exc
-    if (
-        not math.isfinite(seconds)
-        or seconds <= 0
-        or timeout > MAX_TIMEOUT_SECONDS
-        or seconds > MAX_TIMEOUT_SECONDS
-        or math.ceil(seconds * 1000) > 2**32 - 2
-    ):
-        raise PlanError(message)
-    return seconds
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,10 +31,15 @@ class ToolRun:
     """A finished external process: its status and the head of each output stream."""
 
     returncode: int
-    stdout: str
+    stdout_bytes: bytes
     stderr: str
     stdout_truncated: bool
     stderr_truncated: bool
+
+    @property
+    def stdout(self) -> str:
+        """Return diagnostic text; protocol consumers use the original stdout bytes."""
+        return self.stdout_bytes.decode("utf-8", errors="replace")
 
     @property
     def truncated(self) -> bool:
@@ -95,7 +62,7 @@ def run_bounded(
     ToolRun
         The exit status and the captured heads of stdout and stderr.
     """
-    timeout = validate_timeout(timeout)
+    timeout = Timeout(timeout)
     process = subprocess.Popen(  # noqa: S603  Arguments select a local tool without a shell.
         command,
         stdin=subprocess.DEVNULL,
@@ -120,7 +87,7 @@ def run_bounded(
         _join(threads)
     return ToolRun(
         process.returncode,
-        captured[0].text(),
+        bytes(captured[0]._head),
         captured[1].text(),
         captured[0].truncated,
         captured[1].truncated,
@@ -174,24 +141,6 @@ def _kill_tree(process: subprocess.Popen[bytes]) -> None:
     process.kill()
 
 
-@dataclass(frozen=True, slots=True)
-class ToolIdentity:
-    """Name and version of an application as it reports itself."""
-
-    name: str
-    version: str
-
-    def as_dict(self) -> dict[str, str]:
-        """Serialize the identity.
-
-        Returns
-        -------
-        dict[str, str]
-            The tool name and version.
-        """
-        return {"name": self.name, "version": self.version}
-
-
 def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -> str:
     """Resolve an explicit path or program name, or search the candidate names on PATH.
 
@@ -202,7 +151,7 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
 
     Raises
     ------
-    ToolNotFoundError
+    ToolUnavailable
         The requested executable, or every candidate, cannot be found.
     """
     if requested is not None:
@@ -210,22 +159,29 @@ def find_executable(requested: str | Path | None, candidates: tuple[str, ...]) -
         if path.is_file():
             if not os.access(path, os.X_OK):
                 msg = f"Not executable: {requested}"
-                raise ToolNotFoundError(msg)
+                raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
             return str(path)
         resolved = shutil.which(str(requested))
         if resolved:
             return resolved
         msg = f"Executable not found: {requested}"
-        raise ToolNotFoundError(msg)
+        raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
     for candidate in candidates:
         resolved = shutil.which(candidate)
         if resolved:
             return resolved
     msg = f"None of {', '.join(candidates)} was found on PATH."
-    raise ToolNotFoundError(msg)
+    raise ToolUnavailable(msg, remedy=Remedy(RemedyAction.INSTALL_TOOL, candidates[0]))
 
 
-def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolIdentity:
+def identify(
+    name: str,
+    executable: str,
+    version_args: tuple[str, ...],
+    *,
+    timeout: float = Timeout.DEFAULT,
+    runner: Callable[..., ToolRun] = run_bounded,
+) -> ToolIdentity:
     """Ask an application for its version; failure yields ``unknown`` rather than an error.
 
     Returns
@@ -234,14 +190,20 @@ def identify(name: str, executable: str, version_args: tuple[str, ...]) -> ToolI
         The reported version number, or ``unknown`` when it cannot be determined.
     """
     try:
-        completed = run_bounded([executable, *version_args], timeout=IDENTIFY_TIMEOUT_SECONDS)
+        completed = runner([executable, *version_args], timeout=Timeout(timeout))
     except OSError, subprocess.TimeoutExpired:
         return ToolIdentity(name, "unknown")
     found = VERSION_RE.search(completed.stdout or completed.stderr)
     return ToolIdentity(name, found.group(0) if found else "unknown")
 
 
-def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
+def identify_by_file_version(
+    name: str,
+    executable: str,
+    *,
+    timeout: float = Timeout.DEFAULT,
+    runner: Callable[..., ToolRun] = run_bounded,
+) -> ToolIdentity:
     """Read an executable's product version from its file metadata, without running it.
 
     LibreOffice's Windows ``--version`` starts a session without returning.
@@ -255,7 +217,7 @@ def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
     script = f"(Get-Item -LiteralPath '{quoted}').VersionInfo.ProductVersion"
     command = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
     try:
-        completed = run_bounded(command, timeout=IDENTIFY_TIMEOUT_SECONDS)
+        completed = runner(command, timeout=Timeout(timeout))
     except OSError, subprocess.TimeoutExpired:
         return ToolIdentity(name, "unknown")
     found = VERSION_RE.search(completed.stdout)
@@ -263,7 +225,12 @@ def identify_by_file_version(name: str, executable: str) -> ToolIdentity:
 
 
 def identify_running_or_by_file(
-    name: str, executable: str, version_args: tuple[str, ...]
+    name: str,
+    executable: str,
+    version_args: tuple[str, ...],
+    *,
+    runner: Callable[..., ToolRun] = run_bounded,
+    timeout: float = Timeout.DEFAULT,
 ) -> ToolIdentity:
     """Identify via runtime version, or Windows file metadata.
 
@@ -273,28 +240,5 @@ def identify_running_or_by_file(
         The reported version, or ``unknown`` on failure.
     """
     if sys.platform == "win32":
-        return identify_by_file_version(name, executable)
-    return identify(name, executable, version_args)
-
-
-def _interrupt(_signum: int, _frame: FrameType | None) -> None:
-    raise KeyboardInterrupt
-
-
-@contextmanager
-def termination_interrupt() -> Generator[None]:
-    """Temporarily translate SIGTERM into interruption on the main thread.
-
-    Yields
-    ------
-    None
-        A scope whose original signal handler is restored on exit.
-    """
-    if threading.current_thread() is not threading.main_thread():
-        yield
-        return
-    previous = signal.signal(signal.SIGTERM, _interrupt)
-    try:
-        yield
-    finally:
-        signal.signal(signal.SIGTERM, previous)
+        return identify_by_file_version(name, executable, runner=runner, timeout=timeout)
+    return identify(name, executable, version_args, timeout=timeout, runner=runner)
